@@ -10,6 +10,14 @@
                         clearable
                         @keyup.enter="resetPage" />
                 </el-form-item>
+                <el-form-item label="任务名称">
+                    <el-input
+                        class="w-[200px]"
+                        v-model="queryParams.name"
+                        placeholder="请输入任务名称"
+                        clearable
+                        @keyup.enter="resetPage" />
+                </el-form-item>
                 <!-- 任务状态 -->
                 <el-form-item label="任务状态">
                     <el-select
@@ -127,6 +135,7 @@ const queryParams = reactive({
     start_time: "",
     end_time: "",
     nickname: "",
+    name: "",
     status: "",
     shanjian_type: 2,
 });

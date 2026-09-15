@@ -23,16 +23,19 @@ use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\file\File;
+use app\common\model\sv\CloudSvDevice;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceViralRecord;
 use app\common\model\sv\SvMediaMaterial;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
+use app\common\service\OriginalMaterialSpec;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
 use app\common\service\hotspot\HotspotLog;
 use app\common\service\hotspot\VideoService;
 use app\common\service\UploadService;
+use think\exception\HttpResponseException;
 use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Log;
@@ -439,7 +442,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $userId = $copywritingRecord->user_id;
         $personaId = $copywritingRecord->persona_id;
         $taskType = $forceTaskType ?: self::getNextTaskType($copywritingRecord->device_code, $personaId, $config);
-        $device = SvDevice::where('device_code', $copywritingRecord->device_code)->findOrEmpty();
+        $device = CloudSvDevice::resolve($copywritingRecord->device_code);
         if ($device->isEmpty()) {
             throw new \Exception('设备不存在');
         }
@@ -752,7 +755,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 $productContent = '';
         }
 
-        return sprintf(
+        $text = sprintf(
             "我的IP名称是%s。\n\nIP介绍如下：\n%s\n\n账号类型是%s。\n\n我的职业/业务是：\n%s\n\n我主要分享的内容是：\n%s\n\n我想给谁看的是：\n%s\n\n这个账号整体想呈现的感觉是：\n%s\n\n我所在的城市/地点是：\n%s\n\n我希望用户看完内容之后的行为是：\n%s\n\n我正在销售的产品/服务是：\n%s\n\n我想卖给的人群是：\n%s\n\n相比同行，我的优势是：\n%s\n\n以下是我的产品内容：\n%s",
             self::stringifyPersonaCopywritingField($ipName),
             self::stringifyPersonaCopywritingField($personaDesc),
@@ -768,6 +771,33 @@ class CopywritingImitationLogic extends BasePersonaLogic
             self::stringifyPersonaCopywritingField($advantage),
             self::stringifyPersonaCopywritingField($productContent)
         );
+
+        // 「热点追踪」员工配的爆款追踪词。在手机模式下这些词是下发给手机去平台搜索的，
+        // AI 直接生成文案这条路以前完全不读它们，人设配了词也白配。这里把它们作为选题
+        // 方向补进 prompt，让追踪词在没有手机时也能影响内容。
+        // 词为空时一个字都不追加：没配追踪词的人设，prompt 与改造前逐字节一致。
+        $trackingKeywords = self::resolvePersonaTrackingKeywords($personaInfo);
+        if ($trackingKeywords !== '') {
+            $text .= sprintf(
+                "\n\n我近期重点关注的选题方向是：\n%s\n\n请优先围绕这些方向选题；某个方向与我的业务实在不相关时可以跳过，不要生硬套用。",
+                $trackingKeywords
+            );
+        }
+
+        return $text;
+    }
+
+    /**
+     * 取人设规则表(individual/enterprise/local)上的爆款追踪词并拼成顿号分隔的一行。
+     * 人设类型异常导致规则行没有该字段时按无追踪词处理，不能因此让整条文案生成失败。
+     */
+    protected static function resolvePersonaTrackingKeywords($personaInfo): string
+    {
+        try {
+            return self::stringifyPersonaCopywritingField($personaInfo->hot_words ?? []);
+        } catch (\Throwable $e) {
+            return '';
+        }
     }
 
     protected static function stringifyPersonaCopywritingField($value): string
@@ -799,7 +829,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
         bool $keepCopywritingUseState = false
     ): void {
         try {
-            $device = SvDevice::where('device_code', $copywritingRecord->device_code)->findOrEmpty();
+            $device = CloudSvDevice::resolve($copywritingRecord->device_code);
             $persona = AiPersona::where('id', $copywritingRecord->persona_id)->findOrEmpty();
             if ($device->isEmpty() || $persona->isEmpty()) {
                 return;
@@ -986,7 +1016,8 @@ class CopywritingImitationLogic extends BasePersonaLogic
     {
         $deviceCode = $copywritingRecord->device_code;
         $personaId = $copywritingRecord->persona_id;
-        $device = SvDevice::where('device_code', $deviceCode)->findOrEmpty();
+        // 真设备查表；无手机模式的 cloud:{persona_id} 按人设造虚拟设备
+        $device = CloudSvDevice::resolve($deviceCode);
         if ($device->isEmpty()) {
             throw new \Exception('设备不存在');
         }
@@ -1001,7 +1032,8 @@ class CopywritingImitationLogic extends BasePersonaLogic
             return false;
         }
         if ($persona->isEmpty()) throw new \Exception('人设不存在');
-        $materials = self::getMaterialsForImitation($device);
+        $useMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$personaId);
+        $materials = self::getMaterialsForImitation($device, $useMode);
 
         if (!$taskType) $taskType = self::getNextTaskType($deviceCode, $personaId, $config);
 
@@ -1024,16 +1056,37 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $card_introduced = $persona->persona_desc ?? '';
         $typeName = self::getShanjianTypeName($taskType);
         $keywordsForMaterial = $materialKeywords ?? $rewrittenText;
+        $useMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)($persona->id ?? 0));
 
-        if ($taskType == 1 && in_array($config->visual_material_source, [1, 2])) {
+        // AI 找素材在原图模式下照常走：抓来的素材只转存不转码，按原图硬规格判定后入库，
+        // 不合格的降级给自动适配模式(见 splitGrabbedMaterialsByOriginalSpec)。
+        $willGrabByAi = ShanjianVideoSettingLogic::canUseAiMaterials(
+            (int)$taskType,
+            ShanjianVideoSettingLogic::resolveVisualMaterialSource($config)
+        );
+        if ($useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+            && !$willGrabByAi
+            && empty($groupedData['videos'])
+        ) {
+            throw new \Exception('人设下没有可用的原始素材');
+        }
+
+        if ($willGrabByAi) {
             $selectedMaterials = self::selectMaterialsForTaskTypeAndVisualMaterialSource($groupedData['videos'], $groupedData['images'], $taskType, $deviceCode, $config, $keywordsForMaterial);
         } else {
             $selectedMaterials = self::selectMaterialsForTaskType($groupedData['videos'], $groupedData['images'], $taskType, $deviceCode);
         }
 
         // 闪剪限制：素材总时长不能超过5分钟。图片按2s、视频按实际时长累计裁剪。
+        $beforeTrim = $selectedMaterials;
         $selectedMaterials = self::trimMaterialsByDuration($selectedMaterials);
         if (empty($selectedMaterials)) throw new \Exception('人设下无可用素材');
+        if ($useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL) {
+            $emptyVideoError = ShanjianVideoSettingLogic::originalModeEmptyVideoError($selectedMaterials, $beforeTrim);
+            if ($emptyVideoError !== '') {
+                throw new \Exception($emptyVideoError);
+            }
+        }
 
         Db::startTrans();
         try {
@@ -1065,6 +1118,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
             }
             $extradata['volume'] = AiPersonaSynthesisConfig::normalizeMusicVolume($config->music_volume ?? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT);
             $extradata['speed_ratio'] = AiPersonaSynthesisConfig::normalizeSpeechRate($config->speech_rate ?? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT);
+            $extradata['material_use_mode'] = $useMode;
             if ($execTime !== '') {
                 $extradata['exec_time'] = json_encode([$execTime], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
@@ -1144,25 +1198,14 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 $settingCopywriting = json_encode($copyData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
             $taskId = generate_unique_task_id();
-            $cover_result_id = '';
-            $thumb_status = 4;
             $coverKeywords = $rewrittenText;
             if ($source == 3 && $coverKeywords === '') {
                 $coverKeywords = $title ?: ($card_introduced ?: $card_name);
             }
-            switch ($config->video_cover_source) {
-                case 2:
-                    $cover_result_id = self::getAiCover($pic, $coverKeywords, $userId, $taskId);
-                    if(!empty($cover_result_id)) {
-                        $thumb_status = 1;
-                    }else{
-                        $thumb_status = 3;
-                    }
-                    break;
-                case 3:
-                    $pic = $config->pic;
-                    break;
-            }
+            $cover = self::resolveCoverByConfig($config, (string)$pic, (string)$coverKeywords, (int)$userId, $taskId);
+            $pic = $cover['pic'];
+            $thumb_status = $cover['thumb_status'];
+            $cover_result_id = $cover['cover_result_id'];
 
             $settingName = '社媒平台-' . mb_substr($title, 0, 8) . '-' . date('YmdHis');
             foreach ($formattedMaterials as &$m) {
@@ -1226,7 +1269,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                     'device_code'   => $deviceCode,
                     'user_id'       => $userId,
                     'task_id'       => generate_unique_task_id(),
-                    'status'        => 1,
+                    'status'        => 2,
                     'shanjian_type' => $taskType,
                     'copywriting'   => $settingCopywriting,
                     'material'      => json_encode($formattedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -1278,7 +1321,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 'device_code'   => $deviceCode,
                 'user_id'       => $userId,
                 'task_id'       => generate_unique_task_id(),
-                'status'        => 1,
+                'status'        => 2,
                 'shanjian_type' => $taskType,
                 'copywriting'   => $settingCopywriting,
                 'material'      => json_encode($formattedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -1310,7 +1353,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
     /**
      * 远程文件转存（兼容方法不存在或单文件失败场景）
      */
-    public static function transcodeRemoteFileBySourceSafe(string $fileUrl, string $type, int $userId, int $timeout = 0, ?int &$outSize = null): ?string
+    public static function transcodeRemoteFileBySourceSafe(string $fileUrl, string $type, int $userId, int $timeout = 0, ?int &$outSize = null, bool $skipTranscode = false): ?string
     {
         $outSize = 0;
         if (array_key_exists('transcode', self::$testHooks)) {
@@ -1352,7 +1395,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
             'url' => mb_substr($fileUrl, 0, 200),
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         try {
-            $localFileUrl = UploadService::transcodeRemoteFileBySource($fileUrl, $type, $userId, 0, $timeout, $outSize);
+            $localFileUrl = UploadService::transcodeRemoteFileBySource($fileUrl, $type, $userId, 0, $timeout, $outSize, $skipTranscode);
             Log::channel('explosionVideoSynthesis')->write('transcode监控:end ' . json_encode([
                 'type' => $type,
                 'user_id' => $userId,
@@ -1408,6 +1451,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
             if (!empty($options['exec_time'])) {
                 $extradata['exec_time'] = json_encode([$options['exec_time']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             }
+            $extradata['material_use_mode'] = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode(
+                (int)($persona->id ?? 0)
+            );
 
             $settingName = $namePrefix . '-' . mb_substr($title, 0, 8) . '-' . date('YmdHis') . '-' . $typeName;
             $setting = ShanjianVideoSetting::create([
@@ -1692,14 +1738,25 @@ class CopywritingImitationLogic extends BasePersonaLogic
         return ((int)$usedCount) % $total;
     }
 
-    protected static function getMaterialsForImitation($device)
+    protected static function getMaterialsForImitation($device, int $materialUseMode = 1)
     {
-        $all = MaterialModel::where('persona_id', $device->persona_id)
+        $query = MaterialModel::where('persona_id', $device->persona_id)
         ->where('use_status', 1)
         ->where('is_wechat', 0)
         ->where('publish_mode', 1)
-        ->whereIn('material_type', [MaterialModel::MATERIAL_TYPE_VIDEO, MaterialModel::MATERIAL_TYPE_IMAGE])
-        ->select()->toArray();
+        ->whereIn('material_type', [MaterialModel::MATERIAL_TYPE_VIDEO, MaterialModel::MATERIAL_TYPE_IMAGE]);
+        // 两种模式各取各的库：原图只取原片，自动适配只取转码/切片素材。
+        // 与小程序素材列表的查询口径一致，避免"列表看不到的素材被合成用掉"。
+        if ($materialUseMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL) {
+            $userId = (int)($device->user_id ?? 0);
+            $query->where('keep_original', MaterialModel::KEEP_ORIGINAL_YES);
+            if ($userId > 0) {
+                $query->where('user_id', $userId);
+            }
+        } else {
+            $query->where('keep_original', MaterialModel::KEEP_ORIGINAL_NO);
+        }
+        $all = $query->select()->toArray();
         $res = ['videos' => [], 'images' => []];
         foreach ($all as $item) {
             if ((int)$item['material_type'] === MaterialModel::MATERIAL_TYPE_VIDEO) {
@@ -1722,6 +1779,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
     /**
      * 按合成配置选择背景音乐 URL
      * music_source: 1系统 2人设(空则系统兜底) 3不使用
+     *
+     * 音乐库不分素材模式：两种模式取同一批音乐；取不到时按系统音乐兜底，
+     * 不会因为音乐库为空就让成片没有背景音。
      */
     public static function resolveMusicUrlByConfig($config, int $personaId): string
     {
@@ -1733,18 +1793,26 @@ class CopywritingImitationLogic extends BasePersonaLogic
         }
         if ($source === AiPersonaSynthesisConfig::MUSIC_SOURCE_PERSONA && $personaId > 0) {
             // 仅排除已知超过闪剪 300s 上限的音乐；NULL/0（未知时长）仍放行，等时长补全后自然收敛
-            $urls = MaterialModel::where('persona_id', $personaId)
+            $query = MaterialModel::where('persona_id', $personaId)
                 ->where('use_status', MaterialModel::USE_STATUS_ENABLED)
                 ->where('material_type', MaterialModel::MATERIAL_TYPE_MUSIC)
                 ->where('file_url', '<>', '')
                 ->where(function ($q) {
                     $q->whereNull('duration')->whereOr('duration', '<=', MaterialModel::MUSIC_MAX_DURATION);
-                })
-                ->column('file_url');
+                });
+            // 音乐库不按素材模式分库：keep_original 对音乐只表示「已校验格式、合成时不必重编码」，
+            // 是单个文件的属性，不该拿来切成两个互不相通的库。
+            // 原先按模式过滤会让用户在另一模式下传的音乐整批消失，成片直接没有背景音
+            $urls = $query->column('file_url');
             if (!empty($urls)) {
                 $picked = (string)$urls[array_rand($urls)];
-                return $picked !== '' ? FileService::getFileUrl($picked) : self::resolveSystemMusicUrl();
+                if ($picked !== '') {
+                    return FileService::getFileUrl($picked);
+                }
             }
+            // 人设音乐库一首都取不到时退回系统音乐。
+            // 原图模式原先在这里返回空串（成片无声），但音乐是独立音轨，
+            // 不涉及画面的「不压缩不适配」，为它整条静音得不偿失
         }
         return self::resolveSystemMusicUrl();
     }
@@ -1834,8 +1902,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
     /**
      * 优化后的素材选择逻辑
      * 涵盖：纯AI、AI+素材库、纯素材库三种模式
+     * public：旧链路 device\DeviceLogic 也要走同一套判定，避免两边口径漂移
      */
-    protected static function selectMaterialsForTaskTypeAndVisualMaterialSource($localVideos, $localImages, $taskType, $deviceCode, $config, $rewrittenText)
+    public static function selectMaterialsForTaskTypeAndVisualMaterialSource($localVideos, $localImages, $taskType, $deviceCode, $config, $rewrittenText)
     {
         // 1. 定义基础生成规则所需的数量
         $rules = [
@@ -1934,6 +2003,11 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $transcodeCircuitOpen = false;
         $materialStore = self::resolveMaterialStore($opts);
         $platform = (string)($opts['platform'] ?? '');
+        // 原图模式的人设：抓来的素材只转存不重编码，入库前按原图硬规格逐条判定。
+        // 热点库(sv_media)不归人设素材模式管，照旧转码。
+        $isOriginalGrab = $materialStore === 'persona'
+            && ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$personaId)
+                === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
         $existingRemoteUrlMap = self::loadExistingRemoteUrlMap($materialStore, $userId, $personaId);
         $currentBatchRemoteUrlMap = [];
         $startAt = microtime(true);
@@ -2194,7 +2268,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                             $triedCandidates++;
                             try {
                                 $transcodeSize = 0;
-                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'video', $userId, $videoTranscodeSec, $transcodeSize);
+                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'video', $userId, $videoTranscodeSec, $transcodeSize, $isOriginalGrab);
                                 if ($localFileUrl) {
                                     $fileUrl = $localFileUrl;
                                     $videoFailStreak = 0;
@@ -2355,7 +2429,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                             $triedCandidates++;
                             try {
                                 $transcodeSize = 0;
-                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'image', $userId, $imageTranscodeSec, $transcodeSize);
+                                $localFileUrl = self::transcodeRemoteFileBySourceSafe($fileUrl, 'image', $userId, $imageTranscodeSec, $transcodeSize, $isOriginalGrab);
                                 if ($localFileUrl) {
                                     $fileUrl = $localFileUrl;
                                     $imageFailStreak = 0;
@@ -2437,7 +2511,8 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 $elapsedFetch,
                 &$timeoutTriggered,
                 $videoTranscodeSec,
-                $imageTranscodeSec
+                $imageTranscodeSec,
+                $isOriginalGrab
             ) {
                 if ($transcodeCircuitOpen) {
                     return false;
@@ -2493,7 +2568,8 @@ class CopywritingImitationLogic extends BasePersonaLogic
                             $targetType === 1 ? 'video' : 'image',
                             $userId,
                             $targetType === 1 ? $videoTranscodeSec : $imageTranscodeSec,
-                            $transcodeSize
+                            $transcodeSize,
+                            $isOriginalGrab
                         );
                         if (empty($localFileUrl)) {
                             $refundReason = $stageTag . ($targetType === 2 ? '下载失败退费' : '不可用结果退费');
@@ -2719,18 +2795,35 @@ class CopywritingImitationLogic extends BasePersonaLogic
             }
         }
 
+        $downgraded = [];
+        if ($isOriginalGrab) {
+            [$videos, $images, $downgraded] = self::splitGrabbedMaterialsByOriginalSpec($videos, $images);
+            $logStage('original_spec_split', [
+                'kept_video' => count($videos),
+                'kept_image' => count($images),
+                'downgraded' => count($downgraded),
+            ]);
+        }
+
         [$videos, $images] = self::adoptMaterialsToQuota($videos, $images, $vCount, $iCount);
         $coverImageCount = self::countCoverFillImages($images);
         $allMaterials = self::persistGrabbedMaterials(
             $materialStore,
             $userId,
             $personaId,
-            array_merge($videos, $images),
+            array_merge($videos, $images, $downgraded),
             $now,
             $platform
         );
-        $videos = array_values(array_filter($allMaterials, static fn($item) => (int)($item['material_type'] ?? 0) === 1));
-        $images = array_values(array_filter($allMaterials, static fn($item) => (int)($item['material_type'] ?? 0) === 2));
+        // 降级素材已入库留给自动适配模式，但不参与本次原图合成
+        $videos = array_values(array_filter(
+            $allMaterials,
+            static fn($item) => (int)($item['material_type'] ?? 0) === 1 && empty($item['original_downgraded'])
+        ));
+        $images = array_values(array_filter(
+            $allMaterials,
+            static fn($item) => (int)($item['material_type'] ?? 0) === 2 && empty($item['original_downgraded'])
+        ));
         $logStage('end', [
             'insert_count' => count($allMaterials),
             'paid_video' => $paidVideoGrabs,
@@ -2862,12 +2955,18 @@ class CopywritingImitationLogic extends BasePersonaLogic
             ];
         }
 
+        // 兜底素材同样各取各的库，否则原图任务会被塞进一条切片素材，下发时整单卡在规格门禁
+        $fallbackKeepOriginal = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId)
+            === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+            ? MaterialModel::KEEP_ORIGINAL_YES
+            : MaterialModel::KEEP_ORIGINAL_NO;
         $fallbackMaterial = Db::name('ai_persona_material')
             ->where('persona_id', $personaId)
             ->where('user_id', $userId)
             ->where('use_status', 1)
             ->where('is_wechat', 0)
             ->where('publish_mode', 1)
+            ->where('keep_original', $fallbackKeepOriginal)
             ->whereNull('delete_time')
             ->orderRaw('rand()')
             ->find();
@@ -2939,6 +3038,101 @@ class CopywritingImitationLogic extends BasePersonaLogic
             return $raw;
         }
         return $prefix . $raw;
+    }
+
+    /**
+     * 原图模式下把抓来的素材按原图硬规格分两堆。
+     *
+     * 合格的标 keep_original=1 参与本次合成；不合格的降级成自动适配素材照常入库——
+     * 抓取已经扣过算力，留在库里人设切回自动适配还用得上，只是本次原图任务不碰它。
+     * 顺带用探测到的真实时长/宽高回填素材字段：抓取接口返回的元数据经常缺失或是占位值
+     * （duration 缺失时代码填的是 10 秒），拿它当判据会让超长素材蒙混进来，
+     * 一路到下发才被 trimMaterialsByDuration 丢掉。
+     *
+     * @return array{0:array<int,array>,1:array<int,array>,2:array<int,array>} [合格视频, 合格图片, 降级素材]
+     */
+    private static function splitGrabbedMaterialsByOriginalSpec(array $videos, array $images): array
+    {
+        $keptVideos = [];
+        $keptImages = [];
+        $downgraded = [];
+
+        foreach ([MaterialModel::MATERIAL_TYPE_VIDEO => $videos, MaterialModel::MATERIAL_TYPE_IMAGE => $images] as $materialType => $items) {
+            foreach ($items as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                // 已有 id 的是从库里取的兜底素材，取的时候已经按模式筛过，不重复判定
+                if ((int)($item['id'] ?? 0) > 0) {
+                    if ($materialType === MaterialModel::MATERIAL_TYPE_VIDEO) {
+                        $keptVideos[] = $item;
+                    } else {
+                        $keptImages[] = $item;
+                    }
+                    continue;
+                }
+
+                [$item, $reason] = self::judgeGrabbedOriginalMaterial($item, $materialType);
+                if ($reason === '') {
+                    $item['keep_original'] = MaterialModel::KEEP_ORIGINAL_YES;
+                    $item['source_type'] = MaterialModel::SOURCE_TYPE_ORIGINAL;
+                    if ($materialType === MaterialModel::MATERIAL_TYPE_VIDEO) {
+                        $keptVideos[] = $item;
+                    } else {
+                        $keptImages[] = $item;
+                    }
+                    continue;
+                }
+
+                $item['keep_original'] = MaterialModel::KEEP_ORIGINAL_NO;
+                $item['original_downgraded'] = true;
+                $downgraded[] = $item;
+                Log::channel('explosionVideoSynthesis')->write('原图模式抓取素材降级：' . json_encode([
+                    'material_type' => $materialType,
+                    'reason' => $reason,
+                    'file_url' => mb_substr((string)($item['file_url'] ?? ''), 0, 180),
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            }
+        }
+
+        return [$keptVideos, $keptImages, $downgraded];
+    }
+
+    /**
+     * 按原图硬规格判一条抓来的素材，同时把探测到的真实规格回填进去。
+     *
+     * @return array{0:array,1:string} [回填后的素材, 不合格原因(空串=合格)]
+     */
+    private static function judgeGrabbedOriginalMaterial(array $item, int $materialType): array
+    {
+        $fileUrl = trim((string)($item['file_url'] ?? ''));
+        if ($fileUrl === '') {
+            return [$item, '素材地址为空'];
+        }
+
+        if ($materialType === MaterialModel::MATERIAL_TYPE_VIDEO) {
+            $probed = OriginalMaterialSpec::describeVideo($fileUrl);
+            if ($probed === null) {
+                return [$item, '无法识别视频规格'];
+            }
+            $item['duration'] = round((float)$probed['duration'], 2);
+            $item['width'] = (int)$probed['width'];
+            $item['height'] = (int)$probed['height'];
+            $guard = OriginalMaterialSpec::assertVideoForIngest(array_merge($probed, ['url' => $fileUrl]));
+            return [$item, $guard === true ? '' : (string)$guard];
+        }
+
+        $dims = OriginalMaterialSpec::probeImage($fileUrl);
+        if (is_array($dims)) {
+            $item['width'] = (int)$dims[0];
+            $item['height'] = (int)$dims[1];
+        }
+        $guard = OriginalMaterialSpec::assertImage([
+            'url' => $fileUrl,
+            'width' => (int)($item['width'] ?? 0),
+            'height' => (int)($item['height'] ?? 0),
+        ]);
+        return [$item, $guard === true ? '' : (string)$guard];
     }
 
     private static function persistGrabbedMaterials(
@@ -3040,6 +3234,11 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 'use_status' => 1,
                 'publish_mode' => 1,
                 'grab_type' => 1,
+                // 原图模式判定合格的才标原图，其余与改动前一致(0 / 空串)
+                'keep_original' => (int)($item['keep_original'] ?? MaterialModel::KEEP_ORIGINAL_NO) === MaterialModel::KEEP_ORIGINAL_YES
+                    ? MaterialModel::KEEP_ORIGINAL_YES
+                    : MaterialModel::KEEP_ORIGINAL_NO,
+                'source_type' => (string)($item['source_type'] ?? ''),
                 'create_time' => $now,
                 'update_time' => $now,
             ];
@@ -3169,15 +3368,43 @@ class CopywritingImitationLogic extends BasePersonaLogic
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             return $response;
         } catch (\Throwable $e) {
+            $reason = self::upstreamErrorMessage($e);
             Log::channel('explosionVideoSynthesis')->write('requestUrl监控:exception ' . json_encode([
                 'scene' => $scene,
                 'user_id' => $userId,
                 'task_id' => $taskId,
                 'elapsed_ms' => (int)((microtime(true) - $startAt) * 1000),
-                'error' => $e->getMessage(),
+                'error' => $reason,
+                'exception' => $e::class,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            throw new \Exception($e->getMessage());
+            throw new \Exception($reason);
         }
+    }
+
+    /**
+     * 中台请求失败时 ToolsService::send() 抛的是 HttpResponseException（common.php 的 message()），
+     * 它只带一个 Response，getMessage() 恒为空串——直接往上抛等于把原因整个丢掉，
+     * 调用方只能打印一句空错误，再往上就退化成笼统的「XX失败，请稍后重试」。
+     * 真正的原因在响应体里，这里挖出来；实在拿不到才给一句能定位到环节的兜底。
+     */
+    private static function upstreamErrorMessage(\Throwable $e): string
+    {
+        $message = trim($e->getMessage());
+        if ($message !== '') {
+            return $message;
+        }
+        if ($e instanceof HttpResponseException) {
+            $data = $e->getResponse()->getData();
+            if (is_array($data)) {
+                foreach (['msg', 'message', 'error'] as $key) {
+                    $value = trim((string)($data[$key] ?? ''));
+                    if ($value !== '') {
+                        return $value;
+                    }
+                }
+            }
+        }
+        return '中台接口无响应或返回异常';
     }
 
     private static function logThirdPartyExchange(string $label, string $scene, int $userId, string $taskId, mixed $payload): void
@@ -3187,6 +3414,71 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $line = sprintf('%s：场景=%s 用户=%d 任务=%s %s', $label, $scene, $userId, $taskId, $text);
         Log::channel('explosionVideoSynthesis')->write($line);
         HotspotLog::write($line);
+    }
+
+
+    /**
+     * 按人设合成配置解析视频封面（人设自动合成的三条建单链路共用）。
+     *
+     * 封面能不能真下发只看 thumb_status：ShanjianVideoTaskLogic::compositeVideoCron
+     * 的每个下发分支都是 `trim($pic) != '' && thumb_status == 2` 才带
+     * processRules.firstFrameCover。手动封面只写 pic、thumb_status 停在默认的
+     * 4(原图)，等于配了封面永远不提交——曾经的漏洞就在这里。
+     *
+     * @param mixed  $config      人设合成配置（AiPersonaSynthesisConfig）
+     * @param string $fallbackPic 未配封面时的兜底缩略图（形象封面/首个素材缩略图），仅列表展示用
+     * @return array{pic:string,thumb_status:int,cover_result_id:string}
+     */
+    public static function resolveCoverByConfig(
+        $config,
+        string $fallbackPic,
+        string $coverKeywords,
+        int $userId,
+        string $taskId
+    ): array {
+        $pic = $fallbackPic;
+        $thumbStatus = 4;   // 4=原图：不带封面下发
+        $coverResultId = '';
+
+        switch ((int)($config->video_cover_source ?? AiPersonaSynthesisConfig::VIDEO_COVER_TYPE_DEFAULT)) {
+            case AiPersonaSynthesisConfig::VIDEO_COVER_TYPE_AI:
+                // AI 自动：先提交生成，成功后由 covernotify 回填 pic 并置 thumb_status=2
+                $coverResultId = self::getAiCover($pic, $coverKeywords, $userId, $taskId);
+                $thumbStatus = !empty($coverResultId) ? 1 : 3;
+                break;
+            case AiPersonaSynthesisConfig::VIDEO_COVER_TYPE_MANUAL:
+                $manual = self::resolveManualCoverByConfig($config, $fallbackPic);
+                $pic = $manual['pic'];
+                $thumbStatus = $manual['thumb_status'];
+                break;
+        }
+
+        return [
+            'pic' => (string)$pic,
+            'thumb_status' => $thumbStatus,
+            'cover_result_id' => (string)$coverResultId,
+        ];
+    }
+
+    /**
+     * 只解析「手动封面」，不触发 AI 封面生成（AI 封面要扣算力，没接的链路不擅自开）。
+     * 朋友圈/旧设备链路建单时共用。
+     *
+     * @return array{pic:string,thumb_status:int}
+     */
+    public static function resolveManualCoverByConfig($config, string $fallbackPic): array
+    {
+        $noCover = ['pic' => $fallbackPic, 'thumb_status' => 4];
+        if (empty($config)
+            || (int)($config->video_cover_source ?? 0) !== AiPersonaSynthesisConfig::VIDEO_COVER_TYPE_MANUAL
+        ) {
+            return $noCover;
+        }
+        // 配了手动封面却没传图时保留兜底缩略图，仍按无封面下发
+        $manualPic = trim((string)($config->pic ?? ''));
+        return $manualPic !== ''
+            ? ['pic' => $manualPic, 'thumb_status' => 2]
+            : $noCover;
     }
 
 

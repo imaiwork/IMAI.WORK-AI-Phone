@@ -17,7 +17,8 @@ class TaskValidate extends BaseValidate
         'image_indexes' => 'require|array',
         'generation_type' => 'require|integer|in:1,2,3',
         'avatar_id' => 'integer|min:0',
-        'voice_id' => 'integer|min:0',
+        // -1 是「形象原音」哨兵，没有音色库记录，所以下界放到 -1
+        'voice_id' => 'integer|egt:-1',
     ];
 
     protected $message = [
@@ -32,6 +33,7 @@ class TaskValidate extends BaseValidate
         'generation_type.in' => '视频类型仅支持数字人口播、素材口播或新闻体',
         'avatar_id.integer' => '形象ID格式不正确',
         'voice_id.integer' => '音色ID格式不正确',
+        'voice_id.egt' => '音色ID格式不正确',
     ];
 
     public function sceneGenerate()

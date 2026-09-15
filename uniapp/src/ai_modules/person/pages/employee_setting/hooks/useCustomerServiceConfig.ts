@@ -9,7 +9,7 @@ import { AppTypeEnum } from "@/enums/appEnums";
  *  1. 社媒平台（评论 + 私信）—— 每个平台独立持有 type / agent / speech / comment_only_like
  *  2. 微信私信   —— wechat_chat_*
  *  3. 朋友圈互动 —— moments_*（含执行动作：仅点赞/仅评论/评论+点赞）
- *  4. 截流转化   —— shutoff_comment / shutoff_msg（当前 UI 仅暴露固定话术）
+ *  4. 截流转化   —— shutoff_comment / shutoff_msg（固定话术 / AI 接管两种模式）
  *
  * 顶层 enables（comment / dm / wechat_chat / moments）当前 UI 通过单一"智能客服"开关统一控制，
  * 详情接口若返回独立值会原样回写到 enables，保存时按"4 个分块统一启停"重新发送。
@@ -19,6 +19,12 @@ export enum CsReplyMode {
     AI = 1,
     FIXED = 2,
 }
+
+// 截流块中文名：校验提示与话术编辑弹窗标题共用
+export const SHUTOFF_LABELS = {
+    comment: "截流评论",
+    msg: "截流私信",
+} as const;
 
 export enum MomentsAction {
     LIKE_ONLY = 1,
@@ -38,10 +44,18 @@ const TYPE_TO_PLATFORM: Record<number, SocialPlatform> = SOCIAL_PLATFORMS.reduce
     return acc;
 }, {} as Record<number, SocialPlatform>);
 
-type AgentTarget = "social-dm" | "social-comment" | "wechat" | "moments";
+export type AgentTarget = "social-dm" | "social-comment" | "wechat" | "moments" | "shutoff-comment" | "shutoff-msg";
 
 interface ScriptBlock {
     scripts: string[];
+}
+
+// 单智能体块（微信 / 朋友圈 / 截流）共用的智能体槽位形状
+interface AgentSlot {
+    agentId: string;
+    agentName: string;
+    agentStatus: AgentBindStatus;
+    agentStatusText: string;
 }
 
 /** 绑定智能体在当前空间的可用性：ok 可用 / unavailable 跨团队不可用 / deleted 已删除 */
@@ -149,7 +163,7 @@ export function useCustomerServiceConfig(personId: Ref<string>) {
         scripts: [] as string[],
     });
 
-    // 截流块：保留 type / agentId 以便未来在 UI 暴露；当前 UI 仅展示固定话术
+    // 截流块：固定话术 / AI 接管两种模式，对应后端 shutoff_*_type（1 智能体 / 2 固定话术）
     const shutoffComment = reactive({
         replyMode: CsReplyMode.FIXED as CsReplyMode,
         agentId: "",
@@ -170,18 +184,26 @@ export function useCustomerServiceConfig(personId: Ref<string>) {
     // 当前正在选择智能体的目标块；social 按 activePlatform 分发到对应平台槽位
     const agentTarget = ref<AgentTarget>("social-dm");
 
+    // 非社媒的单智能体块：target → 配置块，选择智能体时取值与回写共用
+    const singleAgentBlocks: Record<Exclude<AgentTarget, "social-dm" | "social-comment">, AgentSlot> = {
+        wechat,
+        moments,
+        "shutoff-comment": shutoffComment,
+        "shutoff-msg": shutoffMsg,
+    };
+
     const beginPickAgent = (target: AgentTarget): string => {
         agentTarget.value = target;
         if (target === "social-dm") return socialCurrent.value.dmAgentId;
         if (target === "social-comment") return socialCurrent.value.commentAgentId;
-        if (target === "wechat") return wechat.agentId;
-        return moments.agentId;
+        return singleAgentBlocks[target].agentId;
     };
 
     const applyAgent = (agent: any): void => {
         const id = String(agent?.id ?? "");
         const name = String(agent?.name ?? "");
-        if (agentTarget.value === "social-dm") {
+        const target = agentTarget.value;
+        if (target === "social-dm") {
             const slot = socialCurrent.value;
             slot.dmAgentId = id;
             slot.dmAgentName = name;
@@ -189,7 +211,7 @@ export function useCustomerServiceConfig(personId: Ref<string>) {
             slot.dmAgentStatusText = "";
             return;
         }
-        if (agentTarget.value === "social-comment") {
+        if (target === "social-comment") {
             const slot = socialCurrent.value;
             slot.commentAgentId = id;
             slot.commentAgentName = name;
@@ -197,7 +219,7 @@ export function useCustomerServiceConfig(personId: Ref<string>) {
             slot.commentAgentStatusText = "";
             return;
         }
-        const block = agentTarget.value === "wechat" ? wechat : moments;
+        const block = singleAgentBlocks[target];
         block.agentId = id;
         block.agentName = name;
         block.agentStatus = "ok";
@@ -234,6 +256,11 @@ export function useCustomerServiceConfig(personId: Ref<string>) {
 
     const normalizeReplyMode = (value: any, fallback = CsReplyMode.AI): CsReplyMode =>
         toInt(value) === CsReplyMode.FIXED ? CsReplyMode.FIXED : fallback;
+
+    // 截流历史数据：后端把缺省 type 兜底成 1(AI)，但这些多是从没配过智能体的旧记录。
+    // 只有真的绑了智能体才认作 AI 接管，否则按固定话术回填，避免旧人设一打开就变成"请选择智能体"。
+    const normalizeShutoffMode = (type: any, agentId: any): CsReplyMode =>
+        toInt(type) === CsReplyMode.AI && toInt(agentId) > 0 ? CsReplyMode.AI : CsReplyMode.FIXED;
 
     const applyDetail = (data: Record<string, any>): void => {
         agentConfigId.value = data?.id ?? "";
@@ -304,14 +331,14 @@ export function useCustomerServiceConfig(personId: Ref<string>) {
         moments.agentStatusText = String(data?.moments_agent_status_text ?? "");
         moments.scripts = normalizeScripts(data?.moments_speech);
 
-        shutoffComment.replyMode = normalizeReplyMode(data?.shutoff_comment_type, CsReplyMode.FIXED);
+        shutoffComment.replyMode = normalizeShutoffMode(data?.shutoff_comment_type, data?.shutoff_comment_agent_id);
         shutoffComment.agentId = data?.shutoff_comment_agent_id ? String(data.shutoff_comment_agent_id) : "";
         shutoffComment.agentName = String(data?.shutoff_comment_agent_name ?? "");
         shutoffComment.agentStatus = normalizeAgentStatus(data?.shutoff_comment_agent_status);
         shutoffComment.agentStatusText = String(data?.shutoff_comment_agent_status_text ?? "");
         shutoffComment.scripts = normalizeScripts(data?.shutoff_comment_speech);
 
-        shutoffMsg.replyMode = normalizeReplyMode(data?.shutoff_msg_type, CsReplyMode.FIXED);
+        shutoffMsg.replyMode = normalizeShutoffMode(data?.shutoff_msg_type, data?.shutoff_msg_agent_id);
         shutoffMsg.agentId = data?.shutoff_msg_agent_id ? String(data.shutoff_msg_agent_id) : "";
         shutoffMsg.agentName = String(data?.shutoff_msg_agent_name ?? "");
         shutoffMsg.agentStatus = normalizeAgentStatus(data?.shutoff_msg_agent_status);
@@ -460,6 +487,24 @@ export function useCustomerServiceConfig(personId: Ref<string>) {
             }
             if (moments.replyMode === CsReplyMode.FIXED && !moments.scripts.length) {
                 uni.$u.toast("【朋友圈互动接管】请至少添加一条话术");
+                return false;
+            }
+        }
+        // 截流：AI 接管必须绑定可用智能体；固定话术允许留空（详情接口会用人设线索话术兜底）
+        const shutoffBlocks = [
+            { label: SHUTOFF_LABELS.comment, block: shutoffComment },
+            { label: SHUTOFF_LABELS.msg, block: shutoffMsg },
+        ];
+        for (const { label, block } of shutoffBlocks) {
+            if (block.replyMode !== CsReplyMode.AI) continue;
+            if (!toInt(block.agentId)) {
+                uni.$u.toast(`【${label}】请选择关联智能体`);
+                return false;
+            }
+            if (block.agentStatus !== "ok") {
+                uni.$u.toast(
+                    `【${label}】智能体${block.agentStatus === "deleted" ? "已被删除" : "不可用"}，请重新绑定`
+                );
                 return false;
             }
         }

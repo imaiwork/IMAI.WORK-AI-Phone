@@ -16,6 +16,7 @@ import MontageMaterialCreate from "./_pages/montage_material_create/index.vue";
 import MontageNewsCreate from "./_pages/montage_news_create/index.vue";
 import OneSentenceVideo from "./_pages/one_sentence_video/index.vue";
 import MontageStoryboardCreate from "./_pages/montage_storyboard_create/index.vue";
+import PlayVideo from "./_pages/play_video/index.vue";
 import Model from "./_pages/model/index.vue";
 import Tone from "./_pages/tone/index.vue";
 import Audio from "./_pages/audio/index.vue";
@@ -38,6 +39,7 @@ sidebar.value = [
     { name: "新闻体视频", components: markRaw(MontageNewsCreate), type: SidebarTypeEnum.NEWS_VIDEO },
     { name: "一句话生成视频", components: markRaw(OneSentenceVideo), type: SidebarTypeEnum.ONE_WORD_VIDEO },
     { name: "分镜混剪", components: markRaw(MontageStoryboardCreate), type: SidebarTypeEnum.STORYBOARD_MIX },
+    { name: "爆款玩法复刻", components: markRaw(PlayVideo), type: SidebarTypeEnum.PLAY_VIDEO },
     { name: "声音克隆", components: markRaw(Tone), type: SidebarTypeEnum.VOICE_CLONE },
     { name: "形象克隆", components: markRaw(ModelClone), type: SidebarTypeEnum.ANCHOR_CLONE },
     { name: "我的作品", components: markRaw(Video), type: SidebarTypeEnum.MY_WORKS },
@@ -62,6 +64,7 @@ const getSidebar = computed(() => {
         [SidebarTypeEnum.NEWS_VIDEO]: SidebarGroupEnum.VIDEO_CREATION,
         [SidebarTypeEnum.ONE_WORD_VIDEO]: SidebarGroupEnum.VIDEO_CREATION,
         [SidebarTypeEnum.STORYBOARD_MIX]: SidebarGroupEnum.VIDEO_CREATION,
+        [SidebarTypeEnum.PLAY_VIDEO]: SidebarGroupEnum.VIDEO_CREATION,
         [SidebarTypeEnum.ANCHOR_CLONE]: SidebarGroupEnum.CLONE_MANAGEMENT,
         [SidebarTypeEnum.VOICE_CLONE]: SidebarGroupEnum.CLONE_MANAGEMENT,
         [SidebarTypeEnum.MY_WORKS]: SidebarGroupEnum.MY_WORKS,

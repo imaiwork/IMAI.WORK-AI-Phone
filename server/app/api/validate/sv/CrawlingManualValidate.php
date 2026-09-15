@@ -11,7 +11,9 @@ use app\common\validate\BaseValidate;
 class CrawlingManualValidate extends BaseValidate
 {
     protected $rule = [
-        'source'                         => 'require|in:1,2',
+        'source'                         => 'require|in:1,2,3',
+        'fileurl'                        => 'requireIf:source,1',
+        'crawling_task_ids'              => 'requireIf:source,2|requireIf:source,3|checkCrawlingTaskIds',
         'add_type'                       => 'require|in:0,1',
         'status'                         => 'require|in:0,1,2,3,4',
         'add_number'                     => 'require',
@@ -24,6 +26,10 @@ class CrawlingManualValidate extends BaseValidate
 
     protected $message = [
         'source.require'                         => '请选择来源',
+        'source.in'                              => '来源值不正确',
+        'fileurl.requireIf'                      => '请上传表格文件',
+        'crawling_task_ids.requireIf'            => '请选择获客任务',
+        'crawling_task_ids.checkCrawlingTaskIds' => '请选择获客任务',
         'add_type.require'                     => '请选择自动加好友类型',
         'status.require'                         => '请输入状态',
         'add_number.require'                       => '添加数量不能为空',
@@ -43,6 +49,7 @@ class CrawlingManualValidate extends BaseValidate
     {
         return $this->only([
             'source',
+            'fileurl',
             'crawling_task_ids',
             'add_type',
             'add_number',
@@ -53,6 +60,30 @@ class CrawlingManualValidate extends BaseValidate
             'wechat_id',
             'wechat_reg_type'
         ]);
+    }
+
+    /**
+     * @param mixed $value
+     * @param mixed $rule
+     * @param array<string, mixed> $data
+     * @return bool|string
+     */
+    protected function checkCrawlingTaskIds($value, $rule, $data = [])
+    {
+        $source = (int)($data['source'] ?? 0);
+        if ($source !== 2 && $source !== 3) {
+            return true;
+        }
+        $emptyMsg = $source === 3 ? '请选择抖音获客任务' : '请选择获客任务';
+        if (!is_array($value) || $value === []) {
+            return $emptyMsg;
+        }
+        foreach ($value as $id) {
+            if (!is_numeric($id) || (int)$id <= 0) {
+                return $emptyMsg;
+            }
+        }
+        return true;
     }
 
     // 详情场景

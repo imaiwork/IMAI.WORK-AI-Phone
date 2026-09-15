@@ -3,7 +3,7 @@
 // ================================================================
 import WechatOA from '@/utils/wechat'
 import { createClosureTask, checkTaskPublishTime } from '@/api/device'
-import { normalizeCommentTimeValue, type ClosureFormData } from './types'
+import { TouchTypeEnum, normalizeCommentTimeValue, type ClosureFormData } from './types'
 
 export function useCreateTask(
     formData: ClosureFormData,
@@ -20,6 +20,8 @@ export function useCreateTask(
     const executeCreateTask = async () => {
         uni.showLoading({ title: '创建中...', mask: true })
         try {
+            // 触达方式对私信(task_type=2)与评论(task_type=1)共用；留痕(3)没有这张卡片，恒固定话术
+            const isTouchTask = !isCollect.value
             const params = {
                 name: formData.name,
                 accounts: formData.accounts,
@@ -49,7 +51,12 @@ export function useCreateTask(
                 marker_method: getTouchTypeList.value.filter((i) => i.checked).map((i) => i.name),
                 task_exec_type: formData.task_exec_type,
                 minutes: formData.minutes,
-                task_ids: formData.task_ids
+                task_ids: formData.task_ids,
+                touch_type: isTouchTask ? formData.touch_type : TouchTypeEnum.FIXED,
+                agent_id:
+                    isTouchTask && formData.touch_type === TouchTypeEnum.AI
+                        ? Number(formData.agent_id)
+                        : 0
             }
 
             await createClosureTask(params)

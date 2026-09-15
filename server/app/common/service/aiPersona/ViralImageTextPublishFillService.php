@@ -13,6 +13,8 @@ use think\facade\Log;
 
 /**
  * 按当天空闲图文发布时段，从跨天未使用仿写库存（id ASC）填坑生成发布记录。
+ * 无独立时间窗，Fill Cron 全天每 5 分钟都可填空闲时段。
+ * 5 点前不视频兜底、图文任务扫到后跳过，由 Fallback 的 describeFallbackSkipReason 守门。
  */
 class ViralImageTextPublishFillService
 {
@@ -77,6 +79,14 @@ class ViralImageTextPublishFillService
         if ($userId <= 0 || $deviceCode === '' || $personaId <= 0) {
             $result['skipped']++;
             $result['error'] = '填坑参数无效';
+            ViralPublishFillLog::write('图文发布填坑跳过', [
+                'event' => ViralPublishFillLog::EVENT_FILL_SKIP,
+                'device_code' => $deviceCode,
+                'day' => $targetPublishDay,
+                'persona_id' => $personaId,
+                'skipped' => 1,
+                'skip_reason' => ViralPublishFillLog::SKIP_INVALID_PARAM,
+            ]);
             return $result;
         }
 
@@ -85,6 +95,14 @@ class ViralImageTextPublishFillService
         if (!self::acquireLock($lockKey, $lockValue)) {
             $result['skipped']++;
             $result['error'] = $deviceCode . '图文发布填坑处理中，跳过';
+            ViralPublishFillLog::write('图文发布填坑跳过', [
+                'event' => ViralPublishFillLog::EVENT_LOCK_SKIP,
+                'device_code' => $deviceCode,
+                'day' => $targetPublishDay,
+                'persona_id' => $personaId,
+                'skipped' => 1,
+                'skip_reason' => ViralPublishFillLog::SKIP_PROCESSING,
+            ]);
             return $result;
         }
 
@@ -93,6 +111,14 @@ class ViralImageTextPublishFillService
             if ($persona->isEmpty()) {
                 $result['skipped']++;
                 $result['error'] = $deviceCode . 'IP人设不存在';
+                ViralPublishFillLog::write('图文发布填坑跳过', [
+                    'event' => ViralPublishFillLog::EVENT_FILL_SKIP,
+                    'device_code' => $deviceCode,
+                    'day' => $targetPublishDay,
+                    'persona_id' => $personaId,
+                    'skipped' => 1,
+                    'skip_reason' => ViralPublishFillLog::SKIP_NO_PERSONA,
+                ]);
                 return $result;
             }
 
@@ -103,6 +129,14 @@ class ViralImageTextPublishFillService
             if ($device->isEmpty()) {
                 $result['skipped']++;
                 $result['error'] = $deviceCode . '设备绑定不存在';
+                ViralPublishFillLog::write('图文发布填坑跳过', [
+                    'event' => ViralPublishFillLog::EVENT_FILL_SKIP,
+                    'device_code' => $deviceCode,
+                    'day' => $targetPublishDay,
+                    'persona_id' => $personaId,
+                    'skipped' => 1,
+                    'skip_reason' => ViralPublishFillLog::SKIP_NO_DEVICE,
+                ]);
                 return $result;
             }
 
@@ -114,28 +148,58 @@ class ViralImageTextPublishFillService
                     $targetPublishDay,
                     $platform
                 )) {
+                    if ($i === 0) {
+                        ViralPublishFillLog::write('图文发布填坑跳过', [
+                            'event' => ViralPublishFillLog::EVENT_FILL_SKIP,
+                            'device_code' => $deviceCode,
+                            'day' => $targetPublishDay,
+                            'persona_id' => $personaId,
+                            'skipped' => 1,
+                            'skip_reason' => ViralPublishFillLog::SKIP_NO_SLOT,
+                        ]);
+                    }
                     break;
                 }
 
                 $record = self::claimNextUnusedRecord($userId, $deviceCode, $personaId);
                 if ($record === null) {
+                    if ($result['created'] === 0 && $result['failed'] === 0) {
+                        ViralPublishFillLog::write('图文发布填坑跳过', [
+                            'event' => ViralPublishFillLog::EVENT_FILL_SKIP,
+                            'device_code' => $deviceCode,
+                            'day' => $targetPublishDay,
+                            'persona_id' => $personaId,
+                            'skipped' => 1,
+                            'skip_reason' => ViralPublishFillLog::SKIP_NO_STOCK,
+                        ]);
+                    }
                     break;
                 }
 
                 $ok = PublishLogic::createImageTextPublishFromViralRecord($record, $targetPublishDay);
                 if ($ok) {
                     $result['created']++;
-                    self::log(
-                        "图文发布填坑成功: record_id={$record->id}, device={$deviceCode}, day={$targetPublishDay}"
-                    );
+                    ViralPublishFillLog::write('图文发布填坑成功', [
+                        'event' => ViralPublishFillLog::EVENT_FILL_SUCCESS,
+                        'device_code' => $deviceCode,
+                        'day' => $targetPublishDay,
+                        'persona_id' => $personaId,
+                        'created' => 1,
+                        'remark' => 'record_id=' . (int)$record->id,
+                    ]);
                     continue;
                 }
 
                 $result['failed']++;
                 $error = (string)($record->publish_create_error ?? '未知错误');
-                self::log(
-                    "图文发布填坑失败: record_id={$record->id}, device={$deviceCode}, day={$targetPublishDay}, error={$error}"
-                );
+                ViralPublishFillLog::write('图文发布填坑失败', [
+                    'event' => ViralPublishFillLog::EVENT_FILL_FAIL,
+                    'device_code' => $deviceCode,
+                    'day' => $targetPublishDay,
+                    'persona_id' => $personaId,
+                    'failed' => 1,
+                    'remark' => 'record_id=' . (int)$record->id . ',error=' . $error,
+                ]);
 
                 // 无可用时段时停止本组，避免连刷失败污染后续库存
                 if (mb_strpos($error, '无可用发布时段') !== false) {
@@ -147,6 +211,14 @@ class ViralImageTextPublishFillService
         } catch (\Throwable $th) {
             $result['failed']++;
             $result['error'] = $deviceCode . '图文发布填坑异常：' . $th->getMessage();
+            ViralPublishFillLog::write('图文发布填坑失败', [
+                'event' => ViralPublishFillLog::EVENT_FILL_FAIL,
+                'device_code' => $deviceCode,
+                'day' => $targetPublishDay,
+                'persona_id' => $personaId,
+                'failed' => 1,
+                'remark' => $th->getMessage(),
+            ]);
             self::log($result['error'] . "\n" . $th->getTraceAsString());
             return $result;
         } finally {

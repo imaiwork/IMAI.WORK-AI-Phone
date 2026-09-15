@@ -1,0 +1,1 @@
+.loading-ring.data-v-35d5e397{width:88rpx;height:88rpx;border-radius:50%;border:8rpx solid #eaf1ff;border-top-color:#2680f7;animation:pv-spin-35d5e397 .9s linear infinite}@keyframes pv-spin-35d5e397{to{transform:rotate(360deg)}}.bar-fill.data-v-35d5e397,.btn-blue.data-v-35d5e397{background:linear-gradient(90deg,#2680f7,#3e9bff)}

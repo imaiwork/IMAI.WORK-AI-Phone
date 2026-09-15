@@ -11,6 +11,8 @@ class SvDeviceViralRecord extends BaseModel {
     public const IMAGE_REWRITE_STATUS_SUCCESS = 3;
     public const IMAGE_REWRITE_STATUS_FAIL = 4;
 
+    /** 状态：异常/提取失败（爆款库可见失败原因） */
+    public const STATUS_ERROR = 5;
     /** 状态：符合条件（爆款库可见成功记录） */
     public const STATUS_QUALIFIED = 4;
     /** 状态：3点兜底降级文案 */

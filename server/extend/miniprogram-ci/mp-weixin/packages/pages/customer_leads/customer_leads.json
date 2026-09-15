@@ -4,10 +4,10 @@
   "disableScroll": true,
   "usingComponents": {
     "u-navbar": "../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
-    "u-icon": "../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
-    "empty": "../../../components/empty/empty",
     "z-paging": "../../../node-modules/z-paging/components/z-paging/z-paging",
-    "action-row": "./components/action-row",
+    "leads-overview": "./components/leads-overview",
+    "customer-record": "./components/customer-record",
+    "leads-empty": "./components/leads-empty",
     "customer-leads-skeleton": "./components/customer-leads-skeleton",
     "detail-popup": "./components/popups/detail-popup",
     "track-popup": "./components/popups/track-popup",

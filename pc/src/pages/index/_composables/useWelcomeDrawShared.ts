@@ -50,6 +50,11 @@ export function useWelcomeDrawShared(deps: {
         return true
     }
 
+    /** 任务出结果(成功/失败/退费)后同步一次算力，右上角实时反映本次消耗 */
+    function syncUserTokens() {
+        userStore.refreshTokens()
+    }
+
     function bindDrawConversation(mode: 'image' | 'video' | 'ppt', id: number | string) {
         const num = Number(id) || 0
         if (num <= 0) return
@@ -72,6 +77,7 @@ export function useWelcomeDrawShared(deps: {
     return {
         ensureHasTokens,
         ensureEnoughTokens,
+        syncUserTokens,
         bindDrawConversation,
         clearDrawConversationUrl
     }

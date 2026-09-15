@@ -27,7 +27,7 @@ class DigitalHumanAnchorCron extends Command
         print_r("\n公共数字人形象任务2...'\n");
         DigitalHumanLogic::getDigitalHumanAnchorStatusCron();
         print_r("\n公共数字人形象任务3...'\n");
-        DigitalHumanLogic::getDigitalHumanAnchorFailedStatusCron(); //1小时以上的失败任务处理
+        DigitalHumanLogic::getDigitalHumanAnchorFailedStatusCron(); //0/1超1小时、4超2小时收口
         print_r("\n公共数字人形象任务4...'\n");
         DigitalHumanLogic::digitalHumanAnchorReturnCron(); //公共数字人创建失败退费
         print_r("\n公共数字人形象任务5...'\n");

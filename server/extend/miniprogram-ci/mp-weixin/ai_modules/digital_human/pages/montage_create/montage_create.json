@@ -27,6 +27,7 @@
     "choose-agent": "../../components/choose-agent/choose-agent",
     "recorder-control": "../../components/recorder-control/recorder-control",
     "copywriter-empty": "../../components/copywriter-empty/copywriter-empty",
-    "video-cover-upload": "../../components/video-cover-upload/video-cover-upload"
+    "video-cover-upload": "../../components/video-cover-upload/video-cover-upload",
+    "advanced-setting": "../../components/advanced-setting/advanced-setting"
   }
 }

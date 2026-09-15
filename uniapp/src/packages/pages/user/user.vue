@@ -811,7 +811,7 @@ const handleSettingItem = (item: SettingItem) => {
             uni.$u.route({ url: "/packages/pages/tutorial/tutorial" });
             break;
         case "order":
-            uni.$u.route({ url: "/packages/pages/user_balance/user_balance?type=order" });
+            uni.$u.route({ url: "/packages/pages/user_balance/user_balance" });
             break;
         case "privacy":
             openPolicyPopup("privacy");

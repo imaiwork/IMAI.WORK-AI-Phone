@@ -6,6 +6,7 @@ namespace app\common\workerman\rpa;
 
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDevice;
+use app\common\service\log\ThinkFileLogDir;
 use app\common\workerman\rpa\Routing\HandlerRegistry;
 use app\common\workerman\rpa\Support\ChannelBus;
 use app\common\workerman\rpa\Support\ConnectionRepository;
@@ -249,8 +250,10 @@ class RpaSocketService
             ], 'info');
 
             if (($connection->clientType ?? '') === WorkerEnum::WS_DEVICE_TYPE && $deviceId !== '') {
+                // 只要本连接订阅过该设备频道，就无条件取消订阅，避免旧连接被替换后订阅泄漏
+                $this->channelBus->unsubscribe("device.{$deviceId}.message");
+
                 if ($activeDeviceUid === null || $activeDeviceUid === $uid) {
-                    $this->channelBus->unsubscribe("device.{$deviceId}.message");
                     if (isset($this->worker->devices)) {
                         unset($this->worker->devices[$deviceId]);
                     }
@@ -748,21 +751,104 @@ class RpaSocketService
         return !in_array($type, ['ping', '0', '2000', '2001', (string)WorkerEnum::RPA_DEVICE_RUNNING_LOG], true);
     }
 
+    private static int $socketLogFailCount = 0;
+    private static int $socketLogFailThreshold = 3;
+    private static int $socketLogFdThreshold = 3000;
+    private static int $socketLogFdRecoverThreshold = 2500;
+    private static int $socketLogFdCheckInterval = 180;
+    private static int $socketLogMinDisableDuration = 60;
+    private static int $socketLogDisabledAt = 0;
+    private static int $socketLogLastFdCheckAt = 0;
+
+    private static function getSocketFdCount(): ?int
+    {
+        $fdDir = '/proc/self/fd';
+        if (!is_dir($fdDir)) {
+            return null;
+        }
+
+        try {
+            return iterator_count(new \FilesystemIterator($fdDir, \FilesystemIterator::SKIP_DOTS));
+        } catch (\Throwable $ignored) {
+            return null;
+        }
+    }
+
+    private function shouldSkipSocketLog(): bool
+    {
+        if (!$this->isWriteLog) {
+            $now = time();
+            if ($now - self::$socketLogLastFdCheckAt < self::$socketLogFdCheckInterval) {
+                return true;
+            }
+            self::$socketLogLastFdCheckAt = $now;
+
+            if (self::$socketLogDisabledAt > 0 && $now - self::$socketLogDisabledAt < self::$socketLogMinDisableDuration) {
+                return true;
+            }
+
+            $count = self::getSocketFdCount();
+            if ($count !== null && $count < self::$socketLogFdRecoverThreshold) {
+                $this->isWriteLog = true;
+                self::$socketLogDisabledAt = 0;
+                self::$socketLogFailCount = 0;
+                fwrite(STDERR, "[socket] fd 已回落 ({$count})，自动恢复 socket 日志" . PHP_EOL);
+                return false;
+            }
+
+            return true;
+        }
+
+        $now = time();
+        if ($now - self::$socketLogLastFdCheckAt < self::$socketLogFdCheckInterval) {
+            return false;
+        }
+        self::$socketLogLastFdCheckAt = $now;
+
+        $count = self::getSocketFdCount();
+        if ($count !== null && $count >= self::$socketLogFdThreshold) {
+            $this->isWriteLog = false;
+            self::$socketLogDisabledAt = time();
+            fwrite(STDERR, "[socket] fd 已接近上限 ({$count})，自动关闭 socket 日志" . PHP_EOL);
+            return true;
+        }
+
+        return false;
+    }
+
     public function setLog(string|array|\Throwable $content, $level = 'info'): void
     {
+        if ($this->shouldSkipSocketLog()) {
+            return;
+        }
+
         try {
-            if (!$this->isWriteLog) {
-                return;
-            }
             if ($content instanceof \Throwable) {
                 $content = $content->getTraceAsString();
             }
             if (is_array($content)) {
                 $content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             }
+            ThinkFileLogDir::ensureChannel('socket');
             Log::channel('socket')->write($content, $level);
+            self::$socketLogFailCount = 0;
         } catch (\Throwable $th) {
-            Log::channel('socket')->write($th, 'error');
+            // fd 耗尽时不能再写文件，否则 worker 会被日志失败拖崩溃
+            self::$socketLogFailCount++;
+            try {
+                fwrite(STDERR, '[' . date('Y-m-d H:i:s') . '] socket 日志写入失败: ' . $th->getMessage() . PHP_EOL);
+            } catch (\Throwable $ignored) {
+                // 静默丢弃
+            }
+
+            if (self::$socketLogFailCount >= self::$socketLogFailThreshold) {
+                $this->isWriteLog = false;
+                self::$socketLogDisabledAt = time();
+                try {
+                    fwrite(STDERR, '[socket] 连续日志失败 ' . self::$socketLogFailCount . ' 次，已自动关闭 socket 日志' . PHP_EOL);
+                } catch (\Throwable $ignored) {
+                }
+            }
         }
     }
 
@@ -1092,18 +1178,27 @@ class RpaSocketService
             return;
         }
 
+        if ($this->redis !== null) {
+            try {
+                $this->redis->close();
+            } catch (\Throwable $e) {
+                // 强制重连时旧连接可能已不可用，忽略关闭异常
+            }
+            $this->redis = null;
+        }
+
         $timeout = (float)env('WORKERMAN.REDIS_TIMEOUT', 2);
         if ($timeout <= 0) {
             $timeout = 2;
         }
 
         $this->redis = new Redis([
-            'host' => env('redis.HOST', '127.0.0.1'),
-            'port' => env('redis.PORT', 6379),
+            'host'     => env('redis.HOST', '127.0.0.1'),
+            'port'     => env('redis.PORT', 6379),
             'password' => env('redis.PASSWORD', '123456'),
-            'select' => env('redis.WS_SELECT', 8),
-            'timeout' => $timeout,
-            'persistent' => true,
+            'select'   => env('redis.WS_SELECT', 8),
+            'timeout'  => $timeout,
+            'persistent' => false,
         ]);
     }
 }

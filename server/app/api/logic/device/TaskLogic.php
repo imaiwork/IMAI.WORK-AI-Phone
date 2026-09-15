@@ -23,6 +23,8 @@ use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvDeviceTaskLog;
+use app\common\model\sv\SvDySearchTask;
+use app\common\model\sv\SvDySearchTaskDevice;
 use app\common\model\sv\SvGroupBuyTaskAccount;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSettingAccount;
@@ -106,10 +108,12 @@ class TaskLogic extends ApiLogic
     public static function updateTaskStatusByIds(array $taskIds)
     {
         if (!empty($taskIds)) {
-            SvDeviceTask::where('id', 'in', $taskIds)->update([
-                'status' => DeviceEnum::TASK_STATUS_FAILED,
-                'remark' => '任务被其他任务覆盖'
-            ]);
+            SvDeviceTask::where('id', 'in', $taskIds)
+                ->where('user_id', self::$uid)
+                ->update([
+                    'status' => DeviceEnum::TASK_STATUS_FAILED,
+                    'remark' => '任务被其他任务覆盖'
+                ]);
         }
     }
 
@@ -524,7 +528,11 @@ class TaskLogic extends ApiLogic
 
                 case DeviceEnum::TASK_SOURCE_FRIENDS:
                     //sv_crawling_manual_task
-                    SvCrawlingManualTask::where('id', $params['sub_task_id'])->select()->delete();
+                    $taskinfo = SvCrawlingManualTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty();
+                    if ($taskinfo->isEmpty()) {
+                        throw new \Exception('加好友任务不存在');
+                    }
+                    $taskinfo->delete();
                     break;
 
                 case DeviceEnum::TASK_SOURCE_CLUES:
@@ -647,6 +655,24 @@ class TaskLogic extends ApiLogic
                     //     throw new \Exception('个微rpa任务不存在');
                     // }
                     //SvWechatStrategy::where('id', $params['sub_task_id'])->select()->delete();
+                    break;
+                case DeviceEnum::TASK_SOURCE_DY_SEARCH:
+                    $taskinfo = SvDySearchTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty();
+                    if ($taskinfo->isEmpty()) {
+                        throw new \Exception('获客任务不存在');
+                    }
+                    SvDySearchTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->select()->delete();
+                    SvDySearchTaskDevice::where('task_id', $params['sub_task_id'])->where('user_id', self::$uid)->select()->delete();
+                    SvDeviceTask::where('sub_task_id', $params['sub_task_id'])
+                        ->where('user_id', self::$uid)
+                        ->where('source', 'in', [
+                            DeviceEnum::TASK_SOURCE_DY_SEARCH,
+                            DeviceEnum::TASK_SOURCE_DY_SEARCH_WECHAT,
+                        ])
+                        ->select()
+                        ->delete();
+                    break;
+                case DeviceEnum::TASK_SOURCE_DY_SEARCH_WECHAT:
                     break;
                 default:
 
@@ -855,6 +881,28 @@ class TaskLogic extends ApiLogic
                     }
                     $task['detail'] = $taskinfo;
                     break;
+                case DeviceEnum::TASK_SOURCE_DY_SEARCH:
+                    $taskinfo = SvDySearchTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('获客任务不存在');
+                    }
+                    $detail = SvDySearchTaskDevice::where('task_id', $taskinfo['id'])
+                        ->where('device_code', $task['device_code'])
+                        ->findOrEmpty()
+                        ->toArray();
+                    if ($detail) {
+                        $detail['name'] = $taskinfo['name'] ?? '';
+                        $task['detail'] = $detail;
+                    }
+                    break;
+                case DeviceEnum::TASK_SOURCE_DY_SEARCH_WECHAT:
+                    $taskinfo = SvDySearchTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('获客任务不存在');
+                    }
+                    $taskinfo['name'] = $taskinfo['name'] ?? ($task['task_name'] ?? '');
+                    $task['detail'] = $taskinfo;
+                    break;
                 default:
 
                     throw new \Exception('参数错误');
@@ -870,7 +918,7 @@ class TaskLogic extends ApiLogic
             ];
             $account_info = SvAccount::where($where)->findOrEmpty();
             if (!$account_info->isEmpty()) {
-                $account_info['type'] = (int)$source === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $account_info['type'];
+                $account_info['type'] = DeviceEnum::isWechatAccountDisplay($source) ? 2 : $account_info['type'];
                 $task['account_info'] = $account_info;
             } else {
                 $account_info['type'] = $task['account_type'];
@@ -883,7 +931,7 @@ class TaskLogic extends ApiLogic
                     'type' => $task['account_type']
                 ];
             }
-            $task['account_type'] = (int)$source === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $task['account_type'];
+            $task['account_type'] = DeviceEnum::isWechatAccountDisplay($source) ? 2 : $task['account_type'];
 
             //$task['task_category'] = !in_array($task['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskTypeDesc($task['task_type']) : DeviceEnum::getTaskSceneDesc($task['task_scene']);
             $task['task_category'] = DeviceEnum::getAccountTypeDesc($task['account_type']) . DeviceEnum::getTaskSceneDesc($task['task_scene']);
@@ -900,7 +948,12 @@ class TaskLogic extends ApiLogic
             if($task['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH){
                 $task['task_category'] = strpos($task['task_name'], '图文') !== false ? str_replace('视频', '图文', $task['task_category']) : $task['task_category'];
             }
-
+            if($task['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH){
+                $task['task_category'] = '抖音获客';
+            }
+            if($task['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH_WECHAT){
+                $task['task_category'] = '抖音获客加微';
+            }
             $task['start_time'] = date('H:i', $task['start_time']);
             $task['end_time'] = date('H:i', $task['end_time']);
             $task['task_type'] = DeviceEnum::getTaskTypeByAuto($task['task_type']);
@@ -1051,6 +1104,15 @@ class TaskLogic extends ApiLogic
                     }
                     $name =  $params['name'] ?? $taskinfo['task_name'];
                     SvCityTouchTask::where('id', $taskinfo['id'])->update(['task_name' => $name]);
+                    break;
+                case DeviceEnum::TASK_SOURCE_DY_SEARCH:
+                case DeviceEnum::TASK_SOURCE_DY_SEARCH_WECHAT:
+                    $taskinfo = SvDySearchTask::where('id', $params['sub_task_id'])->where('user_id', self::$uid)->findOrEmpty()->toArray();
+                    if (!$taskinfo) {
+                        throw new \Exception('获客任务不存在');
+                    }
+                    $name = $params['name'] ?? $taskinfo['name'];
+                    SvDySearchTask::where('id', $taskinfo['id'])->update(['name' => $name]);
                     break;
                 default:
 

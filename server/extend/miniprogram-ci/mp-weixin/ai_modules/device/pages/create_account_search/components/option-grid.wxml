@@ -1,0 +1,1 @@
+<view class="{{['grid', 'gap-_12rpx_', b]}}"><view wx:for="{{a}}" wx:for-item="item" wx:key="c" class="{{['h-_76rpx_', 'rounded-_18rpx_', 'flex', 'items-center', 'justify-center', 'border', 'border-solid', 'transition-all', 'duration-200', item.d]}}" bindtap="{{item.e}}"><text class="{{['text-_26rpx_', item.b]}}">{{item.a}}</text></view></view>

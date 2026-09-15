@@ -151,7 +151,7 @@
                 <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="素材类型" prop="material_type" min-width="120" show-overflow-tooltip>
                     <template #default="{ row }">
-                        {{ row.material_type === 1 ? "视频" : "图片" }}
+                        {{ MATERIAL_TYPE_LABEL[Number(row.material_type)] ?? "未知" }}
                     </template>
                 </el-table-column>
                 <el-table-column label="素材名称" prop="material_name" min-width="180" show-overflow-tooltip />
@@ -216,6 +216,19 @@ import AiEmployeeSection from "./components/ai-employee-section.vue";
 import feedback from "@/utils/feedback";
 import { downloadFile } from "@/utils/util";
 
+/** 人设素材类型，与服务端 Material::MATERIAL_TYPE_* 对齐 */
+enum MaterialTypeEnum {
+    VIDEO = 1,
+    IMAGE = 2,
+    MUSIC = 3,
+}
+
+const MATERIAL_TYPE_LABEL: Record<number, string> = {
+    [MaterialTypeEnum.VIDEO]: "视频",
+    [MaterialTypeEnum.IMAGE]: "图片",
+    [MaterialTypeEnum.MUSIC]: "音乐",
+};
+
 const route = useRoute();
 const id = route.query.id;
 const detail = ref<any>({});
@@ -227,9 +240,10 @@ const previewUrl = ref<string>("");
 const showEditPop = ref(false);
 const editPopRef = ref<InstanceType<typeof EditPop>>();
 
+// exclude_hotspot: IP 创作记录只看人设自己的创作，热点追踪有独立后台模块，不并进来
 const { pager, getLists } = usePaging({
     fetchFun: getMontageCreateVideoRecord,
-    params: { persona_id: id },
+    params: { persona_id: id, exclude_hotspot: 1 },
     size: 5,
 });
 
@@ -274,7 +288,11 @@ const handleDeleteMaterial = async (row: any) => {
 };
 
 const handleMaterialClick = (row: any) => {
-    if (row.material_type == 1) {
+    // 音乐既不是图片也不是视频，塞进图片预览只会弹出一个裂图
+    if (Number(row.material_type) === MaterialTypeEnum.MUSIC) {
+        return;
+    }
+    if (Number(row.material_type) === MaterialTypeEnum.VIDEO) {
         showPreviewVideo.value = true;
     } else {
         showPreviewImage.value = true;

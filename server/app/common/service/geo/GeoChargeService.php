@@ -7,6 +7,7 @@ use app\common\logic\AccountLogLogic;
 use app\common\model\chat\ModelsCost;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
+use app\common\service\chat\ChatBillingService;
 use app\common\service\GeoService;
 use think\facade\Log;
 
@@ -14,7 +15,9 @@ use think\facade\Log;
  * GEO 算力计费 —— 直接按【模型】计费,与对话(ChatBillingService)同一定价体系:
  *  - 单价来自 models_cost 表(后台「AI 模型」页,可从中台同步),按中台响应里的
  *    实际 model 别名取行:quota_type=1 固定 model_price/次,否则
- *    (输入tokens+输出tokens) × price ÷ 1000(统一按后台「AI模型」编辑页出售价,输入输出同价)
+ *    (输入tokens × price + 输出tokens × output_price) ÷ 1000
+ *    与对话一致,避免 deepseek-v4-pro 等高输出倍率模型按输入价卖亏
+ *  - 输入售价不低于 cost_price(中台同步成本),防止手动改低后站长倒挂
  *  - GEO 不再叠加 model_config 的 geo_* 场景价("算力/次"),场景常量仅保留
  *    账变编号与名称,供流水渲染与幂等键使用
  *  - models_cost 无该模型行时不扣费并告警(宁可漏收不误扣)
@@ -148,24 +151,33 @@ class GeoChargeService
             Log::warning("GEO 模型计费:models_cost 无模型行,按免费放行(model={$alias})");
             return ['points' => 0.0, 'alias' => $alias, 'unit' => '未配置'];
         }
-        if ((int)$cost['quota_type'] === 1) {
-            return ['points' => round((float)$cost['model_price'], 2), 'alias' => $alias, 'unit' => $cost['model_price'] . ' 算力/次'];
+        $prompt = (int)($usage['prompt'] ?? $usage['prompt_tokens'] ?? 0);
+        $completion = (int)($usage['completion'] ?? $usage['completion_tokens'] ?? 0);
+        $total = (int)($usage['total'] ?? $usage['total_tokens'] ?? 0);
+        $billing = $cost;
+        $inputPrice = max((float)($cost['price'] ?? 0), (float)($cost['cost_price'] ?? 0));
+        $outputPrice = (float)($cost['output_price'] ?? 0);
+        if ($outputPrice <= 0) {
+            $outputPrice = $inputPrice;
         }
-        $prompt = (int)($usage['prompt'] ?? 0);
-        $completion = (int)($usage['completion'] ?? 0);
-        // 中台只回 total 时并入统一单价折算,避免漏计
-        if ($prompt + $completion <= 0) {
-            $prompt = (int)($usage['total'] ?? 0);
+        $billing['price'] = $inputPrice;
+        $billing['output_price'] = $outputPrice;
+        $points = ChatBillingService::calculatePoints($billing, [
+            'prompt_tokens' => $prompt,
+            'completion_tokens' => $completion,
+            'total_tokens' => $total,
+        ]);
+        if ((int)($cost['quota_type'] ?? 0) === 1) {
+            return [
+                'points' => $points,
+                'alias' => $alias,
+                'unit' => ($cost['model_price'] ?? 0) . ' 算力/次',
+            ];
         }
-        // 2026-08-19 口径变更:统一按后台「AI模型」编辑页的出售价(models_cost.price)
-        // 计费,输入输出同价 —— 该页面只展示/编辑这一个价,output_price 无编辑入口,
-        // 双价计费会造成账单单价与后台页面对不上(用户明确要求以 detail 接口价格为准)
-        $price = (float)$cost['price'];
-        $points = round(($prompt + $completion) * $price / 1000, 2);
         return [
             'points' => $points,
             'alias' => $alias,
-            'unit' => "{$cost['price']} 算力/千tokens",
+            'unit' => "输入 {$inputPrice} / 输出 {$outputPrice} 算力/千tokens",
         ];
     }
 
@@ -270,8 +282,8 @@ class GeoChargeService
     }
 
     /**
-     * 按实际 token 结算(仅 TOKEN_SCENES):points = 总token ÷ 单价(tokens/算力)。
-     * 对齐系统既有按量场景(KnowledgeLogic/ChatBillingService)口径;
+     * 按实际 token 结算(仅 TOKEN_SCENES):与对话同口径
+     * (输入 × price + 输出 × output_price) / 1000;
      * 中台成功必带 usage;无用量视为未成功,不扣费。
      * @param array $usage ['prompt'=>int,'completion'=>int,'total'=>int,'model'=>string]
      * @return float 实际扣除的算力(未扣返回 0)

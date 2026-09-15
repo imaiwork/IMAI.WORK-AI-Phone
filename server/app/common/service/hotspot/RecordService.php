@@ -4,6 +4,7 @@ namespace app\common\service\hotspot;
 
 use app\common\model\hotspot\HotspotAnalysis;
 use app\common\model\hotspot\HotspotCreation;
+use app\common\model\hotspot\HotspotTask;
 
 class RecordService
 {
@@ -128,12 +129,12 @@ class RecordService
             return [];
         }
 
-        $marks = [];
+        $marks = self::emptyAnalyzedMap();
         try {
             $marks = self::loadAnalyzedMap($userId, $platform, $topics);
         } catch (\Throwable $e) {
             HotspotLog::exception('热榜回填已分析失败', $e);
-            $marks = [];
+            $marks = self::emptyAnalyzedMap();
         }
 
         $out = [];
@@ -142,8 +143,10 @@ class RecordService
                 continue;
             }
             $title = self::normalizeTopic($topic['title'] ?? '');
-            $analysisId = (int)($marks[$title] ?? 0);
-            $topic['analyzed'] = $analysisId > 0;
+            $analysisId = (int)($marks['analysis'][$title] ?? 0);
+            // 不选人设走「搜索→文案→合成」，不产生人设契合记录：有任务同样代表这条热点做过，
+            // 且 lastFlow 能还原上次现场，不一起标记就会漏标、还原也进不去（白重跑一次收费搜索）
+            $topic['analyzed'] = $analysisId > 0 || !empty($marks['task'][$title]);
             $topic['analysis_id'] = $analysisId;
             $out[] = $topic;
         }
@@ -264,10 +267,16 @@ class RecordService
         return $label !== '' ? $label : '—';
     }
 
+    /** 「已分析」两个来源：选人设的人设契合记录、以及任务（不选人设只会留下任务） */
+    private static function emptyAnalyzedMap(): array
+    {
+        return ['analysis' => [], 'task' => []];
+    }
+
     private static function loadAnalyzedMap(int $userId, string $platform, array $topics): array
     {
         if ($userId <= 0) {
-            return [];
+            return self::emptyAnalyzedMap();
         }
 
         $titles = [];
@@ -281,12 +290,13 @@ class RecordService
             }
         }
         if ($titles === []) {
-            return [];
+            return self::emptyAnalyzedMap();
         }
 
+        $titleList = array_keys($titles);
         $rows = HotspotAnalysis::where('user_id', $userId)
             ->where('platform', $platform)
-            ->whereIn('topic', array_keys($titles))
+            ->whereIn('topic', $titleList)
             ->field(['id', 'topic'])
             ->order('id', 'desc')
             ->select();
@@ -300,14 +310,28 @@ class RecordService
             $map[$topic] = (int)$row->id;
         }
 
+        $taskMap = [];
+        $taskRows = HotspotTask::where('user_id', $userId)
+            ->where('platform', $platform)
+            ->whereIn('topic', $titleList)
+            ->field(['topic'])
+            ->select();
+        foreach ($taskRows as $taskRow) {
+            $taskTopic = self::normalizeTopic($taskRow->topic ?? '');
+            if ($taskTopic !== '') {
+                $taskMap[$taskTopic] = true;
+            }
+        }
+
         HotspotLog::write(sprintf(
-            '热榜回填已分析：用户=%d 平台=%s 话题数=%d 命中=%d',
+            '热榜回填已分析：用户=%d 平台=%s 话题数=%d 分析命中=%d 任务命中=%d',
             $userId,
             $platform,
             count($titles),
-            count($map)
+            count($map),
+            count($taskMap)
         ));
-        return $map;
+        return ['analysis' => $map, 'task' => $taskMap];
     }
 
     private static function newRecordNo(string $prefix, string $table): string

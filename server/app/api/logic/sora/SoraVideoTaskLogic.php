@@ -33,6 +33,31 @@ class SoraVideoTaskLogic extends ApiLogic
     const SEEDANCE2_720P_IMAGE2VIDEO_CREATE = 'seedance2_720p_image2video_create';
     const SEEDANCE2_720P_VIDEO2VIDEO_CREATE = 'seedance2_720p_video2video_create';
 
+    /**
+     * 回调落库的终态 CAS：只在该行仍是在途态（0/1/4）时写入。
+     *
+     * 不用 lock(true) 行锁：三个 notify 在事务里要先下载整段视频再截帧，锁一持有几十秒，
+     * checkStatus() 那边的条件更新会等到 innodb_lock_wait_timeout 抛异常、整轮 cron 中断。
+     * 改成写入时比对状态：抢不到说明轮询（或另一次回调）已推成终态，回滚本次事务
+     * （连带撤销刚写的父设置计数与退费流水），只留一份终态。
+     *
+     * @return bool 是否真的写入；false 时调用方需 Db::rollback()
+     */
+    private static function saveTaskIfPending(SoraVideoTask $task): bool
+    {
+        $changed = $task->getChangedData();
+        if (!$changed) {
+            return true;
+        }
+        $changed['update_time'] = time();
+        $affected = SoraVideoTask::where('id', $task->id)->whereIn('status', [0, 1, 4])->update($changed);
+        if (!$affected) {
+            Log::channel('sora')->warning('回调落库被跳过：任务已不是在途态, id=' . $task->id . ' task_id=' . $task->task_id);
+            return false;
+        }
+        return true;
+    }
+
     public static function notifyNew(array $data)
     {
         if (empty($data['task_id'])) {
@@ -48,6 +73,12 @@ class SoraVideoTaskLogic extends ApiLogic
         }
         Db::startTrans();
         try {
+            // 重读在途态（不加行锁，原因见 saveTaskIfPending），终态由末尾的条件更新保证只写一次
+            $task = SoraVideoTask::where('id', $task->id)->where('status', 'in', [0, 1, 4])->find();
+            if (!$task) {
+                Db::commit();
+                return true;
+            }
             if (isset($data['status'])) {
                 $SoraVideoSetting = SoraVideoSetting::where('id', $task->video_setting_id)->findOrEmpty();
                 if ($SoraVideoSetting->isEmpty()) {
@@ -111,6 +142,7 @@ class SoraVideoTaskLogic extends ApiLogic
                         $task->pic = $thumbnailResult['url'];
                     }
                 } else if ($data['status'] === 'pending') {
+                    Db::rollback();
                     return true;
                 } else {
                     $status = '生成失败';
@@ -123,16 +155,11 @@ class SoraVideoTaskLogic extends ApiLogic
                     $SoraVideoSetting->save();
                     $userId = $task->user_id;
                     $taskId = $task->task_id;
-                    $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-                    //查询是否已返还
-                    if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                        $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                        AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-                    }
+                    AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
                 }
 
                 $mnpMessage = [
-                    'openid' => UserAuth::where('user_id', $task->user_id)->order('id', 'desc')->value('openid'),
+                    'openid' => UserAuth::mnpOpenid((int)$task->user_id),
                     'scene_id' => 402,
                     'name' => $task->name,
                     'time' => date('Y-m-d H:i:s', time()),
@@ -141,12 +168,14 @@ class SoraVideoTaskLogic extends ApiLogic
                 WechatLogic::sendMnpMessage($mnpMessage);
             }
 
-            $task->update_time = time();
-            $task->save();
+            if (!self::saveTaskIfPending($task)) {
+                Db::rollback();
+                return true;
+            }
 
             Db::commit();
             return true;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Db::rollback();
             Log::channel('sora')->error('Notify 处理失败, task_id: ' . $data['task_id'] . ', Error: ' . $e->getMessage());
             self::setError($e->getMessage());
@@ -169,6 +198,12 @@ class SoraVideoTaskLogic extends ApiLogic
         }
         Db::startTrans();
         try {
+            // 重读在途态（不加行锁，原因见 saveTaskIfPending），终态由末尾的条件更新保证只写一次
+            $task = SoraVideoTask::where('id', $task->id)->where('status', 'in', [0, 1, 4])->find();
+            if (!$task) {
+                Db::commit();
+                return true;
+            }
             if (isset($data['state'])) {
                 $SoraVideoSetting = SoraVideoSetting::where('id', $task->video_setting_id)->findOrEmpty();
                 if ($SoraVideoSetting->isEmpty()) {
@@ -208,12 +243,7 @@ class SoraVideoTaskLogic extends ApiLogic
                         $SoraVideoSetting->save();
                         $userId = $task->user_id;
                         $taskId = $task->task_id;
-                        $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-                        //查询是否已返还
-                        if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                            $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                            AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-                        }
+                        AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
                         break;
                     case 'succeeded':
                         $status = '生成成功';
@@ -264,7 +294,7 @@ class SoraVideoTaskLogic extends ApiLogic
                 }
 
                 $mnpMessage = [
-                    'openid' => UserAuth::where('user_id', $task->user_id)->order('id', 'desc')->value('openid'),
+                    'openid' => UserAuth::mnpOpenid((int)$task->user_id),
                     'scene_id' => 402,
                     'name' => $task->name,
                     'time' => date('Y-m-d H:i:s', time()),
@@ -273,12 +303,14 @@ class SoraVideoTaskLogic extends ApiLogic
                 WechatLogic::sendMnpMessage($mnpMessage);
             }
 
-            $task->update_time = time();
-            $task->save();
+            if (!self::saveTaskIfPending($task)) {
+                Db::rollback();
+                return true;
+            }
 
             Db::commit();
             return true;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Db::rollback();
             Log::channel('sora')->error('Notify 处理失败, task_id: ' . $data['task_id'] . ', Error: ' . $e->getMessage());
             self::setError($e->getMessage());
@@ -301,6 +333,12 @@ class SoraVideoTaskLogic extends ApiLogic
         }
         Db::startTrans();
         try {
+            // 重读在途态（不加行锁，原因见 saveTaskIfPending），终态由末尾的条件更新保证只写一次
+            $task = SoraVideoTask::where('id', $task->id)->where('status', 'in', [0, 1, 4])->find();
+            if (!$task) {
+                Db::commit();
+                return true;
+            }
             if (isset($data['status'])) {
                 $SoraVideoSetting = SoraVideoSetting::where('id', $task->video_setting_id)->findOrEmpty();
                 if ($SoraVideoSetting->isEmpty()) {
@@ -340,12 +378,7 @@ class SoraVideoTaskLogic extends ApiLogic
                         $SoraVideoSetting->save();
                         $userId = $task->user_id;
                         $taskId = $task->task_id;
-                        $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-                        //查询是否已返还
-                        if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                            $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                            AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-                        }
+                        AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
                         break;
                     case 'succeeded':
                         $status = '生成成功';
@@ -407,7 +440,7 @@ class SoraVideoTaskLogic extends ApiLogic
 
                 if (isset($status) && ($status == '生成成功' || $status == '生成失败')){
                     $mnpMessage = [
-                        'openid' => UserAuth::where('user_id', $task->user_id)->order('id', 'desc')->value('openid'),
+                        'openid' => UserAuth::mnpOpenid((int)$task->user_id),
                         'scene_id' => 402,
                         'name' => $task->name,
                         'time' => date('Y-m-d H:i:s', time()),
@@ -415,16 +448,19 @@ class SoraVideoTaskLogic extends ApiLogic
                     ];
                     WechatLogic::sendMnpMessage($mnpMessage);
                 }else{
+                    Db::rollback();
                     return true;
                 }
             }
 
-            $task->update_time = time();
-            $task->save();
+            if (!self::saveTaskIfPending($task)) {
+                Db::rollback();
+                return true;
+            }
 
             Db::commit();
             return true;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Db::rollback();
             Log::channel('seedance')->error('Notify 处理失败, task_id: ' . $data['task_id'] . ', Error: ' . $e->getMessage());
             self::setError($e->getMessage());
@@ -536,7 +572,10 @@ class SoraVideoTaskLogic extends ApiLogic
                         'status' => 3,
                         'update_time' => time()
                     ];
-                    SoraVideoTask::where('id', $task['id'])->update($update);
+                    // 终态 CAS：回调已先把任务推成终态时不再改写、不再重复计数
+                    if (!SoraVideoTask::where('id', $task['id'])->whereIn('status', [0, 1, 4])->update($update)) {
+                        continue;
+                    }
                     $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
                     if (!$setting->isEmpty()) {
                         $setting->inc('success_num')->save();
@@ -582,16 +621,27 @@ class SoraVideoTaskLogic extends ApiLogic
                         'status' => 3,
                         'update_time' => time()
                     ];
-                    SoraVideoTask::where('id', $task['id'])->update($update);
+                    // 终态 CAS：回调已先把任务推成终态时不再改写、不再重复计数
+                    if (!SoraVideoTask::where('id', $task['id'])->whereIn('status', [0, 1, 4])->update($update)) {
+                        continue;
+                    }
                     $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
                     if (!$setting->isEmpty()) {
                         $setting->inc('success_num')->save();
                     }
                     continue;
-                }else if(isset($result['data']['status']) && $result['data']['status'] == 'running'){
-                    continue;
-                }else if (isset($result['data']['status']) && $result['data']['status'] == 'queued'){
-                    continue;
+                }else if(isset($result['data']['status']) && in_array($result['data']['status'], ['running', 'queued'], true)){
+                    // 在途状态没有 limit，每轮都会重查；上游一直不给终态的任务 24 小时后收口退费，
+                    // 否则这批任务会永远挂"生成中"并每轮吃一次上游查询
+                    // 模型访问器已把 create_time 格式化成日期串，这里要转回时间戳
+                    if ((int)strtotime((string)$task['create_time']) > time() - 86400) {
+                        continue;
+                    }
+                    $errorUpdate = [
+                        'status' => 2,
+                        'remark' => '超过24小时未完成，已自动标记失败',
+                        'update_time' => time()
+                    ];
                 }else if(isset($result['data']['error'])){
                     if ($result['data']['error']['code'] == 'OutputVideoSensitiveContentDetected.PolicyViolation'){
                         $errorMsg = '请求失败，输出视频可能涉及版权限制';
@@ -632,13 +682,11 @@ class SoraVideoTaskLogic extends ApiLogic
             } else{
                 $typeID = AccountLogEnum::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_480P;
             }
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
+            // 终态 CAS 先行：抢不到说明回调已处理，不重复退费、不重复计数
+            if (!SoraVideoTask::where('id', $task['id'])->whereIn('status', [0, 1, 4])->update($errorUpdate)) {
+                continue;
             }
-            SoraVideoTask::where('id', $task['id'])->update($errorUpdate);
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
             $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
             if (!$setting->isEmpty()) {
                 $setting->inc('error_num')->save();
@@ -815,7 +863,10 @@ class SoraVideoTaskLogic extends ApiLogic
                         'status' => 3,
                         'update_time' => time()
                     ];
-                    SoraVideoTask::where('id', $task['id'])->update($update);
+                    // 终态 CAS：回调已先把任务推成终态时不再改写、不再重复计数
+                    if (!SoraVideoTask::where('id', $task['id'])->whereIn('status', [0, 1, 4])->update($update)) {
+                        continue;
+                    }
                     $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
                     if (!$setting->isEmpty()) {
                         $setting->inc('success_num')->save();
@@ -844,13 +895,11 @@ class SoraVideoTaskLogic extends ApiLogic
             } else {
                 $typeID = AccountLogEnum::TOKENS_DEC_SORA_VIDEO;
             }
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
+            // 终态 CAS 先行：抢不到说明回调已处理，不重复退费、不重复计数
+            if (!SoraVideoTask::where('id', $task['id'])->whereIn('status', [0, 1, 4])->update($errorUpdate)) {
+                continue;
             }
-            SoraVideoTask::where('id', $task['id'])->update($errorUpdate);
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
             $setting = SoraVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
             if (!$setting->isEmpty()) {
                 $setting->inc('error_num')->save();

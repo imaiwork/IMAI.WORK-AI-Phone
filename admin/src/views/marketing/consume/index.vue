@@ -34,6 +34,12 @@
                 <el-form-item>
                     <el-button type="primary" @click="resetPage">查询</el-button>
                     <el-button @click="resetParams">重置</el-button>
+                    <export-data
+                        class="ml-2.5"
+                        :fetch-fun="getConsumeLists"
+                        :params="queryParams"
+                        :page-size="pager.size"
+                    />
                 </el-form-item>
             </el-form>
         </el-card>
@@ -129,5 +135,10 @@ const shouldShowExtraTip = (row: any) => {
     return true;
 };
 
-getLists();
+// export-data 组件在 setup 阶段就会用同一个接口发一次 export=1 的取数请求，
+// 而 request 的重复请求取消是按 url 去重的：晚发的会掐掉早发的。
+// 列表请求放到 onMounted，晚于子组件那次请求，避免自己被取消。
+onMounted(() => {
+    getLists();
+});
 </script>

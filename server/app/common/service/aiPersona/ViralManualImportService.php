@@ -15,6 +15,7 @@ use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
 use app\common\model\aiPersona\AiPersonaWorkflowScheduleUser;
 use app\common\model\marketing\MarketingTemplateSchedule;
+use app\common\model\sv\CloudSvDevice;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceViralManualImport;
 use app\common\model\sv\SvDeviceViralRecord;
@@ -23,6 +24,7 @@ use app\common\service\ConfigService;
 use app\common\service\FileService;
 use app\common\service\ToolsService;
 use app\common\service\storage\Driver as StorageDriver;
+use app\common\service\videoImitation\OriginalCopywritingResolver;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -324,6 +326,11 @@ class ViralManualImportService
             ->where('persona_id', $personaId)
             ->order('id', 'asc')
             ->select();
+        if ($devices->isEmpty() && (int)$persona->run_mode === AiPersona::RUN_MODE_CLOUD) {
+            // 无手机模式没有真实设备行。这条链路里设备号只当分区键用（下面全是取 device_code），
+            // 爆款解析本身走第三方接口不碰手机，所以用虚拟设备顶上就能跑通。
+            $devices = new \think\model\Collection([CloudSvDevice::fromPersona($persona)]);
+        }
         if ($devices->isEmpty()) {
             self::log('【人设】未绑定设备，本窗跳过（保留待执行）', ['persona_id' => $personaId]);
             $stats['skipped']++;
@@ -1197,28 +1204,18 @@ class ViralManualImportService
                     'raw' => $response,
                 ]);
                 if (isset($response['code']) && (int)$response['code'] === 10000) {
-                    $resData = $response['data'] ?? [];
-                    $audioText = trim((string)($resData['audio_text'] ?? ''));
+                    $resData = is_array($response['data'] ?? null) ? $response['data'] : [];
                     $duration = (int)($resData['duration'] ?? 0);
-                    if ($audioText === '') {
-                        self::log('【视频】口播为空，降级 MCP videoImitation', ['import_id' => (int)$row->id]);
-                        $res = ToolsService::Copywriting()->videoImitation([
-                            'input' => ['prompt' => $shareContent],
-                            'version' => 'v2',
-                        ]);
-                        self::log('【视频】MCP 降级响应', [
-                            'import_id' => (int)$row->id,
-                            'code' => $res['code'] ?? null,
-                            'raw' => $res,
-                        ]);
-                        if (isset($res['code']) && (int)$res['code'] === 10000) {
-                            $messageJson = $res['data']['message'] ?? '';
-                            $parsedMsg = json_decode((string)$messageJson, true);
-                            if (is_array($parsedMsg)) {
-                                $audioText = trim((string)($parsedMsg['original_text'] ?? ''));
-                            }
-                        }
-                    }
+
+                    // 原文案只认视频口播，识别不到即提取失败：既不让大模型按标题现编，
+                    // 也不拿作品标题文案（中台 desc）顶替
+                    $resolved = OriginalCopywritingResolver::resolve($resData);
+                    $audioText = $resolved['text'];
+                    self::log('【视频】原文案取值', [
+                        'import_id' => (int)$row->id,
+                        'source' => $resolved['source'],
+                        'len' => mb_strlen($audioText),
+                    ]);
                     break;
                 }
                 $lastError = (string)($response['msg'] ?? '视频解析失败');
@@ -1797,7 +1794,8 @@ class ViralManualImportService
             throw new \RuntimeException('IP人设规则不存在');
         }
         $productContent = "我的IP人设产品内容：\n主营业务/产品：{$persona['main_business']}\n目标客户与痛点：{$persona['target_pain_points']}\n差异化优势与行为引导：{$persona['conversion_hook']}";
-        $promptContent = "我的IP人设内容是：\n" . $rule->getClueContent($persona) . "\n\n" . $productContent . "\n\n视频文案：\n{$audioText}";
+        $personaContent = AiPersona::withViralRewriteLocationRule((string)$rule->getClueContent($persona), $persona);
+        $promptContent = "我的IP人设内容是：\n" . $personaContent . "\n\n" . $productContent . "\n\n视频文案：\n{$audioText}";
         self::log('【仿写】开始生成视频文案', [
             'user_id' => $userId,
             'persona_id' => (int)$persona->id,
@@ -1807,7 +1805,7 @@ class ViralManualImportService
         ]);
         $imitationResult = AutoDeviceSettingLogic::copywriting([
             'keywords' => $promptContent,
-            'persona' => $rule->getClueContent($persona),
+            'persona' => $personaContent,
             'original' => $audioText,
             'voice' => '',
             'hook' => '',

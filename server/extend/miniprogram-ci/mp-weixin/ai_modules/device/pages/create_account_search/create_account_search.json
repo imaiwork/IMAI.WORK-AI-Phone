@@ -1,0 +1,16 @@
+{
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "confirm-dialog": "../../../../components/confirm-dialog/confirm-dialog",
+    "steps": "../../components/steps/steps",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
+    "clue-gen-pop": "../../components/clue-gen-pop/clue-gen-pop",
+    "task-conflict-dialog": "../../components/task-conflict-dialog/task-conflict-dialog",
+    "clue-step": "./components/clue-step",
+    "config-step": "./components/config-step",
+    "time-step": "./components/time-step"
+  }
+}

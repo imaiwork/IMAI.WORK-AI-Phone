@@ -3,18 +3,21 @@
 namespace app\api\lists\aiPersona;
 
 use app\api\lists\BaseApiDataLists;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\common\lists\ListsExtendInterface;
 use app\common\lists\ListsSearchInterface;
+use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
 use think\facade\Cache as FacadeCache;
 
-class MaterialLists extends BaseApiDataLists implements ListsSearchInterface
+class MaterialLists extends BaseApiDataLists implements ListsSearchInterface, ListsExtendInterface
 {
     public function setSearch(): array
     {
         return [
             // material_type 支持单值或多值：1 / 1,2 / [1,2]
-            '=' => ['persona_id', 'use_status', 'publish_mode', 'is_wechat', 'slice_status'],
+            '=' => ['persona_id', 'use_status', 'publish_mode', 'is_wechat', 'slice_status', 'source_type', 'keep_original'],
             'in' => ['material_type'],
             'like' => ['material_name'],
         ];
@@ -26,8 +29,22 @@ class MaterialLists extends BaseApiDataLists implements ListsSearchInterface
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()->each(function ($item) {
-                $item->use_num =    MaterialUseLog::where('material_id', $item->id)->where('use_status', 1)->count();
+                $item->use_num = MaterialUseLog::alias('log')
+                    ->leftJoin('shanjian_video_task task', 'task.id = log.task_id')
+                    ->where('log.material_id', $item->id)
+                    ->where('log.use_status', 1)
+                    // 与素材详情的生成记录同口径：热点追踪等手动发起的任务(auto_type=0)不计次。
+                    // 用左连接是因为成品直发库的使用记录没有 task 行，内连接会把它们一起抹掉
+                    ->where(function ($query) {
+                        $query->whereNull('task.id')
+                            ->whereOr('task.auto_type', '=', MaterialUseLogLists::AUTO_TASK);
+                    })
+                    ->count();
                 $item->slice_status_text = Material::getSliceStatusText((int)($item->slice_status ?? 0));
+                $item->source_type_text = Material::getSourceTypeText(
+                    (string)($item->source_type ?? ''),
+                    (int)($item->keep_original ?? 0)
+                );
             })
             ->toArray();
     }
@@ -35,6 +52,27 @@ class MaterialLists extends BaseApiDataLists implements ListsSearchInterface
     public function count(): int
     {
         return $this->baseQuery()->count();
+    }
+
+    public function extend(): array
+    {
+        $personaId = (int)($this->params['persona_id'] ?? 0);
+        if ($personaId <= 0) {
+            return [
+                'material_use_mode' => ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE,
+            ];
+        }
+        $owned = AiPersona::where('id', $personaId)
+            ->where('user_id', $this->userId)
+            ->findOrEmpty();
+        if ($owned->isEmpty()) {
+            return [
+                'material_use_mode' => ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE,
+            ];
+        }
+        return [
+            'material_use_mode' => ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId),
+        ];
     }
 
     private function baseQuery()
@@ -85,18 +123,7 @@ class MaterialLists extends BaseApiDataLists implements ListsSearchInterface
             return $query;
         }
 
-        return $query->where(function ($q) {
-            $q->where(function ($ok) {
-                $ok->where('use_status', Material::USE_STATUS_ENABLED)
-                    ->where(function ($src) {
-                        $src->where('source_type', '<>', 'slice')
-                            ->whereOr('slice_status', Material::SLICE_STATUS_SUCCESS);
-                    });
-            })->whereOr(function ($fail) {
-                $fail->where('use_status', Material::USE_STATUS_DISABLED)
-                    ->where('slice_status', Material::SLICE_STATUS_FAILED)
-                    ->where('source_type', 'original');
-            });
-        });
+        // 默认可见范围收在 Material::applyDefaultVisible，配置清单的素材计数复用同一份条件
+        return Material::applyDefaultVisible($query);
     }
 }

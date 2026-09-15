@@ -61,15 +61,20 @@ class ViralRewriterLogic extends BasePersonaLogic
             if ($item->isEmpty()) {
                 \think\facade\Log::channel('auto')->write($device->device_code . '自动化爆款复刻配置不存在' . ($item->isEmpty() ? \think\facade\Db::getLastSql() :  $item->id), 'create');
                 //return false;
-                $item = AiPersonaSynthesisConfig::create(
-                    \app\api\logic\aiPersona\SynthesisConfigLogic::buildDefaultConfig(
-                        (int) $persona['id'],
-                        (int) $persona['user_id'],
-                        (int) $persona['persona_type'],
-                        (int) ($persona['publish_mode'] ?? 1)
-                    )
+                $createData = \app\api\logic\aiPersona\SynthesisConfigLogic::buildDefaultConfig(
+                    (int) $persona['id'],
+                    (int) $persona['user_id'],
+                    (int) $persona['persona_type'],
+                    (int) ($persona['publish_mode'] ?? 1)
                 );
+                $item = AiPersonaSynthesisConfig::create($createData);
                 \think\facade\Log::channel('auto')->write($device->device_code . '自动化爆款复刻配置创建成功' . json_encode($item->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), 'create');
+                \think\facade\Log::channel('synthesis_config')->write(sprintf(
+                    '[create] persona_id=%d user_id=%d source=ViralRewriterLogic data=%s',
+                    $persona['id'],
+                    $persona['user_id'],
+                    json_encode($createData, JSON_UNESCAPED_UNICODE)
+                ));
                 $item = AiPersonaSynthesisConfig::where($where)->order('id desc')->findOrEmpty();
             }
 
@@ -176,10 +181,32 @@ class ViralRewriterLogic extends BasePersonaLogic
             $accountMap[(int)$account->type] = $account;
         }
 
+        return self::resolveViralRewriterSourceTasks(
+            $imitateEligible,
+            $xhsImageTextEligible,
+            self::getEnabledContentPublishScheduleCount($persona) > 0,
+            $accountMap,
+            $result
+        );
+    }
+
+    /**
+     * 决定 24h 爆款复刻建哪些来源任务：视频只出抖音；小红书仅图文。
+     *
+     * @param array<int, object> $accountMap
+     * @return list<array{account:object,publish_media_type:int}>
+     */
+    public static function resolveViralRewriterSourceTasks(
+        bool $imitateEligible,
+        bool $xhsImageTextEligible,
+        bool $hasContentPublishSchedule,
+        array $accountMap,
+        array &$result
+    ): array {
         $tasks = [];
 
         if ($imitateEligible) {
-            if (self::getEnabledContentPublishScheduleCount($persona) <= 0) {
+            if (!$hasContentPublishSchedule) {
                 $result['skipped_not_configured']++;
                 $result['errors'][] = '内容发布时间段为空';
             } else {
@@ -188,25 +215,11 @@ class ViralRewriterLogic extends BasePersonaLogic
                     //DeviceEnum::ACCOUNT_TYPE_SPH,
                     //DeviceEnum::ACCOUNT_TYPE_KS,
                 ];
-                // 小红书内容发布为视频时，也可作为视频来源
-                $xhsConfig = AiPersona::getPlatformContentPublishConfig(
-                    $persona['content_publish_config'] ?? [],
-                    DeviceEnum::ACCOUNT_TYPE_XHS
-                );
-                if ((int)($xhsConfig['publish_media_type'] ?? AiPersona::PUBLISH_MEDIA_TYPE_VIDEO)
-                    === AiPersona::PUBLISH_MEDIA_TYPE_VIDEO
-                ) {
-                    $videoPlatforms[] = DeviceEnum::ACCOUNT_TYPE_XHS;
-                }
 
                 $addedVideo = false;
                 foreach ($videoPlatforms as $platformType) {
                     $account = $accountMap[$platformType] ?? null;
                     if (!$account) {
-                        continue;
-                    }
-                    // 小红书图文资格已单独建任务时，避免同一账号重复建视频任务
-                    if ($platformType === DeviceEnum::ACCOUNT_TYPE_XHS && $xhsImageTextEligible) {
                         continue;
                     }
                     $tasks[] = [
@@ -217,7 +230,7 @@ class ViralRewriterLogic extends BasePersonaLogic
                 }
                 if (!$addedVideo) {
                     $result['skipped_no_account']++;
-                    $result['errors'][] = '设备未绑定可用于爆款视频的平台账号';
+                    $result['errors'][] = '设备未绑定抖音账号，无法作为爆款视频来源';
                 }
             }
         }
@@ -476,6 +489,11 @@ class ViralRewriterLogic extends BasePersonaLogic
 
             $item->update_time = time();
             $item->save();
+            \think\facade\Log::channel('synthesis_config')->write(sprintf(
+                '[update] persona_id=%d source=ViralRewriterLogic reason=任务执行后刷新时间戳 update_time=%d',
+                $item->persona_id,
+                $item->update_time
+            ));
             Db::commit();
             return $result;
         } catch (\Throwable $th) {
@@ -483,6 +501,12 @@ class ViralRewriterLogic extends BasePersonaLogic
             Db::rollback();
             $item->update_time = time();
             $item->save();
+            \think\facade\Log::channel('synthesis_config')->write(sprintf(
+                '[update] persona_id=%d source=ViralRewriterLogic reason=任务异常后刷新时间戳 update_time=%d error=%s',
+                $item->persona_id,
+                $item->update_time,
+                $th->getMessage()
+            ));
             $result['failed']++;
             $result['errors'][] = $th->getMessage();
             return $result;

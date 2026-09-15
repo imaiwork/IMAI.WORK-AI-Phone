@@ -245,61 +245,73 @@
             </template>
         </view>
 
-        <!-- ④ 截流转化 -->
+        <!-- ④ 截流转化：截流评论 / 截流私信，各自可选固定话术或 AI 接管 -->
         <view class="cs-block">
             <view class="cs-sec-title"><text>截流转化</text></view>
-            <view class="cs-jl-acc">
+            <view v-for="item in shutoffItems" :key="item.key" class="cs-jl-acc">
                 <view
                     class="cs-jl-row"
-                    @click.stop="emit('update:csShutoffOpen', csShutoffOpen === 'comment' ? '' : 'comment')">
-                    <text class="cs-jl-name">截流评论</text>
+                    @click.stop="emit('update:csShutoffOpen', csShutoffOpen === item.key ? '' : item.key)">
+                    <text class="cs-jl-name">{{ item.label }}</text>
                     <view class="cs-jl-val">
-                        <text>{{ csShutoffComment.scripts.length }}条</text>
+                        <text>
+                            {{
+                                item.block.replyMode === CsReplyMode.AI
+                                    ? "AI 接管"
+                                    : `${item.block.scripts.length}条`
+                            }}
+                        </text>
                         <u-icon
                             name="arrow-down"
                             color="#2F73F6"
                             size="22"
                             :custom-style="{
-                                transform: csShutoffOpen === 'comment' ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transform: csShutoffOpen === item.key ? 'rotate(180deg)' : 'rotate(0deg)',
                                 transition: 'transform 0.25s',
                             }"></u-icon>
                     </view>
                 </view>
-                <view v-show="csShutoffOpen === 'comment'" class="pt-[8rpx]">
-                    <cs-script-list
-                        :scripts="csShutoffComment.scripts"
-                        :maxlength="100"
-                        :max-items="15"
-                        @add="(v) => emit('add-script', csShutoffComment, v, 15)"
-                        @edit="(i, max) => emit('open-script-editor', csShutoffComment.scripts, i, '截流评论', max)"
-                        @remove="(i) => emit('remove-script', csShutoffComment, i)"
-                        @move="(i, dir) => emit('move-script', csShutoffComment, i, dir)" />
-                </view>
-            </view>
-            <view class="cs-jl-acc">
-                <view class="cs-jl-row" @click.stop="emit('update:csShutoffOpen', csShutoffOpen === 'dm' ? '' : 'dm')">
-                    <text class="cs-jl-name">截流私信</text>
-                    <view class="cs-jl-val">
-                        <text>{{ csShutoffMsg.scripts.length }}条</text>
-                        <u-icon
-                            name="arrow-down"
-                            color="#2F73F6"
-                            size="22"
-                            :custom-style="{
-                                transform: csShutoffOpen === 'dm' ? 'rotate(180deg)' : 'rotate(0deg)',
-                                transition: 'transform 0.25s',
-                            }"></u-icon>
+                <view v-show="csShutoffOpen === item.key" class="pt-[8rpx]">
+                    <view class="cs-seg mb-[24rpx]">
+                        <view
+                            class="cs-seg-btn"
+                            :class="{ active: item.block.replyMode === CsReplyMode.FIXED }"
+                            @click.stop="item.block.replyMode = CsReplyMode.FIXED">
+                            固定话术
+                        </view>
+                        <view
+                            class="cs-seg-btn"
+                            :class="{ active: item.block.replyMode === CsReplyMode.AI }"
+                            @click.stop="item.block.replyMode = CsReplyMode.AI">
+                            AI 接管
+                        </view>
                     </view>
-                </view>
-                <view v-show="csShutoffOpen === 'dm'" class="pt-[8rpx]">
+                    <view v-if="item.block.replyMode === CsReplyMode.AI">
+                        <text class="field-label">选择智能体</text>
+                        <view
+                            class="cfg-inp picker-field flex items-center justify-between"
+                            :class="{ 'cfg-inp-warn': item.block.agentStatus !== 'ok' }"
+                            @click.stop="emit('open-agent', item.agentTarget)">
+                            <text
+                                class="text-[24rpx] line-clamp-1"
+                                :class="agentNameClass(item.block.agentId, item.block.agentStatus)">
+                                {{ formatBoundAgentLabel(item.block.agentName, item.block.agentStatus || "ok") }}
+                            </text>
+                            <u-icon name="arrow-right" color="#C0C8D8" size="22"></u-icon>
+                        </view>
+                        <text v-if="item.block.agentId && item.block.agentStatus !== 'ok'" class="cs-agent-warn">
+                            {{ item.block.agentStatusText || "请重新绑定智能体" }}
+                        </text>
+                    </view>
                     <cs-script-list
-                        :scripts="csShutoffMsg.scripts"
-                        :maxlength="200"
-                        :max-items="15"
-                        @add="(v) => emit('add-script', csShutoffMsg, v, 15)"
-                        @edit="(i, max) => emit('open-script-editor', csShutoffMsg.scripts, i, '截流私信', max)"
-                        @remove="(i) => emit('remove-script', csShutoffMsg, i)"
-                        @move="(i, dir) => emit('move-script', csShutoffMsg, i, dir)" />
+                        v-else
+                        :scripts="item.block.scripts"
+                        :maxlength="item.maxlength"
+                        :max-items="SHUTOFF_MAX_ITEMS"
+                        @add="(v) => emit('add-script', item.block, v, SHUTOFF_MAX_ITEMS)"
+                        @edit="(i, max) => emit('open-script-editor', item.block.scripts, i, item.label, max)"
+                        @remove="(i) => emit('remove-script', item.block, i)"
+                        @move="(i, dir) => emit('move-script', item.block, i, dir)" />
                 </view>
             </view>
         </view>
@@ -311,8 +323,10 @@ import CsScriptList from "../../cs-script-list.vue";
 import {
     CsReplyMode,
     MomentsAction,
+    SHUTOFF_LABELS,
     formatBoundAgentLabel,
     type AgentBindStatus,
+    type AgentTarget,
     type SocialPlatform,
 } from "../../../hooks/useCustomerServiceConfig";
 
@@ -329,9 +343,7 @@ interface SocialPlatformMeta {
 
 // 父层把 hook 返回的 reactive 状态、计算属性以 props 形式注入；
 // 子组件只负责 view 渲染，所有操作通过 emit 回流到父层处理。
-type AgentTarget = "social-dm" | "social-comment" | "wechat" | "moments";
-
-defineProps<{
+const props = defineProps<{
     csSocial: any;
     csSocialPlatforms: SocialPlatformMeta[];
     csSocialCurrent: any;
@@ -341,6 +353,25 @@ defineProps<{
     csShutoffMsg: any;
     csShutoffOpen: "comment" | "dm" | "";
 }>();
+
+// 截流评论 / 截流私信结构一致，集中描述后由同一套模板渲染
+const SHUTOFF_MAX_ITEMS = 15;
+const shutoffItems = computed(() => [
+    {
+        key: "comment" as const,
+        label: SHUTOFF_LABELS.comment,
+        block: props.csShutoffComment,
+        maxlength: 100,
+        agentTarget: "shutoff-comment" as AgentTarget,
+    },
+    {
+        key: "dm" as const,
+        label: SHUTOFF_LABELS.msg,
+        block: props.csShutoffMsg,
+        maxlength: 200,
+        agentTarget: "shutoff-msg" as AgentTarget,
+    },
+]);
 
 const emit = defineEmits<{
     (e: "update:csShutoffOpen", v: "comment" | "dm" | ""): void;

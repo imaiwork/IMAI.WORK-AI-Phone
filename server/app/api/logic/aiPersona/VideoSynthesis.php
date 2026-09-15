@@ -223,32 +223,66 @@ class VideoSynthesis extends BasePersonaLogic
                 return true;
             }
 
-            if ($persona->wechat_publish_mode == 3) {
-                $allMaterials = MaterialModel::where('persona_id', $device->persona_id)
+            // 视频类型先于素材门禁确定：只有能靠 AI 抓素材的类型（数字人口播混剪1 + 纯AI/AI+素材库）
+            // 才允许素材库为空继续往下走，口径与 CopywritingAiGenerationLogic 一致。
+            // 注：buildCircleVideoTypes 目前只产出 3/4，两者都必须走素材库，实际不会放行。
+            $videoTypes = self::buildCircleVideoTypes(count($publishTimeSlots));
+            $synthesisConfig = AiPersonaSynthesisConfig::where('persona_id', $device->persona_id)
+                ->where('user_id', $device->user_id)
+                ->findOrEmpty();
+            $allowEmptyLibrary = ShanjianVideoSettingLogic::hasAiMaterialType(
+                $videoTypes,
+                ShanjianVideoSettingLogic::resolveVisualMaterialSource($synthesisConfig)
+            );
+
+            // 素材模式与主链路同口径：原图只取原片，自动适配只取转码/切片素材
+            $materialUseMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$device->persona_id);
+            $isOriginalMode = $materialUseMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
+            $keepOriginal = $isOriginalMode
+                ? MaterialModel::KEEP_ORIGINAL_YES
+                : MaterialModel::KEEP_ORIGINAL_NO;
+
+            // 原图素材统一入库为 is_wechat=0（人设素材库是唯一上传入口，没有朋友圈专属原片这一说），
+            // 所以原图模式下朋友圈也取这一份，不然 wechat_publish_mode!=3 的人设永远查不到素材。
+            $isWechatMaterial = ($isOriginalMode || $persona->wechat_publish_mode == 3) ? 0 : 1;
+            $allMaterials = MaterialModel::where('persona_id', $device->persona_id)
                 ->where('use_status', 1)
-                ->where('is_wechat', 0)
+                ->where('is_wechat', $isWechatMaterial)
                 ->where('publish_mode', 1)
+                ->where('keep_original', $keepOriginal)
                 ->whereIn('material_type', [MaterialModel::MATERIAL_TYPE_VIDEO, MaterialModel::MATERIAL_TYPE_IMAGE])
                 ->select()->toArray();
-            } else {
-                $allMaterials = MaterialModel::where('persona_id', $device->persona_id)
-                ->where('use_status', 1)
-                ->where('is_wechat', 1)
-                ->where('publish_mode', 1)
-                ->whereIn('material_type', [MaterialModel::MATERIAL_TYPE_VIDEO, MaterialModel::MATERIAL_TYPE_IMAGE])
-                ->select()->toArray();
-            }
            
 
-            if (empty($allMaterials)) {
-                $msg = '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的素材';
+            if (empty($allMaterials) && !$allowEmptyLibrary) {
+                $msg = $isOriginalMode
+                    ? '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的原始素材'
+                    : '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的素材';
                 throw new \Exception($msg);
             }
 
+            // 原图模式必须有原片视频，纯图片凑不出成片(与 CopywritingImitationLogic 同口径)
+            // AI 抓素材的类型除外：抓来的原片按硬规格判定后入库，不依赖库里已有原片
+            if ($isOriginalMode && !$allowEmptyLibrary) {
+                $originalVideoCount = 0;
+                foreach ($allMaterials as $item) {
+                    if ((int)$item['material_type'] === MaterialModel::MATERIAL_TYPE_VIDEO) {
+                        $originalVideoCount++;
+                    }
+                }
+                if ($originalVideoCount <= 0) {
+                    $msg = '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的原始素材';
+                    throw new \Exception($msg);
+                }
+            }
+
             // 素材转码就绪门禁:任一视频素材未完成转码则本轮跳过,等下一轮cron
-            $check = MaterialReadinessService::checkPersonaMaterials((int)$device->persona_id, (int)$device->user_id);
-            if (!$check['ready']) {
-                throw MaterialNotReadyException::fromCheck($check, "朋友圈合成 device={$device->device_code} 本轮跳过");
+            // 原片不进转码队列,原图模式跳过,免得被同人设那些还在转码的切片素材连累
+            if (!$isOriginalMode) {
+                $check = MaterialReadinessService::checkPersonaMaterials((int)$device->persona_id, (int)$device->user_id);
+                if (!$check['ready']) {
+                    throw MaterialNotReadyException::fromCheck($check, "朋友圈合成 device={$device->device_code} 本轮跳过");
+                }
             }
             $groupedData = [
                 'videos' => [], // 视频组 (material_type = 1)
@@ -276,13 +310,10 @@ class VideoSynthesis extends BasePersonaLogic
 
             switch ($persona->persona_type) {
                 case 1:
-                    $videoTypes = self::buildCircleVideoTypes(count($publishTimeSlots));
                     return self::processIndividualIp($device, $persona, $groupedData, $videoTypes, $publishTimeSlots);
                 case 2:
-                    $videoTypes = self::buildCircleVideoTypes(count($publishTimeSlots));
                     return self::processLocalLife($device, $persona, $groupedData, $videoTypes, $publishTimeSlots);
                 case 3:
-                    $videoTypes = self::buildCircleVideoTypes(count($publishTimeSlots));
                     return self::processEnterpriseService($device, $persona, $groupedData, $videoTypes, $publishTimeSlots);
                 default:
                     $msg = '设备号' . $deviceCode . '绑定的人设' . AiPersona::formatLabel($persona) . '类型不存在';
@@ -329,6 +360,7 @@ class VideoSynthesis extends BasePersonaLogic
         $personaId = $persona->id;
         $persona_type = $persona->persona_type ?? 0;
         $newsMixcutDuration = self::getNewsMixcutDuration($personaId, $userId);
+        $materialUseMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$personaId);
         $synthesisConfig = AiPersonaSynthesisConfig::where('persona_id', $personaId)
             ->where('user_id', $userId)
             ->findOrEmpty();
@@ -376,6 +408,8 @@ class VideoSynthesis extends BasePersonaLogic
                     'setting_index' => 1,
                     'create_type' => 'batch',
                     'exec_time' => json_encode([$execTime], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                    // 下发闪剪前的原图规格门禁靠 extra 里这个字段识别模式
+                    'material_use_mode' => $materialUseMode,
                 ];
                 try {
                     $anchorId = '';
@@ -496,7 +530,22 @@ class VideoSynthesis extends BasePersonaLogic
                     continue;
                 }
 
-                $selectedMaterials = self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode);
+                // 数字人口播混剪 + 纯AI/AI+素材库：复用统一的 AI 抓素材逻辑，素材库为空也能合成
+                $selectedMaterials = ShanjianVideoSettingLogic::canUseAiMaterials(
+                    (int)$shanjianType,
+                    ShanjianVideoSettingLogic::resolveVisualMaterialSource($synthesisConfig)
+                )
+                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                        CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
+                            $videos,
+                            $images,
+                            (int)$shanjianType,
+                            $deviceCode,
+                            $synthesisConfig,
+                            (string)($copywritingResult['content']['0'] ?? '')
+                        )
+                    )
+                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode);
 
                 if (empty($selectedMaterials)) {
                     $msg = '设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType . '，素材为空';
@@ -593,11 +642,17 @@ class VideoSynthesis extends BasePersonaLogic
                     }
 
                     $taskId = generate_unique_task_id();
+                    // 人设合成配置里的手动封面：只写 pic 不够，下发闪剪时只有 thumb_status=2
+                    // 才会带 processRules.firstFrameCover（见 ShanjianVideoTaskLogic::compositeVideoCron）
+                    $coverConfig = $synthesisConfig->isEmpty() ? null : $synthesisConfig;
+                    $cover = CopywritingImitationLogic::resolveManualCoverByConfig($coverConfig, (string)($pic ?? ''));
                     $pendingTask = [
                         'shanjian_type' => $shanjianType,
                         'device_code' => $deviceCode,
                         'name' => $shanjianVideoSettingData['name'],
-                        'pic' => $pic,
+                        'pic' => $cover['pic'],
+                        'thumb_status' => $cover['thumb_status'],
+                        'video_cover_source' => $coverConfig ? (int)($coverConfig->video_cover_source ?? 0) : 0,
                         'task_id' => $taskId,
                         'persona_id' => $persona->id,
                         'status' => 0,
@@ -836,29 +891,9 @@ class VideoSynthesis extends BasePersonaLogic
             if (empty($mergedMaterials)) {
                 return [];
             }
-            foreach ($mergedMaterials as $key => &$value) {
-                if ($value['material_type'] == 1) {
-                    $value['type'] = 'video';
-                } else {
-                    $value['type'] = 'image';
-                    $value['duration'] = 2;
-                }
-                $value['fileUrl'] = $value['file_url'];
-                unset($value['user_id']);
-                unset($value['persona_id']);
-                unset($value['material_name']);
-                unset($value['material_type']);
-                unset($value['height']);
-                unset($value['width']);
-                unset($value['publish_mode']);
-                unset($value['create_time']);
-                unset($value['update_time']);
-                unset($value['file_url']);
-                unset($value['use_status']);
-            }
-            unset($value);
-
-            return \app\api\logic\shanjian\ShanjianVideoSettingLogic::trimMaterialsByDuration(array_values($mergedMaterials));
+            return ShanjianVideoSettingLogic::trimMaterialsByDuration(
+                ShanjianVideoSettingLogic::formatMaterialsForSetting($mergedMaterials)
+            );
         } catch (\Exception $e) {
             $msg = '设备号: ' . $deviceCode . '，素材选择异常: ' . $e->getMessage();
             Log::channel('wechatVideoSynthesis')->write($msg);

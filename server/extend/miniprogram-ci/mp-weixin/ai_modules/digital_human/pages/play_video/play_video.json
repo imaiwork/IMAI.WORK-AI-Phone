@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "爆款玩法复刻",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-loading": "../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "video-preview": "../../../../components/video-preview/video-preview",
+    "play-section-title": "../../components/play-video/play-section-title",
+    "play-intro-popup": "../../components/play-video/popups/play-intro-popup"
+  }
+}

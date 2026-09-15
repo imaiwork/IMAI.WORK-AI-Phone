@@ -107,6 +107,8 @@ class AiPersonaLists extends BaseAdminDataLists implements ListsSearchInterface
                                    'ap.id', 'ap.user_id', 'ap.persona_name', 'ap.persona_type', 'ap.avatar_url',
                                    'ap.quick_desc', 'ap.industry', 'ap.is_configured', 'ap.status',
                                    'ap.create_time', 'ap.report_status', 'ap.report_gen_time', 'ap.publish_mode',
+                                   'ap.material_use_mode',
+                                   'ap.run_mode',
                                    'ap.workflow_template_id',
                                    'ap.main_business', 'ap.target_pain_points', 'ap.conversion_hook',
                                    'ap.is_shopping_cart', 'ap.goods_name', 'ap.is_store_position', 'ap.store_position'

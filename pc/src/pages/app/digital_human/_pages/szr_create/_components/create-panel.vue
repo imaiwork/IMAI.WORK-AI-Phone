@@ -26,8 +26,10 @@ import {
     CreateTypeEnum,
     DigitalHumanModelVersionEnum,
     CHANJING_ORIGINAL_VOICE_ID,
+    MusicSourceEnum,
     SpeechEngineTypeEnum,
 } from "../../../_enums";
+import { toPackagingParams } from "../../../_config/advanced-setting";
 
 const DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE = 5;
 const VIDEO_NAME_SUFFIX = "数字人口播";
@@ -65,10 +67,22 @@ const isChanjingOriginalVoice = (voiceId: any) => {
     return voiceId == CHANJING_ORIGINAL_VOICE_ID || voiceId === "" || voiceId == null;
 };
 
+/** 关掉视频包装时 packaging 无意义，不提交 */
+const isPackagingEnabled = () => props.formData.ai_clip_enabled == 1 && !!props.formData.packaging;
+
 const validateFormData = (formData: any) => {
     const { url, anchor_id, audio_type, msg, voice_id, audio_url } = formData;
     if (!url || !anchor_id) {
         feedback.msgError("请选择一位数字人");
+        return false;
+    }
+    // 后端在 music_source=自定义 且没有音乐时会直接报错，这里先拦一次
+    if (
+        isPackagingEnabled() &&
+        formData.packaging?.music_source === MusicSourceEnum.CUSTOM &&
+        !formData.packaging?.music_url
+    ) {
+        feedback.msgError("请上传背景音乐");
         return false;
     }
     if (audio_type === CreateTypeEnum.AUDIO) {
@@ -132,6 +146,7 @@ const createSpeechTaskByEngine = (engineType: SpeechEngineTypeEnum) => {
         shanjian_type: DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE,
         engine_type: engineType,
         ai_clip_enabled: props.formData.ai_clip_enabled,
+        ...(isPackagingEnabled() ? { packaging: toPackagingParams(props.formData.packaging) } : {}),
         pic: props.formData.pic,
         ...getContentParams(),
         anchor: [

@@ -22,6 +22,7 @@ class DigitalVoiceLists extends BaseAdminDataLists implements ListsSearchInterfa
     {
         return [
             '=' => ['ad.persona_id', 'ad.user_id'],
+            '%like%' => ['ad.voice_name'],
         ];
     }
 

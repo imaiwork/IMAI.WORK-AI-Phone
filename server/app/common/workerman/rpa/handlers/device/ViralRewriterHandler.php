@@ -2,40 +2,41 @@
 
 namespace app\common\workerman\rpa\handlers\device;
 
+use app\api\logic\aiPersona\PublishLogic;
 use app\api\logic\service\TokenLogService;
-use app\common\enum\AutomationEnum;
+use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
+use app\common\model\aiPersona\AiPersona;
+use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
+use app\common\model\aiPersona\AiPersonaWorkflowScheduleUser;
+use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\sv\SvDeviceViral;
 use app\common\model\sv\SvDeviceViralRecord;
-use app\common\model\sv\SvDevice;
-use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
-use app\common\model\marketing\MarketingTemplateSchedule;
-use app\common\model\aiPersona\AiPersonaWorkflowScheduleUser;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
-use app\common\model\aiPersona\AiPersona;
-use app\common\workerman\rpa\BaseMessageHandler;
-use app\common\workerman\rpa\WorkerEnum;
 use app\common\service\aiPersona\ViralImageRewriteService;
 use app\common\service\aiPersona\ViralKeywordService;
 use app\common\service\aiPersona\ViralSharePlatformDetector;
 use app\common\service\aiPersona\ViralShareTextNormalizer;
 use app\common\service\aiPersona\ViralTitleDedupService;
-use app\common\enum\DeviceEnum;
+use app\common\service\FileService;
+use app\common\service\ToolsService;
+use app\common\service\videoImitation\OriginalCopywritingResolver;
+use app\common\workerman\rpa\BaseMessageHandler;
+use app\common\workerman\rpa\WorkerEnum;
 use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Log;
 use Workerman\Connection\TcpConnection;
-use app\common\service\ToolsService;
-use app\common\service\FileService;
-use app\api\logic\aiPersona\PublishLogic;
 
 
 class ViralRewriterHandler extends BaseMessageHandler
 {
     protected $appType = 0;
     private const VIDEO_PARSE_MAX_RETRY = 3;
+    /** 自动爆款：链接提取失败时的用户可见失败原因 */
+    private const REMARK_LINK_EXTRACT_FAIL = '无法提取该链接';
     private const COPYWRITING_GENERATE_MAX_RETRY = 3;   // 文案仿写 rewritten_text 为空时最大尝试次数
     private const MAX_INTENT_RELEVANCE_COUNT = 10;
     private const DURATION_FILTER_UNLIMITED = 0;
@@ -182,7 +183,11 @@ class ViralRewriterHandler extends BaseMessageHandler
             // 4. 视频解析（内部自动重试）
             $parseResult = $this->parseVideoWithRetry($shareContent, $record);
             if (!$parseResult['success']) {
-                return $this->degradedGenerate($record, $task, '视频解析失败');
+                $this->markRecordFailed($record, self::REMARK_LINK_EXTRACT_FAIL);
+                return [
+                    'isContinue' => 1,
+                    'msg' => $this->payload['deviceId'] . ' 无法提取该链接，已丢弃并继续抓取',
+                ];
             }
 
 
@@ -229,9 +234,12 @@ class ViralRewriterHandler extends BaseMessageHandler
                 $record->remark = '文案与人设严重偏离';
                 $record->save();
                 $count = $this->getIntentRelevanceCount($task);
-                $this->setLog($this->payload['deviceId'] . "视频内容与人设严重偏离,已仿写次数:" . $count, 'viral_rewrite');
+                $this->setLog(
+                    $this->payload['deviceId'] . '视频内容与人设严重偏离，连续偏离次数=' . $count . '/' . self::MAX_INTENT_RELEVANCE_COUNT,
+                    'viral_rewrite'
+                );
                 if ($count >= self::MAX_INTENT_RELEVANCE_COUNT) {
-                    $this->setLog($this->payload['deviceId'] . "视频内容与人设严重偏离,降级处理", 'viral_rewrite');
+                    $this->setLog($this->payload['deviceId'] . '视频内容与人设严重偏离，连续偏离达上限，降级处理', 'viral_rewrite');
                     $record = $this->createRecord($task, $shareContent, $hash, $keyword, $image, $content, $recordDay, [
                         'title_normalized' => $titleNormalized,
                     ]);
@@ -373,23 +381,23 @@ class ViralRewriterHandler extends BaseMessageHandler
         try {
             $noteContent = $this->extractXhsImageTextNote($shareUrl);
         } catch (\Throwable $th) {
-            $this->markRecordFailed($record, 'TikHub图文提取失败：' . $th->getMessage(), [
+            $this->markRecordFailed($record, self::REMARK_LINK_EXTRACT_FAIL, [
                 'image_rewrite_status' => SvDeviceViralRecord::IMAGE_REWRITE_STATUS_FAIL,
             ]);
             $this->setLog($record->device_code . "TikHub图文提取失败 record_id={$record->id}: " . $th->getMessage(), 'viral_rewrite');
-            return ['isContinue' => 1, 'msg' => 'TikHub图文提取失败，继续抓取下一条'];
+            return ['isContinue' => 1, 'msg' => '无法提取该链接，继续抓取下一条'];
         }
 
         $content = array_merge($content, $noteContent);
         $images = is_array($noteContent['images'] ?? null) ? $noteContent['images'] : [];
         if (empty($images)) {
-            $this->markRecordFailed($record, 'TikHub未返回可用图文图片', [
+            $this->markRecordFailed($record, self::REMARK_LINK_EXTRACT_FAIL, [
                 'original_text' => $this->buildImageTextSourceText($content),
                 'tikhub_raw' => $noteContent['tikhub_raw'] ?? [],
                 'image_rewrite_status' => SvDeviceViralRecord::IMAGE_REWRITE_STATUS_FAIL,
             ]);
             $this->setLog($record->device_code . "TikHub未返回可用图文图片 record_id={$record->id}", 'viral_rewrite');
-            return ['isContinue' => 1, 'msg' => 'TikHub未返回可用图文图片，继续抓取下一条'];
+            return ['isContinue' => 1, 'msg' => '无法提取该链接，继续抓取下一条'];
         }
 
         // 抓取费 + 图改写费一并按企业钱包预检，避免成员个人算力为 0 被误拦 / 余额不够仍继续跑
@@ -1077,7 +1085,7 @@ class ViralRewriterHandler extends BaseMessageHandler
         $lockKey = $this->buildDayQuotaLockKey($deviceCode, $personaId, $mediaType);
         $lockValue = $this->acquireDayQuotaLock($lockKey);
         if ($lockValue === null) {
-            $this->setLog($deviceCode . ' viral rewrite day quota lock busy', 'viral_rewrite');
+            $this->setLog($deviceCode . '配额锁定中，稍后重试下一条', 'viral_rewrite');
             return [
                 'ok' => false,
                 'response' => ['isContinue' => 1, 'msg' => $deviceCode . '配额锁定中，稍后重试下一条'],
@@ -1087,20 +1095,11 @@ class ViralRewriterHandler extends BaseMessageHandler
         try {
             $recordDayInfo = $this->resolveRecordDay($publishTimeCount, $task);
             $recordDay = $recordDayInfo['day'];
-            $this->setLog(
-                $deviceCode
-                . ' viral rewrite date quota: today_occupied=' . $recordDayInfo['today_count']
-                . ', next_day_occupied=' . $recordDayInfo['next_day_count']
-                . ', publish_time_count=' . $publishTimeCount
-                . ', target_day=' . ($recordDay ?: 'none'),
-                'viral_rewrite'
-            );
-            $this->setLog(
-                $deviceCode . '已占用配额:' . $recordDayInfo['today_count'] . '总仿写次数:' . $publishTimeCount,
-                'viral_rewrite'
-            );
             if (empty($recordDay)) {
-                $this->setLog($deviceCode . '仿写占用次数超过发布时段数，任务结束', 'viral_rewrite');
+                $this->setLog(
+                    $deviceCode . '配额已满: ' . $this->formatDayQuotaCounts($recordDayInfo, $publishTimeCount) . '，任务结束',
+                    'viral_rewrite'
+                );
                 return [
                     'ok' => false,
                     'response' => ['isContinue' => 0, 'msg' => $deviceCode . '仿写成功次数超过发布时段数，任务结束'],
@@ -1108,6 +1107,12 @@ class ViralRewriterHandler extends BaseMessageHandler
             }
 
             $record = $this->createRecord($task, $shareContent, $hash, $keyword, $image, $content, $recordDay, $extra);
+            $this->setLog(
+                $deviceCode . '配额: ' . $this->formatDayQuotaCounts($recordDayInfo, $publishTimeCount, $recordDay)
+                . '，本次分配=' . $this->formatAssignedDayLabel($recordDayInfo, $recordDay)
+                . '，记录id=' . (int)$record->id,
+                'viral_rewrite'
+            );
             return [
                 'ok' => true,
                 'day' => $recordDay,
@@ -1137,7 +1142,7 @@ class ViralRewriterHandler extends BaseMessageHandler
             }
             return null;
         } catch (\Throwable $th) {
-            $this->setLog($this->payload['deviceId'] . ' viral rewrite day quota lock acquire failed: ' . $th->getMessage(), 'viral_rewrite');
+            $this->setLog($this->payload['deviceId'] . '获取配额锁失败: ' . $th->getMessage(), 'viral_rewrite');
             return null;
         }
     }
@@ -1150,7 +1155,7 @@ class ViralRewriterHandler extends BaseMessageHandler
                 $redis->del($lockKey);
             }
         } catch (\Throwable $th) {
-            $this->setLog('viral rewrite day quota lock release failed: ' . $th->getMessage(), 'viral_rewrite');
+            $this->setLog('释放配额锁失败: ' . $th->getMessage(), 'viral_rewrite');
         }
     }
 
@@ -1187,6 +1192,43 @@ class ViralRewriterHandler extends BaseMessageHandler
             'today_count' => $todayCount,
             'next_day_count' => $nextDayCount,
         ];
+    }
+
+    /**
+     * 配额日志：当天/次日已抓取数。指定 $assignedDay 时，对应日期计入本次占坑。
+     *
+     * @param array{today:string,next_day:string,today_count:int,next_day_count:int} $recordDayInfo
+     */
+    private function formatDayQuotaCounts(array $recordDayInfo, int $publishTimeCount, string $assignedDay = ''): string
+    {
+        $todayCount = (int)$recordDayInfo['today_count'];
+        $nextDayCount = (int)$recordDayInfo['next_day_count'];
+        if ($assignedDay !== '') {
+            if ($assignedDay === (string)$recordDayInfo['today']) {
+                $todayCount++;
+            } elseif ($assignedDay === (string)$recordDayInfo['next_day']) {
+                $nextDayCount++;
+            }
+        }
+
+        return '当天(' . $recordDayInfo['today'] . ')已抓取' . $todayCount . '/' . $publishTimeCount
+            . '，次日(' . $recordDayInfo['next_day'] . ')已抓取' . $nextDayCount . '/' . $publishTimeCount
+            . '，每日期额=' . $publishTimeCount;
+    }
+
+    /**
+     * @param array{today:string,next_day:string} $recordDayInfo
+     */
+    private function formatAssignedDayLabel(array $recordDayInfo, string $recordDay): string
+    {
+        if ($recordDay === (string)$recordDayInfo['today']) {
+            return '当天(' . $recordDay . ')';
+        }
+        if ($recordDay === (string)$recordDayInfo['next_day']) {
+            return '次日(' . $recordDay . ')';
+        }
+
+        return $recordDay;
     }
 
     /**
@@ -1368,32 +1410,17 @@ class ViralRewriterHandler extends BaseMessageHandler
                 try {
                     $response = ToolsService::VideoImitation()->video2text($shareContent);
                     $this->setLog($record->device_code . "视频解析第" . ($i + 1) . "次结果: " . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'viral_rewrite');
-                    $audioText = '';
                     if (isset($response['code']) && $response['code'] == 10000) {
-                        $resData = $response['data'] ?? [];
-                        $audioText = trim($resData['audio_text'] ?? '');
+                        $resData = is_array($response['data'] ?? null) ? $response['data'] : [];
 
-                        // 如果文案为空，降级调用MCP
-                        if (empty($audioText)) {
-                            $requestParams = [
-                                'input' => [
-                                    'prompt' => $shareContent
-                                ],
-                                'version' => 'v2'
-                            ];
-                            $this->setLog($record->device_code . "MCP视频视频解析请求参数: " . json_encode($requestParams, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'viral_rewrite');
-                            $res = ToolsService::Copywriting()->videoImitation($requestParams);
-                            $this->setLog($record->device_code . "MCP视频解析结果: " . json_encode($res, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'viral_rewrite');
-                            if (isset($res['code']) && $res['code'] == 10000) {
-                                $data = $res['data'] ?? [];
-                                $messageJson = $data['message'] ?? '';
-                                $parsedMsg = json_decode($messageJson, true);
-                                $this->setLog($record->device_code . "MCP视频解析messageJson结果: " . json_encode($parsedMsg, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'viral_rewrite');
-                                if ($parsedMsg) {
-                                    $audioText = $parsedMsg['original_text'] ?? '';
-                                }
-                            }
-                        }
+                        // 原文案只认视频口播，识别不到即提取失败：既不让大模型按标题现编，
+                        // 也不拿作品标题文案（中台 desc）顶替
+                        $resolved = OriginalCopywritingResolver::resolve($resData);
+                        $audioText = $resolved['text'];
+                        $this->setLog(
+                            $record->device_code . "原文案取值: " . OriginalCopywritingResolver::describe($resolved),
+                            'viral_rewrite'
+                        );
 
                         return [
                             'success'    => true,
@@ -1413,9 +1440,12 @@ class ViralRewriterHandler extends BaseMessageHandler
                 $record->save();
             }
 
-            $record->remark = '视频解析多次失败，原因: ' . $lastErrorMsg;
+            $record->remark = self::REMARK_LINK_EXTRACT_FAIL;
             $record->save();
-            $this->setLog($record->device_code . "视频解析全部失败，开始降级生成", 'viral_rewrite');
+            $this->setLog(
+                $record->device_code . "视频解析全部失败 last_error={$lastErrorMsg}，标记无法提取该链接",
+                'viral_rewrite'
+            );
             return ['success' => false, 'audio_text' => '', 'duration' => 0, 'last_error' => $lastErrorMsg];
         } catch (\Throwable $th) {
             //throw $th;
@@ -1594,7 +1624,8 @@ class ViralRewriterHandler extends BaseMessageHandler
             }
 
             $productContent = "我的IP人设产品内容：\n主营业务/产品：{$persona['main_business']}\n目标客户与痛点：{$persona['target_pain_points']}\n差异化优势与行为引导：{$persona['conversion_hook']}";
-            $promptContent  = "我的IP人设内容是：\n" . $rule->getClueContent($persona) . "\n\n" . $productContent . "\n\n视频文案：\n{$audioText}";
+            $personaContent = AiPersona::withViralRewriteLocationRule((string)$rule->getClueContent($persona), $persona);
+            $promptContent  = "我的IP人设内容是：\n" . $personaContent . "\n\n" . $productContent . "\n\n视频文案：\n{$audioText}";
             $titlecoze['keywords'] = $promptContent;
 
             // 文案仿写：rewritten_text 为空或异常时重试，最多 COPYWRITING_GENERATE_MAX_RETRY 次
@@ -1613,7 +1644,7 @@ class ViralRewriterHandler extends BaseMessageHandler
                         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
                         'viral_rewrite'
                     );
-                    $titlecoze['persona'] = $rule->getClueContent($persona);
+                    $titlecoze['persona'] = $personaContent;
                     $titlecoze['original'] = $audioText;
                     $titlecoze['voice'] = '';
                     $titlecoze['hook'] = '';
@@ -1762,8 +1793,9 @@ class ViralRewriterHandler extends BaseMessageHandler
             }
 
             $productContent = "我的IP人设产品内容：\n主营业务/产品：{$persona['main_business']}\n目标客户与痛点：{$persona['target_pain_points']}\n差异化优势与行为引导：{$persona['conversion_hook']}";
+            $personaContent = AiPersona::withViralRewriteLocationRule((string)$rule->getClueContent($persona), $persona);
             // 没有视频原文，只靠人设和产品生成
-            $promptContent = "我的IP人设内容是：\n" . $rule->getClueContent($persona) . "\n\n" . $productContent . "\n\n请根据以上信息，生成一篇吸引人的营销文案。";
+            $promptContent = "我的IP人设内容是：\n" . $personaContent . "\n\n" . $productContent . "\n\n请根据以上信息，生成一篇吸引人的营销文案。";
             $titlecoze['keywords'] = $promptContent;
 
             $this->setLog(
@@ -1775,7 +1807,7 @@ class ViralRewriterHandler extends BaseMessageHandler
                 ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
                 'viral_rewrite'
             );
-            $titlecoze['persona'] = $rule->getClueContent($persona);
+            $titlecoze['persona'] = $personaContent;
             $titlecoze['original'] = '';
             $titlecoze['voice'] = '';
             $titlecoze['hook'] = '';

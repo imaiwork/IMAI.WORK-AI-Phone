@@ -181,15 +181,19 @@ export function useWelcomeFiles(options?: { getMaxRefs?: () => number }) {
 
     async function uploadFilesToUrls(files: File[]): Promise<string[]> {
         const urls: string[] = []
+        let failed = 0
         for (const f of files) {
             try {
                 const resp: any = await uploadImage({ file: f, name: 'file' })
                 const url = resp?.uri || resp?.url || resp?.src || resp?.data?.uri || resp?.data?.url
                 if (url) urls.push(url)
+                else failed++
             } catch {
-                /* 单张失败忽略 */
+                failed++
             }
         }
+        // 静默吞掉会让用户以为「参考图没生效」，必须出声
+        if (failed > 0) feedback.msgWarning(`${failed} 张参考图上传失败`)
         return urls
     }
 

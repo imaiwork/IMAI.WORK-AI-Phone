@@ -55,15 +55,32 @@
                 </ElTabs>
             </div>
 
+            <div v-if="showPersonaEntry" class="persona-entry" @click="togglePersonaView(true)">
+                <div class="flex items-center gap-2.5">
+                    <Icon name="local-icon-agent" :size="16" />
+                    <span class="text-[13px] font-black text-[#475569]">来自 IP 人设的智能体</span>
+                    <span class="persona-count">{{ personaAgentCount }}</span>
+                </div>
+                <span class="text-[12px] font-medium text-[#94A3B8]">展开查看 ›</span>
+            </div>
+            <div v-else-if="personaView" class="persona-entry" @click="togglePersonaView(false)">
+                <div class="flex items-center gap-2.5">
+                    <Icon name="el-icon-ArrowLeft" :size="14" />
+                    <span class="text-[13px] font-black text-[#475569]">IP 人设的智能体</span>
+                    <span class="persona-count">{{ personaAgentCount }}</span>
+                </div>
+                <span class="text-[12px] font-medium text-[#94A3B8]">返回我创建的</span>
+            </div>
+
             <div class="grow min-h-0">
                 <ElScrollbar :distance="20" @end-reached="load">
                     <template v-if="pager.lists.length">
                         <div class="grid grid-cols-4 2xl:grid-cols-5 gap-6 p-8">
-                            <div
-                                v-for="(item, index) in pager.lists"
-                                :key="index"
-                                class="agent-card group"
-                                @click="handleAgentChatting(item)">
+                            <template v-for="(item, index) in pager.lists" :key="item.id">
+                            <div v-if="showPersonaSection(index)" class="persona-section col-span-full">
+                                <span class="persona-section-name">{{ personaSectionTitle(item) }}</span>
+                            </div>
+                            <div class="agent-card group" @click="handleAgentChatting(item)">
                                 <div
                                     class="card-cover"
                                     :style="{ background: `url(${item.bg_image || AgentBg}) center/cover` }">
@@ -116,11 +133,12 @@
                                     </div>
                                 </div>
                             </div>
+                            </template>
                         </div>
                         <load-text :is-load="pager.isLoad"></load-text>
                     </template>
                     <div v-else class="h-full flex flex-col items-center justify-center grayscale opacity-50">
-                        <ElEmpty description="暂无可用智能体" />
+                        <ElEmpty :description="personaView ? '该分组下暂无智能体' : '暂无可用智能体'" />
                     </div>
                 </ElScrollbar>
             </div>
@@ -154,7 +172,7 @@ import {
     shouldShowAgentAccessTag,
 } from "@/utils/agentPermission";
 import AgentBg from "@/assets/images/agent_bg.png";
-import { AgentTypeEnum } from "../_enums";
+import { AgentTypeEnum, AgentOriginEnum } from "../_enums";
 import CozeSetting from "../_components/coze-setting.vue";
 import CozeEdit from "../_components/coze-edit.vue";
 import CozeFlowEdit from "../_components/coze-flow-edit.vue";
@@ -178,6 +196,8 @@ interface AgentItem {
     coze_id?: number;
     source?: number;
     is_owner?: number;
+    origin?: number;
+    persona_name?: string;
 }
 
 // 定义Tab项接口
@@ -202,10 +222,27 @@ const tabs = computed(() => TABS);
 // --- 数据获取与分页 ---
 const queryParams = reactive({ page_no: 1 });
 
+// 人设自动开通的智能体默认收进折叠区，避免把用户手工创建的淹没
+const personaView = ref(false);
+const personaAgentCount = ref(0);
+
+// 折叠区条目数，用于入口上的计数
+const loadPersonaAgentCount = async () => {
+    try {
+        const data = await getAgentList({ page_no: 1, page_size: 1, origin: AgentOriginEnum.PERSONA });
+        personaAgentCount.value = Number(data?.count ?? 0);
+    } catch (error) {
+        personaAgentCount.value = 0;
+    }
+};
+
 // 根据当前Tab动态选择获取列表的API
 const getListsAPI = (params: any) => {
     return currentTab.value === AgentTypeEnum.AGENT
-        ? getAgentList(params)
+        ? getAgentList({
+              ...params,
+              origin: personaView.value ? AgentOriginEnum.PERSONA : AgentOriginEnum.MANUAL,
+          })
         : getCozeAgentList({
               ...params,
               type: currentTab.value === AgentTypeEnum.COZE_AGENT ? 1 : 2,
@@ -284,6 +321,7 @@ const handleDelete = async (item: AgentItem) => {
                 await deleteAPI({ id: item.id });
                 pager.lists = pager.lists.filter((listItem) => listItem.id !== item.id);
                 feedback.msgSuccess("删除成功");
+                if (currentTab.value === AgentTypeEnum.AGENT) loadPersonaAgentCount();
             } catch (error) {
                 feedback.msgWarning("删除失败");
             }
@@ -367,11 +405,44 @@ const handleCozeSetting = async () => {
     cozeSettingRef.value?.setFormData(cozeSettingConfig.value);
 };
 
+/**
+ * 展开态下是否需要在这条前面起一个人设分节。
+ * 后端在 origin=2 时按 persona_id 排序，同一人设跨分页也连续，
+ * 所以只跟上一条比较即可，新加载的永远追加在末尾。
+ * @param {number} index - 当前条在列表中的下标
+ */
+const showPersonaSection = (index: number) => {
+    if (!personaView.value) return false;
+    if (index === 0) return true;
+    const lists = pager.lists as AgentItem[];
+    return (Number(lists[index]?.persona_id) || 0) !== (Number(lists[index - 1]?.persona_id) || 0);
+};
+
+/**
+ * 分节标题：取人设名，取不到就退回占位
+ * @param {AgentItem} item - 当前条数据
+ */
+const personaSectionTitle = (item: AgentItem) =>
+    item.persona_name || (item.persona_id ? `人设 #${item.persona_id}` : "未绑定人设");
+
+// 是否展示折叠区入口
+const showPersonaEntry = computed(
+    () => currentTab.value === AgentTypeEnum.AGENT && !personaView.value && personaAgentCount.value > 0
+);
+
+// 展开/收起人设智能体
+const togglePersonaView = (value: boolean) => {
+    if (personaView.value === value) return;
+    personaView.value = value;
+    resetPage();
+};
+
 // 切换Tab
 const handleTabClick = (tab: any) => {
     const newTabValue = tab.paneName as AgentTypeEnum;
     if (currentTab.value === newTabValue) return;
     currentTab.value = newTabValue;
+    personaView.value = false;
     resetPage();
 };
 
@@ -410,10 +481,35 @@ const getCozeSettingDetail = async () => {
 onMounted(() => {
     getLists();
     getCozeSettingDetail();
+    loadPersonaAgentCount();
 });
 </script>
 
 <style scoped lang="scss">
+.persona-entry {
+    @apply mx-6 mt-4 flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-br bg-[#f8fafc] px-4 py-3 transition-colors;
+
+    &:hover {
+        @apply border-primary;
+    }
+}
+
+.persona-section {
+    @apply flex items-center gap-2 border-b border-[#F1F5F9] pb-2;
+
+    &:not(:first-child) {
+        @apply mt-2;
+    }
+}
+
+.persona-section-name {
+    @apply text-[13px] font-black text-[#475569];
+}
+
+.persona-count {
+    @apply rounded-full bg-[#0065fb]/10 px-2 text-[11px] font-black leading-[18px] text-primary;
+}
+
 .coze-config-btn {
     @apply flex items-center h-10 px-4 rounded-xl bg-black border border-br text-[13px] font-black text-white;
 }

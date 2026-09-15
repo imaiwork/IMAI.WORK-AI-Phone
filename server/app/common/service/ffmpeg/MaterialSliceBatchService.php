@@ -386,6 +386,7 @@ class MaterialSliceBatchService
                 'thumbnail_url' => $thumbnailUrl,
                 // 转码阶段已截到封面则不再强制重截；否则兜底再截
                 'ensure_thumbnail' => $thumbnailUrl === '',
+                'keep_original' => Material::KEEP_ORIGINAL_NO,
             ]
         );
 
@@ -835,6 +836,7 @@ class MaterialSliceBatchService
                 'width' => (int)$slice->width,
                 'height' => (int)$slice->height,
                 'ensure_thumbnail' => true,
+                'keep_original' => Material::KEEP_ORIGINAL_NO,
             ]
         );
         $this->refund($slice);

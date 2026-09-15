@@ -2,11 +2,15 @@
 
 namespace app\api\logic\sv;
 
+use app\common\enum\DeviceEnum;
 use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvAddWechatStrategy;
-use app\common\model\wechat\AiWechat;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvCrawlingTask;
+use app\common\model\sv\SvDySearchTask;
+use app\common\model\wechat\AiWechat;
+use app\common\service\sv\DySearchAccountNormalizer;
+use Channel\Client as ChannelClient;
 use think\facade\Cache;
 use think\facade\Log;
 
@@ -28,6 +32,10 @@ class SvAddWechatRecordLogic extends SvBaseLogic
             
             if((int)$record->status === 1){
                 throw new \Exception('请勿重复执行', 400);
+            }
+
+            if ((int)($record->dy_search_task_id ?? 0) > 0) {
+                return self::retryDySearch($record);
             }
 
             $account = SvAccount::where('device_code', $record['device_code'])->where('user_id', self::$uid)->findOrEmpty();
@@ -100,7 +108,7 @@ class SvAddWechatRecordLogic extends SvBaseLogic
             $record->wechat_no = $wechat->wechat_id;
             $record->wechat_name = $wechat->wechat_nickname;
             $record->result = '';
-            $record->update = time();
+            $record->update_time = time();
             $record->save();
 
             $wechat->is_cooling = 0;
@@ -115,6 +123,117 @@ class SvAddWechatRecordLogic extends SvBaseLogic
             return false;
         }
         return true;
+    }
+
+    private static function retryDySearch(SvAddWechatRecord $record): bool
+    {
+        $task = SvDySearchTask::where('id', (int)$record->dy_search_task_id)
+            ->where('user_id', self::$uid)
+            ->findOrEmpty();
+        if ($task->isEmpty()) {
+            throw new \Exception('获客任务不存在', 400);
+        }
+        if (in_array((int)$task->status, [4], true)) {
+            throw new \Exception('获客任务已结束', 400);
+        }
+        if ((int)$task->add_type !== 1) {
+            throw new \Exception('仅支持加微任务重试', 400);
+        }
+        if (trim((string)$task->wechat_id) === '') {
+            throw new \Exception('获客任务未配置微信号', 400);
+        }
+
+        $deviceCode = (string)$record->device_code;
+        $wechat = self::findDySearchWechatAccount($deviceCode, (string)$task->wechat_id, (int)self::$uid);
+        if ($wechat === null) {
+            throw new \Exception('指定的加微微信不属于该设备', 400);
+        }
+
+        $greeting = '';
+        if ((int)$task->add_remark_enable === 1) {
+            $remarks = $task->remarks;
+            if (is_string($remarks)) {
+                $decoded = json_decode($remarks, true);
+                $remarks = is_array($decoded) ? $decoded : [];
+            }
+            if (is_array($remarks) && $remarks !== []) {
+                $remarks = array_values(array_filter(array_map('trim', $remarks), function ($item) {
+                    return $item !== '';
+                }));
+                if ($remarks !== []) {
+                    $greeting = (string)$remarks[array_rand($remarks)];
+                }
+            }
+        }
+
+        $record->wechat_no = $wechat->account ?? '';
+        $record->wechat_name = $wechat->nickname ?? '';
+        $record->wechat_avatar = $wechat->avatar ?? '';
+        $record->remark = $greeting;
+        $record->status = 2;
+        $record->result = '执行中';
+        $record->update_time = time();
+        $record->save();
+
+        $data = [
+            'type' => DeviceEnum::RPA_ADD_WECHAT,
+            'appType' => 0,
+            'content' => json_encode([
+                'task_id' => (int)$record->id,
+                'deviceId' => $deviceCode,
+                'account' => $wechat->account,
+                'account_type' => 1,
+                'send_wechat_ids' => [[
+                    'friendWechatId' => $record->reg_wechat,
+                    'message' => $greeting,
+                    'recordId' => (int)$record->id,
+                    'isManual' => 0,
+                ]],
+                'add_interval_time' => (int)$task->add_interval_time > 0 ? (int)$task->add_interval_time : 10,
+                'msg' => '抖音获客加微重试',
+            ], JSON_UNESCAPED_UNICODE),
+            'deviceId' => $deviceCode,
+            'appVersion' => DeviceEnum::APP_VERSION,
+            'messageId' => 0,
+        ];
+        ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+        ChannelClient::publish('device.' . $deviceCode . '.message', [
+            'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
+        ]);
+        return true;
+    }
+
+    private static function findDySearchWechatAccount(string $deviceCode, string $wechatId, int $userId): ?SvAccount
+    {
+        $tokens = DySearchAccountNormalizer::splitWechatIds($wechatId);
+        if ($tokens === [] || $deviceCode === '') {
+            return null;
+        }
+
+        $query = SvAccount::where('device_code', $deviceCode)->where('type', 1);
+        if ($userId > 0) {
+            $query->where('user_id', $userId);
+        }
+        $found = $query->where('account', 'in', $tokens)->findOrEmpty();
+        if (!$found->isEmpty()) {
+            return $found;
+        }
+
+        $ids = [];
+        foreach ($tokens as $token) {
+            if (ctype_digit($token)) {
+                $ids[] = (int)$token;
+            }
+        }
+        if ($ids === []) {
+            return null;
+        }
+        $query = SvAccount::where('device_code', $deviceCode)->where('type', 1);
+        if ($userId > 0) {
+            $query->where('user_id', $userId);
+        }
+        $found = $query->where('id', 'in', $ids)->findOrEmpty();
+        return $found->isEmpty() ? null : $found;
     }
 
     public static function delete(array $params)
@@ -138,7 +257,7 @@ class SvAddWechatRecordLogic extends SvBaseLogic
                 ->limit(5)
                 ->order('id desc')
                 ->select();
-
+        
         foreach ($tasks as $task) {
             try {
                 $params = ['task_id' => $task->task_id, 'keywords' => $task->original_message, 'user_id' => $task->user_id];
@@ -150,6 +269,7 @@ class SvAddWechatRecordLogic extends SvBaseLogic
                     continue;
                 }
                 $response = \app\common\service\ToolsService::Coze()->intention($params);
+                Log::channel('acquiringIntent')->error('线索词id: ' . $task->id .',请求参数: '.json_encode($params, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT).',意图信息: ' . json_encode($response, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT));
                 // continue;
                 if($response['code'] == 10000 && isset($response['data']['content'])){
                     $intentionType = (int)$response['data']['content'];
@@ -157,7 +277,10 @@ class SvAddWechatRecordLogic extends SvBaseLogic
                     $task->update_time = time();
                     $task->save();
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                // 必须接 Throwable：中台 Coze 上游异常时这里会冒出 \Error（如返回值不是 array 触发 TypeError），
+                // 只接 \Exception 的话它会一路穿到 Crontab::execute() 打断整张定时任务表，
+                // 2026-09-08 夜里就是这样把「自动合成视频」等后续任务全拖停、整晚零出片。
                 Log::channel('acquiringIntent')->error('线索词id: ' . $task->id . ', 错误信息: ' . $e->getMessage());
             }
         }

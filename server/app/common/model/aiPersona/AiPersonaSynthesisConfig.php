@@ -15,11 +15,36 @@ class AiPersonaSynthesisConfig extends BaseModel
     const VISUAL_MATERIAL_SOURCE_AI_MATERIAL = 2;
     const VISUAL_MATERIAL_SOURCE_MATERIAL = 3;
 
+    //闪剪素材使用方式: 1-自动适配(切片) 2-原图
+    const MATERIAL_USE_MODE_SLICE = 1;
+    const MATERIAL_USE_MODE_ORIGINAL = 2;
+
     //文案来源: 1-仿写, 2-AI生成, 3-无需, 4-文案库
     const COPYWRITING_SOURCE_IMITATE = 1;
     const COPYWRITING_SOURCE_AI = 2;
     const COPYWRITING_SOURCE_NONE = 3;
     const COPYWRITING_SOURCE_LIBRARY = 4;
+
+    /**
+     * 校验文案来源取值，与 AiPersona::requireValidRunMode 同款：脏值一律抛错，不静默兜底
+     * @throws \Exception
+     */
+    public static function requireValidCopywritingSource($value): int
+    {
+        $invalid = is_bool($value) || is_array($value) || is_object($value)
+            || (is_string($value) && !is_numeric(trim($value)));
+        $source = $invalid ? 0 : (int)$value;
+        $allowed = [
+            self::COPYWRITING_SOURCE_IMITATE,
+            self::COPYWRITING_SOURCE_AI,
+            self::COPYWRITING_SOURCE_NONE,
+            self::COPYWRITING_SOURCE_LIBRARY,
+        ];
+        if (!in_array($source, $allowed, true)) {
+            throw new \Exception('文案来源不正确，1=找爆款仿写 2=AI直接生成 3=不使用 4=文案库');
+        }
+        return $source;
+    }
 
     //文案库使用方式: 1-随机, 2-顺序
     const LIBRARY_USE_MODE_RANDOM = 1;
@@ -70,6 +95,22 @@ class AiPersonaSynthesisConfig extends BaseModel
 
     protected $json = ['generation_types', 'template_config'];
     protected $jsonAssoc = true;
+
+    /** 每日出片条数：0=未配置。仅无手机模式消费，手机模式仍按发布时段数出片 */
+    const DAILY_VIDEO_COUNT_UNSET = 0;
+    /** 无手机模式未配置条数时的兜底，取 1 而不是 0，避免云端人设一条都不出 */
+    const DAILY_VIDEO_COUNT_CLOUD_DEFAULT = 1;
+    const DAILY_VIDEO_COUNT_MAX = 20;
+
+    /** 归一每日出片条数：非法或越界回落到未配置(0)，由调用方决定兜底 */
+    public static function normalizeDailyVideoCount($value): int
+    {
+        $count = (int)$value;
+        if ($count < 0 || $count > self::DAILY_VIDEO_COUNT_MAX) {
+            return self::DAILY_VIDEO_COUNT_UNSET;
+        }
+        return $count;
+    }
 
     public static function normalizeNewsMixcutDuration($duration): int
     {

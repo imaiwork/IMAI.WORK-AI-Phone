@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\common\command;
 
+use app\common\service\log\ThinkFileLogDir;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Argument;
@@ -92,22 +93,13 @@ class SingleWorkerService extends Command
     {
         $logRoot = root_path() . 'runtime' . DIRECTORY_SEPARATOR . 'log';
         $workermanLog = $logRoot . DIRECTORY_SEPARATOR . 'workerman.log';
-        $this->ensureDirectory(dirname($workermanLog));
+        ThinkFileLogDir::ensure(dirname($workermanLog));
 
         Worker::$stdoutFile = $workermanLog;
         Worker::$logFile = $workermanLog;
 
-        $this->ensureDirectory($logRoot . DIRECTORY_SEPARATOR . 'socket' . DIRECTORY_SEPARATOR . date('Ymd') . DIRECTORY_SEPARATOR . date('Ym'));
-    }
-
-    private function ensureDirectory(string $path): void
-    {
-        if (is_dir($path)) {
-            return;
-        }
-
-        if (!mkdir($path, 0755, true) && !is_dir($path)) {
-            throw new \RuntimeException('Cannot create log directory: ' . $path);
+        foreach (['socket', 'wechat_socket'] as $channel) {
+            ThinkFileLogDir::ensureChannel($channel);
         }
     }
 }

@@ -267,7 +267,7 @@
 				{
 					"path": "pages/user_balance/user_balance",
 					"style": {
-						"navigationBarTitleText": "变化记录",
+						"navigationBarTitleText": "算力使用记录",
 						"navigationStyle": "custom",
 						"enablePullDownRefresh": false,
 						"disableScroll": true
@@ -402,7 +402,7 @@
 				{
 					"path": "pages/effect_statistics/effect_statistics",
 					"style": {
-						"navigationBarTitleText": "效果统计",
+						"navigationBarTitleText": "作品数据",
 						"navigationStyle": "custom",
 						"disableScroll": true
 					},
@@ -463,6 +463,46 @@
 					},
 					"meta": {
 						"share": true
+					}
+				},
+				{
+					"path": "pages/play_video/play_video",
+					"style": {
+						"navigationBarTitleText": "爆款玩法复刻",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/play_video_face/play_video_face",
+					"style": {
+						"navigationBarTitleText": "影视换脸改词",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/play_video_dance/play_video_dance",
+					"style": {
+						"navigationBarTitleText": "跳舞换脸",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/play_video_clip/play_video_clip",
+					"style": {
+						"navigationBarTitleText": "影视引流拼接",
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
 					}
 				},
 				{
@@ -1426,6 +1466,16 @@
 				},
 				{
 					"path": "pages/create_city_intercept/create_city_intercept",
+					"style": {
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/create_account_search/create_account_search",
 					"style": {
 						"navigationStyle": "custom",
 						"disableScroll": true

@@ -23,6 +23,13 @@
                         @click="runDiagnosis">
                         {{ diagRunning ? `诊断中 ${diagDone}/${diagTotal}` : "一键诊断" }}
                     </ElButton>
+                    <ElButton
+                        v-if="diagRunning"
+                        class="!h-11 !rounded-xl !ml-0"
+                        :loading="diagCancelling"
+                        @click="cancelDiagnosis">
+                        取消
+                    </ElButton>
                     <span class="text-slate-400 text-xs leading-4"
                         >按模型用量计费<br />失败不扣</span
                     >
@@ -203,6 +210,7 @@ import {
     geoQuestions,
     geoMonitorBatch,
     geoMonitorProgress,
+    geoMonitorCancel,
     geoInsightVisibilityTrend,
     geoProjectUpdate,
 } from "@/api/geo";
@@ -381,6 +389,9 @@ const load = async () => {
 const diagRunning = ref(false);
 const diagTotal = ref(0);
 const diagDone = ref(0);
+// 当前批次 id:取消诊断要带上它;恢复轮询(值为 0)时由进度响应回填
+const diagBatchId = ref(0);
+const diagCancelling = ref(false);
 // 切换菜单/品牌导致组件卸载时终止循环,避免死组件里继续发几十个慢请求、
 // 与新实例的再次诊断并发造成重复采集
 let diagCancelled = false;
@@ -455,15 +466,20 @@ const stopDiagPolling = () => {
 const startDiagPolling = (batchId = 0) => {
     stopDiagPolling();
     diagRunning.value = true;
+    diagBatchId.value = batchId;
     const tick = async () => {
         try {
-            const p: any = await geoMonitorProgress(props.pid, 0, batchId);
+            const p: any = await geoMonitorProgress(props.pid, 0, diagBatchId.value);
             diagDone.value = Number(p?.done || 0);
             diagTotal.value = Number(p?.total || diagTotal.value);
+            // 恢复轮询时不知道批次 id(传 0 由后端取最近批次),从响应回填,取消时才带得上
+            if (Number(p?.batch_task_id || 0) > 0) diagBatchId.value = Number(p.batch_task_id);
             if (p?.finished) {
                 stopDiagPolling();
                 diagRunning.value = false;
-                ElMessage.success(`诊断完成:成功 ${p?.success ?? 0} · 失败 ${p?.failed ?? 0}`);
+                // 其他标签页/向导里取消的批次也会走到这:话术区分取消与自然完成
+                if (p?.canceled) ElMessage.info(`诊断已取消,已完成 ${p?.done ?? 0}/${p?.total ?? 0} 的结果已保留`);
+                else ElMessage.success(`诊断完成:成功 ${p?.success ?? 0} · 失败 ${p?.failed ?? 0}`);
                 load();
                 loadTrend();
             }
@@ -473,6 +489,39 @@ const startDiagPolling = (batchId = 0) => {
     };
     tick();
     diagTimer = setInterval(tick, 5000);
+};
+
+// 取消诊断:按当前进度收口。已完成 cell 已按量计费、结果保留;未执行 cell 从未
+// 扣费,直接作废;正在执行中的个别 cell 服务端无法中断,会自然跑完并计入结果
+const cancelDiagnosis = async () => {
+    if (diagCancelling.value) return;
+    try {
+        await geoConfirm({
+            title: "取消诊断",
+            message: "取消后按当前进度出结果,已完成的问题保留,未执行的不再执行、不产生扣费。",
+            confirmText: "取消诊断",
+            cancelText: "继续诊断",
+            tone: "warning",
+            facts: [{ label: "当前进度", value: `${diagDone.value}/${diagTotal.value}` }],
+            note: "正在执行中的个别请求会自然结束并计入结果",
+        });
+    } catch {
+        return; // 用户选择继续诊断
+    }
+    diagCancelling.value = true;
+    try {
+        const res: any = await geoMonitorCancel(props.pid, diagBatchId.value);
+        stopDiagPolling();
+        diagRunning.value = false;
+        if (res?.already_finished) ElMessage.info("诊断刚好已自然结束,结果已全部保留");
+        else ElMessage.success(`已取消诊断,保留已完成 ${res?.done ?? 0}/${res?.total ?? 0}`);
+        load();
+        loadTrend();
+    } catch (e) {
+        ElMessage.error(errText(e));
+    } finally {
+        diagCancelling.value = false;
+    }
 };
 
 // 刷新/重进页面时恢复进行中的诊断批次(后端自动取该项目最近批次;

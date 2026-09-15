@@ -1161,6 +1161,8 @@ trait DeviceAutoTaskTrait
                     'comment_publish_day' => $setting->comment_publish_day ?? 0,
                     'ip_address' => $setting->ip_address ?? [],
                     'is_note_like' => $setting->is_like ?? 0,
+                    'touchType' => (int)($setting->touch_type ?? 1),
+                    'agentId' => (int)($setting->agent_id ?? 0),
                     'msg' => '评论区评论任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1254,6 +1256,8 @@ trait DeviceAutoTaskTrait
                     'comment_publish_day' => $setting->comment_publish_day ?? 0,
                     'ip_address' => $setting->ip_address ?? [],
                     'is_note_like' => $setting->is_like ?? 0,
+                    'touchType' => (int)($setting->touch_type ?? 1),
+                    'agentId' => (int)($setting->agent_id ?? 0),
                     'msg' => '评论区私信任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,

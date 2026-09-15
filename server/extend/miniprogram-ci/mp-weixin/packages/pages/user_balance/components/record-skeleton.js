@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js"),o=e.defineComponent({__name:"record-skeleton",props:{rows:{default:6}},setup:o=>(r,s)=>({a:e.f(o.rows,((e,o,r)=>({a:e,b:e>1?1:""})))})}),r=e._export_sfc(o,[["__scopeId","data-v-153a2a1b"]]);wx.createComponent(r);

@@ -63,6 +63,7 @@ export function useWelcomeVideoDraw(deps: {
     appStore: ReturnType<typeof useAppStore>
     pollDrawTask: (taskNo: string, callbacks?: { onProgress?: (p: number) => void }) => Promise<any>
     refreshHistoryIfOpen: () => void
+    syncUserTokens: () => void
     bindDrawConversation: (mode: 'image' | 'video' | 'ppt', id: number | string) => void
     ensureEnoughTokens: (scene: string, count: number) => boolean
     ensureHasTokens: () => boolean
@@ -74,6 +75,7 @@ export function useWelcomeVideoDraw(deps: {
         appStore,
         pollDrawTask,
         refreshHistoryIfOpen,
+        syncUserTokens,
         bindDrawConversation,
         ensureEnoughTokens,
         ensureHasTokens,
@@ -258,6 +260,8 @@ export function useWelcomeVideoDraw(deps: {
             fillVideosFromAssets(task, t)
         } catch (e: any) {
             markVideoTaskFailed(task, resolveDrawErrorMsg(e))
+        } finally {
+            syncUserTokens()
         }
     }
 

@@ -3,6 +3,7 @@
 
 namespace app\common\command;
 
+use app\common\model\aiPersona\AiPersona;
 use app\common\model\sv\SvDevice;
 use think\console\Command;
 use think\console\Input;
@@ -61,6 +62,8 @@ class VideoSynthesisCoverageCheck extends Command
             ->where('d.auto_type', 1)
             ->where('p.status', 1)
             ->where('p.publish_mode', 1)
+            // 与 handleDeviceLevel 同步：无手机模式人设不由设备维度合成，不能计入未完成
+            ->where('p.run_mode', AiPersona::RUN_MODE_PHONE)
             ->where('d.persona_id', '>', 0);
 
         // 未完成 = 布尔锁=0 且完成日期非今天（白天 reset 清锁后靠日期判断，任何时间跑都准确）
@@ -83,6 +86,8 @@ class VideoSynthesisCoverageCheck extends Command
             ->where('d.auto_type', 1)
             ->whereIn('p.wechat_publish_mode', [1, 3])
             ->where('p.status', 1)
+            // 与 WechatVideoSynthesis 同步：无手机模式人设不走朋友圈手机链路
+            ->where('p.run_mode', AiPersona::RUN_MODE_PHONE)
             ->where('d.is_first', 0)
             ->where('d.persona_id', '>', 0);
 

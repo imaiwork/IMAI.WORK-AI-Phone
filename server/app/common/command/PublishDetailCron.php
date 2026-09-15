@@ -21,7 +21,9 @@ use think\facade\Log;
 class PublishDetailCron extends Command
 {
     private const RUNNING_LOCK_KEY = 'publish_detail_cron:running';
-    private const RUNNING_LOCK_TTL = 900;
+    // 必须 <= php-fpm request_terminate_timeout(600)：锁比进程上限还长的话，
+    // 轮次被超时杀掉后锁不会随 finally 释放，要白等到 TTL 到期才允许下一轮。
+    private const RUNNING_LOCK_TTL = 600;
 
     protected function configure()
     {

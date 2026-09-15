@@ -10,6 +10,7 @@ import { useAppStore } from "./stores/app";
 // 布局组件导入
 import LayoutAccount from "@/layouts/components/account/index.vue";
 import LayoutSurvey from "@/layouts/components/survey/index.vue";
+import LayoutCompleteProfile from "@/layouts/components/complete-profile/index.vue";
 import DataPackage from "@/components/data-package/index.vue";
 import OemRecharge from "@/components/oem-recharge/index.vue";
 import SiteClosedPage from "@/components/site-closed/index.vue";
@@ -74,6 +75,7 @@ useHead({
             <!-- 全局弹窗组件 -->
             <LayoutAccount v-if="userStore.showLogin" />
             <LayoutSurvey v-if="appStore.showSurvey" />
+            <LayoutCompleteProfile v-if="userStore.showCompleteProfile" />
             <data-package v-if="appStore.showDataPackage"></data-package>
             <OemRecharge v-if="appStore.showOemRecharge" />
         </NuxtLayout>

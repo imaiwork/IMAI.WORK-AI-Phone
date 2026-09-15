@@ -19,7 +19,7 @@ class AiPersonaIndividual extends BaseModel
         $personality_tags = AiPersonaTextService::join($this->personality_tags);
         $monetize_paths = AiPersonaTextService::join($this->monetize_paths);
         $identity = AiPersonaTextService::join($this->identity);
-        $this->clue_content = "我的IP人设名称是{$persona->devicpersona_namee_code}。
+        $this->clue_content = "我的IP人设名称是{$persona->persona_name}。
 
                     IP人设介绍如下：
                     {$persona->persona_desc}

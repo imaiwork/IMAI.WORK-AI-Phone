@@ -357,7 +357,8 @@ class MidPlatformDrawClient
         if ($taskNo !== '') {
             $url .= (str_contains($url, '?') ? '&' : '?') . 'task_no=' . rawurlencode($taskNo);
         }
-        return $url;
+        // 回调鉴权令牌；令牌未配置时保持原地址（存量接口按迁移期规则放行）
+        return \app\common\service\CallbackTokenService::appendTo($url) ?: $url;
     }
 
     private function assertSuccess(array $response): void

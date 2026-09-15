@@ -8,6 +8,7 @@ use app\api\validate\videoImitation\TaskValidate;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 
 /**
  * 视频复刻生成任务控制器
@@ -111,7 +112,13 @@ class TaskController extends BaseApiController
                 (int)$params['generation_type'],
                 (int)($params['avatar_id'] ?? 0),
                 (int)($params['voice_id'] ?? 0),
-                (string)$this->request->post('rewritten_text', '')
+                (string)$this->request->post('rewritten_text', ''),
+                // 未传 = 不改动已有设置；传空串同样按未传处理
+                self::optionalFloat($this->request->post('music_volume', null)),
+                self::optionalFloat($this->request->post('speech_rate', null)),
+                // 未传=沿用已有；传空串=改回自动随机/系统音乐
+                self::optionalString($this->request->post('clip_template_id', null)),
+                self::optionalString($this->request->post('music_url', null))
             );
             return $result !== false
                 ? $this->success('生成配置已确认，任务已提交', $result)
@@ -121,6 +128,22 @@ class TaskController extends BaseApiController
         } catch (\Throwable $e) {
             return $this->fail($e->getMessage());
         }
+    }
+
+    /** 可选字符串入参：未传返回 null（下游保留原值）；传了空串按「清空」处理 */
+    private static function optionalString($value): ?string
+    {
+        return $value === null ? null : trim((string)$value);
+    }
+
+    /** 可选数值入参：未传/空串返回 null，交由下游保留原值 */
+    private static function optionalFloat($value): ?float
+    {
+        if ($value === null || $value === '' || !is_numeric($value)) {
+            return null;
+        }
+
+        return (float)$value;
     }
 
     /**
@@ -226,7 +249,12 @@ class TaskController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('shanjiannotice')->write('视频复刻接收回调: ' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('shanjiannotice')->write('视频复刻接收回调: ' . json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('shanjiannotice', '视频复刻', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             
             $taskId = $data['task_id'] ?? '';
             if (empty($taskId)) {

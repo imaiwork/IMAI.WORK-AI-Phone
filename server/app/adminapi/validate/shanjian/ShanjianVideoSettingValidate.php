@@ -24,6 +24,7 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'clip' => '',
         'music' => '',
         'extra' => '',
+        'material_use_mode' => 'in:1,2',
         'success_num' => 'number',
         'error_num' => 'number',
     ];
@@ -31,6 +32,7 @@ class ShanjianVideoSettingValidate extends BaseValidate
     protected $message = [
         'name.max' => '名称长度不能超过50',
         'pic.max' => '封面长度不能超过255',
+        'material_use_mode.in' => '素材使用方式不正确，1=自动适配 2=原图',
     ];
 
 }

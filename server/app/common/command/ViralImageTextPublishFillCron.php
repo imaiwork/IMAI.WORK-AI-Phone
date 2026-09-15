@@ -3,6 +3,7 @@
 namespace app\common\command;
 
 use app\common\service\aiPersona\ViralImageTextPublishFillService;
+use app\common\service\aiPersona\ViralPublishFillLog;
 use think\console\Command;
 use think\console\Input;
 use think\console\Output;
@@ -35,22 +36,41 @@ class ViralImageTextPublishFillCron extends Command
             if ($output) {
                 $output->writeln('图文发布填坑任务正在执行，跳过');
             }
+            ViralPublishFillLog::write('图文发布填坑跳过', [
+                'event' => ViralPublishFillLog::EVENT_LOCK_SKIP,
+                'skipped' => 1,
+                'skip_reason' => ViralPublishFillLog::SKIP_PROCESSING,
+                'remark' => '整轮运行锁',
+            ]);
             return true;
         }
 
         try {
             $stats = ViralImageTextPublishFillService::runOnce();
+            $created = (int)($stats['created'] ?? 0);
+            $failed = (int)($stats['failed'] ?? 0);
+            $skipped = (int)($stats['skipped'] ?? 0);
+            $groups = (int)($stats['groups'] ?? 0);
+            $event = $created > 0
+                ? ViralPublishFillLog::EVENT_FILL_SUCCESS
+                : ($failed > 0 ? ViralPublishFillLog::EVENT_FILL_FAIL : ViralPublishFillLog::EVENT_FILL_SKIP);
             $msg = sprintf(
                 '图文发布填坑完成：groups=%d created=%d failed=%d skipped=%d',
-                (int)($stats['groups'] ?? 0),
-                (int)($stats['created'] ?? 0),
-                (int)($stats['failed'] ?? 0),
-                (int)($stats['skipped'] ?? 0)
+                $groups,
+                $created,
+                $failed,
+                $skipped
             );
             if ($output) {
                 $output->writeln($msg);
             }
-            Log::channel('auto')->write($msg, 'create');
+            ViralPublishFillLog::write('图文发布填坑整轮完成', [
+                'event' => $event,
+                'created' => $created,
+                'failed' => $failed,
+                'skipped' => $skipped,
+                'remark' => '整轮汇总 groups=' . $groups,
+            ]);
             foreach (($stats['errors'] ?? []) as $error) {
                 if ($error !== '') {
                     Log::channel('auto')->write('图文发布填坑分组提示：' . $error, 'create');
@@ -62,6 +82,11 @@ class ViralImageTextPublishFillCron extends Command
             if ($output) {
                 $output->writeln($msg);
             }
+            ViralPublishFillLog::write('图文发布填坑失败', [
+                'event' => ViralPublishFillLog::EVENT_FILL_FAIL,
+                'failed' => 1,
+                'remark' => $th->getMessage(),
+            ]);
             Log::channel('auto')->write($msg . "\n" . $th->getTraceAsString(), 'create');
             return false;
         } finally {

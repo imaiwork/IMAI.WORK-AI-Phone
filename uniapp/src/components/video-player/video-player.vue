@@ -3,7 +3,8 @@
         class="h-full w-full bg-no-repeat relative"
         :style="{
             backgroundImage: `url(${poster})`,
-            backgroundSize: '100% 100%',
+            backgroundSize: posterFit === 'contain' ? 'contain' : '100% 100%',
+            backgroundPosition: 'center',
             borderRadius: borderRadius + 'rpx',
         }">
         <view class="relative z-[88] w-full h-full video-box" :class="{ 'opacity-0': !isShowVideo }">
@@ -85,6 +86,8 @@ const props = withDefaults(
         borderRadius?: number;
         showClose?: boolean;
         isBar?: boolean;
+        /** 封面适配：fill 拉伸铺满（卡片场景，与容器同比例）；contain 等比缩放居中（全屏场景，与 video 的 object-fit=contain 一致，避免变形） */
+        posterFit?: "fill" | "contain";
     }>(),
     {
         poster: "",
@@ -93,6 +96,7 @@ const props = withDefaults(
         borderRadius: 48,
         showClose: false,
         isBar: true,
+        posterFit: "fill",
     },
 );
 

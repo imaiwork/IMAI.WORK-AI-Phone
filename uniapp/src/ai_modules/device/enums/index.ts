@@ -48,7 +48,28 @@ export enum CreateTypeEnum {
     GROUP_PURCHASE = "GROUP_PURCHASE", // 团购评论截流
     CITY_EXPOSURE = "CITY_EXPOSURE", // 同城曝光
     CITY_INTERCEPT = "CITY_INTERCEPT", // 同城截流
+    ACCOUNT_SEARCH = "ACCOUNT_SEARCH", // 抖音账号搜寻获客
 }
+
+// 加微任务线索来源，对应 sv.crawlingManual 的 source 字段
+export enum ClueSourceEnum {
+    // 表格导入
+    FILE = 1,
+    // 获客任务引用（视频号自动获线索）
+    AUTO_CLUE = 2,
+    // 抖音获客任务引用（抖音账号搜寻获客抓到的手机号/微信号）
+    DY_SEARCH = 3,
+}
+
+// 线索卡片上显示的来源文案
+export const CLUE_SOURCE_TEXT: Record<ClueSourceEnum, string> = {
+    [ClueSourceEnum.FILE]: "文件表格",
+    [ClueSourceEnum.AUTO_CLUE]: "获客线索",
+    [ClueSourceEnum.DY_SEARCH]: "抖音获客线索",
+};
+
+// 抖音获客任务只有已完成/已结束才取得到号，见 CrawlingManualLogic::_getRecordByDySearchClue
+export const DY_SEARCH_PICKABLE_STATUS = [3, 4];
 
 export enum ActionKey {
     Like = 1,

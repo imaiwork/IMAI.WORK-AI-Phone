@@ -227,6 +227,8 @@ enum VideoType {
     MONTAGE_STORYBOARD = 7,
     /** 闪剪数字人纯口播，展示归「数字人口播」 */
     DIGITAL_HUMAN_SHANJIAN = 9,
+    /** 爆款玩法 */
+    PLAY_VIDEO = 11,
 }
 
 const typeList = [
@@ -238,6 +240,7 @@ const typeList = [
     { name: "新闻体", key: VideoType.NEWS },
     { name: "一句话生成", key: VideoType.SENTENCE },
     { name: "分镜混剪", key: VideoType.MONTAGE_STORYBOARD },
+    { name: "爆款玩法", key: VideoType.PLAY_VIDEO },
 ];
 
 const typeNameMap: Record<number, string> = {
@@ -392,6 +395,11 @@ const getStatus = (item: any) => {
     const { type, status } = item || {};
     if (type === 1) {
         if (status === 0 || status === 1 || status === 2) return status;
+        return 3;
+    } else if (type === 11) {
+        // 爆款玩法:2成功 3失败/4超时 其余生成中
+        if (status === 2) return 1;
+        if (status === 3 || status === 4) return 2;
         return 3;
     } else {
         if (status === 0) return 0;

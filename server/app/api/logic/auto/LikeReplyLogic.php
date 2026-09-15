@@ -4,17 +4,15 @@
 namespace app\api\logic\auto;
 
 use app\api\logic\ApiLogic;
+use app\common\enum\ChatEnum;
 use app\common\enum\DeviceEnum;
+use app\common\model\auto\AutoDeviceCircleLikeReplyConfig;
+use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\sv\SvAccount;
-
 use app\common\model\sv\SvDeviceCircleLikeReply;
 use app\common\model\sv\SvDeviceCircleLikeReplyAccount;
-use app\common\model\auto\AutoDeviceConfig;
-use app\common\model\auto\AutoDeviceCircleLikeReplyConfig;
 use app\common\service\sv\CircleInteractionActionService;
 use think\facade\Db;
-
-use app\api\logic\sv\ToolsLogic;
 
 /**
  * 自动点赞评论任务逻辑
@@ -45,7 +43,7 @@ class LikeReplyLogic extends ApiLogic
                     'comment_method' => $params['comment_method'] ?? 1,
                     'comment_robot_prompt' => $params['comment_robot_prompt'] ?? AutoDeviceCircleLikeReplyConfig::getCommentRobotPrompt(),
                     'robot_params' => [
-                        'model' => 'gpt-4o',
+                        'model' => ChatEnum::DEFAULT_CHAT_MODEL_ALIAS,
                         'temperature' => 0.3,
                         'top_p' => 0.8,
                         'presence_penalty' => 0,

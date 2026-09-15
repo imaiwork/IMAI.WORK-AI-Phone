@@ -20,6 +20,13 @@ class WechatLogic extends ApiLogic
 {
     public static function add($params)
     {
+        // 重复账号会在下面的循环里互删策略并留下孤儿任务，且个微接管一台设备只跑一条策略，这里先收口
+        $params['accounts'] = self::uniqueAccounts($params['accounts'] ?? []);
+        if (count($params['accounts']) > 1) {
+            self::setError('个微接管每个任务只能选择一个微信账号');
+            return false;
+        }
+
         Db::startTrans();
         try {
 
@@ -49,6 +56,7 @@ class WechatLogic extends ApiLogic
             }
             //print_r($params);die;
             $allTaskInstall = [];
+            $handledDevices = [];
             foreach ($params['accounts'] as $account) {
                 $account['device_code'] = SvAccount::where('account', $account['account'])->where('type', 1)->where('user_id', self::$uid)->value('device_code') ?? '';
                 if (empty($account['device_code'])) {
@@ -56,12 +64,14 @@ class WechatLogic extends ApiLogic
                     return false;
                 }
 
-                $find = SvWechatStrategy::where('device_code', $account['device_code'])->limit(1)->findOrEmpty();
-                if (!$find->isEmpty()) {
-                    // self::setError('设备' . $account['device_code'] . '个微rpa任务已存在');
-                    // return false;
-                    SvDeviceTask::where('sub_task_id', $find->id)->where('task_type', DeviceEnum::TASK_TYPE_WECHAT_RPA)->where('user_id', self::$uid)->select()->delete();
-                    $find->delete();
+                // 同一设备只清理一次旧策略，否则同设备的第二个账号会把本次刚建好的策略删掉，留下指向已删策略的孤儿任务
+                if (!isset($handledDevices[$account['device_code']])) {
+                    $handledDevices[$account['device_code']] = true;
+                    $find = SvWechatStrategy::where('device_code', $account['device_code'])->where('user_id', self::$uid)->limit(1)->findOrEmpty();
+                    if (!$find->isEmpty()) {
+                        SvDeviceTask::where('sub_task_id', $find->id)->where('task_type', DeviceEnum::TASK_TYPE_WECHAT_RPA)->where('user_id', self::$uid)->select()->delete();
+                        $find->delete();
+                    }
                 }
 
                 $params['user_id'] = self::$uid;
@@ -304,6 +314,24 @@ class WechatLogic extends ApiLogic
         } catch (\Throwable $th) {
             \think\facade\Log::channel('device')->write($th->__toString(), 'wechat');
         }
+    }
+
+    /**
+     * @notes 按 type+account 去重：账号列表由 sv_account、ai_wechat 合并下发，id 会跨表撞号，不能拿 id 判重
+     */
+    private static function uniqueAccounts($accounts): array
+    {
+        if (!is_array($accounts)) {
+            return [];
+        }
+        $unique = [];
+        foreach ($accounts as $account) {
+            if (!is_array($account) || empty($account['account'])) {
+                continue;
+            }
+            $unique[($account['type'] ?? '') . '_' . $account['account']] = $account;
+        }
+        return array_values($unique);
     }
 
     private static function getDatesByFrep(int $days)

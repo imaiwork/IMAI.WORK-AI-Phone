@@ -12,6 +12,8 @@ use app\common\model\sv\SvCrawlingRecord;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvDeviceCircleLikeReplyRecord;
 use app\common\model\sv\SvDeviceTakeOverRecord;
+use app\common\model\sv\SvAddWechatRecord;
+use app\common\model\sv\SvDySearchRecord;
 use app\common\model\sv\SvGroupBuyRecord;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvPrivateMessage;
@@ -25,6 +27,7 @@ class IntentionCustomerService
         'city_touch' => '同城视频',
         'group_buy' => '团购',
         'crawling' => '视频号获客',
+        'dy_search' => DySearchIntentionMapper::SOURCE_NAME,
         'sph_like' => '视频号点赞',
         'private_message' => '私信/评论',
     ];
@@ -119,6 +122,7 @@ class IntentionCustomerService
             self::cityTouchItems($userId, $platform),
             self::groupBuyItems($userId, $platform),
             self::crawlingItems($userId, $platform),
+            self::dySearchItems($userId, $platform),
             self::sphLikeItems($userId, $platform),
             self::privateMessageItems($userId, $platform)
         );
@@ -246,6 +250,7 @@ class IntentionCustomerService
         ]);
         $groupBuyItems = self::groupBuyItems($userId, $platform);
         $crawlingItems = self::crawlingItems($userId, $platform);
+        $dySearchItems = self::dySearchItems($userId, $platform);
 
         return [
             [
@@ -272,7 +277,30 @@ class IntentionCustomerService
                 'count' => count(self::dedupeItems($crawlingItems)),
                 'unit' => '人',
             ],
+            DySearchIntentionMapper::summarize($dySearchItems),
         ];
+    }
+
+    /**
+     * 抖音账号搜寻计入客资数：仅已入库，按 dy_uid 去重。
+     */
+    public static function dySearchClueCount(int $userId, ?int $platform): int
+    {
+        if ($userId <= 0 || ($platform !== null && $platform !== DeviceEnum::ACCOUNT_TYPE_DY)) {
+            return 0;
+        }
+
+        try {
+            $rows = SvDySearchRecord::where('user_id', $userId)
+                ->where('result', 'in', DySearchIntentionMapper::LIST_RESULTS)
+                ->field('id,dy_uid')
+                ->select()
+                ->toArray();
+        } catch (\Throwable $e) {
+            return 0;
+        }
+
+        return count(DySearchIntentionMapper::dedupeByDyUid($rows));
     }
 
     public static function responseItem(array $item, bool $includeSourceInteraction = false): array
@@ -520,6 +548,127 @@ class IntentionCustomerService
                 '_source_comment_count' => 0,
             ]);
         }, $rows);
+    }
+
+    /**
+     * 抖音账号搜寻：仅已入库，按 dy_uid 去重。默认公域，加微成功才进私域。
+     */
+    private static function dySearchItems(int $userId, ?int $platform): array
+    {
+        if ($platform !== null && $platform !== DeviceEnum::ACCOUNT_TYPE_DY) {
+            return [];
+        }
+
+        try {
+            $rows = SvDySearchRecord::alias('r')
+                ->join('sv_dy_search_task t', 't.id = r.task_id and t.user_id = r.user_id and t.delete_time is null')
+                ->where('r.user_id', $userId)
+                ->where('r.result', 'in', DySearchIntentionMapper::LIST_RESULTS)
+                ->field('r.id,r.user_id,r.device_code,r.reg_content,r.clue_type,r.nickname,r.avatar,r.create_time,r.dy_uid,r.dy_id,r.fans,r.works,r.scan_source,r.ocr_text,r.exec_keyword,r.result,t.name as task_name')
+                ->order('r.create_time', 'desc')
+                ->order('r.id', 'desc')
+                ->limit(2000)
+                ->select()
+                ->toArray();
+        } catch (\Throwable $e) {
+            $rows = [];
+        }
+
+        $rows = DySearchIntentionMapper::dedupeByDyUid($rows);
+        $successContacts = self::dySearchAddedContacts($userId);
+
+        return array_map(function (array $item) use ($userId, $successContacts) {
+            $timestamp = self::toTimestamp($item['create_time'] ?? 0);
+            $regContent = trim((string)($item['reg_content'] ?? ''));
+            $taskName = trim((string)($item['task_name'] ?? ''));
+            $nickname = trim((string)($item['nickname'] ?? ''));
+            $dyId = trim((string)($item['dy_id'] ?? ''));
+            $dyUid = trim((string)($item['dy_uid'] ?? ''));
+            $ocrText = trim((string)($item['ocr_text'] ?? ''));
+            $scanSource = trim((string)($item['scan_source'] ?? ''));
+            $keyword = trim((string)($item['exec_keyword'] ?? ''));
+            $split = DySearchIntentionMapper::splitRegContent($regContent);
+            $contact = $split['contact'];
+            $hasContact = $contact !== '';
+            $isPrivate = DySearchIntentionMapper::isPrivateByContacts($split, $successContacts);
+            $customerName = $nickname !== '' ? $nickname : ($dyId !== '' ? $dyId : ($contact !== '' ? $contact : '未知客户'));
+            $latestIntention = $hasContact
+                ? ($taskName !== '' ? "在{$taskName}中匹配到【{$contact}】自动录入" : $contact)
+                : ($keyword !== '' ? '已走访，未识别到联系方式，线索词「' . $keyword . '」' : '已走访，未识别到联系方式');
+
+            $formatted = self::formatItem([
+                'id' => 'dy_search:' . $item['id'],
+                '_user_id' => $userId,
+                'source_key' => DySearchIntentionMapper::SOURCE_KEY,
+                'source_name' => DySearchIntentionMapper::SOURCE_NAME,
+                'source_text' => DySearchIntentionMapper::sourceText($keyword),
+                'account_name' => $customerName,
+                'customer_name' => $customerName,
+                'avatar' => self::completeFileUrl((string)($item['avatar'] ?? '')),
+                'platform' => DeviceEnum::ACCOUNT_TYPE_DY,
+                'account' => $dyId,
+                'wechat_no' => $contact,
+                'wechat_status' => $hasContact ? 'recognized' : 'unrecognized',
+                'latest_intention' => $latestIntention,
+                'create_time' => $timestamp > 0 ? date('Y-m-d H:i:s', $timestamp) : self::formatTime($item['create_time'] ?? ''),
+                'contact_from' => DySearchIntentionMapper::mapContactFrom($scanSource, $dyId, $contact),
+                'contact_raw' => DySearchIntentionMapper::contactRaw($ocrText, $hasContact),
+                'contact_type' => $split['contact_type'],
+                'fans' => (int)($item['fans'] ?? 0),
+                'works' => (int)($item['works'] ?? 0),
+                'exec_keyword' => $keyword,
+                'cover_checked' => DySearchIntentionMapper::coverChecked($scanSource, $ocrText),
+                'result' => (int)($item['result'] ?? 0),
+                'dy_uid' => $dyUid,
+                'scan_source' => $scanSource,
+                '_timestamp' => $timestamp,
+                '_contact_token' => '',
+                '_is_private' => $isPrivate,
+                '_source_interaction_count' => 0,
+                '_source_like_count' => 0,
+                '_source_comment_count' => 0,
+            ]);
+            $formatted['_dedupe_keys'] = array_values(array_unique(array_filter([
+                $dyUid !== '' ? 'dy_uid:' . strtolower($dyUid) : '',
+                $dyId !== '' ? 'platform:' . DeviceEnum::ACCOUNT_TYPE_DY . ':account:' . strtolower($dyId) : '',
+                'source:' . ($formatted['id'] ?? ''),
+            ])));
+
+            return $formatted;
+        }, $rows);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function dySearchAddedContacts(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+
+        try {
+            $rows = SvAddWechatRecord::where('user_id', $userId)
+                ->whereNull('delete_time')
+                ->where('status', 1)
+                ->where(function ($query) {
+                    $query->where('channel', DySearchIntentionMapper::ADD_CHANNEL)
+                        ->whereOr('account_type', DeviceEnum::ACCOUNT_TYPE_DY);
+                })
+                ->column('reg_wechat');
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $contacts = [];
+        foreach ($rows as $row) {
+            $row = trim((string)$row);
+            if ($row !== '') {
+                $contacts[] = $row;
+            }
+        }
+
+        return $contacts;
     }
 
     private static function privateMessageItems(int $userId, ?int $platform): array

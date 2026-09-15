@@ -6,11 +6,11 @@ use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
-use app\common\model\digitalHuman\DigitalHumanAnchor;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
+use app\common\service\digitalHuman\PublicAnchorBindService;
 use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
 use think\exception\HttpResponseException;
@@ -33,23 +33,21 @@ class ShanjianAnchorLogic extends ApiLogic
         $user_id      = $params['user_id'] ?? self::$uid;
         $dh_id        = $params['dh_id'];
 
-        // 并发去重：同一 dh_id 已存在极速克隆记录则跳过，避免重复提交
-        $exists = ShanjianAnchor::where('dh_id', $dh_id)
-            ->where('clone_type', self::CLONE_TYPE_FAST)
-            ->whereNull('delete_time')
-            ->findOrEmpty();
-        if (!$exists->isEmpty()) {
-            Log::channel('shanjiannotice')->write('极速克隆记录已存在，跳过：dh_id=' . $dh_id);
+        // 并发去重：本用户同 dh_id 进行中/成功则跳过；失败软删后重提
+        $exists = PublicAnchorBindService::takeOwnShanjianForSubmit((int)$dh_id, (int)$user_id, self::CLONE_TYPE_FAST);
+        if (!empty($exists)) {
+            Log::channel('shanjiannotice')->write('极速克隆记录已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id);
             self::$returnData = ['id' => $exists->id];
             return true;
         }
 
-        $digitalHuman = DigitalHumanAnchor::where('id', $dh_id)->findOrEmpty();
-        $task_ids     = json_decode($digitalHuman->task_ids, true) ?: [];
-        if ($digitalHuman->isEmpty()) {
-            Log::channel('shanjiannotice')->write('公共形象未找到');
+        $digitalHuman = PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$user_id);
+        if (empty($digitalHuman)) {
+            Log::channel('shanjiannotice')->write('公共形象不属于当前用户：dh_id=' . $dh_id . ' user_id=' . $user_id);
+            self::setError('公共形象不属于当前用户');
             return false;
         }
+        $task_ids = json_decode((string)$digitalHuman->task_ids, true) ?: [];
 
         $name                            = $params['name'] ?? '形象合成' . date('YmdHi');
         $task_id                         = generate_unique_task_id();
@@ -105,23 +103,21 @@ class ShanjianAnchorLogic extends ApiLogic
         $user_id      = $params['user_id'] ?? self::$uid;
         $dh_id        = $params['dh_id'];
 
-        // 并发去重：同一 dh_id 已存在专业克隆记录则跳过，避免重复提交
-        $exists = ShanjianAnchor::where('dh_id', $dh_id)
-            ->where('clone_type', self::CLONE_TYPE_PRO)
-            ->whereNull('delete_time')
-            ->findOrEmpty();
-        if (!$exists->isEmpty()) {
-            Log::channel('shanjiannotice')->write('专业克隆记录已存在，跳过：dh_id=' . $dh_id);
+        // 并发去重：本用户同 dh_id 进行中/成功则跳过；失败软删后重提
+        $exists = PublicAnchorBindService::takeOwnShanjianForSubmit((int)$dh_id, (int)$user_id, self::CLONE_TYPE_PRO);
+        if (!empty($exists)) {
+            Log::channel('shanjiannotice')->write('专业克隆记录已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id);
             self::$returnData = ['id' => $exists->id];
             return true;
         }
 
-        $digitalHuman = DigitalHumanAnchor::where('id', $dh_id)->findOrEmpty();
-        $task_ids     = json_decode($digitalHuman->task_ids, true) ?: [];
-        if ($digitalHuman->isEmpty()) {
-            Log::channel('shanjiannotice')->write('公共形象未找到');
+        $digitalHuman = PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$user_id);
+        if (empty($digitalHuman)) {
+            Log::channel('shanjiannotice')->write('公共形象不属于当前用户：dh_id=' . $dh_id . ' user_id=' . $user_id);
+            self::setError('公共形象不属于当前用户');
             return false;
         }
+        $task_ids = json_decode((string)$digitalHuman->task_ids, true) ?: [];
 
         $name                                = $params['name'] ?? '专业形象合成' . date('YmdHi');
         $task_id                             = generate_unique_task_id();
@@ -271,22 +267,28 @@ class ShanjianAnchorLogic extends ApiLogic
     {
         $model = ShanjianAnchor::where('task_id', $data['task_id'])->where('user_id', $data['user_id'])->where('status', 1)->select()
             ->each(function ($item) use ($data) {
-                // 公共数字人形象
-                $digitalHuman = DigitalHumanAnchor::where('id', $item->dh_id)->find();
-                $task_ids = json_decode($digitalHuman->task_ids, true) ?: [];
+                // 公共数字人形象：必须与子任务同属一个用户
+                $digitalHuman = PublicAnchorBindService::ownedPublic((int)$item->dh_id, (int)$item->user_id);
+                if (empty($digitalHuman)) {
+                    PublicAnchorBindService::logSkipUnowned((int)$item->dh_id, (int)$item->user_id, 'ShanjianAnchorLogic::updateAnchor');
+                }
+                $task_ids = !empty($digitalHuman) ? (json_decode((string)$digitalHuman->task_ids, true) ?: []) : [];
                 $cloneType = (int)($item->clone_type ?? self::CLONE_TYPE_FAST);
                 $taskKey = $cloneType === self::CLONE_TYPE_PRO ? 'shanjian_pro' : 'shanjian';
                 $refundScene = $cloneType === self::CLONE_TYPE_PRO ? 'human_avatar_shanjian_pro' : 'human_avatar_shanjian';
 
+                $owned = !empty($digitalHuman);
                 if (in_array($data['status'], ['failed', 'succeed'])) {
                     $item->status = ($data['status'] == 'succeed') ? 3 : 2;
                     // TODO 失败退费
                     if ($item->status == 2) {
                         $task_ids[$taskKey] = $task_ids[$taskKey] ?? ['task_id' => '', 'status' => 0];
                         $task_ids[$taskKey]['status'] = 2;
-                        $digitalHuman->task_ids = json_encode($task_ids);
-                        $digitalHuman->status = 3;
-                        $digitalHuman->remark = $data['errorMessage'] ?? '合成失败';
+                        if ($owned) {
+                            $digitalHuman->task_ids = json_encode($task_ids);
+                            $digitalHuman->status = 3;
+                            $digitalHuman->remark = $data['errorMessage'] ?? '合成失败';
+                        }
 
                         self::refundTokens($item->user_id, $data['taskId'], $data['task_id'], $refundScene);
                         $item->remark = $data['errorMessage'];
@@ -296,7 +298,9 @@ class ShanjianAnchorLogic extends ApiLogic
                         if ($cloneType === self::CLONE_TYPE_PRO) {
                             $task_ids['shanjian_pro'] = $task_ids['shanjian_pro'] ?? ['task_id' => '', 'status' => 0];
                             $task_ids['shanjian_pro']['status'] = 3;
-                            $digitalHuman->task_ids = json_encode($task_ids);
+                            if ($owned) {
+                                $digitalHuman->task_ids = json_encode($task_ids);
+                            }
                             $item->status = 3;
                         } else {
                             $param = [
@@ -310,46 +314,60 @@ class ShanjianAnchorLogic extends ApiLogic
                                 Log::channel('shanjiannotice')->write('闪剪音色结果返回'.json_encode($response,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                                 if (isset($response['code']) && $response['code'] == 10000) {
                                     $task_ids['shanjian']['status'] = 1;
-                                    $digitalHuman->task_ids = json_encode($task_ids);
-                                    $digitalHuman->status = 1;
+                                    if ($owned) {
+                                        $digitalHuman->task_ids = json_encode($task_ids);
+                                        $digitalHuman->status = 1;
+                                    }
 
                                     $item->status = 4;
                                 }else{
                                     $task_ids['shanjian']['status'] = 2;
-                                    $digitalHuman->task_ids = json_encode($task_ids);
-                                    $digitalHuman->status = 3;
                                     $item->status = 5;
                                     $item->remark = $response['message'] ?? '';
-                                    $digitalHuman->remark = $item->remark;
+                                    if ($owned) {
+                                        $digitalHuman->task_ids = json_encode($task_ids);
+                                        $digitalHuman->status = 3;
+                                        $digitalHuman->remark = $item->remark;
+                                    }
                                 }
                             } catch (HttpResponseException $e) {
                                 $task_ids['shanjian']['status'] = 2;
-                                $digitalHuman->task_ids = json_encode($task_ids);
-                                $digitalHuman->status = 3;
-
                                 $item->status = 5;
                                 $response = $e->getResponse();   // 先拿到 Response 对象
                                 $responsedata     = $response->getData(); // 返回的就是数组
                                 Log::channel('shanjiannotice')->write('闪剪音色结果返回2'.json_encode($responsedata,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
                                 $item->remark = $responsedata['msg'] ?? '';
-                                $digitalHuman->remark = $item->remark;
+                                if ($owned) {
+                                    $digitalHuman->task_ids = json_encode($task_ids);
+                                    $digitalHuman->status = 3;
+                                    $digitalHuman->remark = $item->remark;
+                                }
                             }catch (\Exception $e) {
                                 $task_ids['shanjian']['status'] = 2;
-                                $digitalHuman->task_ids = json_encode($task_ids);
-                                $digitalHuman->status = 3;
-
                                 $item->status = 5;
                                 $item->remark = $e->getMessage() ?? '';
-                                $digitalHuman->remark = $item->remark;
+                                if ($owned) {
+                                    $digitalHuman->task_ids = json_encode($task_ids);
+                                    $digitalHuman->status = 3;
+                                    $digitalHuman->remark = $item->remark;
+                                }
                             }
                         }
                     }
 
 
                 }
-                $digitalHuman->save();
+                if ($owned) {
+                    $digitalHuman->save();
+                }
                 $item->save();
+
+                // 多 key 池：专业克隆 status=3 即终态（不串音色），实时上报资产绑定；
+                // 极速克隆此处 status=3/4 是中间态，等 updateVoice 推到 6 再报。
+                if ($cloneType === self::CLONE_TYPE_PRO && (int)$item->status === 3) {
+                    \app\common\service\ShanjianAssetReportService::reportAvatarRow($item);
+                }
             });
 
         return true;
@@ -384,12 +402,7 @@ class ShanjianAnchorLogic extends ApiLogic
             if (isset($response['code']) && $response['code'] == 10000) {
                 return true;
             }
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
 
             return true;
         } catch (\Throwable $e) {
@@ -417,6 +430,11 @@ class ShanjianAnchorLogic extends ApiLogic
 
                 }
                 $item->save();
+
+                // 多 key 池：极速克隆 status=6（形象+音色完整终态）实时上报资产绑定
+                if ((int)$item->status === 6) {
+                    \app\common\service\ShanjianAssetReportService::reportAvatarRow($item);
+                }
             });
 
         return true;

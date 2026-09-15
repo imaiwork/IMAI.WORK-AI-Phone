@@ -10,6 +10,7 @@ use app\common\model\sv\SvAccountLog;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvCrawlingRecord;
 use app\common\model\sv\SvCrawlingTask;
+use app\common\model\sv\SvDySearchRecord;
 use app\common\model\sv\SvCrawlingWechatTask;
 use app\common\model\sv\SvCrawlingManualTaskRecord;
 use app\common\model\sv\SvAddWechatRecord;
@@ -44,6 +45,14 @@ class DisplayLogic extends ApiLogic
                 ->group('reg_content')
                 ->count(); //社媒回复
 
+            // 口径：当日 result=1 且 reg_content 非空，按联系方式去重；不并入 sph_clues_count
+            $dy_search_clues_count = SvDySearchRecord::where('user_id', self::$uid)
+                ->whereTime('create_time', 'between', [$start_time, $end_time])
+                ->where('result', 1)
+                ->where('reg_content', 'not in', ['', null])
+                ->group('reg_content')
+                ->count();
+
             $social_media_reply_count = SvAccountLog::where('user_id', self::$uid)
                 ->whereTime('create_time', 'between', [$start_time, $end_time])
                 ->where('log_type', SvAccountLog::TYPE_MESSAGE_REPLY)
@@ -59,6 +68,7 @@ class DisplayLogic extends ApiLogic
                 'device_count' => $device_count, //统计设备
                 'social_media_reply_count' => $social_media_reply_count, //社媒回复
                 'sph_clues_count' => $sph_clues_count, // 获客人数
+                'dy_search_clues_count' => $dy_search_clues_count, // 抖音获客当日客资
                 'wechat_reply_count' => $logCounts[AiWechatLog::TYPE_MESSAGE_REPLY] ?? 0, //私域回复
                 'wechat_add_count' => $logCounts[AiWechatLog::TYPE_ACCEPT_FRIEND] ?? 0, //添加好友
                 'wechat_through_friend_count' => $logCounts[AiWechatLog::TYPE_THROUGH_FRIEND] ?? 0, //通过好友
@@ -229,6 +239,7 @@ class DisplayLogic extends ApiLogic
                             'create_time',
                             'update_time'
                         ])
+                        ->where('status', 'in', [0, 1, 2])
                         ->select();
                 }else{
                     $addWechatlist = SvAddWechatRecord::where('device_code', $task->device_code)

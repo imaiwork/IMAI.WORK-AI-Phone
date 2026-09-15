@@ -677,6 +677,90 @@ class GeoLogic extends BaseLogic
     }
 
     /**
+     * 取消一键诊断:按当前进度收口,不回滚已有结果。
+     * 计费是逐 cell 跑完才按量结算的——已完成的 cell 对应真实上游调用,结果与
+     * 扣费保留;pending cell 从未扣费,置 canceled 后不再执行;正在执行中的
+     * cell 无法中断进程外的引擎调用,由 cron 自然跑完并照常回写/结算。
+     * 批次落终态 canceled 后,cron 不再领取,防重复提交与每日自动监测的
+     * running 检查随之放行,可立即发起新一轮诊断。
+     *
+     * @return array|false
+     */
+    public static function monitorCancel(int $userId, int $projectId, int $batchTaskId = 0)
+    {
+        if (self::assertOwn($userId, $projectId)->isEmpty()) {
+            self::setError('项目不存在或无权限');
+            return false;
+        }
+        if ($batchTaskId <= 0) {
+            $latest = GeoTask::where('project_id', $projectId)
+                ->where('task_type', 'monitor_batch')
+                ->where('status', 'running')
+                ->order('id', 'desc')
+                ->findOrEmpty();
+            if ($latest->isEmpty()) {
+                self::setError('没有进行中的诊断批次');
+                return false;
+            }
+            $batchTaskId = (int)$latest->id;
+        }
+        try {
+            // 与 claimNext/writebackBatchProgress 同一把行锁,避免取消与领取并发时
+            // 互相覆盖 input.cells
+            return \think\facade\Db::transaction(function () use ($projectId, $batchTaskId) {
+                $row = \think\facade\Db::name('geo_task')->where('id', $batchTaskId)
+                    ->where('project_id', $projectId)
+                    ->where('task_type', 'monitor_batch')
+                    ->lock(true)->find();
+                if (!$row) {
+                    throw new \Exception('诊断批次不存在');
+                }
+                $input = json_decode((string)($row['input'] ?? ''), true) ?: [];
+                $ref = json_decode((string)($row['result_ref'] ?? ''), true) ?: [];
+                $total = (int)($input['total'] ?? 0);
+                $summary = [
+                    'batch_task_id' => $batchTaskId,
+                    'total' => $total,
+                    // 与 monitorProgress 同口径:done 按 total 封顶
+                    'done' => $total > 0 ? min((int)($ref['completed'] ?? 0), $total) : 0,
+                    'success' => (int)($ref['success'] ?? 0),
+                    'failed' => (int)($ref['failed'] ?? 0),
+                    'skipped' => (int)($ref['skipped'] ?? 0),
+                ];
+                // 点取消的瞬间批次恰好自然跑完:不改写终态,告知前端按已结束处理
+                if ((string)$row['status'] !== 'running') {
+                    return $summary + ['already_finished' => true, 'canceled_cells' => 0, 'in_flight' => 0];
+                }
+                $canceled = 0;
+                $inFlight = 0;
+                $cells = (array)($input['cells'] ?? []);
+                foreach ($cells as $i => $cell) {
+                    $st = (string)($cell['status'] ?? 'pending');
+                    if ($st === 'pending') {
+                        $cells[$i]['status'] = 'canceled';
+                        $canceled++;
+                    } elseif ($st === 'running') {
+                        $inFlight++;
+                    }
+                }
+                $input['cells'] = $cells;
+                $ref['canceled'] = $canceled;
+                $ref['canceled_at'] = time();
+                \think\facade\Db::name('geo_task')->where('id', $batchTaskId)->update([
+                    'status' => 'canceled',
+                    'input' => json_encode($input, JSON_UNESCAPED_UNICODE),
+                    'result_ref' => json_encode($ref, JSON_UNESCAPED_UNICODE),
+                    'update_time' => time(),
+                ]);
+                return $summary + ['already_finished' => false, 'canceled_cells' => $canceled, 'in_flight' => $inFlight];
+            });
+        } catch (\Throwable $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * 一键诊断进度。优先按 batch_task_id 读批次 geo_task 的统计
      * (total 读 input.total,completed/success/failed/skipped 读 result_ref,
      *  终态失败/跳过已由 Job 计入 completed);旧前端只传 since 时自动取该项目
@@ -706,7 +790,7 @@ class GeoLogic extends BaseLogic
                 $ref = json_decode((string)$batch->result_ref, true) ?: [];
                 $total = max(0, (int)($input['total'] ?? 0));
                 $done = $total > 0 ? min((int)($ref['completed'] ?? 0), $total) : 0;
-                $terminal = in_array((string)$batch->status, ['success', 'failed'], true);
+                $terminal = in_array((string)$batch->status, ['success', 'failed', 'canceled'], true);
                 // total=0(入队全失败)或批次已终态 → 视为 finished,避免进度条永久卡住
                 $finished = $terminal || ($total > 0 && $done >= $total);
                 return [
@@ -719,6 +803,8 @@ class GeoLogic extends BaseLogic
                     'skipped' => (int)($ref['skipped'] ?? 0),
                     'percent' => $total > 0 ? (int)floor($done / $total * 100) : ($finished ? 100 : 0),
                     'finished' => $finished,
+                    // 用户主动取消的批次:前端据此把"诊断完成"话术换成"已取消"
+                    'canceled' => (string)$batch->status === 'canceled',
                 ];
             }
         }

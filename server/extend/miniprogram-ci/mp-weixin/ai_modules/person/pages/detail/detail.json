@@ -22,6 +22,12 @@
     "image-detail-popup": "./components/popups/image-detail-popup",
     "video-detail-popup": "./components/popups/video-detail-popup",
     "materials-tab": "./components/materials-tab",
+    "enhance-entry": "./components/enhance-entry",
+    "issue-banner": "./components/issue-banner",
+    "run-status-card": "./components/run-status-card",
+    "copy-source-sheet": "./components/popups/copy-source-sheet",
+    "enhance-sheet": "./components/popups/enhance-sheet",
+    "setup-checklist": "./components/setup-checklist",
     "viral-tab": "./components/viral-tab",
     "manual-import-popup": "./components/popups/manual-import-popup",
     "cut-mode-popup": "./components/popups/cut-mode-popup"

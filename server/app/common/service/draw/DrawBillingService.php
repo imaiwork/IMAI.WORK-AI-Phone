@@ -535,7 +535,14 @@ class DrawBillingService
     }
 
     /**
-     * 失败幂等退费
+     * 失败退费：双闸幂等——bill_status CAS 为第一道，退款流水查重为第二道
+     *
+     * ⚠️ 此前只有「读 bill_status + 数退款流水」两次读判断，没有原子抢占：中台回调
+     * （DrawLogic::notify）与轮询（DrawGenerateService::poll）都会走到 handleMidResult，
+     * 而那里开头的 isTerminal 检查同样是先读后写。两条路并发判失败时，各自持有的
+     * $task 都还是 BILL_HELD、退款流水都还是 0 条，于是各退一笔。
+     * 2026-09-10 把 pollPending 接进 cron 后这条并发路才真正通电，故补上 CAS。
+     * 写法与 PlayVideoBillingService::refundIfHeld 保持逐条对齐。
      */
     public function refundIfHeld(DrawTask $task): void
     {
@@ -543,8 +550,10 @@ class DrawBillingService
             return;
         }
         if ((float)$task->tokens_cost <= 0) {
-            $task->bill_status = DrawEnum::BILL_REFUNDED;
-            $task->save();
+            DrawTask::where('id', (int)$task->id)
+                ->where('bill_status', DrawEnum::BILL_HELD)
+                ->update(['bill_status' => DrawEnum::BILL_REFUNDED]);
+            $task->refresh();
             return;
         }
 
@@ -554,18 +563,29 @@ class DrawBillingService
             return;
         }
 
+        // 第二道闸：已有同任务退款流水（历史退款/并发路已处理）→ 只补状态
         $refunded = UserTokensLog::where('user_id', $task->user_id)
             ->where('task_id', $task->task_no)
             ->where('change_type', $billingCode)
             ->where('action', AccountLogEnum::INC)
             ->count();
         if ($refunded > 0) {
-            $task->bill_status = DrawEnum::BILL_REFUNDED;
-            $task->save();
+            DrawTask::where('id', (int)$task->id)
+                ->where('bill_status', DrawEnum::BILL_HELD)
+                ->update(['bill_status' => DrawEnum::BILL_REFUNDED]);
+            $task->refresh();
             return;
         }
 
-        Db::startTrans();
+        // 第一道闸：CAS 抢退款权，赢家才动钱。用数据库行当互斥，redis 不可用也有效
+        $claimed = DrawTask::where('id', (int)$task->id)
+            ->where('bill_status', DrawEnum::BILL_HELD)
+            ->update(['bill_status' => DrawEnum::BILL_REFUNDED]);
+        if ($claimed === 0) {
+            $task->refresh();
+            return;
+        }
+
         try {
             AccountLogLogic::recordUserTokensLog(
                 false,
@@ -575,11 +595,13 @@ class DrawBillingService
                 $task->task_no,
                 ['退费原因' => $task->error_msg ?: '生成失败退费']
             );
-            $task->bill_status = DrawEnum::BILL_REFUNDED;
-            $task->save();
-            Db::commit();
+            $task->refresh();
         } catch (\Throwable $e) {
-            Db::rollback();
+            // 钱没退成，回滚闸门允许 cron/人工重试
+            DrawTask::where('id', (int)$task->id)
+                ->where('bill_status', DrawEnum::BILL_REFUNDED)
+                ->update(['bill_status' => DrawEnum::BILL_HELD]);
+            $task->bill_status = DrawEnum::BILL_HELD;
             Log::error('draw refund failed: ' . $e->getMessage(), ['task_no' => $task->task_no]);
             throw $e;
         }

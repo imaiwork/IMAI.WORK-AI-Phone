@@ -19,6 +19,7 @@ use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
 use app\common\service\FileService;
+use app\common\service\OriginalMaterialSpec;
 use think\facade\Queue;
 
 class VideoService
@@ -135,13 +136,37 @@ class VideoService
         $retrySeq = (int)($options['retry_seq'] ?? 0);
         $sjId = TaskService::resolveBoundVideoTaskId($task);
         if ($sjId <= 0) {
-            HotspotLog::write('原单不存在，回退新建：任务号=' . $taskNo);
+            $settingId = (int)($options['shanjian_setting_id'] ?? 0);
+            if ($settingId > 0 && ScriptService::shouldRedispatchEmptyPersonaMaterials(
+                $options,
+                self::settingMaterialById($settingId)
+            )) {
+                HotspotLog::write(sprintf(
+                    '原闪剪任务缺失且设置素材为空，回退新建：任务号=%s 设置id=%d',
+                    $taskNo,
+                    $settingId
+                ));
+                TaskService::clearShanjianBinding($taskNo, $retrySeq);
+            } else {
+                HotspotLog::write('原单不存在，回退新建：任务号=' . $taskNo);
+            }
             return 'need_dispatch';
         }
 
         $sjTask = self::lookupShanjianTask($sjId);
         if ($sjTask === null || (method_exists($sjTask, 'isEmpty') && $sjTask->isEmpty())) {
             HotspotLog::write(sprintf('原闪剪单已删除，回退新建：任务号=%s 闪剪id=%d', $taskNo, $sjId));
+            TaskService::clearShanjianBinding($taskNo, $retrySeq);
+            return 'need_dispatch';
+        }
+
+        $settingMaterial = self::settingMaterialPayload($sjTask);
+        if (ScriptService::shouldRedispatchEmptyPersonaMaterials($options, $settingMaterial)) {
+            HotspotLog::write(sprintf(
+                '原闪剪单素材为空但任务已勾选人设素材，回退新建：任务号=%s 闪剪id=%d',
+                $taskNo,
+                $sjId
+            ));
             TaskService::clearShanjianBinding($taskNo, $retrySeq);
             return 'need_dispatch';
         }
@@ -230,6 +255,26 @@ class VideoService
             return is_callable($hook) ? $hook($sjId) : $hook;
         }
         return ShanjianVideoTask::where('id', $sjId)->findOrEmpty();
+    }
+
+    private static function settingMaterialById(int $settingId): array
+    {
+        if ($settingId <= 0) {
+            return [];
+        }
+        $setting = self::lookupShanjianSetting($settingId);
+        if ($setting === null || $setting === false
+            || (method_exists($setting, 'isEmpty') && $setting->isEmpty())
+        ) {
+            return [];
+        }
+        $raw = $setting->material ?? [];
+        return is_array($raw) ? $raw : self::parseJsonArray($raw);
+    }
+
+    private static function settingMaterialPayload(mixed $sjTask): array
+    {
+        return self::settingMaterialById((int)($sjTask->video_setting_id ?? 0));
     }
 
     private static function lookupShanjianSetting(int $settingId): mixed
@@ -488,20 +533,42 @@ class VideoService
             return $recovered;
         }
 
-        $persona = is_array($task['persona'] ?? null) ? $task['persona'] : [];
-        if (PersonaService::hasIdentity($persona)) {
-            $persona = PersonaService::resolve($userId, $persona);
-        }
-        $personaId = (int)($persona['id'] ?? 0);
-        if ($personaId <= 0) {
-            throw new HotspotUpstreamException('人设不能为空');
+        $manualMode = (int)($opt['persona_mode'] ?? ScriptService::PERSONA_MODE_PERSONA)
+            === ScriptService::PERSONA_MODE_MANUAL;
+
+        $persona = [];
+        $personaId = 0;
+        if (!$manualMode) {
+            $persona = is_array($task['persona'] ?? null) ? $task['persona'] : [];
+            if (PersonaService::hasIdentity($persona)) {
+                $persona = PersonaService::resolve($userId, $persona);
+            }
+            $personaId = (int)($persona['id'] ?? 0);
+            if ($personaId <= 0) {
+                throw new HotspotUpstreamException('人设不能为空');
+            }
         }
 
         $avatar = [];
         $voiceId = '';
         $modelVersion = 0;
         $pic = '';
-        if ($opt['video_type'] === 'digital') {
+        $manualVoiceName = '';
+        if ($manualMode) {
+            // 不选人设：形象与音色互不捆绑，各取用户自选项（与爆款复刻洗稿模式同源）
+            if ($opt['video_type'] === 'digital') {
+                $avatar = ManualAssetService::resolveAvatar($userId, (int)($opt['avatar_id'] ?? 0));
+                $pic = (string)$avatar['pic'];
+            }
+            // 形象原音要靠所选形象才能解析出 speakerId，把 avatar_id 一并传下去
+            $voice = ManualAssetService::resolveVoice(
+                $userId,
+                (int)($opt['voice_id'] ?? 0),
+                (int)($opt['avatar_id'] ?? 0)
+            );
+            $voiceId = (string)$voice['voice_id'];
+            $manualVoiceName = (string)$voice['name'];
+        } elseif ($opt['video_type'] === 'digital') {
             $avatar = self::resolveAvatar($userId, $personaId, $opt);
             $voiceId = (string)$avatar['voice_id'];
             $pic = (string)$avatar['pic'];
@@ -520,25 +587,56 @@ class VideoService
         $payloadMaterials = self::stripMaterialIds($materials);
 
         $synthesisConfig = self::resolveSynthesisConfig($userId, $personaId);
-        $musicUrl = self::resolveMusicUrl($userId, $personaId, $synthesisConfig);
-        $volume = self::resolveVolume($synthesisConfig);
+        // 不选人设没有人设合成配置可依：背景音乐用高级设置里自传的曲子，没传就系统随机
+        $musicUrl = $manualMode
+            ? ManualAssetService::resolveMusicUrl((string)($opt['music_url'] ?? ''))
+            : self::resolveMusicUrl($userId, $personaId, $synthesisConfig);
+        // 人设模式跟随人设合成配置；不选人设没有配置可依，用高级设置里用户自选的值
+        // （音量 0 由下游 buildBackgroundMusicRule 判成 audioSwitch=false，即静音）
+        $volume = $manualMode
+            ? AiPersonaSynthesisConfig::normalizeMusicVolume($opt['music_volume'] ?? null)
+            : self::resolveVolume($synthesisConfig);
+        $speedRatio = $manualMode
+            ? AiPersonaSynthesisConfig::normalizeSpeechRate($opt['speech_rate'] ?? null)
+            : self::resolveSpeechRate($synthesisConfig);
         $generationType = self::generationTypeByVideoType($opt['video_type']);
         $templateConfig = $synthesisConfig->isEmpty() ? [] : ($synthesisConfig->template_config ?? []);
-        try {
-            $clipId = SynthesisTemplateConfigService::pickTemplateId($templateConfig, $generationType, 1);
-        } catch (\Throwable $e) {
-            throw new HotspotUpstreamException($e->getMessage() ?: '视频模板选取失败');
+        // 不选人设时用户可直接指定剪辑模板；没指定（或指定的已下架）仍按自动随机走
+        $clipId = $manualMode
+            ? ManualAssetService::resolveClipTemplateId(
+                (string)($opt['clip_template_id'] ?? ''),
+                (string)$opt['video_type']
+            )
+            : '';
+        if ($clipId === '') {
+            try {
+                $clipId = SynthesisTemplateConfigService::pickTemplateId($templateConfig, $generationType, 1);
+            } catch (\Throwable $e) {
+                throw new HotspotUpstreamException($e->getMessage() ?: '视频模板选取失败');
+            }
         }
         $retrySeq = (int)($options['retry_seq'] ?? 0);
         $extra = [
             'video_count' => 1,
             'volume' => $volume,
+            // 口播语速：下游 ShanjianVideoTaskLogic::appendSpeakerSpeedRatio 只认 extra.speed_ratio，
+            // 不传就恒为 1.0，人设里设的语速形同虚设（与 IP 合成/自动化同口径）
+            'speed_ratio' => $speedRatio,
             'source' => self::SOURCE,
             'create_type' => self::SOURCE,
             'hotspot_task_no' => $taskNo,
             'retry_seq' => $retrySeq,
-            'ai_music' => $musicUrl === '',
+            // 背景音乐来源必须显式给：人设配「无背景音乐」时 resolveMusicUrl 返回空串，
+            // 交给 normalizeAdvancedSettings 猜就会按「没有自定义音乐」判成系统内置，
+            // 下发 backgroundMusic.audioSwitch=true 让闪剪自己配一首，人设的设置等于白设。
+            // 有 URL 的两档（系统随机曲 / 人设音乐库）都已在 resolveMusicUrl 里取定，按自定义下发。
+            'music_source' => $musicUrl !== ''
+                ? ShanjianVideoSettingLogic::MUSIC_SOURCE_CUSTOM
+                : ShanjianVideoSettingLogic::MUSIC_SOURCE_NONE,
         ];
+        if (!$manualMode && $personaId > 0) {
+            $extra['material_use_mode'] = ScriptService::resolveFrozenMaterialUseMode($opt, $personaId);
+        }
 
         $settingName = self::composeRecordName($title, self::SETTING_NAME_MAX);
         $displayTitle = self::composeDisplayTitle($title, self::TASK_NAME_MAX);
@@ -563,10 +661,15 @@ class VideoService
                 'pic' => $avatar['pic'],
             ]];
             $params['voice'] = [['voice_id' => $voiceId]];
-            $params['character_design'] = [[
-                'name' => (string)($persona['name'] ?? ''),
-                'introduced' => (string)(($persona['business'] ?? '') !== '' ? $persona['business'] : ($persona['tone'] ?? '')),
-            ]];
+            // 不选人设时没有人设档案，人物卡留空：ShanjianVideoSettingLogic::add 只校验数组非空，
+            // 下游 compositeVideoCron 对 card_name/card_introduced 分别判空，两个都空就不会拼 introduceCard，
+            // 效果与洗稿模式不传 introduceCard 一致（整段不传会被「人设信息不能为空」拦下）
+            $params['character_design'] = [$manualMode
+                ? ['name' => '', 'introduced' => '']
+                : [
+                    'name' => (string)($persona['name'] ?? ''),
+                    'introduced' => (string)(($persona['business'] ?? '') !== '' ? $persona['business'] : ($persona['tone'] ?? '')),
+                ]];
             $params['material'] = $payloadMaterials;
         } else {
             $params['voice'] = $voiceId;
@@ -579,11 +682,13 @@ class VideoService
         HotspotLog::json('视频合成参数：', [
             'task_no' => $taskNo,
             'user_id' => $userId,
+            'persona_mode' => $manualMode ? '不选人设' : '人设',
             'persona_id' => $personaId,
             'persona_name' => (string)($persona['name'] ?? ''),
             'video_type' => $opt['video_type'],
             'shanjian_type' => $params['shanjian_type'],
             'material_mode' => $opt['material_mode'],
+            'material_use_mode' => (int)($extra['material_use_mode'] ?? 0),
             'goal' => $opt['goal'],
             'direction' => $opt['direction'],
             'duration_sec' => $opt['duration_sec'],
@@ -642,6 +747,10 @@ class VideoService
             'shanjian_task_id' => $sjTaskId,
             'source' => self::SOURCE,
         ];
+        // 音色名回写：详情/后台展示不依赖客户端有没有传 voice，与 avatar 名回写同口径
+        if ($manualMode && $manualVoiceName !== '') {
+            $patch['voice'] = $manualVoiceName;
+        }
         $logPatch = self::persistMaterialUseLogs($userId, $personaId, $sjTaskId, $materialIds, $taskNo);
         $patch = array_merge($patch, $logPatch);
         if ($svMaterialIds !== []) {
@@ -1018,7 +1127,57 @@ class VideoService
     private static function resolveMaterials(int $userId, int $personaId, array $opt, string $script): array
     {
         $mode = (string)($opt['material_mode'] ?? 'ai_persona');
-        $selected = $mode === 'ai' ? [] : self::loadPersonaMaterials($userId, $personaId, $opt['materials'] ?? []);
+        $manualMode = (int)($opt['persona_mode'] ?? ScriptService::PERSONA_MODE_PERSONA)
+            === ScriptService::PERSONA_MODE_MANUAL;
+        $frozenUseMode = (!$manualMode && $personaId > 0)
+            ? ScriptService::resolveFrozenMaterialUseMode($opt, $personaId)
+            : ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE;
+        $isOriginalMode = !$manualMode && $personaId > 0
+            && $frozenUseMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
+        $selectedIds = $mode === 'ai' ? [] : ($opt['materials'] ?? []);
+        $selected = $mode === 'ai' ? [] : self::loadPersonaMaterials(
+            $userId,
+            $personaId,
+            $selectedIds,
+            ScriptService::resolveClipReloadUseMode($opt)
+        );
+        if ($mode !== 'ai') {
+            ScriptService::assertSelectedMaterialsReloaded(is_array($selectedIds) ? $selectedIds : [], $selected);
+            $missing = ScriptService::selectedIdsMissingFromReload(
+                is_array($selectedIds) ? $selectedIds : [],
+                self::collectMaterialIds($selected)
+            );
+            if ($missing !== []) {
+                HotspotLog::write(sprintf(
+                    '人设素材部分未回表：已选=%d 回表=%d 未命中id=%s',
+                    count(array_filter(array_map('intval', is_array($selectedIds) ? $selectedIds : []), static fn($id) => $id > 0)),
+                    count($selected),
+                    implode(',', $missing)
+                ));
+            }
+        }
+        // 原图模式判空：纯人设素材没有后手，这里就得报错；
+        // ai/ai_persona 的缺口留给下面 AI 补齐，补完再判一次，否则会在 AI 出手前先被判死
+        if ($isOriginalMode && !self::shouldFillAiMaterials($mode)) {
+            $beforeTrim = $selected;
+            $selected = ShanjianVideoSettingLogic::trimMaterialsByDuration($selected);
+            // 只有素材混剪缺视频出不了片才判死；数字人口播的素材是穿插画面，
+            // 只选图片照样能合成，不该按「原图模式必须选视频」整单打回
+            // （与下面 AI 补齐后那次收口同口径）
+            if ($opt['video_type'] === 'clips') {
+                $emptyVideoError = ShanjianVideoSettingLogic::originalModeEmptyVideoError($selected, $beforeTrim);
+                if ($emptyVideoError !== '') {
+                    throw new HotspotUpstreamException($emptyVideoError);
+                }
+            } elseif (count($selected) !== count($beforeTrim)) {
+                HotspotLog::write(sprintf(
+                    '原图模式素材按时长裁剪：视频类型=%s 裁剪前=%d 裁剪后=%d',
+                    (string)$opt['video_type'],
+                    count($beforeTrim),
+                    count($selected)
+                ));
+            }
+        }
         $quota = self::materialQuota((string)($opt['video_type'] ?? ''));
         $targets = self::pickMaterialTargets($quota);
         $targetV = (int)$targets['video'];
@@ -1053,6 +1212,9 @@ class VideoService
                     );
                     $ai = self::formatRawMaterials(is_array($aiV) ? $aiV : []);
                     $ai = array_merge($ai, self::formatRawMaterials(is_array($aiI) ? $aiI : []));
+                    if ($isOriginalMode) {
+                        $ai = self::filterMaterialsByOriginalSpec($ai);
+                    }
                     // 只裁剪 AI 补来的部分，不动用户已选素材
                     $ai = self::trimMaterialsToTargets(
                         ShanjianVideoSettingLogic::trimMaterialsByDuration($ai),
@@ -1085,7 +1247,7 @@ class VideoService
                 } catch (\Throwable $e) {
                     HotspotLog::write('AI找素材失败：' . $e->getMessage());
                     if (self::shouldFailClipsOnAiMaterialError((string)$opt['video_type'], $selected)) {
-                        throw new HotspotUpstreamException(self::clipsEmptyMaterialError($mode, $e->getMessage()));
+                        throw new HotspotUpstreamException(self::clipsEmptyMaterialError($mode, $e->getMessage(), $manualMode));
                     }
                     if ($opt['video_type'] === 'digital') {
                         HotspotLog::write('数字人口播AI找素材失败，降级为纯口播');
@@ -1095,7 +1257,20 @@ class VideoService
         }
 
         if ($opt['video_type'] === 'clips' && $mode === 'ai' && $selected === []) {
-            throw new HotspotUpstreamException(self::clipsEmptyMaterialError($mode, ''));
+            throw new HotspotUpstreamException(self::clipsEmptyMaterialError($mode, '', $manualMode));
+        }
+
+        // AI 补齐之后再收一次口：人设原片与 AI 素材合到一起才知道总时长够不够
+        if ($isOriginalMode && self::shouldFillAiMaterials($mode)) {
+            $beforeTrim = $selected;
+            $selected = ShanjianVideoSettingLogic::trimMaterialsByDuration($selected);
+            // 素材混剪必须有可用视频；数字人口播沿用上面「AI失败降级为纯口播」的处置，不因缺视频整单失败
+            if ($opt['video_type'] === 'clips') {
+                $emptyVideoError = ShanjianVideoSettingLogic::originalModeEmptyVideoError($selected, $beforeTrim);
+                if ($emptyVideoError !== '') {
+                    throw new HotspotUpstreamException($emptyVideoError);
+                }
+            }
         }
 
         return array_values($selected);
@@ -1152,12 +1327,20 @@ class VideoService
     /**
      * clips 全空时的失败文案。转存熔断保留原因，避免只写笼统「AI找素材失败」。
      */
-    public static function clipsEmptyMaterialError(string $mode, string $error): string
+    public static function clipsEmptyMaterialError(string $mode, string $error, bool $manualMode = false): string
     {
         if ($error !== '' && mb_strpos($error, '转存失败') !== false) {
             return $error;
         }
-        return $mode === 'ai' ? 'AI找素材失败，请改用纯人设素材或稍后重试' : '素材混剪必须选择素材';
+        if ($mode !== 'ai') {
+            return '素材混剪必须选择素材';
+        }
+        // 不选人设时没有人设素材库可退，别给出做不到的建议
+        $tip = $manualMode
+            ? 'AI找素材失败，请稍后重试或改用数字人口播混剪'
+            : 'AI找素材失败，请改用纯人设素材或稍后重试';
+        // 带上上游给的真实原因：只写一句笼统失败，用户和排查的人都分不清是中台抖动还是内容被拒
+        return $error === '' ? $tip : $tip . '（' . mb_substr($error, 0, 60, 'UTF-8') . '）';
     }
 
     /**
@@ -1168,7 +1351,7 @@ class VideoService
         return $videoType === 'clips' && $selected === [];
     }
 
-    private static function loadPersonaMaterials(int $userId, int $personaId, array $ids): array
+    private static function loadPersonaMaterials(int $userId, int $personaId, array $ids, ?int $frozenUseMode = null): array
     {
         if (array_key_exists('personaMaterials', self::$testHooks)) {
             return is_array(self::$testHooks['personaMaterials']) ? self::$testHooks['personaMaterials'] : [];
@@ -1177,17 +1360,14 @@ class VideoService
         if ($ids === [] || $userId <= 0 || $personaId <= 0) {
             return [];
         }
-        $rows = Material::where('user_id', $userId)
-            ->where('persona_id', $personaId)
-            ->where('publish_mode', Material::PUBLISH_MODE_MAKE_VIDEO)
-            ->whereIn('material_type', [Material::MATERIAL_TYPE_VIDEO, Material::MATERIAL_TYPE_IMAGE])
-            ->where('use_status', Material::USE_STATUS_ENABLED)
+        $rows = PersonaService::clipMaterialQuery(
+            $userId,
+            $personaId,
+            $frozenUseMode,
+            $frozenUseMode !== null
+        )
             ->whereIn('id', $ids)
-            ->where(function ($query) {
-                $query->where('source_type', '<>', 'slice')
-                    ->whereOr('slice_status', Material::SLICE_STATUS_SUCCESS);
-            })
-            ->field(['id', 'file_url', 'thumbnail_url', 'material_type'])
+            ->field(['id', 'file_url', 'thumbnail_url', 'material_type', 'duration'])
             ->select()
             ->toArray();
         // 按用户勾选顺序排列，而非数据库返回顺序
@@ -1319,6 +1499,52 @@ class VideoService
         ));
     }
 
+    /**
+     * 原图模式下按原图硬规格筛 AI/热点库素材，不合格的丢掉不用。
+     *
+     * 下发前 ShanjianVideoSettingLogic::preflightMaterials 会对每条素材跑同一套规格，
+     * 而且一条不过就把整个任务判失败(status=2)——不是剔素材。所以这里提前筛，
+     * 宁可少几条素材，也不把不合规的带到下发环节炸整单。
+     * 与自动合成链路 splitGrabbedMaterialsByOriginalSpec 同思路（那边还会降级入库，
+     * 这里的 AI 素材进的是热点库、不归人设素材模式管，只做本次取舍）。
+     *
+     * @param list<array<string, mixed>> $items
+     * @return list<array<string, mixed>>
+     */
+    private static function filterMaterialsByOriginalSpec(array $items): array
+    {
+        $kept = [];
+        $dropped = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $url = trim((string)($item['fileUrl'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+            $guard = ($item['type'] ?? '') === 'video'
+                ? OriginalMaterialSpec::assertVideo(['url' => $url])
+                : OriginalMaterialSpec::assertImage(['url' => $url]);
+            if ($guard === true) {
+                $kept[] = $item;
+                continue;
+            }
+            $dropped[] = [
+                'type' => (string)($item['type'] ?? ''),
+                'reason' => (string)$guard,
+                'url' => mb_substr($url, 0, 180, 'UTF-8'),
+            ];
+        }
+        if ($dropped !== []) {
+            HotspotLog::json('原图模式剔除不合规AI素材：', [
+                'kept' => count($kept),
+                'dropped' => $dropped,
+            ], 2000);
+        }
+        return array_values($kept);
+    }
+
     private static function formatRawMaterials(array $rows): array
     {
         $out = [];
@@ -1392,10 +1618,17 @@ class VideoService
         return CopywritingImitationLogic::resolveMusicUrlByConfig($config, $personaId);
     }
 
-    private static function resolveVolume($config): float
+    private static function resolveVolume(mixed $config): float
     {
         return AiPersonaSynthesisConfig::normalizeMusicVolume(
             $config->isEmpty() ? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT : ($config->music_volume ?? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT)
+        );
+    }
+
+    private static function resolveSpeechRate(mixed $config): float
+    {
+        return AiPersonaSynthesisConfig::normalizeSpeechRate(
+            $config->isEmpty() ? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT : ($config->speech_rate ?? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT)
         );
     }
 
@@ -1487,11 +1720,24 @@ class VideoService
         }
         $options = is_array($task['options'] ?? null) ? $task['options'] : [];
         $retrySeq = (int)($options['retry_seq'] ?? 0);
-        if ((int)($options['shanjian_setting_id'] ?? 0) > 0) {
+        $boundSettingId = (int)($options['shanjian_setting_id'] ?? 0);
+        if ($boundSettingId > 0) {
+            if (ScriptService::shouldRedispatchEmptyPersonaMaterials(
+                $options,
+                self::settingMaterialById($boundSettingId)
+            )) {
+                HotspotLog::write(sprintf(
+                    '已绑定闪剪设置但素材为空，忽略复用并重新下发：任务号=%s 设置id=%d',
+                    $taskNo,
+                    $boundSettingId
+                ));
+                TaskService::clearShanjianBinding($taskNo, $retrySeq);
+                return null;
+            }
             HotspotLog::write(sprintf(
                 '跳过重复下发：任务号=%s 已绑定闪剪设置id=%d',
                 $taskNo,
-                (int)$options['shanjian_setting_id']
+                $boundSettingId
             ));
             return $task;
         }

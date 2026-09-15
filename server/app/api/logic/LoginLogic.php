@@ -11,7 +11,7 @@ use app\common\logic\AccountLogLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\distribution\DistributionAgent;
 use app\common\model\user\{User, UserAuth};
-use app\common\service\{ConfigService, FileService, wechat\WeChatConfigService, wechat\WeChatMnpService, wechat\WeChatOaService, wechat\WeChatRequestService};
+use app\common\service\{ConfigService, FileService, UserProfileConfigService, wechat\WeChatConfigService, wechat\WeChatMnpService, wechat\WeChatOaService, wechat\WeChatRequestService};
 use think\facade\{Config, Db};
 
 /**
@@ -67,6 +67,22 @@ class LoginLogic extends BaseLogic
 
         $value = trim((string)($registerConfig['default_invite_source'] ?? ''));
         return $value !== '' ? $value : '系统';
+    }
+
+    /**
+     * @notes 注册默认密码：当前站点域名(不含 http/https 协议头与端口)
+     * @return string
+     */
+    public static function getRegisterDefaultPassword(): string
+    {
+        $host = trim((string)request()->host(true));
+        if ($host === '') {
+            $host = trim((string)(config('project.website.domain') ?: config('project.website.url')));
+        }
+        $host = preg_replace('/^https?:\/\//i', '', $host);
+        $host = explode('/', $host)[0];
+        $host = explode(':', $host)[0];
+        return strtolower($host);
     }
 
     public static function checkRegisterPolicy(string $inviteCode = ''): int
@@ -181,7 +197,8 @@ class LoginLogic extends BaseLogic
     {
         $userSn = User::createUserSn();
         $passwordSalt = Config::get('project.unique_identification');
-        $password = create_password((string)($params['password'] ?? $mobile), $passwordSalt);
+        // 未传密码时(验证码注册/验证码登录自动注册)初始密码为当前站点域名
+        $password = create_password((string)($params['password'] ?? self::getRegisterDefaultPassword()), $passwordSalt);
         $avatar = ConfigService::get('default_image', 'user_avatar');
         $tokens = ConfigService::get('default_tokens', 'tokens', 0);
         // OEM 站点注册:team_id 作当前散客归属,origin_team_id 锁定站点原生归属
@@ -583,9 +600,12 @@ class LoginLogic extends BaseLogic
     {
         try {
             //通过code获取微信openid
-            $response = (new WeChatMnpService(self::mnpTenantId()))->getMnpResByCode($params['code']);
+            $mnpService = new WeChatMnpService(self::mnpTenantId());
+            $response = $mnpService->getMnpResByCode($params['code']);
             $response['user_id'] = $params['user_id'];
             $response['terminal'] = UserTerminalEnum::WECHAT_MMP;
+            // openid 归属哪个小程序(主站/OEM)必须一起记下,支付按 appid 取号
+            $response['app_id'] = $mnpService->getAppId();
 
             return self::createAuth($response);
         } catch (\Exception $e) {
@@ -610,6 +630,7 @@ class LoginLogic extends BaseLogic
             $response = (new WeChatOaService())->getOaResByCode($params['code']);
             $response['user_id'] = $params['user_id'];
             $response['terminal'] = UserTerminalEnum::WECHAT_OA;
+            $response['app_id'] = (string)(WeChatConfigService::getOaConfig()['app_id'] ?? '');
 
             return self::createAuth($response);
         } catch (\Exception $e) {
@@ -629,10 +650,24 @@ class LoginLogic extends BaseLogic
      */
     public static function createAuth($response)
     {
+        $appId = (string)($response['app_id'] ?? '');
+
         //先检查openid是否有记录
         $isAuth = UserAuth::where('openid', '=', $response['openid'])->findOrEmpty();
         if (!$isAuth->isEmpty()) {
-            throw new \Exception('该微信已被绑定');
+            // 已经绑在别人名下才算冲突；绑自己(重复授权/换端补绑)幂等返回，
+            // 顺带补齐 appid，否则支付按 appid 取不到号
+            if ((int)$isAuth->user_id !== (int)$response['user_id']) {
+                throw new \Exception('该微信已被绑定');
+            }
+            if ($appId !== '' && (string)$isAuth->app_id !== $appId) {
+                $isAuth->app_id = $appId;
+            }
+            if (empty($isAuth->unionid) && !empty($response['unionid'])) {
+                $isAuth->unionid = $response['unionid'];
+            }
+            $isAuth->save();
+            return true;
         }
 
         if (isset($response['unionid']) && !empty($response['unionid'])) {
@@ -645,11 +680,13 @@ class LoginLogic extends BaseLogic
         }
 
         //如果没有授权，直接生成一条微信授权记录
+        // 同一用户在主站小程序与 OEM 小程序下各一条(appid 不同、openid 不同)，不互相覆盖
         UserAuth::create([
             'user_id' => $response['user_id'],
             'openid' => $response['openid'],
             'unionid' => $response['unionid'] ?? '',
             'terminal' => $response['terminal'],
+            'app_id' => $appId,
         ]);
         return true;
     }
@@ -730,11 +767,25 @@ class LoginLogic extends BaseLogic
      */
     public static function updateUser($params, $userId)
     {
-        return User::where(['id' => $userId])->update([
+        $data = [
             'nickname' => $params['nickname'],
             'avatar' => FileService::setFileUrl($params['avatar']),
             'is_new_user' => YesNoEnum::NO
-        ]);
+        ];
+
+        // 完善资料弹窗的选填项:只有客户端传了才写,老版本客户端只传头像昵称时不清空已有资料;
+        // 门店/资质证书还要看后台「用户设置」的收集开关,关掉后即使被构造请求也不入库
+        if (isset($params['sex'])) {
+            $data['sex'] = (int)$params['sex'];
+        }
+        if (isset($params['store_name']) && UserProfileConfigService::isOpen(UserProfileConfigService::FIELD_STORE_NAME)) {
+            $data['store_name'] = trim((string)$params['store_name']);
+        }
+        if (isset($params['certificate_image']) && UserProfileConfigService::isOpen(UserProfileConfigService::FIELD_CERTIFICATE_IMAGE)) {
+            $data['certificate_image'] = FileService::setFileUrl($params['certificate_image']);
+        }
+
+        return User::where(['id' => $userId])->update($data);
     }
 
     /**

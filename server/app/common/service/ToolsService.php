@@ -253,11 +253,13 @@ class ToolsService
 
     /**
      * 设置请求参数 + 回调地址
-     * @param string $notifyUrl
      * @param array $params
+     * @param string $notifyUrl
+     * @param array $notifyParams
+     * @param bool $withToken 回调地址是否带上全站回调鉴权令牌（免登录回调接口应传 true）
      * @return self
      */
-    public function setRequestAndNotifyUrl(array $params, string $notifyUrl, array $notifyParams = []): self
+    public function setRequestAndNotifyUrl(array $params, string $notifyUrl, array $notifyParams = [], bool $withToken = false): self
     {
 
         $host = config('app.app_host');
@@ -267,7 +269,14 @@ class ToolsService
             ToolsThrowMessage('当前未配置为外网站点, 请联系站长配置');
         }
 
-        $params['notify_url'] = $host . url($notifyUrl, $notifyParams, false);
+        $callbackUrl = $host . url($notifyUrl, $notifyParams, false);
+
+        if ($withToken) {
+            // 令牌未配置时 appendTo 返回空串，此时保持原样发出：存量接口按迁移期规则不鉴权放行
+            $callbackUrl = CallbackTokenService::appendTo($callbackUrl) ?: $callbackUrl;
+        }
+
+        $params['notify_url'] = $callbackUrl;
 
         $this->setRequest($params);
 
@@ -2041,6 +2050,20 @@ class TikHubService
         }
         return is_array($data['hot_words'] ?? null) ? $data['hot_words'] : [];
     }
+
+    /**
+     * 作品数据整包：中台一次返回 analytics（账号/作品/窗口）。
+     * 只封装 HTTP，不扣费、不写缓存。
+     *
+     * @return array<string, mixed>
+     */
+    public function fetchWorkDataAnalytics(string $platform, string $account): array
+    {
+        return HotspotMidClient::request('/api/hotspot/analytics', [
+            'platform' => $platform,
+            'account' => $account,
+        ], HotspotMidClient::KIND_ANALYTICS);
+    }
 }
 
 class ArkService
@@ -2150,11 +2173,13 @@ class GptImage2Service
             'image_url' => FileService::getFileUrl($imagePathOrUrl),
             'prompt' => $prompt,
         ];
+        // 图生图是同步硬等，上游拉图 + 生成常超 5 分钟；总超时必须小于中台 nginx 的
+        // proxy_read_timeout，否则 nginx 先断，中台只会拿到 context canceled，看不到真因。
         return app(ToolsService::class)
             ->setApiUrl('/api/image/xhsHotCopy')
             ->setRequest($params)
             ->setMethod('POST')
-            ->setTimeout(10, 300)
+            ->setTimeout(10, 600)
             ->sendWithoutThrow()
             ->response;
     }
@@ -2174,7 +2199,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/avatar')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 1])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 1], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2188,7 +2213,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/voice')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 1])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 1], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2203,7 +2228,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/video')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'video', 'model_version' => 1])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'video', 'model_version' => 1], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2280,7 +2305,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/audio')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'audio', 'model_version' => 1])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'audio', 'model_version' => 1], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2297,7 +2322,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/pro/avatar')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 2])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 2], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2317,7 +2342,7 @@ class HumanService
 
         return app(ToolsService::class)
             ->setApiUrl('/api/human/pro/voice')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 2])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 2], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2353,7 +2378,7 @@ class HumanService
 
         return app(ToolsService::class)
             ->setApiUrl('/api/human/pro/audio')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'audio', 'model_version' => 2])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'audio', 'model_version' => 2], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2367,7 +2392,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/pro/video')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'video', 'model_version' => 2])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'video', 'model_version' => 2], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2384,7 +2409,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ym/avatar')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 4])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 4], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2403,7 +2428,7 @@ class HumanService
         ini_set('max_execution_time', 0);
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ym/voice')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 4])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 4], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2440,7 +2465,7 @@ class HumanService
         $notifyUrl = $params['notify_url'] ?? '/api/human/notify';
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ym/audio')
-            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'audio', 'model_version' => 4])
+            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'audio', 'model_version' => 4], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2455,7 +2480,7 @@ class HumanService
         $notifyUrl = $params['notify_url'] ?? '/api/human/notify';
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ym/video')
-            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'video', 'model_version' => 4])
+            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'video', 'model_version' => 4], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2472,7 +2497,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ymt/avatar')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 6])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'avatar', 'model_version' => 6], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2491,7 +2516,7 @@ class HumanService
         ini_set('max_execution_time', 0);
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ymt/voice')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 6])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'voice', 'model_version' => 6], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2527,7 +2552,7 @@ class HumanService
         $notifyUrl = $params['notify_url'] ?? '/api/human/notify';
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ymt/audio')
-            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'audio', 'model_version' => 6])
+            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'audio', 'model_version' => 6], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2542,7 +2567,7 @@ class HumanService
         $notifyUrl = $params['notify_url'] ?? '/api/human/notify';
         return app(ToolsService::class)
             ->setApiUrl('/api/human/ymt/video')
-            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'video', 'model_version' => 6])
+            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'video', 'model_version' => 6], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2558,7 +2583,7 @@ class HumanService
         $notifyUrl = $params['notify_url'] ?? '/api/human/notify';
         return app(ToolsService::class)
             ->setApiUrl('/api/human/chanjing/avatar')
-            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'avatar', 'model_version' => 7])
+            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'avatar', 'model_version' => 7], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2574,7 +2599,7 @@ class HumanService
         $notifyUrl = $params['notify_url'] ?? '/api/human/notify';
         return app(ToolsService::class)
             ->setApiUrl('/api/human/chanjing/voice')
-            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'voice', 'model_version' => 7])
+            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'voice', 'model_version' => 7], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2589,7 +2614,7 @@ class HumanService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/human/chanjing/audio')
-            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'audio', 'model_version' => 7])
+            ->setRequestAndNotifyUrl($params, '/api/human/notify', ['human_type' => 'audio', 'model_version' => 7], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -2605,7 +2630,7 @@ class HumanService
         $notifyUrl = $params['notify_url'] ?? '/api/human/notify';
         return app(ToolsService::class)
             ->setApiUrl('/api/human/chanjing/video')
-            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'video', 'model_version' => 7])
+            ->setRequestAndNotifyUrl($params, $notifyUrl, ['human_type' => 'video', 'model_version' => 7], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -3249,7 +3274,7 @@ class AsrService
 
         return app(ToolsService::class)
             ->setApiUrl('/api/asr/audio/text')
-            ->setRequestAndNotifyUrl($params, '/api/audio/notify', [])
+            ->setRequestAndNotifyUrl($params, '/api/audio/notify', [], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -4866,7 +4891,7 @@ class SvService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/media/text')
-            ->setRequestAndNotifyUrl($params, '/api/sv.copywriting/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'id' => $params['id']])
+            ->setRequestAndNotifyUrl($params, '/api/sv.copywriting/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'id' => $params['id']], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -4876,7 +4901,7 @@ class SvService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/media/title')
-            ->setRequestAndNotifyUrl($params, '/api/sv.copywriting/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'id' => $params['id']])
+            ->setRequestAndNotifyUrl($params, '/api/sv.copywriting/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'id' => $params['id']], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -4886,7 +4911,7 @@ class SvService
     {
         return app(ToolsService::class)
             ->setApiUrl('/api/media/subtitle')
-            ->setRequestAndNotifyUrl($params, '/api/sv.copywriting/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'id' => $params['id']])
+            ->setRequestAndNotifyUrl($params, '/api/sv.copywriting/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'id' => $params['id']], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -4942,6 +4967,8 @@ class SvService
         } else {
             $params['notify_url'] = $url . url('/api/sv.videoTask/clipnotify', [], false);
         }
+        // 与 setRequestAndNotifyUrl(withToken: true) 同规则：令牌未配置时保持原地址
+        $params['notify_url'] = CallbackTokenService::appendTo($params['notify_url']) ?: $params['notify_url'];
 
         return app(ToolsService::class)
             ->setApiUrl('/api/sv/clip/create')
@@ -5084,6 +5111,21 @@ class ShanjianService
     }
 
     /**
+     * 训练类接口请求封装（多 key 池版本门槛）。
+     * 存量资产全部同步到中台后（ShanjianAssetReportService::isSynced），训练请求带能力标头，
+     * 中台仅对带标头的训练请求参与多 key 分配；不带标头（老版本站长端 / 存量未追平）恒用默认 key，
+     * 行为与多 key 池上线前完全一致。
+     */
+    private function trainTools(): ToolsService
+    {
+        $tools = app(ToolsService::class);
+        if (ShanjianAssetReportService::isSynced()) {
+            $tools->setHeader('X-Shanjian-Assets-Synced', '1');
+        }
+        return $tools;
+    }
+
+    /**
      * 批量查询闪剪单队列状态。
      */
     public function queueStatus(array $params): array
@@ -5101,20 +5143,20 @@ class ShanjianService
      */
     public function voiceTrain(array $params): array
     {
-        return app(ToolsService::class)
+        return $this->trainTools()
             ->setApiUrl('/api/shanjian/voice_train')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianAnchor/voicenotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianAnchor/voicenotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
 
     public function singleVoiceTrain(array $params): array
     {
-        return app(ToolsService::class)
+        return $this->trainTools()
             ->setApiUrl('/api/shanjian/voice_train')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.voice/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.voice/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5140,6 +5182,22 @@ class ShanjianService
             ->setApiUrl('/api/task/batch-refund')
             ->setMethod('POST')
             ->setRequest($params)
+            ->send()
+            ->response;
+    }
+
+    /**
+     * 多 key 池：把本站闪剪形象/音色资产上报中台建立资产级 key 绑定。
+     * 中台侧幂等 upsert（已有绑定不改 key），重复上报无害。
+     * items 字段：station_user_id、asset_type(avatar/voice)；
+     * 形象带 avatar_id(+speaker_id)，音色带 voice_id(+audio_url 供跨 key 重克隆用)。
+     */
+    public function reportAssets(array $items): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/shanjian/assets/report')
+            ->setMethod('POST')
+            ->setRequest(['items' => array_values($items)])
             ->send()
             ->response;
     }
@@ -5175,10 +5233,10 @@ class ShanjianService
      */
     public function fastTrain(array $params): array
     {
-        return app(ToolsService::class)
+        return $this->trainTools()
             ->setApiUrl('/api/shanjian/fast_train')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianAnchor/anchornotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianAnchor/anchornotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5188,10 +5246,10 @@ class ShanjianService
      */
     public function trainPro(array $params): array
     {
-        return app(ToolsService::class)
+        return $this->trainTools()
             ->setApiUrl('/api/shanjian/train_pro')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianAnchor/anchornotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianAnchor/anchornotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5217,7 +5275,7 @@ class ShanjianService
         return $this->v2Tools()
             ->setApiUrl('/api/v2/shanjian/realman_broadcast')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5230,7 +5288,7 @@ class ShanjianService
         return $this->v2Tools()
             ->setApiUrl('/api/v2/shanjian/mixcut_broadcast')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5243,7 +5301,7 @@ class ShanjianService
         return $this->v2Tools()
             ->setApiUrl('/api/v2/shanjian/virtualman_broadcast')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5256,7 +5314,7 @@ class ShanjianService
         return $this->v2Tools()
             ->setApiUrl('/api/v2/shanjian/virtualman_video')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5276,7 +5334,7 @@ class ShanjianService
         return $this->v2Tools()
             ->setApiUrl('/api/v2/shanjian/news_mixcut')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5296,7 +5354,7 @@ class ShanjianService
             ->setApiUrl('/api/shanjian/aicover')
             ->setMethod('POST')
             ->setRequest($params)
-            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/covernotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/shanjian.shanjianVideoTask/covernotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5313,7 +5371,7 @@ class ShanjianService
                 'user_id'         => $params['user_id'],
                 'task_id'         => $params['task_id'],
                 'minimax_task_id' => $params['minimax_task_id'] ?? 0,
-            ])
+            ], withToken: true)
             ->send()
             ->response;
     }
@@ -5326,7 +5384,7 @@ class SoraService
         return app(ToolsService::class)
             ->setApiUrl('/api/sora/video')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/sora.soraVideoTask/notifyNew', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => 1])
+            ->setRequestAndNotifyUrl($params, '/api/sora.soraVideoTask/notifyNew', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => 1], withToken: true)
             ->send()
             ->response;
     }
@@ -5336,7 +5394,7 @@ class SoraService
         return app(ToolsService::class)
             ->setApiUrl('/api/sora/video_pro')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/sora.soraVideoTask/notifyNew', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => 2])
+            ->setRequestAndNotifyUrl($params, '/api/sora.soraVideoTask/notifyNew', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => 2], withToken: true)
             ->send()
             ->response;
     }
@@ -5362,7 +5420,7 @@ class SoraService
         return app(ToolsService::class)
             ->setApiUrl($api)
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/sora.soraVideoTask/notifySeedance', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => $modelVersion])
+            ->setRequestAndNotifyUrl($params, '/api/sora.soraVideoTask/notifySeedance', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => $modelVersion], withToken: true)
             ->send()
             ->response;
     }
@@ -5382,7 +5440,7 @@ class SoraService
         return app(ToolsService::class)
             ->setApiUrl('/api/sora/video')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/sora.soraAnchor/videoNotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => 1])
+            ->setRequestAndNotifyUrl($params, '/api/sora.soraAnchor/videoNotify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id'], 'model_version' => 1], withToken: true)
             ->send()
             ->response;
     }
@@ -5412,7 +5470,7 @@ class SoraService
         return app(ToolsService::class)
             ->setApiUrl('/api/sora/anchor')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($params, '/api/sora.soraAnchor/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']])
+            ->setRequestAndNotifyUrl($params, '/api/sora.soraAnchor/notify', ['user_id' => $params['user_id'], 'task_id' => $params['task_id']], withToken: true)
             ->send()
             ->response;
     }
@@ -5971,7 +6029,7 @@ class VideoImitationService
         // 调用远程开放平台接口
         return app(ToolsService::class)
             ->setApiUrl('/api/shanjian/virtualman_broadcast')
-            ->setRequestAndNotifyUrl($requestParams, '/api/videoImitation.task/notify', ['user_id' => $requestParams['user_id'], 'task_id' => $requestParams['task_id']])
+            ->setRequestAndNotifyUrl($requestParams, '/api/videoImitation.task/notify', ['user_id' => $requestParams['user_id'], 'task_id' => $requestParams['task_id']], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -5987,7 +6045,7 @@ class VideoImitationService
         // 调用远程开放平台接口
         return app(ToolsService::class)
             ->setApiUrl('/api/shanjian/mixcut_broadcast')
-            ->setRequestAndNotifyUrl($requestParams, '/api/videoImitation.task/notify', ['user_id' => $requestParams['user_id'], 'task_id' => $requestParams['task_id']])
+            ->setRequestAndNotifyUrl($requestParams, '/api/videoImitation.task/notify', ['user_id' => $requestParams['user_id'], 'task_id' => $requestParams['task_id']], withToken: true)
             ->setMethod('POST')
             ->send()
             ->response;
@@ -6003,7 +6061,7 @@ class VideoImitationService
         return app(ToolsService::class)
             ->setApiUrl('/api/shanjian/news_mixcut')
             ->setMethod('POST')
-            ->setRequestAndNotifyUrl($requestParams, '/api/videoImitation.task/notify', ['user_id' => $requestParams['user_id'], 'task_id' => $requestParams['task_id']])
+            ->setRequestAndNotifyUrl($requestParams, '/api/videoImitation.task/notify', ['user_id' => $requestParams['user_id'], 'task_id' => $requestParams['task_id']], withToken: true)
             ->send()
             ->response;
     }

@@ -151,7 +151,6 @@ class LeadLogic extends ApiLogic
         try {
             $conversationId = trim((string)($params['conversation_id'] ?? ''));
             $messageId = (int)($params['message_id'] ?? 0);
-            $message = null;
 
             if ($conversationId === '' && $messageId <= 0) {
                 self::setError('会话ID或消息ID不能为空');
@@ -185,23 +184,13 @@ class LeadLogic extends ApiLogic
                     ->findOrEmpty();
             }
 
-            $extra = [];
-            if ($message && !$message->isEmpty()) {
-                $extra = self::decodeJson($message->extra ?? '');
-            } else {
-                $latestCardsMessage = MapLeadMessage::where('conversation_id', $conversationId)
-                    ->where('user_id', self::$uid)
-                    ->where('content_type', self::CONTENT_CARDS)
-                    ->order('id', 'desc')
-                    ->findOrEmpty();
-                if (!$latestCardsMessage->isEmpty()) {
-                    $message = $latestCardsMessage;
-                    $extra = self::decodeJson($latestCardsMessage->extra ?? '');
-                }
+            $fallbackKeyword = '';
+            if (!$conversation->isEmpty()) {
+                $fallbackKeyword = self::limitString(self::stringValue($conversation->title ?? ''), 255);
             }
-            $keyword = self::buildExportKeyword($conversation, $extra);
+            $keywordByMessageId = self::buildExportKeywordMap($conversationId);
 
-            $rows = MapLeadRecord::field('name,addr,phone,tag,rating,create_time')
+            $rows = MapLeadRecord::field('name,addr,phone,tag,rating,create_time,message_id')
                 ->where('conversation_id', $conversationId)
                 ->where('user_id', self::$uid)
                 ->order('id', 'asc')
@@ -225,7 +214,7 @@ class LeadLogic extends ApiLogic
                     self::stringValue($row['addr'] ?? ''),
                     self::stringValue($row['tag'] ?? ''),
                     self::stringValue($row['rating'] ?? ''),
-                    $keyword,
+                    self::resolveExportKeyword($row, $keywordByMessageId, $fallbackKeyword),
                     self::formatExportTime($row['create_time'] ?? ''),
                 ];
             }
@@ -261,39 +250,110 @@ class LeadLogic extends ApiLogic
             }
             $rows = array_merge(
                 $rows,
-                self::cardsToExportRows($extra['cards'], (string)($cardMessage->create_time ?? ''))
+                self::cardsToExportRows(
+                    $extra['cards'],
+                    (string)($cardMessage->create_time ?? ''),
+                    (int)$cardMessage->id
+                )
             );
         }
 
         return $rows;
     }
 
-    private static function buildExportKeyword(MapLeadConversation $conversation, array $extra): string
+    /**
+     * 按助手卡片消息 ID 回查该轮搜索词。
+     *
+     * @return array<int, string>
+     */
+    private static function buildExportKeywordMap(string $conversationId): array
     {
-        $title = '';
-        if ($conversation && !$conversation->isEmpty()) {
-            $title = self::stringValue($conversation->title ?? '');
-        }
-        if ($title !== '') {
-            return self::limitString($title, 255);
+        $messages = MapLeadMessage::field('id,role,content_type,content,extra')
+            ->where('conversation_id', $conversationId)
+            ->where('user_id', self::$uid)
+            ->order('id', 'asc')
+            ->select()
+            ->toArray();
+
+        return self::mapCardMessageKeywords($messages);
+    }
+
+    /**
+     * 将会话消息按时间序映射为「卡片消息 ID => 搜索关键词」。
+     * 优先取紧邻的上一条用户文本，其次取助手 extra.request。
+     *
+     * @param array<int, array<string, mixed>> $messages
+     * @return array<int, string>
+     */
+    public static function mapCardMessageKeywords(array $messages): array
+    {
+        $map = [];
+        $lastUserContent = '';
+
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+
+            $role = self::stringValue($message['role'] ?? '');
+            $contentType = self::stringValue($message['content_type'] ?? '');
+            $content = self::stringValue($message['content'] ?? '');
+            $id = (int)($message['id'] ?? 0);
+
+            if ($role === self::ROLE_USER && $contentType === self::CONTENT_TEXT) {
+                $lastUserContent = $content;
+                continue;
+            }
+
+            if ($contentType !== self::CONTENT_CARDS || $id <= 0) {
+                continue;
+            }
+
+            $keyword = $lastUserContent;
+            if ($keyword === '') {
+                $keyword = self::keywordFromExtra(self::decodeJson($message['extra'] ?? ''));
+            }
+            $map[$id] = self::limitString($keyword, 255);
         }
 
+        return $map;
+    }
+
+    /**
+     * @param array<int, string> $keywordByMessageId
+     */
+    private static function resolveExportKeyword(array $row, array $keywordByMessageId, string $fallbackKeyword): string
+    {
+        $messageId = (int)($row['message_id'] ?? 0);
+        if ($messageId > 0) {
+            $keyword = self::stringValue($keywordByMessageId[$messageId] ?? '');
+            if ($keyword !== '') {
+                return $keyword;
+            }
+        }
+
+        return $fallbackKeyword;
+    }
+
+    private static function keywordFromExtra(array $extra): string
+    {
         $request = is_array($extra['request'] ?? null) ? $extra['request'] : [];
+        $query = self::stringValue($request['query'] ?? '');
+        if ($query !== '') {
+            return self::limitString($query, 255);
+        }
+
         $composed = trim(
             self::stringValue($request['city'] ?? '') .
             self::stringValue($request['region'] ?? '') .
             self::stringValue($request['location_extra'] ?? '') .
             (self::stringValue($request['biz'] ?? '') !== '' ? ' ' . self::stringValue($request['biz'] ?? '') : '')
         );
-        if ($composed !== '') {
-            return self::limitString($composed, 255);
-        }
 
-        $query = self::stringValue($request['query'] ?? '');
-        return self::limitString($query, 255);
+        return self::limitString($composed, 255);
     }
 
-    private static function cardsToExportRows(array $cards, string $fallbackTime): array
+    private static function cardsToExportRows(array $cards, string $fallbackTime, int $messageId = 0): array
     {
         $rows = [];
         foreach ($cards as $card) {
@@ -307,6 +367,7 @@ class LeadLogic extends ApiLogic
                 'tag'         => self::stringValue($card['tag'] ?? ''),
                 'rating'      => self::stringValue($card['rating'] ?? ''),
                 'create_time' => $fallbackTime,
+                'message_id'  => $messageId,
             ];
         }
         return $rows;

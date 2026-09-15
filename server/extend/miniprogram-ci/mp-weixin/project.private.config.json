@@ -3,11 +3,25 @@
     "miniprogram": {
       "list": [
         {
+          "name": "packages/pages/webview/webview",
+          "pathName": "packages/pages/webview/webview",
+          "query": "url=%2Fhttps%3A%2F%2Fdemo.imai.work&title=%25E7%25BD%2591%25E7%25AB%2599",
+          "scene": null,
+          "launchMode": "default"
+        },
+        {
+          "name": "ai_modules/device/pages/index/index",
+          "pathName": "ai_modules/device/pages/index/index",
+          "query": "",
+          "launchMode": "default",
+          "scene": null
+        },
+        {
           "name": "packages/pages/user/user",
           "pathName": "ai_modules/person/pages/index/index",
           "query": "",
-          "scene": null,
-          "launchMode": "default"
+          "launchMode": "default",
+          "scene": null
         },
         {
           "name": "clo",

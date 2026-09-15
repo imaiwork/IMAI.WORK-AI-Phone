@@ -3,7 +3,7 @@
         <view class="flex-shrink-0 px-[28rpx] h-[100rpx] flex items-center justify-between">
             <view class="flex items-center gap-[10rpx]">
                 <view class="w-[6rpx] h-[32rpx] bg-primary rounded-full" />
-                <text class="text-[32rpx] font-extrabold text-[#0D1117]">线索列表</text>
+                <text class="text-[32rpx] font-extrabold text-[#0D1117]">{{ pageTitle }}</text>
             </view>
             <view
                 class="flex items-center gap-[6rpx] h-[52rpx] px-[20rpx] rounded-full transition-all"
@@ -40,14 +40,7 @@
                             :class="selectedList.includes(index) ? 'bg-primary' : 'bg-transparent'" />
 
                         <view class="flex-1 min-w-0 py-[4rpx]">
-                            <clue-card
-                                :data="{
-                                    name: item.name,
-                                    time: item.create_time,
-                                    total: item.crawl_number,
-                                    added: item.completed_add_count,
-                                }"
-                                :type="2" />
+                            <clue-card :data="toCardData(item)" :type="2" :source="source" />
                         </view>
 
                         <view class="flex-shrink-0 mr-[28rpx]">
@@ -95,7 +88,8 @@
 
 <script setup lang="ts">
 import { getTaskList } from "@/api/sph";
-import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import { getDySearchTaskList } from "@/api/device";
+import { ListenerTypeEnum, ClueSourceEnum, DY_SEARCH_PICKABLE_STATUS } from "@/ai_modules/device/enums";
 import ClueCard from "@/ai_modules/device/components/clue-card/clue-card.vue";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 
@@ -105,9 +99,29 @@ const pagingRef = shallowRef();
 const taskList = ref<any[]>([]);
 const selectedList = ref<number[]>([]);
 
+// 从哪种获客任务里挑线索：视频号自动获线索 或 抖音账号搜寻获客
+const source = ref<ClueSourceEnum>(ClueSourceEnum.AUTO_CLUE);
+const isDySearch = computed(() => source.value === ClueSourceEnum.DY_SEARCH);
+const pageTitle = computed(() => (isDySearch.value ? "抖音获客线索" : "线索列表"));
+
+onLoad((options: any) => {
+    if (Number(options?.source) === ClueSourceEnum.DY_SEARCH) {
+        source.value = ClueSourceEnum.DY_SEARCH;
+    }
+});
+
+// 两个接口字段名不同，统一成 clue-card 的入参
+const toCardData = (item: any) => ({
+    name: item.name,
+    time: item.create_time,
+    total: isDySearch.value ? item.clue_total : item.crawl_number,
+    added: isDySearch.value ? item.added_count : item.completed_add_count,
+});
+
 const queryList = async (page_no: number, page_size: number) => {
     try {
-        const { lists } = await getTaskList({ page_no, page_size });
+        const api = isDySearch.value ? getDySearchTaskList : getTaskList;
+        const { lists } = await api({ page_no, page_size });
         pagingRef.value.complete(lists);
     } catch (error) {
         pagingRef.value.complete([]);
@@ -115,8 +129,17 @@ const queryList = async (page_no: number, page_size: number) => {
 };
 
 const handleSelect = (index: number, item: any) => {
-    const { crawl_number } = item;
-    if (crawl_number == 0) {
+    if (isDySearch.value) {
+        // 后端只从已完成/已结束的任务里取号，没跑完的选了也是空
+        if (!DY_SEARCH_PICKABLE_STATUS.includes(Number(item.status))) {
+            uni.$u.toast("该任务还没结束，暂时取不到线索");
+            return;
+        }
+        if (Number(item.clue_total) === 0) {
+            uni.$u.toast("该线索没有可采集数量");
+            return;
+        }
+    } else if (item.crawl_number == 0) {
         uni.$u.toast("该线索没有可采集数量");
         return;
     }
@@ -136,11 +159,9 @@ const handleConfirm = () => {
             const task = taskList.value[item];
             return {
                 id: task.id,
-                name: task.name,
-                time: task.create_time,
-                total: task.crawl_number,
-                added: task.completed_add_count,
+                ...toCardData(task),
                 file_type: 2,
+                source: source.value,
             };
         }),
     });

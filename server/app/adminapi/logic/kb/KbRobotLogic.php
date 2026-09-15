@@ -25,6 +25,7 @@ use app\common\service\AgentPermissionService;
 use app\common\service\chat\ChatModelsService;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
+use app\common\service\TeamContextService;
 use Exception;
 use function Symfony\Component\Translation\t;
 
@@ -144,10 +145,14 @@ class KbRobotLogic extends BaseLogic
             $iconImage = '';
             $chatImage = FileService::getFileUrl(ConfigService::get('website', 'shop_logo'));
 
+            $ownerUserId = $userId > 0 ? $userId : 0;
+            $ownerTeamId = $ownerUserId > 0 ? TeamContextService::currentTeamId($ownerUserId) : 0;
+
             // 创建机器人
-            $botCode = generate_sn(KbRobot::class, 'code', 0);
+            $botCode = generate_sn(KbRobot::class, 'code', $ownerUserId);
             $robot   = KbRobot::create([
-                                           'user_id'      => 0,
+                                           'user_id'      => $ownerUserId,
+                                           'team_id'      => $ownerTeamId,
                                            'code'         => $botCode,
                                            'kb_ids'       => '',
                                            'icons'        => $iconImage,
@@ -167,7 +172,7 @@ class KbRobotLogic extends BaseLogic
 
             // 创建智能体默认回复策略
             SvReplyStrategy::create([
-                                        "user_id"            => 0,
+                                        "user_id"            => $ownerUserId,
                                         "multiple_type"      => 0,
                                         "robot_id"           => $robot['id'],
                                         "number_chat_rounds" => 3,

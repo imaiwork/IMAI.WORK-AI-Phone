@@ -8,7 +8,6 @@ use app\common\logic\AccountLogLogic;
 use app\common\model\ModelConfig;
 use app\common\model\storyboard\StoryboardVideoSetting;
 use app\common\model\storyboard\StoryboardVideoTask;
-use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use think\facade\Log;
 
@@ -93,12 +92,7 @@ class StoryboardVideoTaskLogic extends ApiLogic
 
             $typeID = AccountLogEnum::TOKENS_DEC_STORYBOARD_VIDEO;
 
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
             StoryboardVideoTask::where('id', $task['id'])->update($errorUpdate);
             $setting = StoryboardVideoSetting::where('id', $task['video_setting_id'])->findOrEmpty();
             if (!$setting->isEmpty()) {

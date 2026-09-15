@@ -68,6 +68,12 @@ export const ToolEnumMap = {
 };
 
 export enum TokensSceneEnum {
+    /** 爆款玩法-影视换脸改词 */
+    PLAY_FACE = "play_face",
+    /** 爆款玩法-跳舞换脸 */
+    PLAY_DANCE = "play_dance",
+    /** 爆款玩法-影视引流拼接 */
+    PLAY_SPLICE = "play_splice",
     CHAT = "chat",
     SCENE_CHAT = "scene_chat",
     TEXT_TO_IMAGE = "text_to_image",

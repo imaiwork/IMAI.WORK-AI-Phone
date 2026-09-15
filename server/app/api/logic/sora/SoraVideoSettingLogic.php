@@ -311,7 +311,7 @@ class SoraVideoSettingLogic extends ApiLogic
             }
 
             $mnpMessage = [
-                'openid'   => UserAuth::where('user_id', self::$uid)->order('id', 'desc')->value('openid'),
+                'openid'   => UserAuth::mnpOpenid((int)self::$uid),
                 'scene_id' => 402,
                 'name'     => $name,
                 'time'     => date('Y-m-d H:i:s', time()),
@@ -645,7 +645,7 @@ class SoraVideoSettingLogic extends ApiLogic
                         continue;
                     }
                     $mnpMessage = [
-                        'openid'   => UserAuth::where('user_id', $setting['user_id'])->order('id', 'desc')->value('openid'),
+                        'openid'   => UserAuth::mnpOpenid((int)$setting['user_id']),
                         'scene_id' => 402,
                         'name'     => $setting['name'],
                         'time'     => date('Y-m-d H:i:s', time()),

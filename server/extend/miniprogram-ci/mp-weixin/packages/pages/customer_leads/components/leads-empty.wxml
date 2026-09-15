@@ -1,0 +1,1 @@
+<view class="flex flex-col items-center px-_32rpx_ pt-_72rpx_ pb-_48rpx_ text-center"><view class="text-primary mb-_24rpx_"><u-icon wx:if="{{a}}" u-i="fdd16b10-0" bind:__l="__l" u-p="{{a}}"/></view><text class="text-lg font-semibold text-_h1E293B_">{{b}}</text><text wx:if="{{c}}" class="text-xs leading-relaxed text-_h617087_ mt-_16rpx_">{{d}}</text></view>

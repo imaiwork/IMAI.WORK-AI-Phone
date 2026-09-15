@@ -10,6 +10,7 @@ use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvLeadScrapingSetting;
+use app\common\service\sv\ShutoffDmTouchHelper;
 
 use app\common\model\user\User;
 use app\common\workerman\rpa\BaseMessageHandler;
@@ -83,6 +84,7 @@ class CommentToTouchPostHandler extends BaseMessageHandler
 
             $hash = hash('sha256', $content['nickName'] . ($content['commentStr'] ?? ''));
             $account = str_replace(WorkerEnum::getAccountTypeDesc($this->payload['appType'] ?? 3) . '号：', '', $content['account'] ?? '');
+            $mapped = ShutoffDmTouchHelper::mapTouchPostRecord($content);
             $insert = [
                 'user_id'             => $task->user_id,
                 'task_type'           => $taskType,
@@ -97,7 +99,7 @@ class CommentToTouchPostHandler extends BaseMessageHandler
                 'platform'            => $this->appType,
                 'device_code'         => $this->payload['deviceId'],
                 'task_id'             => $content['task_id'],
-                'content'             => $content['commentStr'] ?? '',
+                'content'             => $mapped['content'],
                 'exec_time'           => time(),
                 'hash'                => $hash,
                 'image'               => $this->toolUtil->saveBase64ToImage($content['image'] ?? '', $hash, 'touch'),
@@ -109,8 +111,8 @@ class CommentToTouchPostHandler extends BaseMessageHandler
                 'note_title'          => $content['title'] ?? '',
                 'notes'               => $content['notes'] ?? '',
                 'filter_keyword'      => $content['targetKeywords'] ?? '',
-                'comment_content'     => $content['replyCommentStr'] ?? '',
-                'touch_content'       => $content['touch_content'] ?? '',
+                'comment_content'     => $mapped['comment_content'],
+                'touch_content'       => $mapped['touch_content'],
             ];
             SvLeadScrapingRecord::create($insert);
             return [

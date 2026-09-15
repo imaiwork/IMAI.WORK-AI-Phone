@@ -220,6 +220,21 @@ export const createClosureTask = (data: any) => {
     return request.post({ url: "/sv.leadScraping/add", data });
 };
 
+// 抖音账号搜寻获客任务新增
+export const createDySearchTask = (data: Record<string, any>) => {
+    return request.post({ url: "/device.dySearchTask/add", data });
+};
+
+// 抖音账号搜寻获客任务列表
+export const getDySearchTaskList = (data?: Record<string, any>) => {
+    return request.get({ url: "/device.dySearchTask/lists", data });
+};
+
+// 抖音账号搜寻获客历史记录（线索词 / 私信话术 / 加好友备注）
+export const getDySearchTaskHistory = (data?: Record<string, any>) => {
+    return request.get({ url: "/device.dySearchTask/history", data });
+};
+
 // 获取自动任务详情
 export const getAutoTaskDetail = (data: any) => {
     return request.get({ url: "/auto.device/detail", data });
@@ -303,11 +318,6 @@ export const createCircleLikeTask = (data: any) => {
 // 个微接管任务新增
 export const createWechatPrivateTask = (data: any) => {
     return request.post({ url: "/device.wechat/add", data });
-};
-
-// 截流获客任务新增
-export const createInteractionTask = (data: any) => {
-    return request.post({ url: "/sv.leadScraping/add", data });
 };
 
 // 朋友圈发布时间校验

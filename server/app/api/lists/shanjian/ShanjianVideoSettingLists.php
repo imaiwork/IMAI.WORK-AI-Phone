@@ -3,6 +3,7 @@
 namespace app\api\lists\shanjian;
 
 use app\api\lists\BaseApiDataLists;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
@@ -43,6 +44,12 @@ class ShanjianVideoSettingLists extends BaseApiDataLists implements ListsSearchI
                     $item[$field] = [];
                 }
             }
+            $extra = is_array($item['extra'] ?? null) ? $item['extra'] : [];
+            $extra['material_use_mode'] = ShanjianVideoSettingLogic::normalizeMaterialUseMode(
+                $extra['material_use_mode'] ?? ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE
+            );
+            $item['extra'] = $extra;
+            $item['material_use_mode'] = $extra['material_use_mode'];
 
             $item['task'] = ShanjianVideoTask::where('video_setting_id', $item['id'])
                 ->order('update_time', 'desc')

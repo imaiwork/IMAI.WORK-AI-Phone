@@ -17,6 +17,7 @@ use app\common\service\draw\MediaModelsService;
 use app\common\service\FileService;
 use app\common\service\transcoding\OssMediaProcessService;
 use app\common\service\UserDisplaySanitizer;
+use app\common\service\UserProfileConfigService;
 
 
 /**
@@ -215,6 +216,8 @@ class PcLogic extends BaseLogic
             'domain' => config('app.app_host') . '/',
             'site_closed' => $siteClosed,
             'login' => $loginConfig,
+            // 完善资料弹窗的选填项开关(后台「用户设置」-注册资料填写项)
+            'user_profile_fields' => UserProfileConfigService::getConfig(),
             'website' => $website,
             // 与后台「媒体处理」一致：仅阿里云 + OSS 切割/转码(MPS) 且配置完整时为 true
             'is_oss_transcode' => OssMediaProcessService::isEnabled(),
@@ -345,9 +348,11 @@ class PcLogic extends BaseLogic
             $info['fs_image'] = FileService::getFileUrl($info['fs_image']);
         }
 
-        // 团队 OEM 站点(按请求域名解析):联系客服统一用 OEM 设置的管理员联系二维码
+        // 团队 OEM 站点:联系客服统一用 OEM 设置的管理员联系二维码
+        // 解析走「请求域名 + 小程序 appid」双通道 —— 只按域名会漏掉「没配自有域名、
+        // 只发小程序」的 OEM(其包内 baseUrl 回落成主站域名),导致登录页等入口露出主站客服码
         try {
-            $tenant = \app\api\logic\TeamLogic::resolveTenant((string)\think\facade\Request::domain(), '');
+            $tenant = \app\api\logic\TeamLogic::currentRequestTenant();
             $adminQr = (string)($tenant['admin_qr'] ?? '');
             if ((int)($tenant['team_id'] ?? 0) > 0 && $adminQr !== '') {
                 $info['image'] = $adminQr;

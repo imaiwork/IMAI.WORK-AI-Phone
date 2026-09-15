@@ -2,6 +2,7 @@
 
 namespace app\common\service\hotspot;
 
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\model\hotspot\HotspotTask;
 use app\common\service\FileService;
 use think\facade\Db;
@@ -89,6 +90,36 @@ class TaskService
             $options['shots'] = ScriptService::normalizeShots($params['shots']);
         }
         ScriptService::assertCreateOptions($options);
+        if ((int)($options['persona_mode'] ?? ScriptService::PERSONA_MODE_PERSONA) !== ScriptService::PERSONA_MODE_MANUAL) {
+            $persona = PersonaService::fromRequest($params);
+            $personaId = (int)($persona['id'] ?? 0);
+            if ($personaId > 0) {
+                // 原图模式不再限制素材来源：AI/热点库素材在下发前按原图硬规格逐条筛
+                // （VideoService::resolveMaterials），与自动合成、手动爆款复刻同口径
+                $useMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId);
+                $options['material_use_mode'] = $useMode;
+                $selectedIds = $options['materials'] ?? [];
+                if (ScriptService::shouldValidateSelectedMaterialIds($options)
+                    && is_array($selectedIds)
+                    && $selectedIds !== []
+                ) {
+                    $foundIds = PersonaService::selectableMaterialIds($userId, $personaId, $selectedIds, $useMode);
+                    $missing = ScriptService::selectedIdsMissingFromReload($selectedIds, $foundIds);
+                    if ($missing !== []) {
+                        // 打回时把失效的 id 记下来：只有这里能看出是模式变了还是素材被删/禁用
+                        HotspotLog::write(sprintf(
+                            '已选混剪素材校验失败：用户=%d 人设id=%d 素材模式=%d 已选=%s 失效=%s',
+                            $userId,
+                            $personaId,
+                            $useMode,
+                            implode(',', ScriptService::normalizePositiveIdList($selectedIds)),
+                            implode(',', $missing)
+                        ));
+                        throw new HotspotUpstreamException('人设素材模式已变更或素材不可用，请重新选择素材');
+                    }
+                }
+            }
+        }
         $options['dispatch_status'] = 'pending';
         $options['dispatch_locked_at'] = 0;
 

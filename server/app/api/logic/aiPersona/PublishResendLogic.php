@@ -10,6 +10,7 @@ use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvPublishSettingDetail;
 use app\common\model\wechat\AiWechatCircleTask;
+use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\FileService;
 use think\facade\Db;
 
@@ -52,12 +53,17 @@ class PublishResendLogic extends ApiLogic
             $publishKind = (string)$context['kind'];
             $payload = self::buildFailedTaskOptPayload($context, $copy);
             $deviceOnline = self::isDeviceOnlineSafe((string)$task->device_code);
+            $sceneOpen = AutoTaskSceneConfigService::canAdd($source, $accountType);
+            $sceneClosedReason = $sceneOpen
+                ? ''
+                : AutoTaskSceneConfigService::describeClosedReason($source, $accountType);
 
             self::$returnData = [
                 'tip' => self::RESEND_TIP,
-                'can_resend' => true,
+                'can_resend' => $sceneOpen,
                 'device_online' => $deviceOnline,
                 'device_offline_reason' => $deviceOnline ? '' : self::DEVICE_OFFLINE_MSG,
+                'scene_closed_reason' => $sceneClosedReason,
                 'device_running' => self::isDeviceRunning((string)$task->device_code),
                 'is_demo_data' => 0,
                 'publish_kind' => $publishKind,
@@ -112,6 +118,11 @@ class PublishResendLogic extends ApiLogic
             $copy = self::resolveResendCopywriting($source, $params, $context);
             $optParams = self::buildOptParamsFromTask($task);
             self::assertAccountExists((string)$task->device_code, (int)$optParams['account_type']);
+            AutoTaskSceneConfigService::assertCanDispatch(
+                (int)$optParams['source'],
+                (int)$optParams['account_type'],
+                (string)$task->device_code
+            );
             // 指令经 Channel 实时推送，离线设备收不到且不补发，任务会挂在执行中直到超时，下发前拦截
             if (!self::isDeviceOnlineSafe((string)$task->device_code)) {
                 throw new \Exception(self::DEVICE_OFFLINE_MSG);

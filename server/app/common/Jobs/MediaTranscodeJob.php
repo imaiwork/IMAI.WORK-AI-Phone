@@ -93,6 +93,17 @@ class MediaTranscodeJob
                 );
             }
 
+            // 幂等：巡检/预检可能对同一文件重复投递；任何合法重转都会先把状态置回 1，
+            // 所以到这里仍是 3（已成功）的一定是重复作业，直接丢弃，避免重复转码/重复入库切割。
+            $currentStatus = (int)(File::where('id', $fileId)->value('transcode_status') ?? 0);
+            if ($currentStatus === 3) {
+                $job->delete();
+                Log::channel('ffmpeg')->write(
+                    "[转码队列] 文件已转码成功，丢弃重复作业 file_id={$fileId}"
+                );
+                return;
+            }
+
             if ($this->isTaskAttemptExhausted($fileId)) {
                 $this->markTranscodeFailed($fileId);
                 $job->delete();
@@ -817,6 +828,7 @@ class MediaTranscodeJob
                     'height' => $height,
                     'thumbnail_url' => $thumbnailUrl,
                     'ensure_thumbnail' => $thumbnailUrl === '',
+                    'keep_original' => 0,
                 ]
             );
 

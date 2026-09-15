@@ -13,6 +13,7 @@ use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvDeviceTaskLog;
 use app\common\service\auto\AutoTaskSceneScheduleSyncService;
 use app\common\service\FileService;
+use app\common\service\sv\PublishTaskReconcile;
 use think\db\Query;
 
 class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface, ListsExtendInterface
@@ -518,53 +519,33 @@ class PublishTaskLists extends BaseApiDataLists implements ListsSearchInterface,
         return isset($this->runningDeviceMap[$deviceCode]);
     }
 
-    /** 明细失败(status=2)时对外统一展示为执行失败 */
+    /** 明细终态优先于设备任务离线失败 */
     private function resolveItemTaskStatus(array $row): int
     {
-        $detailStatus = (int)($row['detail_status'] ?? 0);
-        $taskStatus = (int)($row['task_status'] ?? 0);
-        if ($detailStatus === 2 || $taskStatus === DeviceEnum::TASK_STATUS_FAILED) {
-            return DeviceEnum::TASK_STATUS_FAILED;
-        }
-        if ($detailStatus === 1 || $taskStatus === DeviceEnum::TASK_STATUS_FINISHED) {
-            return DeviceEnum::TASK_STATUS_FINISHED;
-        }
-        if ($detailStatus === 3 || $taskStatus === DeviceEnum::TASK_STATUS_RUNNING) {
-            return DeviceEnum::TASK_STATUS_RUNNING;
-        }
-        return $taskStatus;
+        return PublishTaskReconcile::decideListStatus(
+            (int)($row['detail_status'] ?? 0),
+            (int)($row['task_status'] ?? 0),
+            (string)($row['task_remark'] ?? '')
+        );
     }
 
     /**
-     * 失败原因优先取服务端系统错误(算力不足等), 避免设备进度文案/英文占位覆盖
+     * 失败原因优先取算力不足；明细已成功时不再展示离线失败。
      */
     private function resolvePublishRemark(array $row): string
     {
-        $detailRemark = trim((string)($row['detail_remark'] ?? ''));
-        $taskRemark = trim((string)($row['task_remark'] ?? ''));
-
-        foreach ([$taskRemark, $detailRemark] as $remark) {
-            if ($remark !== '' && (str_contains($remark, '算力不足') || str_starts_with($remark, '任务执行失败'))) {
-                return $remark;
-            }
-        }
-
-        $noise = [
-            'publish dispatch failed',
-            '发布下发失败',
-            '收到发布任务',
-            '任务执行中',
-            'RPA执行：收到发布任务',
-            'RPA执行：',
-        ];
-        if ($detailRemark !== '' && !in_array($detailRemark, $noise, true)) {
-            return $detailRemark;
-        }
-        if ($taskRemark !== '' && !in_array($taskRemark, $noise, true)) {
-            return $taskRemark;
-        }
-
-        return $detailRemark !== '' ? $detailRemark : $taskRemark;
+        return PublishTaskReconcile::decideListRemark(
+            (string)($row['detail_remark'] ?? ''),
+            (string)($row['task_remark'] ?? ''),
+            [
+                'publish dispatch failed',
+                '发布下发失败',
+                '收到发布任务',
+                '任务执行中',
+                'RPA执行：收到发布任务',
+                'RPA执行：',
+            ]
+        );
     }
 
     private function appendDeviceAccount(array &$device, array $row): void

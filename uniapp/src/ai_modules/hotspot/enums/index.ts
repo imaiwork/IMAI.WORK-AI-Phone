@@ -36,6 +36,39 @@ export enum HotspotVideoType {
     CLIPS = "clips",
 }
 
+/** 人设模式：1 选人设（默认，走契合分析+人设形象/音色/素材） 2 不选人设（形象/音色自选，素材固定 AI 找素材） */
+export enum HotspotPersonaMode {
+    PERSONA = 1,
+    MANUAL = 2,
+}
+
+export const HOTSPOT_PERSONA_MODE_OPTIONS = [
+    { val: HotspotPersonaMode.PERSONA, label: "选人设" },
+    { val: HotspotPersonaMode.MANUAL, label: "不选人设 · 自选形象音色" },
+] as const;
+
+export const isManualPersonaMode = (mode: number | string | undefined): boolean =>
+    Number(mode) === HotspotPersonaMode.MANUAL;
+
+/** 音量/语速默认值，与后端 AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT / SPEECH_RATE_DEFAULT 一致 */
+export const HOTSPOT_MUSIC_VOLUME_DEFAULT = 0.3;
+export const HOTSPOT_SPEECH_RATE_DEFAULT = 1.0;
+
+/** 「形象原音」音色哨兵：音色库里没有这条记录，后端按所选形象克隆出的原音下发
+ *  （与 ManualAssetService::ORIGIN_VOICE_ID 同值） */
+export const HOTSPOT_ORIGIN_VOICE_ID = -1;
+
+/** 不选人设时的背景音乐来源 */
+export enum HotspotMusicSource {
+    SYSTEM = 1,
+    UPLOAD = 2,
+}
+
+export const HOTSPOT_MUSIC_SOURCE_OPTIONS = [
+    { val: HotspotMusicSource.SYSTEM, label: "系统音乐随机" },
+    { val: HotspotMusicSource.UPLOAD, label: "上传我的音乐" },
+];
+
 export const HOTSPOT_PLATFORM_OPTIONS = [
     {
         key: HotspotPlatform.DOUYIN,
@@ -108,6 +141,12 @@ export const HOTSPOT_TASK_STEPS_SHORT = [
     { key: "script", label: "文案" },
     { key: "video", label: "合成" },
 ] as const;
+
+/** 步骤名：不选人设的任务没有人设契合分析，第 3 步换个说法免得看着像漏做了 */
+export const hotspotStepLabel = (key: string, personaMode?: number | string): string => {
+    if (key === "analyze" && isManualPersonaMode(personaMode)) return "热点解读 · 未选人设";
+    return HOTSPOT_TASK_STEPS.find((s) => s.key === key)?.label || key;
+};
 
 export const platformLabel = (key: string): string => HOTSPOT_PLATFORM_OPTIONS.find((p) => p.key === key)?.label || key;
 

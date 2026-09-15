@@ -11,6 +11,7 @@ class ChatEnum
     const MODEL_TYPE_DRAW  = 3;       // 生图模型
     const MODEL_TYPE_HUMAN  = 4;       // 数字人模型
     const MODEL_TYPE_RANKING  = 11;  // 重排模型
+    const DEFAULT_CHAT_MODEL_ALIAS = 'glm-5.3'; // 业务兜底对话模型
     const API2D35 = 'api2d3.5'; // api2d3.5
     const API2D40 = 'api2d4.0'; // api2d4.0
     const ZHUPI   = 'zhipu';    // ChatGLM

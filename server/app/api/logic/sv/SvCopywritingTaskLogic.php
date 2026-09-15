@@ -96,12 +96,7 @@ class SvCopywritingTaskLogic extends SvBaseLogic
                 if ($response['State'] == 'Failed') {
 
                     //查询是否已返还
-                    if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $task_id)->count() == 0) {
-
-                        $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $task_id)->value('change_amount') ?? 0;
-
-                        AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $task_id);
-                    }
+                    AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$task_id);
                     $update['status'] = 3;
                     SvCopywritingTask::where('id',$copywritingtask['id'])->save($update);
                     $copywriting->error_num = $copywriting->error_num + 1;

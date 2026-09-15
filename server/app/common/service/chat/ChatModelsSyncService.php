@@ -53,8 +53,8 @@ class ChatModelsSyncService
                 $stats['removed'] = self::removeStale($remoteAliases);
             }
 
-            // 业务默认 gpt-4o（id=2）必须保持启用
-            self::ensureDefaultGpt4oEnabled();
+            // 业务默认对话模型按 alias 保持启用，并设为默认
+            self::ensureDefaultChatModelEnabled();
 
             Db::commit();
         } catch (\Throwable $e) {
@@ -113,12 +113,29 @@ class ChatModelsSyncService
     }
 
     /**
-     * 业务默认 gpt-4o（models.id=2 / models_cost.id=2）强制保持启用。
+     * 业务默认对话模型按 alias 保持启用，并设为同 type 唯一默认。
+     * 本地尚无该行时跳过，等下次中台同步创建后再保证。
      */
-    private static function ensureDefaultGpt4oEnabled(): void
+    private static function ensureDefaultChatModelEnabled(): void
     {
-        Models::where('id', 2)->where('is_enable', 0)->update(['is_enable' => 1]);
-        ModelsCost::where('id', 2)->where('status', 0)->update(['status' => 1]);
+        $cost = ModelsCost::where('type', ChatEnum::MODEL_TYPE_CHAT)
+            ->where('alias', ChatEnum::DEFAULT_CHAT_MODEL_ALIAS)
+            ->findOrEmpty();
+        if ($cost->isEmpty()) {
+            return;
+        }
+
+        ModelsCost::where('id', $cost['id'])->where('status', 0)->update(['status' => 1]);
+
+        $modelId = (int)$cost['model_id'];
+        if ($modelId <= 0) {
+            return;
+        }
+
+        Models::where('id', $modelId)->update(['is_enable' => 1, 'is_default' => 1]);
+        Models::where('type', ChatEnum::MODEL_TYPE_CHAT)
+            ->where('id', '<>', $modelId)
+            ->update(['is_default' => 0]);
     }
 
     /**
@@ -133,8 +150,7 @@ class ChatModelsSyncService
             ->where('c.type', ChatEnum::MODEL_TYPE_CHAT)
             ->where('m.is_system', 1)
             ->whereNotIn('c.alias', $uniqueAliases)
-            ->where('c.id', '<>', 2)
-            ->where('c.model_id', '<>', 2)
+            ->where('c.alias', '<>', ChatEnum::DEFAULT_CHAT_MODEL_ALIAS)
             ->field('c.id, c.model_id')
             ->select()
             ->toArray();
@@ -150,7 +166,7 @@ class ChatModelsSyncService
 
         $removedModels = 0;
         foreach ($staleModelIds as $modelId) {
-            if ($modelId <= 0 || $modelId === 2) {
+            if ($modelId <= 0) {
                 continue;
             }
             // 主模型下若还有其它计费行则保留，避免误删

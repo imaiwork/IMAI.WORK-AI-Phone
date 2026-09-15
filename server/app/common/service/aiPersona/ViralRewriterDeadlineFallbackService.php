@@ -19,14 +19,86 @@ use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Log;
 
+/**
+ * 图文填坑 / 视频兜底时间窗（以本类常量为准，不改时刻）：
+ * - 扫描入口：03:00 起、图文截止 07:00（scanAndTrigger 用 FALLBACK_TIME / IMAGE_TEXT_LAST_SCAN_TIME）
+ * - 视频兜底：03:00–06:00（扫描强制截止；完成回调 3 点后仍可触发）
+ * - 图文兜底：05:00–07:00（严格窗口；5 点前扫到会返回「未到5点兜底时间」后跳过）
+ * - Fill Cron：viral_image_text_publish_fill_cron，每 5 分钟；FillService 无独立时间窗
+ */
 class ViralRewriterDeadlineFallbackService
 {
     public const FALLBACK_TIME = '03:00';//03:00
     public const LAST_SCAN_TIME = '06:00';//06:00
     public const IMAGE_TEXT_FALLBACK_TIME = '05:00';//05:00
     public const IMAGE_TEXT_LAST_SCAN_TIME = '07:00';//07:00
+    public const FILL_CRON_COMMAND = 'viral_image_text_publish_fill_cron';
+    public const FILL_CRON_EXPRESSION = '*/5 * * * *';
 
     private const LOCK_TTL = 120;
+
+    /**
+     * 现行填坑/兜底时间窗只读出口，供排障与测试断言，禁止再复制一份魔法字符串。
+     *
+     * @return array{
+     *     video: array{start:string,end:string},
+     *     image_text: array{start:string,end:string},
+     *     scan: array{start:string,end:string},
+     *     fill_cron: array{command:string,expression:string,has_own_window:bool}
+     * }
+     */
+    public static function describeFillWindows(): array
+    {
+        return [
+            'video' => [
+                'start' => self::FALLBACK_TIME,
+                'end' => self::LAST_SCAN_TIME,
+            ],
+            'image_text' => [
+                'start' => self::IMAGE_TEXT_FALLBACK_TIME,
+                'end' => self::IMAGE_TEXT_LAST_SCAN_TIME,
+            ],
+            'scan' => [
+                'start' => self::FALLBACK_TIME,
+                'end' => self::IMAGE_TEXT_LAST_SCAN_TIME,
+            ],
+            'fill_cron' => [
+                'command' => self::FILL_CRON_COMMAND,
+                'expression' => self::FILL_CRON_EXPRESSION,
+                'has_own_window' => false,
+            ],
+        ];
+    }
+
+    /**
+     * 未到开始时间或已过扫描截止时返回原因文案；可兜底时返回空串。
+     */
+    public static function describeFallbackSkipReason(
+        bool $isImageTextTask = false,
+        ?int $currentTime = null,
+        bool $enforceVideoScanEnd = false
+    ): string {
+        $currentTime = $currentTime ?? time();
+        $today = date('Y-m-d', $currentTime);
+        $startLabel = $isImageTextTask ? '5点' : '3点';
+        $startTime = $isImageTextTask ? self::IMAGE_TEXT_FALLBACK_TIME : self::FALLBACK_TIME;
+        $deadline = strtotime($today . ' ' . $startTime . ':00');
+        if ($deadline === false || $currentTime < $deadline) {
+            return '未到' . $startLabel . '兜底时间';
+        }
+
+        // 图文兜底严格限制在5点至7点；视频扫描限制在3点至6点，完成回调在3点后仍可触发。
+        if ($isImageTextTask || $enforceVideoScanEnd) {
+            $endLabel = $isImageTextTask ? '7点' : '6点';
+            $endTime = $isImageTextTask ? self::IMAGE_TEXT_LAST_SCAN_TIME : self::LAST_SCAN_TIME;
+            $lastDeadline = strtotime($today . ' ' . $endTime . ':00');
+            if ($lastDeadline === false || $currentTime > $lastDeadline) {
+                return '已过' . $endLabel . '兜底扫描时间';
+            }
+        }
+
+        return '';
+    }
 
     /**
      * 扫描当天未完成的爆款仿写任务：视频兜底为3点至6点，图文兜底为5点至7点。
@@ -83,16 +155,30 @@ class ViralRewriterDeadlineFallbackService
     {
         $viralTask = $this->getTaskConfig($task);
         if ($viralTask->isEmpty()) {
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'skip_reason' => '任务不存在',
+                'remark' => '爆款仿写任务不存在',
+            ]);
             return ['triggered' => true, 'created' => 0, 'msg' => $task->device_code . '爆款仿写任务不存在'];
         }
 
         $isImageTextTask = (int)($viralTask->publish_media_type ?? AiPersona::PUBLISH_MEDIA_TYPE_VIDEO)
             === AiPersona::PUBLISH_MEDIA_TYPE_IMAGE_TEXT;
-        if (!$this->isFallbackTime($isImageTextTask, $currentTime, $fromScan)) {
+        $timeSkipReason = self::describeFallbackSkipReason($isImageTextTask, $currentTime, $fromScan);
+        if ($timeSkipReason !== '') {
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'persona_id' => (int)$viralTask->persona_id,
+                'skip_reason' => $timeSkipReason,
+                'fallback_source' => $isImageTextTask
+                    ? ViralPublishFillLog::SOURCE_IMAGE_TEXT
+                    : ViralPublishFillLog::SOURCE_VIDEO,
+            ]);
             return [
                 'triggered' => false,
                 'created' => 0,
-                'msg' => $task->device_code . $this->buildFallbackTimeSkipReason($isImageTextTask, $currentTime, $fromScan),
+                'msg' => $task->device_code . $timeSkipReason,
             ];
         }
 
@@ -103,6 +189,12 @@ class ViralRewriterDeadlineFallbackService
             (string)$task->device_code,
             (int)$viralTask->persona_id
         )) {
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'persona_id' => (int)$viralTask->persona_id,
+                'skip_reason' => ViralPublishFillLog::SKIP_SETTLED,
+                'fallback_source' => ViralPublishFillLog::SOURCE_IMAGE_TEXT,
+            ]);
             return [
                 'triggered' => false,
                 'created' => 0,
@@ -113,6 +205,14 @@ class ViralRewriterDeadlineFallbackService
         $lockKey = $this->buildLockKey($taskDay, (int)$task->user_id, (string)$task->device_code, (int)$viralTask->persona_id);
         $lockValue = (string)(getmypid() ?: 0) . ':' . microtime(true);
         if (!$this->acquireLock($lockKey, $lockValue)) {
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_LOCK_SKIP,
+                'persona_id' => (int)$viralTask->persona_id,
+                'skip_reason' => ViralPublishFillLog::SKIP_PROCESSING,
+                'fallback_source' => $isImageTextTask
+                    ? ViralPublishFillLog::SOURCE_IMAGE_TEXT
+                    : ViralPublishFillLog::SOURCE_VIDEO,
+            ]);
             return ['triggered' => false, 'created' => 0, 'msg' => $task->device_code . '兜底处理中，跳过本次'];
         }
 
@@ -134,6 +234,14 @@ class ViralRewriterDeadlineFallbackService
         try {
             $publishTimeCount = $this->getPublishTimeCount($viralTask);
             if ($publishTimeCount <= 0) {
+                $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                    'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                    'persona_id' => (int)$viralTask->persona_id,
+                    'skip_reason' => ViralPublishFillLog::SKIP_NO_SLOT,
+                    'fallback_source' => $isImageTextTask
+                        ? ViralPublishFillLog::SOURCE_IMAGE_TEXT
+                        : ViralPublishFillLog::SOURCE_VIDEO,
+                ]);
                 return ['triggered' => false, 'created' => 0, 'msg' => $task->device_code . '发布时段为空，无需兜底'];
             }
 
@@ -146,10 +254,27 @@ class ViralRewriterDeadlineFallbackService
             }
 
             if ($shortage <= 0) {
+                $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                    'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                    'persona_id' => (int)$viralTask->persona_id,
+                    'publish_slots' => $publishTimeCount,
+                    'success_count' => $successCount,
+                    'shortage' => 0,
+                    'skip_reason' => ViralPublishFillLog::SKIP_NO_SLOT,
+                    'fallback_source' => ViralPublishFillLog::SOURCE_VIDEO,
+                    'remark' => '已达配额',
+                ]);
                 return ['triggered' => false, 'created' => 0, 'msg' => $task->device_code . '已达到发布时段文案数'];
             }
 
-            $this->log("爆款仿写3点兜底开始: 任务ID={$task->id}, 发布数={$publishTimeCount}, 已生成={$successCount}, 待补齐={$shortage}, 设备={$task->device_code}");
+            $this->fallbackFillLog($task, '爆款仿写兜底开始', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_START,
+                'persona_id' => (int)$viralTask->persona_id,
+                'publish_slots' => $publishTimeCount,
+                'success_count' => $successCount,
+                'shortage' => $shortage,
+                'fallback_source' => ViralPublishFillLog::SOURCE_VIDEO,
+            ]);
 
             $taskDay = $this->getTaskDay($task);
             $failureRemark = $this->resolveLastFailureRemark(
@@ -176,49 +301,18 @@ class ViralRewriterDeadlineFallbackService
             return ['triggered' => $created > 0, 'created' => $created, 'msg' => $task->device_code . "3点兜底完成，补齐降级文案{$created}条"];
         } catch (\Throwable $th) {
             $fallbackHour = $isImageTextTask ? '5点图文' : '3点';
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'persona_id' => (int)$viralTask->persona_id,
+                'skip_reason' => '异常',
+                'fallback_source' => $isImageTextTask
+                    ? ViralPublishFillLog::SOURCE_IMAGE_TEXT
+                    : ViralPublishFillLog::SOURCE_VIDEO,
+                'remark' => $th->getMessage(),
+            ]);
             $this->log($task->device_code . '爆款仿写' . $fallbackHour . '兜底异常: ' . $th->getTraceAsString());
             return ['triggered' => true, 'created' => 0, 'msg' => $task->device_code . $fallbackHour . '兜底异常:' . $th->getMessage()];
         }
-    }
-
-    private function isFallbackTime(
-        bool $isImageTextTask = false,
-        ?int $currentTime = null,
-        bool $enforceVideoScanEnd = false
-    ): bool
-    {
-        return $this->buildFallbackTimeSkipReason($isImageTextTask, $currentTime, $enforceVideoScanEnd) === '';
-    }
-
-    /**
-     * 未到开始时间或已过扫描截止时返回原因文案；可兜底时返回空串。
-     */
-    private function buildFallbackTimeSkipReason(
-        bool $isImageTextTask = false,
-        ?int $currentTime = null,
-        bool $enforceVideoScanEnd = false
-    ): string
-    {
-        $currentTime = $currentTime ?? time();
-        $today = date('Y-m-d', $currentTime);
-        $startLabel = $isImageTextTask ? '5点' : '3点';
-        $startTime = $isImageTextTask ? self::IMAGE_TEXT_FALLBACK_TIME : self::FALLBACK_TIME;
-        $deadline = strtotime($today . ' ' . $startTime . ':00');
-        if ($deadline === false || $currentTime < $deadline) {
-            return '未到' . $startLabel . '兜底时间';
-        }
-
-        // 图文兜底严格限制在5点至7点；视频扫描限制在3点至6点，完成回调在3点后仍可触发。
-        if ($isImageTextTask || $enforceVideoScanEnd) {
-            $endLabel = $isImageTextTask ? '7点' : '6点';
-            $endTime = $isImageTextTask ? self::IMAGE_TEXT_LAST_SCAN_TIME : self::LAST_SCAN_TIME;
-            $lastDeadline = strtotime($today . ' ' . $endTime . ':00');
-            if ($lastDeadline === false || $currentTime > $lastDeadline) {
-                return '已过' . $endLabel . '兜底扫描时间';
-            }
-        }
-
-        return '';
     }
 
     /**
@@ -233,6 +327,12 @@ class ViralRewriterDeadlineFallbackService
             ->where('persona_id', (int)$viralTask->persona_id)
             ->findOrEmpty();
         if ($device->isEmpty()) {
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'persona_id' => (int)$viralTask->persona_id,
+                'skip_reason' => ViralPublishFillLog::SKIP_NO_DEVICE,
+                'fallback_source' => ViralPublishFillLog::SOURCE_IMAGE_TEXT,
+            ]);
             return ['triggered' => true, 'created' => 0, 'msg' => $task->device_code . '小红书图文视频兜底失败：设备不存在'];
         }
 
@@ -243,6 +343,12 @@ class ViralRewriterDeadlineFallbackService
 
         $persona = AiPersona::where('id', $personaId)->findOrEmpty();
         if ($persona->isEmpty()) {
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'persona_id' => $personaId,
+                'skip_reason' => ViralPublishFillLog::SKIP_NO_PERSONA,
+                'fallback_source' => ViralPublishFillLog::SOURCE_IMAGE_TEXT,
+            ]);
             return ['triggered' => true, 'created' => 0, 'msg' => $deviceCode . '小红书图文视频兜底失败：IP人设不存在'];
         }
 
@@ -263,13 +369,19 @@ class ViralRewriterDeadlineFallbackService
         // 无空坑且无待填库存：无需再跑 fill/视频兜底；无 pending 时结案避免每分钟空跑
         if (!$hasSlot && !$hasUnusedInventory) {
             if (!$hasPending) {
-                $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId);
+                $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId, (int)$task->id);
+            } else {
+                $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                    'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                    'persona_id' => $personaId,
+                    'publish_slots' => $publishTimeCount,
+                    'success_count' => $successCount,
+                    'shortage' => $shortage,
+                    'skip_reason' => ViralPublishFillLog::SKIP_NO_SLOT,
+                    'fallback_source' => ViralPublishFillLog::SOURCE_IMAGE_TEXT,
+                    'remark' => '存在改写未完成，暂不结案',
+                ]);
             }
-            $this->log(
-                $deviceCode . '图文兜底早退：无空闲发布时段且无待填库存'
-                . ($hasPending ? '（存在改写未完成，暂不结案）' : '，已结案')
-                . "，任务ID={$task->id}, 日期={$taskDay}, 图文成功={$successCount}, 图文缺口={$shortage}"
-            );
 
             return [
                 'triggered' => false,
@@ -280,7 +392,14 @@ class ViralRewriterDeadlineFallbackService
             ];
         }
 
-        $this->log("爆款仿写5点图文兜底开始: 任务ID={$task->id}, 发布数={$publishTimeCount}, 已生成={$successCount}, 待补齐={$shortage}, 设备={$deviceCode}");
+        $this->fallbackFillLog($task, '爆款仿写兜底开始', [
+            'event' => ViralPublishFillLog::EVENT_FALLBACK_START,
+            'persona_id' => $personaId,
+            'publish_slots' => $publishTimeCount,
+            'success_count' => $successCount,
+            'shortage' => $shortage,
+            'fallback_source' => ViralPublishFillLog::SOURCE_IMAGE_TEXT,
+        ]);
 
         // 与定时填坑共用：跨天未使用库存按 id ASC 填目标发布日空闲时段
         $fillResult = ViralImageTextPublishFillService::fillGroup(
@@ -291,17 +410,18 @@ class ViralRewriterDeadlineFallbackService
         );
         $imagePublishCreated = (int)($fillResult['created'] ?? 0);
         $imagePublishFailed = (int)($fillResult['failed'] ?? 0);
-        $readyCount = $imagePublishCreated + $imagePublishFailed;
-
         if ($imagePublishCreated === 0 && $imagePublishFailed === 0) {
-            $this->log(
-                "图文仿写不足用视频兜底：无成功图文仿写，改用视频兜底。任务ID={$task->id}, 日期={$taskDay}, 发布时间段={$publishTimeCount}, 图文成功={$successCount}, 图文缺口={$shortage}, 设备={$deviceCode}"
-                . (($fillResult['error'] ?? '') !== '' ? ', tip=' . $fillResult['error'] : '')
-            );
-        } else {
-            $this->log(
-                "5点图文发布补扫完成: 任务ID={$task->id}, 日期={$taskDay}, 待生成={$readyCount}, 成功={$imagePublishCreated}, 失败={$imagePublishFailed}, 设备={$deviceCode}"
-            );
+            $this->fallbackFillLog($task, '图文发布填坑跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'persona_id' => $personaId,
+                'publish_slots' => $publishTimeCount,
+                'success_count' => $successCount,
+                'shortage' => $shortage,
+                'skip_reason' => ViralPublishFillLog::SKIP_NO_STOCK,
+                'fallback_source' => ViralPublishFillLog::SOURCE_IMAGE_TEXT,
+                'remark' => '无成功图文仿写，改用视频兜底'
+                    . (($fillResult['error'] ?? '') !== '' ? '，' . (string)$fillResult['error'] : ''),
+            ]);
         }
 
         // 按发布时间段数作为上限，实际创建条数由空时段数截断
@@ -314,9 +434,32 @@ class ViralRewriterDeadlineFallbackService
         $fallbackMsg = (string)($fallback['msg'] ?? '');
         $totalCreated = $imagePublishCreated + $created;
 
-        $this->log(
-            "图文仿写不足用视频兜底：任务ID={$task->id}, 日期={$taskDay}, 发布时间段={$publishTimeCount}, 图文成功={$successCount}, 图文缺口={$shortage}, 图文发布已生成={$imagePublishCreated}, 空时段={$emptySlots}, 可用视频={$availableVideos}, 视频已生成={$created}, 未完成={$remaining}, msg={$fallbackMsg}, 设备={$deviceCode}"
-        );
+        if ($emptySlots <= 0 && $created <= 0) {
+            $this->fallbackFillLog($task, '爆款仿写兜底跳过', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SKIP,
+                'persona_id' => $personaId,
+                'publish_slots' => $publishTimeCount,
+                'success_count' => $successCount,
+                'shortage' => $shortage,
+                'created' => $imagePublishCreated,
+                'skip_reason' => ViralPublishFillLog::SKIP_NO_SLOT,
+                'fallback_source' => ViralPublishFillLog::SOURCE_VIDEO,
+                'remark' => $fallbackMsg,
+            ]);
+        } else {
+            $this->fallbackFillLog($task, '图文仿写不足用视频兜底', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_VIDEO,
+                'persona_id' => $personaId,
+                'publish_slots' => $publishTimeCount,
+                'success_count' => $successCount,
+                'shortage' => $shortage,
+                'created' => $created,
+                'fallback_source' => ViralPublishFillLog::SOURCE_VIDEO,
+                'remark' => '空时段=' . $emptySlots . ',可用视频=' . $availableVideos
+                    . ',未完成=' . $remaining . ',msg=' . $fallbackMsg
+                    . ',图文发布已生成=' . $imagePublishCreated,
+            ]);
+        }
 
         if ($created > 0) {
             $defaultRemark = '图文仿写不足，用视频补位';
@@ -327,16 +470,19 @@ class ViralRewriterDeadlineFallbackService
                 AiPersona::PUBLISH_MEDIA_TYPE_IMAGE_TEXT,
                 $defaultRemark
             );
-            $remarkSource = $failureRemark === $defaultRemark ? '默认文案' : '图文失败记录';
             $errorCreated = $this->createImageTextVideoFallbackErrorRecords(
                 $viralTask,
                 $task,
                 $failureRemark,
                 $created
             );
-            $this->log(
-                "图文视频补位写入status=7: 任务ID={$task->id}, 设备={$deviceCode}, 视频占位={$created}, 错误记录={$errorCreated}, remark来源={$remarkSource}, remark={$failureRemark}"
-            );
+            $this->fallbackFillLog($task, '图文视频补位写入status=7', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_STATUS7,
+                'persona_id' => $personaId,
+                'status7' => $errorCreated,
+                'fallback_source' => ViralPublishFillLog::SOURCE_VIDEO,
+                'remark' => $failureRemark,
+            ]);
         }
 
         if ($fallbackMsg === '存在改写未完成的图文仿写') {
@@ -350,7 +496,7 @@ class ViralRewriterDeadlineFallbackService
         if ($emptySlots <= 0 && $created <= 0) {
             if ($imagePublishCreated > 0) {
                 // 本轮已补齐图文发布且无空坑，结案避免后续空跑
-                $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId);
+                $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId, (int)$task->id);
 
                 return [
                     'triggered' => true,
@@ -360,7 +506,7 @@ class ViralRewriterDeadlineFallbackService
             }
 
             // 无新建、无空坑：结案；triggered=false 降低扫描噪声
-            $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId);
+            $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId, (int)$task->id);
 
             return [
                 'triggered' => false,
@@ -386,7 +532,7 @@ class ViralRewriterDeadlineFallbackService
 
         // 视频兜底已按空坑补齐，结案
         if ($emptySlots > 0 && $created >= $requested) {
-            $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId);
+            $this->markImageTextFallbackSettled($taskDay, $userId, $deviceCode, $personaId, (int)$task->id);
         }
 
         return [
@@ -423,8 +569,13 @@ class ViralRewriterDeadlineFallbackService
         }
     }
 
-    private function markImageTextFallbackSettled(string $day, int $userId, string $deviceCode, int $personaId): void
-    {
+    private function markImageTextFallbackSettled(
+        string $day,
+        int $userId,
+        string $deviceCode,
+        int $personaId,
+        int $taskId = 0
+    ): void {
         try {
             $redis = Cache::store('redis')->handler();
             $redis->setex(
@@ -432,6 +583,15 @@ class ViralRewriterDeadlineFallbackService
                 $this->getImageTextSettledTtl($day),
                 '1'
             );
+            ViralPublishFillLog::write('图文兜底已结案', [
+                'event' => ViralPublishFillLog::EVENT_FALLBACK_SETTLE,
+                'device_code' => $deviceCode,
+                'task_id' => $taskId,
+                'day' => $day,
+                'persona_id' => $personaId,
+                'skip_reason' => ViralPublishFillLog::SKIP_SETTLED,
+                'fallback_source' => ViralPublishFillLog::SOURCE_IMAGE_TEXT,
+            ], 'viral_bottom');
         } catch (\Throwable $th) {
             $this->log('图文兜底结案标记写入失败: ' . $th->getMessage());
         }
@@ -756,6 +916,20 @@ class ViralRewriterDeadlineFallbackService
             'fallback_index' => $index,
             'fallback_total' => $total,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $fields
+     */
+    private function fallbackFillLog(SvDeviceTask $task, string $prefix, array $fields): void
+    {
+        $fields['device_code'] = $fields['device_code'] ?? (string)$task->device_code;
+        $fields['task_id'] = $fields['task_id'] ?? (int)$task->id;
+        $fields['day'] = $fields['day'] ?? $this->getTaskDay($task);
+        if (!isset($fields['persona_id']) && isset($task->persona_id)) {
+            $fields['persona_id'] = (int)$task->persona_id;
+        }
+        ViralPublishFillLog::write($prefix, $fields, 'viral_bottom');
     }
 
     private function log(string $content, string $level = 'viral_bottom'): void

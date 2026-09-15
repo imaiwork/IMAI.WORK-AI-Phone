@@ -3,6 +3,7 @@
 namespace app\api\logic\sv;
 
 use app\api\logic\service\TokenLogService;
+use app\common\enum\ChatEnum;
 use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
@@ -885,7 +886,7 @@ class CrawlingTaskLogic extends SvBaseLogic
             $keyword = $task['add_friends_prompt'] != '' ? $task['add_friends_prompt'] : (ChatPrompt::where('prompt_name', '加好友内容')->value('prompt_text') ?? '');
             $request = [
                 'stream' => false,
-                'model' => 'gpt-4o',
+                'model' => ChatEnum::DEFAULT_CHAT_MODEL_ALIAS,
                 'messages' => [
                     ['role' => 'system', 'content' => $keyword],
                     [
@@ -1013,7 +1014,7 @@ class CrawlingTaskLogic extends SvBaseLogic
      */
     public static function verifyWeChatCron()
     {
-        print_r("\n微信号验证\n");
+        \think\facade\Log::channel('device')->write('微信号验证开始','verify_wechat');
         $retryBefore = time() - 300;
         $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
         $deadline = time() + self::VERIFY_CRON_BUDGET_SECONDS;
@@ -1027,6 +1028,10 @@ class CrawlingTaskLogic extends SvBaseLogic
                 ->order('id', 'asc')
                 ->limit(5)
                 ->select();
+            \think\facade\Log::channel('device')->write(
+                '微信号校验定时任务：共' . count($records) . '条记录',
+                'verify_wechat'
+            );
         } catch (\Throwable $th) {
             \think\facade\Log::channel('device')->write($th->__toString(), 'verify_wechat');
             return;

@@ -66,7 +66,8 @@ class ApiLogic extends BaseLogic
     public static function sendNotice(array $payload, $scene_id = 401)
     {
         try {
-            $openId = UserAuth::where('user_id', $payload['userId'])->where('terminal', 1)->order('update_time', 'desc')->limit(1)->findOrEmpty()->openid ?? '';
+            // 订阅消息用主站小程序 access_token,openid 必须取同一 appid 名下的
+            $openId = UserAuth::mnpOpenid((int)$payload['userId']);
             if (empty($openId)) {
                 throw new \think\exception\ValidateException('openId为空');
             }

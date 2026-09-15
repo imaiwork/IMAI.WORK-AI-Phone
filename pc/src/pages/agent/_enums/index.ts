@@ -79,6 +79,14 @@ export enum AgentTypeEnum {
 }
 
 /**
+ * @description 智能体来源枚举，与后端 kb_robot.origin 对齐
+ */
+export enum AgentOriginEnum {
+    MANUAL = 1, // 用户手工创建
+    PERSONA = 2, // IP 人设自动开通
+}
+
+/**
  * @description 发布渠道类型枚举
  */
 export enum PublishTypeEnum {

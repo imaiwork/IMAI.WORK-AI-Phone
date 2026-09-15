@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js");if(!Array){e.resolveComponent("u-icon")()}Math;const t=e.defineComponent({__name:"leads-empty",props:{text:null,description:{default:""}},setup:t=>(o,n)=>e.e({a:e.p({name:"file-text",size:"52",color:"currentColor"}),b:e.t(t.text),c:t.description},t.description?{d:e.t(t.description)}:{})});wx.createComponent(t);

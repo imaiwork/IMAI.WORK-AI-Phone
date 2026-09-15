@@ -10,7 +10,6 @@ use app\common\logic\AccountLogLogic;
 use app\common\model\ModelConfig;
 use app\common\model\sora\SoraAnchor;
 use app\common\model\user\User;
-use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use think\facade\Db;
 use think\facade\Log;
@@ -271,15 +270,7 @@ class SoraAnchorLogic extends ApiLogic
                                               $userId = $data['user_id'];
                                               $taskId = $data['task_id'];
                                               $typeID = AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SORA;
-                                              $count  = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)
-                                                                     ->count();
-                                              //查询是否已返还
-                                              if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)
-                                                               ->count() < $count) {
-                                                  $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)
-                                                                         ->value('change_amount') ?? 0;
-                                                  AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-                                              }
+                                              AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
                                               $item->remark = self::formatMessage($data['message']);
                                           } else {
                                               $item->anchor_id = $data['data']['characters'][0]['id'];
@@ -327,12 +318,7 @@ class SoraAnchorLogic extends ApiLogic
                             $task->remark = '角色转绘视频：此内容违反第三方肖像权、内容相似性的防护规定，请重新生成';
                         }
                         Log::channel('sora')->write($task->remark);
-                        $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-                        //查询是否已返还
-                        if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                            $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                            AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-                        }
+                        AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
                         break;
                     case 'succeeded':
                         $typeID = AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SORA;
@@ -353,12 +339,7 @@ class SoraAnchorLogic extends ApiLogic
                             //失败返还角色创建算力
                             $task->status = 2;
                             $task->remark = $response['message'] ?? '创建失败';
-                            $count        = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-                            //查询是否已返还
-                            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-                            }
+                            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
                         }
                         break;
                 }
@@ -396,8 +377,9 @@ class SoraAnchorLogic extends ApiLogic
             Log::channel('sora')->write('超过10分钟无回调的角色创建任务处理' . json_encode($result, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             // 超过10分钟无回调的任务处理
             if (!empty($result) && isset($result['code']) && $result['code'] == 10000) {
-                // 角色创建中跳过处理
-                if (isset($result['data']['state']) && $result['data']['state'] == 'pending') {
+                // 角色创建中跳过处理；上游一直 pending 的 24 小时后收口退费（访问器已把 create_time 格式化成日期串）
+                if (isset($result['data']['state']) && $result['data']['state'] == 'pending'
+                    && (int)strtotime((string)$task['create_time']) > time() - 86400) {
                     continue;
                 }
                 if (isset($result['data']['data']['characters'][0]['id'])) {
@@ -435,12 +417,7 @@ class SoraAnchorLogic extends ApiLogic
             //失败返还算力
             $userId = $task['user_id'];
             $taskId = $task['task_id'];
-            $count  = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
             SoraAnchor::where('id', $task['id'])->update($errorUpdate);
         }
 
@@ -520,12 +497,7 @@ class SoraAnchorLogic extends ApiLogic
             //失败返还算力
             $userId = $task['user_id'];
             $taskId = $task['task_id'];
-            $count  = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
             SoraAnchor::where('id', $task['id'])->update($errorUpdate);
         }
 

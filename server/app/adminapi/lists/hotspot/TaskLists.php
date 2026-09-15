@@ -6,6 +6,7 @@ use app\adminapi\lists\BaseAdminDataLists;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\hotspot\HotspotTask;
 use app\common\model\user\User;
+use app\common\service\hotspot\ScriptService;
 use app\common\service\hotspot\TaskService;
 
 class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
@@ -38,7 +39,11 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
                 'topic' => (string)$row->topic,
                 'platform' => (string)$row->platform,
                 'title' => (string)$row->title,
-                'persona_name' => (string)(is_array($row->persona_json) ? ($row->persona_json['name'] ?? '') : ''),
+                // 不选人设的任务本就没有人设快照，空列容易被当成数据丢了，直接标出模式
+                'persona_name' => self::personaLabel(
+                    is_array($row->persona_json) ? $row->persona_json : [],
+                    $options
+                ),
                 'video_type' => (string)($options['video_type'] ?? ''),
                 'status' => (string)$row->status,
                 'dispatch_status' => (string)($options['dispatch_status'] ?? 'pending'),
@@ -56,6 +61,18 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
     public function count(): int
     {
         return $this->buildQuery()->count();
+    }
+
+    /** 人设列展示：人设模式取快照名，不选人设模式明确标注，两者都缺失时按历史数据留空 */
+    private static function personaLabel(array $persona, array $options): string
+    {
+        $name = trim((string)($persona['name'] ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+        return (int)($options['persona_mode'] ?? 0) === ScriptService::PERSONA_MODE_MANUAL
+            ? '未选人设'
+            : '';
     }
 
     private function buildQuery()

@@ -71,7 +71,7 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $_SERV
 // 获取主机名
 $host = $_SERVER['HTTP_HOST'];
 $domain = $host;
-if (isset($_SERVER['SERVER_NAME'])) {
+if (isset($_SERVER['SERVER_NAME']) && $_SERVER['SERVER_NAME'] != '_') {
     $domain = $_SERVER['SERVER_NAME'];
 }
 $installDomain = $domain;

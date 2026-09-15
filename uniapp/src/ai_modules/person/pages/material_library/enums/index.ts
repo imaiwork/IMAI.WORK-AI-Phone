@@ -36,6 +36,12 @@ export enum CoverSourceEnum {
     Manual = "manual",
 }
 
+/** 运行模式：对应人设 run_mode，1 手机模式 = 绑定 AI 手机制作发布；2 无手机模式 = 云端制作、小程序审核发布 */
+export enum RunModeEnum {
+    Phone = "phone",
+    Cloud = "cloud",
+}
+
 /** 视频模板使用方式：1=自动随机，2=自定义多选 */
 export enum TemplateModeEnum {
     Auto = 1,

@@ -53,6 +53,10 @@
       "root": "ai_modules/digital_human",
       "pages": [
         "pages/index/index",
+        "pages/play_video/play_video",
+        "pages/play_video_face/play_video_face",
+        "pages/play_video_dance/play_video_dance",
+        "pages/play_video_clip/play_video_clip",
         "pages/szr_create/szr_create",
         "pages/tone_clone/tone_clone",
         "pages/audio_manage/audio_manage",
@@ -170,7 +174,8 @@
         "pages/task_tutorial/task_tutorial",
         "pages/create_group_purchase/create_group_purchase",
         "pages/create_city_exposure/create_city_exposure",
-        "pages/create_city_intercept/create_city_intercept"
+        "pages/create_city_intercept/create_city_intercept",
+        "pages/create_account_search/create_account_search"
       ]
     },
     {

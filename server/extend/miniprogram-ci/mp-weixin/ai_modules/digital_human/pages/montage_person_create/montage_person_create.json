@@ -20,6 +20,7 @@
     "choose-character": "../../components/choose-character/choose-character",
     "tokens-cost": "../../components/tokens-cost/tokens-cost",
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
-    "video-cover-upload": "../../components/video-cover-upload/video-cover-upload"
+    "video-cover-upload": "../../components/video-cover-upload/video-cover-upload",
+    "advanced-setting": "../../components/advanced-setting/advanced-setting"
   }
 }

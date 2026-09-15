@@ -7,7 +7,9 @@ use app\api\logic\minimax\VoiceLogic as MinimaxVoiceLogic;
 use app\api\logic\service\TokenLogService;
 use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\api\logic\sv\ToolsLogic;
+use app\api\logic\videoSynthesis\CopywritingImitationLogic;
 use app\common\enum\DeviceEnum;
+use app\common\enum\FileEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\Jobs\VideoImitationGenerateJob;
 use app\common\logic\AccountLogLogic;
@@ -26,6 +28,7 @@ use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\model\videoImitation\VideoImitationTask;
 use app\common\service\FileService;
+use app\common\service\aiPersona\SynthesisTemplateConfigService;
 use app\common\service\MaterialReadinessService;
 use app\common\service\draw\MediaModelsService;
 use app\common\service\ShanjianQueueService;
@@ -46,8 +49,16 @@ class TaskLogic extends BaseLogic
     private const WASH_AUTO_CONFIRM_STALE_SECONDS = 1800;
 
     /** 手动纯AI素材搜索与转码的同步处理限制 */
-    private const WASH_STRICT_MATERIAL_TIMEOUT_SECONDS = 120;
+    private const WASH_STRICT_MATERIAL_TIMEOUT_SECONDS = 180;
+    private const WASH_STRICT_MATERIAL_CLEANUP_RESERVE_SECONDS = 45;
     private const WASH_STRICT_MATERIAL_MAX_ROUNDS = 5;
+    private const WASH_STRICT_VIDEO_GRAB_BATCH_SIZE = 1;
+    private const WASH_STRICT_IMAGE_GRAB_BATCH_SIZE = 1;
+    private const WASH_STRICT_ROUND_TRANSCODE_WAIT_SECONDS = 10;
+    private const WASH_STRICT_VIDEO_DOWNLOAD_TIMEOUT_SECONDS = 30;
+    private const WASH_STRICT_IMAGE_DOWNLOAD_TIMEOUT_SECONDS = 15;
+    private const WASH_STRICT_REFUND_MAX_ATTEMPTS = 3;
+    private const WASH_STRICT_REFUND_REQUEST_TIMEOUT_SECONDS = 3;
     private const WASH_STRICT_KEYWORD_MAX_ROUNDS = 3;
     private const WASH_STRICT_KEYWORD_REQUEST_TIMEOUT_SECONDS = 30;
     private const WASH_STRICT_TRANSCODE_POLL_MICROSECONDS = 1000000;
@@ -134,6 +145,10 @@ class TaskLogic extends BaseLogic
         $data['rewritten_text_confirmed'] = (int)($data['rewritten_text_confirmed'] ?? 0);
         $data['wash_avatar_id'] = (int)($data['wash_avatar_id'] ?? 0);
         $data['wash_voice_id'] = (int)($data['wash_voice_id'] ?? 0);
+        $data['wash_voice_is_original'] = (int)($data['wash_voice_is_original'] ?? 0);
+        $data['copywriting_length'] = VideoImitationTask::normalizeCopywritingLength($data['copywriting_length'] ?? 0);
+        $data['wash_clip_template_id'] = (string)($data['wash_clip_template_id'] ?? '');
+        $data['wash_music_url'] = $data['wash_music_url'] ? FileService::getFileUrl((string)$data['wash_music_url']) : '';
         if ($data['rewrite_mode'] === VideoImitationTask::REWRITE_MODE_WASH
             && $data['media_type'] === VideoImitationTask::MEDIA_TYPE_VIDEO
         ) {
@@ -142,7 +157,10 @@ class TaskLogic extends BaseLogic
                     ->where('user_id', $userId)
                     ->value('name');
             }
-            if ($data['wash_voice_id'] > 0) {
+            if ($data['wash_voice_is_original'] === 1) {
+                // 形象原音没有音色库记录，名字直接给固定文案
+                $data['voice_name'] = '形象原音';
+            } elseif ($data['wash_voice_id'] > 0) {
                 $data['voice_name'] = (string)HumanVoice::where('id', $data['wash_voice_id'])
                     ->where('user_id', $userId)
                     ->value('name');
@@ -231,7 +249,11 @@ class TaskLogic extends BaseLogic
         int $generationType,
         int $avatarId = 0,
         int $voiceId = 0,
-        string $rewrittenText = ''
+        string $rewrittenText = '',
+        ?float $musicVolume = null,
+        ?float $speechRate = null,
+        ?string $clipTemplateId = null,
+        ?string $musicUrl = null
     ) {
         $task = VideoImitationTask::where('id', $id)->where('user_id', $userId)->find();
         if (!$task) {
@@ -269,7 +291,11 @@ class TaskLogic extends BaseLogic
                 $userId,
                 $generationType,
                 $avatarId,
-                $voiceId
+                $voiceId,
+                $musicVolume,
+                $speechRate,
+                $clipTemplateId,
+                $musicUrl
             );
             $task->save($selection);
         } catch (\Throwable $e) {
@@ -362,7 +388,14 @@ class TaskLogic extends BaseLogic
                 self::stepItem('rewrite', '洗稿仿写', $hasRewrittenText, $failed && $extractDone && !$hasRewrittenText, $remarks),
                 self::stepItem('generation_type', '选择视频类型', $typeSelected, false),
                 self::stepItem('avatar', '选择形象', $typeSelected && (!$needAvatar || (int)$task->wash_avatar_id > 0), false),
-                self::stepItem('voice', '选择音色', $typeSelected && (!$needVoice || (int)$task->wash_voice_id > 0), false),
+                self::stepItem(
+                    'voice',
+                    '选择音色',
+                    $typeSelected && (!$needVoice
+                        || (int)$task->wash_voice_id > 0
+                        || (int)$task->wash_voice_is_original === 1),
+                    false
+                ),
                 self::stepItem('confirm', '确认生成配置', $configConfirmed, false),
                 self::stepItem('render', '云端渲染', $status === VideoImitationTask::STATUS_SUCCESS, $renderFailed, $remarks),
             ];
@@ -392,6 +425,14 @@ class TaskLogic extends BaseLogic
      */
     private static function assertVideoGenerateAllowed(VideoImitationTask $task): bool
     {
+        if (!VideoImitationLogic::validateRewriteMode(
+            (int)$task->user_id,
+            (int)$task->persona_id,
+            (int)($task->rewrite_mode ?: VideoImitationTask::REWRITE_MODE_PERSONA)
+        )) {
+            self::setError(VideoImitationLogic::getError());
+            return false;
+        }
         $status = (int)$task->status;
         $rewrittenText = trim((string)$task->rewritten_text);
 
@@ -497,6 +538,14 @@ class TaskLogic extends BaseLogic
         }
         if ((int)$task->image_rewrite_status !== VideoImitationTask::IMAGE_REWRITE_STATUS_SELECTING) {
             self::setError('当前任务不在待选图状态，无法确认');
+            return false;
+        }
+        if (!VideoImitationLogic::validateRewriteMode(
+            $userId,
+            (int)$task->persona_id,
+            (int)($task->rewrite_mode ?: VideoImitationTask::REWRITE_MODE_PERSONA)
+        )) {
+            self::setError(VideoImitationLogic::getError());
             return false;
         }
 
@@ -911,9 +960,9 @@ class TaskLogic extends BaseLogic
             return;
         }
 
-        $tokenCode = (int)$task->is_material === 0
-            ? AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN
-            : AccountLogEnum::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN;
+        // 必须与 generate() 预扣时的口径一致(含 is_material=2 新闻体)，
+        // 否则查不到扣费流水 → $points=0 → 不退费，且 queue_refund_status 被置 1 后不再补退
+        [, $tokenCode] = self::resolveTokenByMaterialType((int)$task->is_material);
         $deducted = abs((float)UserTokensLog::where('user_id', (int)$task->user_id)
             ->where('change_type', $tokenCode)
             ->where('task_id', (string)$task->id)
@@ -1187,11 +1236,24 @@ class TaskLogic extends BaseLogic
 
         $localVideos = [];
         $localImages = [];
+        // 人设素材按人设当前的素材模式取：原图模式只用未转码原片(keep_original=1)，
+        // 自动适配只用转码/切片素材(keep_original=0)——与自动合成
+        // (CopywritingImitationLogic::getMaterialsForImitation)、小程序素材列表同一口径，
+        // 避免"人设已切原图，手动复刻仍拿切片素材合成"。
+        // 注：AI 抓来的素材进的是 SV 素材库，不归人设素材模式管，仍照旧转码后使用。
+        $materialUseMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$task->persona_id);
+        $isOriginalMaterialMode = $materialUseMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
         if ($visualMaterialSource == 2 || $visualMaterialSource == 3) {
             $allMaterials = Material::where('persona_id', $task->persona_id)
                 ->where('user_id', $userId)
                 ->where('use_status', 1)
                 ->where('publish_mode', 1)
+                // 朋友圈专属素材不进剪辑合成，与自动合成、旧设备链路同一口径
+                ->where('is_wechat', 0)
+                ->where(
+                    'keep_original',
+                    $isOriginalMaterialMode ? Material::KEEP_ORIGINAL_YES : Material::KEEP_ORIGINAL_NO
+                )
                 ->select()->toArray();
             $materialCheck = MaterialReadinessService::checkFileUrlsForSubmit(array_column($allMaterials, 'file_url'));
             $blockedUris = array_fill_keys(array_merge(
@@ -1223,6 +1285,21 @@ class TaskLogic extends BaseLogic
                         ];
                     }
                 }
+            }
+            Log::channel('shanjian')->write('[视频仿写人设取材] ' . json_encode([
+                'task_id' => (int)$task->id,
+                'persona_id' => (int)$task->persona_id,
+                'material_use_mode' => $materialUseMode,
+                'visual_material_source' => (int)$visualMaterialSource,
+                'library_count' => count($allMaterials),
+                'video_count' => count($localVideos),
+                'image_count' => count($localImages),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+            // 原图模式必须有原片视频；纯人设素材没有 AI 兜底，早失败好过扣完费再退
+            if ($isOriginalMaterialMode && $visualMaterialSource == 3 && empty($localVideos)) {
+                self::setError('当前人设为原图模式，素材库中没有可用的原图视频素材，请先上传原图素材或将人设切回自动适配');
+                return false;
             }
         }
 
@@ -1336,7 +1413,7 @@ class TaskLogic extends BaseLogic
             Db::startTrans();
             try {
                 if ($points > 0) {
-                    User::userTokensChange($userId, $points, 'inc');
+                    // recordUserTokensLog 传 false 内部已按原扣费主体退回(团队/个人)，此处不得再 inc，否则双倍退费
                     $extra = ['退回项目' => '爆款视频复刻-' . $extraDesc . ' 失败退回', '算力单价' => $unit, "预估时长" => $duration . '秒', '实际消耗算力' => $points];
                     AccountLogLogic::recordUserTokensLog(false, $userId, $tokenCode, $points, (string) $task->id, $extra);
                 }
@@ -1355,7 +1432,7 @@ class TaskLogic extends BaseLogic
             Db::startTrans();
             try {
                 if ($points > 0) {
-                    User::userTokensChange($userId, $points, 'inc');
+                    // recordUserTokensLog 传 false 内部已按原扣费主体退回(团队/个人)，此处不得再 inc，否则双倍退费
                     $extra = ['退回项目' => '爆款视频复刻-' . $extraDesc . ' 失败退回', '算力单价' => $unit, "预估时长" => $duration . '秒', '实际消耗算力' => $points];
                     AccountLogLogic::recordUserTokensLog(false, $userId, $tokenCode, $points, (string) $task->id, $extra);
                 }
@@ -1373,10 +1450,8 @@ class TaskLogic extends BaseLogic
         // 组装接口数据
         $shanjianPayload = [
             "packRules" => [
-                "backgroundMusic" => [
-                    "audioSwitch" => true,
-                    "volume" => $isMaterial == 2 ? 0.6 : 0.5
-                ]
+                // 人设模式跟随合成配置(来源/音量)，洗稿与异常回落原硬编码默认
+                "backgroundMusic" => self::resolveBackgroundMusicRule($task, $userId, $isMaterial)
             ],
             "processRules" => [
                 "watermarkShow" => false
@@ -1403,6 +1478,14 @@ class TaskLogic extends BaseLogic
                 $shanjianPayload['content'] = $rewrittenText;
                 if (!empty($voiceId)) {
                     $shanjianPayload['speakerId'] = $voiceId;
+                    // 语速仅闪剪 TTS(speakerId) 路径可用；MiniMax 走 audioUrl，闪剪会忽略 speedRatio
+                    $speedRatio = self::resolveSpeechRate($task, $userId);
+                    if ($speedRatio !== null) {
+                        $shanjianPayload['speakerExtra'] = array_merge(
+                            is_array($shanjianPayload['speakerExtra'] ?? null) ? $shanjianPayload['speakerExtra'] : [],
+                            ['speedRatio' => $speedRatio]
+                        );
+                    }
                 }
             }
             $task->title = $shanjianPayload['title'];
@@ -1411,11 +1494,11 @@ class TaskLogic extends BaseLogic
         if (!empty($introduceCard)) {
             $shanjianPayload['introduceCard'] = $introduceCard;
         }
-        // 获取视频风格(剪辑模板)
-        $styleScene = self::resolveStyleScene($isMaterial);
-        $clip = ShanjianClipTemplate::where('scene', $styleScene)->orderRand()->find();
-        if ($clip) {
-            $shanjianPayload['styleId'] = $clip['id'];
+        // 获取视频风格(剪辑模板)：人设模式跟随人设合成配置，洗稿/异常回落全局随机
+        $styleId = self::resolveClipTemplateId($task, $userId, $isMaterial);
+        if ($styleId !== '') {
+            $shanjianPayload['styleId'] = $styleId;
+            $task->clip_template_id = $styleId;
         }
 
         $videoService = ToolsService::VideoImitation();
@@ -2264,15 +2347,20 @@ class TaskLogic extends BaseLogic
         bool $filterExistingLibrary = false,
         bool $reuseExistingLibrary = false
     ): array {
-        $deadline = microtime(true) + self::WASH_STRICT_MATERIAL_TIMEOUT_SECONDS;
+        $startedAt = microtime(true);
+        $hardDeadline = $startedAt + self::WASH_STRICT_MATERIAL_TIMEOUT_SECONDS;
+        // 搜索必须提前结束，给未使用抓取调用的退费和最终结算留出固定时间。
+        $searchDeadline = $hardDeadline - self::WASH_STRICT_MATERIAL_CLEANUP_RESERVE_SECONDS;
         $candidates = ['video' => [], 'image' => []];
         $grabCalls = [];
         $seenRemoteUrls = [];
+        $selectedGrabTaskIds = [];
+        $completed = false;
 
         try {
             $keywords = self::extractWashStrictKeywords(
                 $text,
-                $deadline
+                $searchDeadline
             );
             // 关键词提取成功后再结算，避免超时或空结果仍扣除用户算力。
             if ($extractPrice > 0 && empty(self::$testHooks['skipUserTokens'])) {
@@ -2312,21 +2400,57 @@ class TaskLogic extends BaseLogic
             $searchStoppedByDeadline = false;
 
             for ($round = 1; $round <= self::WASH_STRICT_MATERIAL_MAX_ROUNDS; $round++) {
-                if (microtime(true) >= $deadline) {
+                if (microtime(true) >= $searchDeadline) {
                     $searchStoppedByDeadline = true;
                     break;
                 }
+                // 待转码素材也占用目标名额，避免上一批尚未完成时重复发起大量付费抓取。
+                $activeCounts = ['video' => 0, 'image' => 0];
+                foreach (['video', 'image'] as $candidateType) {
+                    foreach ($candidates[$candidateType] as $candidate) {
+                        if (in_array(($candidate['transcode_status'] ?? ''), ['pending', 'ready'], true)) {
+                            $activeCounts[$candidateType]++;
+                        }
+                    }
+                }
                 $gaps = [
-                    'video' => $targetVideoCount - count($selection['videos']),
-                    'image' => $targetImageCount - count($selection['images']),
+                    'video' => max(0, $targetVideoCount - $activeCounts['video']),
+                    'image' => max(0, $targetImageCount - $activeCounts['image']),
                 ];
                 if ($gaps['video'] <= 0 && $gaps['image'] <= 0) {
-                    break;
+                    // 名额都在等待转码时继续轮询，但不再发起新的付费抓取。
+                    $roundWaitDeadline = min(
+                        $searchDeadline,
+                        microtime(true) + self::WASH_STRICT_ROUND_TRANSCODE_WAIT_SECONDS
+                    );
+                    self::waitWashStrictTranscodes(
+                        $candidates,
+                        $grabCalls,
+                        $userId,
+                        $roundWaitDeadline
+                    );
+                    $selection = self::selectWashStrictMaterials(
+                        $candidates,
+                        $targetVideoCount,
+                        $targetImageCount
+                    );
+                    if (
+                        count($selection['videos']) >= $targetVideoCount
+                        && count($selection['images']) >= $targetImageCount
+                    ) {
+                        break;
+                    }
+                    continue;
                 }
 
-                foreach (['video', 'image'] as $type) {
-                    for ($index = 0; $index < $gaps[$type]; $index++) {
-                        if (microtime(true) >= $deadline) {
+                // 图片通常更小且更快，先保证至少有一条可用素材，再尝试视频。
+                foreach (['image', 'video'] as $type) {
+                    $batchSize = $type === 'video'
+                        ? self::WASH_STRICT_VIDEO_GRAB_BATCH_SIZE
+                        : self::WASH_STRICT_IMAGE_GRAB_BATCH_SIZE;
+                    $grabCount = min($gaps[$type], $batchSize);
+                    for ($index = 0; $index < $grabCount; $index++) {
+                        if (microtime(true) >= $searchDeadline) {
                             $searchStoppedByDeadline = true;
                             break 2;
                         }
@@ -2349,7 +2473,7 @@ class TaskLogic extends BaseLogic
                                     'keywords' => $keyword,
                                     'searchTerm' => $keyword,
                                 ],
-                                $deadline,
+                                $searchDeadline,
                                 15
                             );
                             $list = self::resolveWashStrictGrabList($response);
@@ -2360,7 +2484,9 @@ class TaskLogic extends BaseLogic
                                 $seenRemoteUrls,
                                 $userId,
                                 $filterExistingLibrary,
-                                $reuseExistingLibrary
+                                $reuseExistingLibrary,
+                                $searchDeadline,
+                                $taskId
                             );
                             if ($candidate !== null) {
                                 $candidates[$type][] = $candidate;
@@ -2370,8 +2496,8 @@ class TaskLogic extends BaseLogic
                                     $type,
                                     $userId,
                                     $grabCalls,
-                                    $deadline,
-                                    '未找到可投递转码的候选素材'
+                                    '未找到可投递转码的候选素材',
+                                    1
                                 );
                             }
                         } catch (\Throwable $e) {
@@ -2388,10 +2514,10 @@ class TaskLogic extends BaseLogic
                                 $type,
                                 $userId,
                                 $grabCalls,
-                                $deadline,
-                                '抓取或转码投递失败'
+                                '抓取或转码投递失败',
+                                1
                             );
-                            if (microtime(true) >= $deadline) {
+                            if (microtime(true) >= $searchDeadline) {
                                 $searchStoppedByDeadline = true;
                                 break 2;
                             }
@@ -2400,13 +2526,17 @@ class TaskLogic extends BaseLogic
                 }
 
                 if (!$searchStoppedByDeadline) {
+                    $roundWaitDeadline = min(
+                        $searchDeadline,
+                        microtime(true) + self::WASH_STRICT_ROUND_TRANSCODE_WAIT_SECONDS
+                    );
                     self::waitWashStrictTranscodes(
                         $candidates,
                         $grabCalls,
                         $userId,
-                        $deadline
+                        $roundWaitDeadline
                     );
-                    $searchStoppedByDeadline = microtime(true) >= $deadline;
+                    $searchStoppedByDeadline = microtime(true) >= $searchDeadline;
                 }
                 $selection = self::selectWashStrictMaterials(
                     $candidates,
@@ -2429,6 +2559,36 @@ class TaskLogic extends BaseLogic
                 }
             }
 
+            // 搜索停止后用完整的清理预留时间等待已投递素材，避免下载成功后仅因转码稍慢而被退费丢弃。
+            $finalRefreshStartedAt = microtime(true);
+            self::waitWashStrictTranscodes(
+                $candidates,
+                $grabCalls,
+                $userId,
+                $hardDeadline
+            );
+            $selection = self::selectWashStrictMaterials(
+                $candidates,
+                $targetVideoCount,
+                $targetImageCount
+            );
+            $finalPendingCount = 0;
+            foreach (['video', 'image'] as $candidateType) {
+                foreach ($candidates[$candidateType] as $candidate) {
+                    if (($candidate['transcode_status'] ?? '') === 'pending') {
+                        $finalPendingCount++;
+                    }
+                }
+            }
+            Log::channel('shanjian')->write('[手动纯AI找素材最终转码刷新] ' . json_encode([
+                'task_id' => $taskId,
+                'elapsed_ms' => (int)round((microtime(true) - $finalRefreshStartedAt) * 1000),
+                'ready_video_count' => count($selection['videos']),
+                'ready_image_count' => count($selection['images']),
+                'pending_count' => $finalPendingCount,
+                'hard_deadline_reached' => microtime(true) >= $hardDeadline ? 1 : 0,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
             $selected = array_merge($selection['videos'], $selection['images']);
             // 复用现有时长门禁；目标数量仅为上限，不再要求视频、图片分别达标。
             $selected = ShanjianVideoSettingLogic::trimMaterialsByDuration($selected, 300, 59);
@@ -2444,15 +2604,14 @@ class TaskLogic extends BaseLogic
                 static fn(array $item): bool => ($item['type'] ?? '') === 'image'
             ));
 
-            $selectedGrabTaskIds = array_fill_keys(array_map(
+            $finalSelectedGrabTaskIds = array_fill_keys(array_map(
                 static fn(array $item): string => (string)$item['grab_task_id'],
                 $selected
             ), true);
             self::refundUnusedWashStrictGrabCalls(
                 $grabCalls,
-                $selectedGrabTaskIds,
+                $finalSelectedGrabTaskIds,
                 $userId,
-                $deadline,
                 '素材未进入最终提交集合'
             );
 
@@ -2479,19 +2638,47 @@ class TaskLogic extends BaseLogic
                 $selectedImages
             );
 
+            $selectedGrabTaskIds = $finalSelectedGrabTaskIds;
+            $completed = true;
             return self::formatMaterialResult($selected);
         } catch (\Throwable $e) {
-            self::refundUnusedWashStrictGrabCalls(
-                $grabCalls,
-                [],
-                $userId,
-                $deadline,
-                '手动纯AI找素材失败或超时'
-            );
             if ($e instanceof \Exception) {
                 throw $e;
             }
             throw new \RuntimeException($e->getMessage(), 0, $e);
+        } finally {
+            // 退费不再服从素材搜索截止时间。异常时全部退，成功时仅保留最终提交素材的调用。
+            $keptGrabTaskIds = $completed ? $selectedGrabTaskIds : [];
+            self::refundUnusedWashStrictGrabCalls(
+                $grabCalls,
+                $keptGrabTaskIds,
+                $userId,
+                $completed ? '素材未进入最终提交集合' : '手动纯AI找素材失败或超时'
+            );
+            if ($grabCalls !== []) {
+                $refundPendingTaskIds = [];
+                $refundedCount = 0;
+                foreach ($grabCalls as $grabTaskId => $call) {
+                    if (isset($keptGrabTaskIds[$grabTaskId])) {
+                        continue;
+                    }
+                    if (!empty($call['refunded'])) {
+                        $refundedCount++;
+                    } else {
+                        $refundPendingTaskIds[] = (string)$grabTaskId;
+                    }
+                }
+                try {
+                    Log::channel('shanjian')->write('[手动纯AI找素材费用核对] ' . json_encode([
+                        'task_id' => $taskId,
+                        'grab_call_count' => count($grabCalls),
+                        'selected_call_count' => count($keptGrabTaskIds),
+                        'refunded_call_count' => $refundedCount,
+                        'refund_pending_task_ids' => $refundPendingTaskIds,
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                } catch (\Throwable $e) {
+                }
+            }
         }
     }
 
@@ -2631,7 +2818,7 @@ class TaskLogic extends BaseLogic
     }
 
     /**
-     * 单次搜索会继续尝试后续候选，直到找到可投递转码的一条素材。
+     * 单次搜索会跳过重复/非法候选，但只实际下载一个有效候选，避免慢链接耗尽整轮时间。
      *
      * @param array<int, array<string, mixed>> $list
      * @param array<string, bool> $seenRemoteUrls
@@ -2644,14 +2831,20 @@ class TaskLogic extends BaseLogic
         array &$seenRemoteUrls,
         int $userId = 0,
         bool $filterExistingLibrary = false,
-        bool $reuseExistingLibrary = false
+        bool $reuseExistingLibrary = false,
+        float $deadline = 0,
+        int $taskId = 0
     ): ?array {
         foreach ($list as $item) {
+            if ($deadline > 0 && microtime(true) >= $deadline) {
+                break;
+            }
             $link = trim((string)($item['link'] ?? ''));
-            if ($link === '' || isset($seenRemoteUrls[$link])) {
+            $remoteDedupKey = SvMediaMaterial::videoImitationRemoteDedupKey($link, $type);
+            if ($link === '' || $remoteDedupKey === '' || isset($seenRemoteUrls[$remoteDedupKey])) {
                 continue;
             }
-            $seenRemoteUrls[$link] = true;
+            $seenRemoteUrls[$remoteDedupKey] = true;
             if (!FileService::isAllowedGrabMaterialUrl($link, $type)) {
                 continue;
             }
@@ -2674,40 +2867,76 @@ class TaskLogic extends BaseLogic
                 continue;
             }
 
+            $maxDownloadSeconds = $type === 'video'
+                ? self::WASH_STRICT_VIDEO_DOWNLOAD_TIMEOUT_SECONDS
+                : self::WASH_STRICT_IMAGE_DOWNLOAD_TIMEOUT_SECONDS;
+            $remainingSeconds = $deadline > 0
+                ? max(1, (int)floor($deadline - microtime(true)))
+                : $maxDownloadSeconds;
+            $downloadTimeout = min($maxDownloadSeconds, $remainingSeconds);
+            $downloadStartedAt = microtime(true);
+            $downloadResult = 'failed';
+            $downloadError = '';
+            $dispatchedCandidate = null;
             try {
-                $transRes = self::transcodeGrabbedSource($link, $type);
+                $transRes = self::transcodeGrabbedSource($link, $type, $downloadTimeout);
                 $fileId = (int)($transRes['id'] ?? 0);
                 $storedUrl = (string)(($transRes['oss_uri'] ?? '') ?: ($transRes['url'] ?? ''));
                 if ($fileId <= 0 || $storedUrl === '') {
-                    continue;
+                    $downloadResult = 'invalid_result';
+                } else {
+                    $fileUrl = FileService::getFileUrl($storedUrl);
+                    if (
+                        $filterExistingLibrary
+                        && self::isExistingVideoImitationMaterial($userId, '', $fileUrl)
+                    ) {
+                        $downloadResult = 'duplicate_content';
+                        self::logSkippedExistingStrictMaterial($grabTaskId, $type, $link, 'content');
+                    } else {
+                        $downloadResult = 'dispatched';
+                        $dispatchedCandidate = [
+                            'file_id' => $fileId,
+                            'remote_url' => $link,
+                            'fileUrl' => $fileUrl,
+                            'type' => $type,
+                            'duration' => $duration,
+                            'size' => self::resolveGrabbedMaterialSize($transRes),
+                            'grab_task_id' => $grabTaskId,
+                            'transcode_status' => 'pending',
+                        ];
+                    }
                 }
-                $fileUrl = FileService::getFileUrl($storedUrl);
-                if (
-                    $filterExistingLibrary
-                    && self::isExistingVideoImitationMaterial($userId, '', $fileUrl)
-                ) {
-                    self::logSkippedExistingStrictMaterial($grabTaskId, $type, $link, 'content');
-                    continue;
-                }
-                return [
-                    'file_id' => $fileId,
-                    'remote_url' => $link,
-                    'fileUrl' => $fileUrl,
-                    'type' => $type,
-                    'duration' => $duration,
-                    'size' => self::resolveGrabbedMaterialSize($transRes),
-                    'grab_task_id' => $grabTaskId,
-                    'transcode_status' => 'pending',
-                ];
             } catch (\Throwable $e) {
+                $downloadError = $e->getMessage();
                 Log::channel('shanjian')->write(sprintf(
                     '[手动纯AI找素材] 候选转码投递失败 grab_task_id=%s type=%s url=%s err=%s',
                     $grabTaskId,
                     $type,
                     $link,
-                    $e->getMessage()
+                    $downloadError
                 ));
+            } finally {
+                $elapsedMilliseconds = (int)round((microtime(true) - $downloadStartedAt) * 1000);
+                try {
+                    Log::channel('shanjian')->write('[手动纯AI素材下载耗时] ' . json_encode([
+                        'task_id' => $taskId,
+                        'grab_task_id' => $grabTaskId,
+                        'type' => $type,
+                        'timeout_seconds' => $downloadTimeout,
+                        'elapsed_ms' => $elapsedMilliseconds,
+                        'result' => $downloadResult,
+                        'url' => mb_substr($link, 0, 180, 'UTF-8'),
+                        'error' => $downloadError,
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                } catch (\Throwable $e) {
+                }
             }
+
+            if ($dispatchedCandidate !== null) {
+                return $dispatchedCandidate;
+            }
+            // 已经尝试过一次真实下载；失败后交给下一次抓取，避免本调用连续阻塞。
+            break;
         }
 
         return null;
@@ -2726,20 +2955,12 @@ class TaskLogic extends BaseLogic
         }
         if (
             trim($remoteUrl) !== ''
-            && SvMediaMaterial::findExistingIdByRemoteUrl(
-                $userId,
-                SvMediaMaterial::SOURCE_VIDEO_IMITATION,
-                $remoteUrl
-            ) > 0
+            && SvMediaMaterial::findExistingVideoImitationMaterialId($userId, $remoteUrl, true) > 0
         ) {
             return true;
         }
         return trim($fileUrl) !== ''
-            && SvMediaMaterial::findExistingId(
-                $userId,
-                SvMediaMaterial::SOURCE_VIDEO_IMITATION,
-                $fileUrl
-            ) > 0;
+            && SvMediaMaterial::findExistingVideoImitationContentId($userId, $fileUrl, true) > 0;
     }
 
     /**
@@ -2795,17 +3016,24 @@ class TaskLogic extends BaseLogic
     /**
      * @return array<string, mixed>
      */
-    private static function transcodeGrabbedSource(string $link, string $type): array
+    private static function transcodeGrabbedSource(string $link, string $type, int $timeout = 0): array
     {
         if (array_key_exists('transcodeBySource', self::$testHooks)) {
             $hook = self::$testHooks['transcodeBySource'];
             if (is_callable($hook)) {
-                $result = $hook($link, $type);
+                $result = $hook($link, $type, $timeout);
                 return is_array($result) ? $result : [];
             }
             return is_array($hook) ? $hook : [];
         }
-        return UploadService::transcodeBySource($link, $type, 0, 0);
+        return UploadService::transcodeBySource(
+            $link,
+            $type,
+            0,
+            0,
+            FileEnum::SOURCE_ADMIN,
+            $timeout
+        );
     }
 
     /**
@@ -2911,8 +3139,8 @@ class TaskLogic extends BaseLogic
                             $type,
                             $userId,
                             $grabCalls,
-                            $deadline,
-                            '素材转码失败'
+                            '素材转码失败',
+                            1
                         );
                     }
                 }
@@ -3053,7 +3281,6 @@ class TaskLogic extends BaseLogic
         array &$grabCalls,
         array $selectedGrabTaskIds,
         int $userId,
-        float $deadline,
         string $reason
     ): void {
         foreach ($grabCalls as $grabTaskId => $call) {
@@ -3065,14 +3292,13 @@ class TaskLogic extends BaseLogic
                 (string)$call['type'],
                 $userId,
                 $grabCalls,
-                $deadline,
                 $reason
             );
         }
     }
 
     /**
-     * 中台抓取退费为尽力操作，且必须服从本次120秒共享截止时间。
+     * 中台抓取退费使用独立短超时并按原task_id重试，不受素材搜索截止时间影响。
      *
      * @param array<string, array{type:string,refunded:bool}> $grabCalls
      */
@@ -3081,59 +3307,96 @@ class TaskLogic extends BaseLogic
         string $type,
         int $userId,
         array &$grabCalls,
-        float $deadline,
-        string $reason
+        string $reason,
+        int $maxAttempts = self::WASH_STRICT_REFUND_MAX_ATTEMPTS
     ): void {
         if (!isset($grabCalls[$grabTaskId]) || !empty($grabCalls[$grabTaskId]['refunded'])) {
             return;
         }
-        // 标记已尝试，避免转码轮询与最终清理重复发起退费。
-        $grabCalls[$grabTaskId]['refunded'] = true;
         if (array_key_exists('refundWashStrictGrabCall', self::$testHooks)
             && is_callable(self::$testHooks['refundWashStrictGrabCall'])
         ) {
-            (self::$testHooks['refundWashStrictGrabCall'])($grabTaskId, $type, $userId, $reason);
-            return;
-        }
-        if (microtime(true) >= $deadline) {
-            Log::channel('shanjian')->write(sprintf(
-                '[手动纯AI找素材] 已到截止时间，退费请求未发送 grab_task_id=%s type=%s reason=%s',
-                $grabTaskId,
-                $type,
-                $reason
-            ));
-            return;
-        }
-
-        try {
-            $response = self::requestWashStrictTool(
-                $type === 'image' ? '/api/media/grab/image' : '/api/media/grab/video',
-                [
-                    'is_return' => 1,
-                    'task_id' => $grabTaskId,
-                    'user_id' => $userId,
-                ],
-                $deadline,
-                3
-            );
-            if ((int)($response['code'] ?? 0) !== 10000) {
+            try {
+                (self::$testHooks['refundWashStrictGrabCall'])($grabTaskId, $type, $userId, $reason);
+                $grabCalls[$grabTaskId]['refunded'] = true;
+            } catch (\Throwable $e) {
                 Log::channel('shanjian')->write(sprintf(
-                    '[手动纯AI找素材] 中台退费失败 grab_task_id=%s type=%s reason=%s response=%s',
+                    '[手动纯AI找素材] 测试退费钩子异常 grab_task_id=%s type=%s reason=%s err=%s',
                     $grabTaskId,
                     $type,
                     $reason,
-                    json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                    $e->getMessage()
                 ));
             }
-        } catch (\Throwable $e) {
-            Log::channel('shanjian')->write(sprintf(
-                '[手动纯AI找素材] 中台退费异常 grab_task_id=%s type=%s reason=%s err=%s',
-                $grabTaskId,
-                $type,
-                $reason,
-                $e->getMessage()
-            ));
+            return;
         }
+
+        $lastError = '';
+        $maxAttempts = max(1, min(self::WASH_STRICT_REFUND_MAX_ATTEMPTS, $maxAttempts));
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $refundDeadline = microtime(true) + self::WASH_STRICT_REFUND_REQUEST_TIMEOUT_SECONDS;
+                $response = self::requestWashStrictTool(
+                    $type === 'image' ? '/api/media/grab/image' : '/api/media/grab/video',
+                    [
+                        'is_return' => 1,
+                        'task_id' => $grabTaskId,
+                        'user_id' => $userId,
+                    ],
+                    $refundDeadline,
+                    self::WASH_STRICT_REFUND_REQUEST_TIMEOUT_SECONDS
+                );
+                if ((int)($response['code'] ?? 0) === 10000) {
+                    // 只有中台明确确认成功后才标记，失败时允许finally再次补偿。
+                    $grabCalls[$grabTaskId]['refunded'] = true;
+                    try {
+                        Log::channel('shanjian')->write(sprintf(
+                            '[手动纯AI找素材] 中台退费成功 grab_task_id=%s type=%s attempt=%d reason=%s',
+                            $grabTaskId,
+                            $type,
+                            $attempt,
+                            $reason
+                        ));
+                    } catch (\Throwable $e) {
+                    }
+                    return;
+                }
+                $lastError = trim((string)($response['message'] ?? '中台未返回退费成功'));
+                Log::channel('shanjian')->write(sprintf(
+                    '[手动纯AI找素材] 中台退费失败 grab_task_id=%s type=%s attempt=%d reason=%s response=%s',
+                    $grabTaskId,
+                    $type,
+                    $attempt,
+                    $reason,
+                    json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                ));
+            } catch (\Throwable $e) {
+                $lastError = $e->getMessage();
+                Log::channel('shanjian')->write(sprintf(
+                    '[手动纯AI找素材] 中台退费异常 grab_task_id=%s type=%s attempt=%d reason=%s err=%s',
+                    $grabTaskId,
+                    $type,
+                    $attempt,
+                    $reason,
+                    $lastError
+                ));
+            }
+            if ($attempt < $maxAttempts) {
+                usleep($attempt * 200000);
+            }
+        }
+
+        $failureLabel = $maxAttempts < self::WASH_STRICT_REFUND_MAX_ATTEMPTS
+            ? '本轮退费未成功，将在最终清理重试'
+            : '中台退费最终失败，需人工核账';
+        Log::channel('shanjian')->write(sprintf(
+            '[手动纯AI找素材] %s grab_task_id=%s type=%s reason=%s err=%s',
+            $failureLabel,
+            $grabTaskId,
+            $type,
+            $reason,
+            $lastError
+        ));
     }
 
     private static function assertWashStrictDeadline(float $deadline): void
@@ -3570,6 +3833,189 @@ class TaskLogic extends BaseLogic
             2 => 'newsMixCutting',
             default => 'oralMixCutting',
         };
+    }
+
+    /**
+     * 混剪类型(is_material) → 人设合成配置的生成类型
+     */
+    private static function resolveTemplateGenerationType(int $isMaterial): int
+    {
+        return match ($isMaterial) {
+            0 => SynthesisTemplateConfigService::TYPE_DIGITAL_ORAL,
+            2 => SynthesisTemplateConfigService::TYPE_NEWS_MIXCUT,
+            default => SynthesisTemplateConfigService::TYPE_MATERIAL_MIXCUT,
+        };
+    }
+
+    /**
+     * 选取剪辑模板：人设模式跟随人设合成配置(自动随机/自定义已选)；
+     * 洗稿模式无人设、人设可选池为空或取值异常时，回落到原全局按 scene 随机。
+     *
+     * 注意：本方法在预扣费与素材抓取之后才被调用，任何异常都必须吞掉并降级，
+     * 否则任务会卡在 status=2 且不退费。
+     */
+    private static function resolveClipTemplateId(VideoImitationTask $task, int $userId, int $isMaterial): string
+    {
+        // 洗稿用户自选模板优先。确认时已按 scene + auto_type 校验过，这里只做存在性兜底。
+        $washTemplateId = trim((string)$task->wash_clip_template_id);
+        if ($washTemplateId !== '' && (int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
+            $ok = ShanjianClipTemplate::where('id', $washTemplateId)
+                ->where('scene', self::resolveStyleScene($isMaterial))
+                ->count() > 0;
+            if ($ok) {
+                return $washTemplateId;
+            }
+            Log::channel('shanjian')->write(sprintf(
+                '[视频仿写] 洗稿自选模板已失效已回落随机 task_id=%d clip_template_id=%s is_material=%d',
+                (int)$task->id,
+                $washTemplateId,
+                $isMaterial
+            ));
+        }
+
+        $personaId = (int)$task->persona_id;
+        if ($personaId > 0 && $userId > 0) {
+            try {
+                $clipId = trim(SynthesisTemplateConfigService::pickForPersona(
+                    $userId,
+                    $personaId,
+                    self::resolveTemplateGenerationType($isMaterial),
+                    1
+                ));
+                if ($clipId !== '') {
+                    return $clipId;
+                }
+            } catch (\Throwable $e) {
+                Log::channel('shanjian')->write(sprintf(
+                    '[视频仿写] 人设模板选取失败已回落随机 task_id=%d persona_id=%d is_material=%d err=%s',
+                    (int)$task->id,
+                    $personaId,
+                    $isMaterial,
+                    $e->getMessage()
+                ));
+            }
+        }
+
+        // 洗稿(persona_id=0) 与人设取值失败：全局随机。
+        // 带上 auto_type=1，与人设/自动合成的候选池对齐——原先这里漏了这个过滤，
+        // 洗稿可能抽到人设模式永远抽不到的非自动化模板。
+        $clip = ShanjianClipTemplate::where('scene', self::resolveStyleScene($isMaterial))
+            ->where('auto_type', 1)
+            ->orderRand()
+            ->find();
+
+        return $clip ? (string)$clip['id'] : '';
+    }
+
+    /**
+     * 读取人设合成配置；无人设/无记录返回 null
+     */
+    private static function findPersonaSynthesisConfig(VideoImitationTask $task, int $userId): ?AiPersonaSynthesisConfig
+    {
+        $personaId = (int)$task->persona_id;
+        if ($personaId <= 0 || $userId <= 0) {
+            return null;
+        }
+        $config = AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->findOrEmpty();
+
+        return $config->isEmpty() ? null : $config;
+    }
+
+    /**
+     * 背景音乐规则：人设模式跟随合成配置(music_source 来源 + music_volume 音量)。
+     * 洗稿(persona_id=0)、无配置记录或任何异常，一律回落原硬编码默认，绝不中断下发。
+     *
+     * 已在 dev 实测 v1 端点(/api/shanjian/mixcut_broadcast)三个字段均生效：
+     * audioSwitch=false 关得掉音乐、volume 影响响度、audioUrl 换得掉曲子。
+     * 但 audioSwitch=true 单独给是不够的——test 素材混剪实测(materialSoundSwitch=false，
+     * 排除素材原声干扰)：带 audioUrl 的成片有立体声音乐(任务754 侧声道-28dB)，
+     * 不带的成片是纯单声道口播(任务748/749 侧声道-90/-85dB，等于没有背景音)。
+     * 所以音乐开着就必须给 audioUrl，别指望闪剪自己配一首。
+     *
+     * @return array{audioSwitch:bool, volume:float, audioUrl?:string}
+     */
+    private static function resolveBackgroundMusicRule(VideoImitationTask $task, int $userId, int $isMaterial): array
+    {
+        // 闪剪只按 audioUrl 放曲子：只给 audioSwitch/volume 不给地址，成片就是彻底没有背景音。
+        // 洗稿没有人设、也没有人设音乐库，音量开着就得给一首系统音乐，与人设模式取不到时的兜底同源。
+        $default = [
+            'audioSwitch' => true,
+            'volume' => $isMaterial == 2 ? 0.6 : 0.5,
+            'audioUrl' => CopywritingImitationLogic::resolveSystemMusicUrl(),
+        ];
+
+        try {
+            $config = self::findPersonaSynthesisConfig($task, $userId);
+            if ($config === null) {
+                // 洗稿无人设：用用户在配置步自选的音量；未设置(-1)才回落默认
+                $washVolume = (float)($task->wash_music_volume ?? VideoImitationTask::WASH_PARAM_UNSET);
+                if ($washVolume < 0) {
+                    return $default;
+                }
+                $washVolume = min(1.0, round($washVolume, 2));
+
+                if ($washVolume <= 0) {
+                    return ['audioSwitch' => false, 'volume' => 0.0];
+                }
+                // 用户自传的曲子优先，没传才用系统音乐随机
+                $washMusic = trim((string)$task->wash_music_url);
+                $audioUrl = $washMusic !== '' ? FileService::getFileUrl($washMusic) : $default['audioUrl'];
+
+                return ['audioSwitch' => true, 'volume' => $washVolume, 'audioUrl' => $audioUrl];
+            }
+
+            $volume = AiPersonaSynthesisConfig::normalizeMusicVolume(
+                $config->music_volume ?? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT
+            );
+            $musicUrl = trim(CopywritingImitationLogic::resolveMusicUrlByConfig($config, (int)$task->persona_id));
+
+            // music_source=3(不使用) 时 resolveMusicUrlByConfig 返回空串；音量归零同样视为关闭
+            if ($musicUrl === '' || $volume <= 0) {
+                return ['audioSwitch' => false, 'volume' => $volume];
+            }
+
+            return ['audioSwitch' => true, 'volume' => $volume, 'audioUrl' => $musicUrl];
+        } catch (\Throwable $e) {
+            Log::channel('shanjian')->write(sprintf(
+                '[视频仿写] 人设背景音乐配置读取失败已回落默认 task_id=%d persona_id=%d err=%s',
+                (int)$task->id,
+                (int)$task->persona_id,
+                $e->getMessage()
+            ));
+            return $default;
+        }
+    }
+
+    /**
+     * 口播语速：人设模式跟随 speech_rate；洗稿/无配置/异常返回 null（不下发该字段，保持中台默认）
+     */
+    private static function resolveSpeechRate(VideoImitationTask $task, int $userId): ?float
+    {
+        try {
+            $config = self::findPersonaSynthesisConfig($task, $userId);
+            if ($config === null) {
+                // 洗稿无人设：用用户自选语速；未设置(-1)则不下发该字段
+                $washRate = (float)($task->wash_speech_rate ?? VideoImitationTask::WASH_PARAM_UNSET);
+
+                return $washRate < 0
+                    ? null
+                    : AiPersonaSynthesisConfig::normalizeSpeechRate($washRate);
+            }
+
+            return AiPersonaSynthesisConfig::normalizeSpeechRate(
+                $config->speech_rate ?? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT
+            );
+        } catch (\Throwable $e) {
+            Log::channel('shanjian')->write(sprintf(
+                '[视频仿写] 人设语速配置读取失败已跳过 task_id=%d persona_id=%d err=%s',
+                (int)$task->id,
+                (int)$task->persona_id,
+                $e->getMessage()
+            ));
+            return null;
+        }
     }
 
     /**

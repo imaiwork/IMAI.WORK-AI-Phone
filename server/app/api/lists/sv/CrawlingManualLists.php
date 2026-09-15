@@ -14,6 +14,12 @@ use app\common\model\wechat\AiWechat;
  */
 class CrawlingManualLists extends BaseApiDataLists implements ListsSearchInterface
 {
+    private const SOURCE_TEXT = [
+        1 => '表格导入',
+        2 => '获客任务引用',
+        3 => '抖音获客任务引用',
+    ];
+
     public function setSearch(): array
     {
         return [
@@ -28,7 +34,7 @@ class CrawlingManualLists extends BaseApiDataLists implements ListsSearchInterfa
             ->limit($this->limitOffset, $this->limitLength)
             ->select()->each(function ($item) {
                 if ($item->status == 1) {
-                    $item->completed_add_count = SvCrawlingManualTaskRecord::where('task_id', $item->id)->where('status', 'in', [0, 1])->count();
+                    $item->completed_add_count = SvCrawlingManualTaskRecord::where('task_id', $item->id)->where('status', 1)->count();
                     if ($item->completed_add_count >= $item->exec_add_count) {
                         $item->status = 3;
                         $item->update_time = time();
@@ -55,6 +61,7 @@ class CrawlingManualLists extends BaseApiDataLists implements ListsSearchInterfa
                     }
                 }
                 $item->exec_day = ceil(($item->end_time - $item->start_time) / 86400);
+                $item->source_text = self::SOURCE_TEXT[(int)$item->source] ?? '';
                 $item->wechats = AiWechat::field('wechat_id,wechat_no,wechat_nickname,wechat_avatar,wechat_status')
                     ->where('user_id', $this->userId)
                     ->where('wechat_id', 'in', explode(',', $item->wechat_id))

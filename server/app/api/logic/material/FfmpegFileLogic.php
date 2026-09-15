@@ -13,11 +13,11 @@ class FfmpegFileLogic extends ApiLogic
     public static function addFfmpegFile(array $params)
     {
         try {
-            $user_id = $params['user_id'] ?? self::$uid;
             $uri = FileService::setFileUrl($params['uri']);
             $data    = [
                 'file_id'     => $params['file_id'] ?? 0,
-                'user_id'     => $user_id,
+                // 归属只认会话用户，不接受请求体里的 user_id（内部调用方传的也是 self::$uid）
+                'user_id'     => self::$uid,
                 'type'        => $params['type'] ?? 20,
                 'status'      => $params['status'] ?? 0,
                 'name'        => $params['name'] ?? '无',
@@ -49,8 +49,13 @@ class FfmpegFileLogic extends ApiLogic
                 return false;
             }
 
-            FfmpegFile::update($params);
-            self::$returnData = FfmpegFile::where('id', $params['id'])->findOrEmpty()->toArray();
+            // 只允许改白名单字段，且走模型实例保存：防止 params 带 user_id / 其它 id 改到别人的行，
+            // 同时保留 update_time 自动写入
+            $data = array_intersect_key($params, array_flip(['uri', 'name', 'type', 'status', 'width', 'height', 'remark']));
+            if ($data) {
+                $ffmpegFile->save($data);
+            }
+            self::$returnData = FfmpegFile::where('id', $ffmpegFile->id)->findOrEmpty()->toArray();
             return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());

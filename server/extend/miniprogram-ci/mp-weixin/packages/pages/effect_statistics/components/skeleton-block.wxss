@@ -1,0 +1,1 @@
+.wd-skeleton.data-v-250fcdc9{background:linear-gradient(90deg,#f2f4f8 25%,#e9edf4 37%,#f2f4f8 63%);background-size:400% 100%;animation:wd-skeleton-loading-250fcdc9 1.3s ease infinite}@keyframes wd-skeleton-loading-250fcdc9{0%{background-position:100% 50%}to{background-position:0 50%}}

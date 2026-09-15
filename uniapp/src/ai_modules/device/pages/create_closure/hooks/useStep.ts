@@ -1,3 +1,4 @@
+import { TouchTypeEnum } from './types'
 import type { ClosureFormData } from './types'
 
 export function useStep(
@@ -6,6 +7,8 @@ export function useStep(
     isPinLunWork: Ref<boolean>,
     getTouchTypeList: Ref<any[]>
 ) {
+    // 选了 AI 接管（私信/评论共用）时不需要固定话术，改为必须绑定智能体
+    const isAiTouch = () => !isCollect.value && formData.touch_type === TouchTypeEnum.AI
     const step = ref(1)
 
     const canStepProceed = (stepNumber: number): boolean => {
@@ -29,10 +32,9 @@ export function useStep(
                     }
                     return true
                 } else {
-                    return (
-                        formData.comment_filter_list.length > 0 &&
-                        formData.comment_content_list.length > 0
-                    )
+                    if (formData.comment_filter_list.length === 0) return false
+                    if (isAiTouch()) return Number(formData.agent_id) > 0
+                    return formData.comment_content_list.length > 0
                 }
             case 3:
                 return true
@@ -49,7 +51,8 @@ export function useStep(
             2: () => {
                 if (formData.customer_type == 0) {
                     if (formData.comment_filter_list.length == 0) return '评论词筛选至少添加一个'
-                    if (!isCollect.value && formData.comment_content_list.length == 0)
+                    if (isAiTouch() && Number(formData.agent_id) <= 0) return '请选择截流智能体'
+                    if (!isCollect.value && !isAiTouch() && formData.comment_content_list.length == 0)
                         return '触达方式和话术至少添加一个'
                     if (isPinLunWork.value && formData.fixed_comment_list.length == 0)
                         return '固定话术至少添加一个'

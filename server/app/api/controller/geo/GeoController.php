@@ -307,6 +307,21 @@ class GeoController extends BaseApiController
         return $this->success($msg, $res);
     }
 
+    /** 取消一键诊断:按当前进度收口。已完成 cell 保留(已按量计费),pending 不再执行(从未扣费),在跑 cell 自然结束 */
+    public function monitorCancel()
+    {
+        $pid = (int)$this->request->post('project_id');
+        if (!$this->ownProject($pid)) return $this->fail('无权访问该项目');
+        $res = GeoLogic::monitorCancel(
+            $this->userId,
+            $pid,
+            (int)$this->request->post('batch_task_id', 0)
+        );
+        if ($res === false) return $this->fail(GeoLogic::getError());
+        $msg = !empty($res['already_finished']) ? '诊断已结束,无需取消' : '已取消诊断';
+        return $this->success($msg, $res);
+    }
+
     /** 一键诊断进度(优先按 batch_task_id 读批次统计,否则退回 since 旧口径) */
     public function monitorProgress()
     {

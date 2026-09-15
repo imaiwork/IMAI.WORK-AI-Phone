@@ -288,7 +288,8 @@ class AutoTaskSceneScheduleSyncService
     }
 
     /**
-     * 解析排期有效窗口：剥离已关平台后按锁定规则重算结束时间。
+     * 解析排期有效窗口：剥离已关平台后按锁定规则处理结束时间。
+     * 内容发布（scene=5）保留节点原始窗，按剩余平台数均分；其它场景仍可能重算结束时间。
      * 任务间空档不属于本任务。
      *
      * @param array $schedule
@@ -363,7 +364,7 @@ class AutoTaskSceneScheduleSyncService
     }
 
     /**
-     * 按有效窗口均分各平台执行档。
+     * 按有效窗口均分各平台执行档，最后一档对齐窗口终点。
      *
      * @param string $date
      * @param string $startTime
@@ -373,30 +374,50 @@ class AutoTaskSceneScheduleSyncService
      */
     public static function splitPlatformSlots(string $date, string $startTime, string $endTime, array $platforms): array
     {
-        $platforms = array_values(self::decodePlatforms($platforms));
-        $count = count($platforms);
         $st = strtotime($date . ' ' . $startTime . ':00');
         $et = strtotime($date . ' ' . $endTime . ':00');
-        if ($count <= 0 || $st === false || $et === false || $et <= $st) {
+        if ($st === false || $et === false) {
+            return [];
+        }
+
+        return self::splitPlatformSlotsByTimestamp((int)$st, (int)$et, $platforms);
+    }
+
+    /**
+     * 按时间戳窗口均分各平台执行档，最后一档对齐 $et。
+     *
+     * @param int $st
+     * @param int $et
+     * @param array $platforms
+     * @return list<array{index:int,platform:array,start_time:int,end_time:int}>
+     */
+    public static function splitPlatformSlotsByTimestamp(int $st, int $et, array $platforms): array
+    {
+        $platforms = array_values(self::decodePlatforms($platforms));
+        $count = count($platforms);
+        if ($count <= 0 || $et <= $st) {
             return [];
         }
 
         $interval = ($et - $st) / $count;
         $slots = [];
         foreach ($platforms as $index => $platform) {
-            $start = (int)($st + $index * $interval);
+            $start = (int)round($st + $interval * $index);
+            $end = $index === $count - 1
+                ? $et
+                : (int)round($st + $interval * ($index + 1));
             $slots[] = [
                 'index' => $index,
                 'platform' => $platform,
                 'start_time' => $start,
-                'end_time' => (int)($start + $interval),
+                'end_time' => $end,
             ];
         }
         return $slots;
     }
 
     /**
-     * 视频发布始终按平台数锁定；多平台任务同样锁定（每平台 10 分钟）。
+     * 内容发布不锁定结束时间，沿用节点原始窗均分；其它场景多平台仍按每平台 10 分钟锁定。
      *
      * @param int $scene
      * @param int $platformCount
@@ -404,7 +425,7 @@ class AutoTaskSceneScheduleSyncService
      */
     public static function shouldLockEndTime(int $scene, int $platformCount): bool
     {
-        return $scene === self::SCENE_VIDEO_PUBLISH || $platformCount > 1;
+        return $scene !== self::SCENE_VIDEO_PUBLISH && $platformCount > 1;
     }
 
     /**
@@ -420,7 +441,8 @@ class AutoTaskSceneScheduleSyncService
     }
 
     /**
-     * 按锁定规则重算结束时间。当前或剥离前满足锁定条件时都重算，避免关平台后仍沿用旧时长。
+     * 按锁定规则重算结束时间。内容发布不重算。
+     * 其它场景当前或剥离前满足锁定条件时都重算，避免关平台后仍沿用旧时长。
      *
      * @param array $row
      * @param int $previousPlatformCount 剥离前平台数；-1 表示未知，仅按当前平台判断

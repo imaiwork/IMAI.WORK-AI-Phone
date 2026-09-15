@@ -138,12 +138,30 @@ VALUES
 -- 完成日期字段：小于当天即视为"今天未完成"，0 点后自然解锁，最终替代 reset_video_synthesis 的每日重置；
 -- retry_date：合成重试计数所属日期，非当天视为计数 0（按天惰性清零）。
 -- 过渡期代码按"旧布尔锁 AND 日期"交集挑选设备，reset_video_synthesis 暂保留当安全网，观察一周后再停用
-ALTER TABLE `la_sv_device`
-ADD COLUMN `synthesis_m_date` date NULL DEFAULT NULL COMMENT '社媒视频合成完成日期(小于当天视为未完成)',
-ADD COLUMN `synthesis_w_date` date NULL DEFAULT NULL COMMENT '朋友圈视频合成完成日期(小于当天视为未完成)',
-ADD COLUMN `retry_date` date NULL DEFAULT NULL COMMENT '合成重试计数所属日期(非当天视为计数0)';
+-- ADD COLUMN / ADD INDEX 先查 information_schema，已存在则 DO 0，避免重跑或结构比对抢先执行后再次失败
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_device`') AND COLUMN_NAME = 'synthesis_m_date');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_device` ADD COLUMN `synthesis_m_date` date NULL DEFAULT NULL COMMENT ''社媒视频合成完成日期(小于当天视为未完成)''', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
-ALTER TABLE `la_sv_device` ADD INDEX `idx_auto_synthesis_m_date` (`auto_type`, `synthesis_m_date`);
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_device`') AND COLUMN_NAME = 'synthesis_w_date');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_device` ADD COLUMN `synthesis_w_date` date NULL DEFAULT NULL COMMENT ''朋友圈视频合成完成日期(小于当天视为未完成)''', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_device`') AND COLUMN_NAME = 'retry_date');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_device` ADD COLUMN `retry_date` date NULL DEFAULT NULL COMMENT ''合成重试计数所属日期(非当天视为计数0)''', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_device`') AND INDEX_NAME = 'idx_auto_synthesis_m_date');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_device` ADD INDEX `idx_auto_synthesis_m_date` (`auto_type`, `synthesis_m_date`)', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
 -- 回填：当前已锁定(=1)的设备视为今天已完成，保证任意时间部署（含凌晨合成窗口内）都不会当天重复生成
 UPDATE `la_sv_device` SET `synthesis_m_date` = CURDATE() WHERE `synthesis_m` = 1;
@@ -232,41 +250,114 @@ WHERE p.`shanjian_type` = 2
 -- 手动爆款复刻：未选人设·洗稿模式（仅 la_video_imitation_task）
 -- 全部字段向后兼容，历史数据默认 rewrite_mode=1。
 -- ================================================================
-ALTER TABLE `la_video_imitation_task`
-    ADD COLUMN `rewrite_mode` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT '文案模式:1人设复刻2洗稿' AFTER `persona_id`,
-    ADD COLUMN `generation_type` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT '洗稿视频类型:0未选1数字人口播2素材口播3新闻体' AFTER `rewrite_mode`,
-    ADD COLUMN `wash_avatar_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '洗稿所选digital_human_anchor.id' AFTER `generation_type`,
-    ADD COLUMN `wash_voice_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT '洗稿所选human_voice.id' AFTER `wash_avatar_id`,
-    ADD COLUMN `wash_voice_provider` varchar(20) NOT NULL DEFAULT '' COMMENT '洗稿音色渠道:shanjian/minimax' AFTER `wash_voice_id`,
-    ADD COLUMN `wash_third_avatar_id` varchar(100) NOT NULL DEFAULT '' COMMENT '确认时保存的中台形象ID快照' AFTER `wash_voice_provider`,
-    ADD COLUMN `wash_third_voice_id` varchar(100) NOT NULL DEFAULT '' COMMENT '确认时保存的中台音色ID快照' AFTER `wash_third_avatar_id`,
-    ADD COLUMN `generation_config_confirmed` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT '洗稿生成配置是否确认:0否1是' AFTER `wash_third_voice_id`,
-    ADD COLUMN `rewritten_text_confirmed` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT '洗稿文案是否已确认:0否1是' AFTER `generation_config_confirmed`,
-    ADD KEY `idx_rewrite_confirm_status` (`rewrite_mode`, `generation_config_confirmed`, `status`);
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'rewrite_mode');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `rewrite_mode` tinyint(1) unsigned NOT NULL DEFAULT 1 COMMENT ''文案模式:1人设复刻2洗稿'' AFTER `persona_id`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'generation_type');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `generation_type` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT ''洗稿视频类型:0未选1数字人口播2素材口播3新闻体'' AFTER `rewrite_mode`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'wash_avatar_id');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `wash_avatar_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT ''洗稿所选digital_human_anchor.id'' AFTER `generation_type`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'wash_voice_id');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `wash_voice_id` int(11) unsigned NOT NULL DEFAULT 0 COMMENT ''洗稿所选human_voice.id'' AFTER `wash_avatar_id`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'wash_voice_provider');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `wash_voice_provider` varchar(20) NOT NULL DEFAULT '''' COMMENT ''洗稿音色渠道:shanjian/minimax'' AFTER `wash_voice_id`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'wash_third_avatar_id');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `wash_third_avatar_id` varchar(100) NOT NULL DEFAULT '''' COMMENT ''确认时保存的中台形象ID快照'' AFTER `wash_voice_provider`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'wash_third_voice_id');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `wash_third_voice_id` varchar(100) NOT NULL DEFAULT '''' COMMENT ''确认时保存的中台音色ID快照'' AFTER `wash_third_avatar_id`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'generation_config_confirmed');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `generation_config_confirmed` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT ''洗稿生成配置是否确认:0否1是'' AFTER `wash_third_voice_id`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND COLUMN_NAME = 'rewritten_text_confirmed');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD COLUMN `rewritten_text_confirmed` tinyint(1) unsigned NOT NULL DEFAULT 0 COMMENT ''洗稿文案是否已确认:0否1是'' AFTER `generation_config_confirmed`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_video_imitation_task`') AND INDEX_NAME = 'idx_rewrite_confirm_status');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_video_imitation_task` ADD INDEX `idx_rewrite_confirm_status` (`rewrite_mode`, `generation_config_confirmed`, `status`)', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
 -- ================================================================
 -- 2026-08-22 意向客户/数据看板接口提速
 -- /api/display/statistics、intentionStatistics、intentionCustomerLists 均读取 sv_private_message，
 -- 该表此前只有主键，按 user_id 查询全表扫描；补 user_id 索引。
 -- ================================================================
-ALTER TABLE `la_sv_private_message` ADD KEY `idx_user_id` (`user_id`);
+SET @c := (SELECT COUNT(1) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_private_message`') AND INDEX_NAME = 'idx_user_id');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_private_message` ADD INDEX `idx_user_id` (`user_id`)', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
--- 热点追踪 AI 找素材改存 SV 素材库：仅加来源，不加 remote_url / persona_id
-ALTER TABLE `la_sv_media_material`
-  ADD COLUMN `source` varchar(32) NOT NULL DEFAULT '' COMMENT '来源:hotspot热点追踪,video_imitation手动爆款复刻',
-  ADD COLUMN `remote_url` varchar(1024) NOT NULL DEFAULT '' COMMENT '来源平台原链,仅热点写入' AFTER `source`,
-  ADD KEY `idx_user_source` (`user_id`, `source`);
-  
+-- 热点追踪 AI 找素材改存 SV 素材库：加 source / remote_url
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_media_material`') AND COLUMN_NAME = 'source');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_media_material` ADD COLUMN `source` varchar(32) NOT NULL DEFAULT '''' COMMENT ''来源:hotspot热点追踪,video_imitation手动爆款复刻''', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_media_material`') AND COLUMN_NAME = 'remote_url');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_media_material` ADD COLUMN `remote_url` varchar(1024) NOT NULL DEFAULT '''' COMMENT ''来源平台原链,仅热点写入'' AFTER `source`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
+
+SET @c := (SELECT COUNT(1) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_media_material`') AND INDEX_NAME = 'idx_user_source');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_sv_media_material` ADD INDEX `idx_user_source` (`user_id`, `source`)', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
 -- 人设合成配置：AI生成文案类型 + 自定义方向
-ALTER TABLE `la_ai_persona_synthesis_config` 
-  ADD COLUMN `copywriting_generation_type` tinyint NOT NULL DEFAULT 1 COMMENT '文案生成类型:1干货科普2带货种草3观点评论4剧情段子5情感共鸣6揭秘避坑7自定义' AFTER `speech_rate`,
-  ADD COLUMN `copywriting_generation_custom` varchar(500) NOT NULL DEFAULT '' COMMENT '自定义文案生成方向,仅类型7使用' AFTER `copywriting_generation_type`;
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_ai_persona_synthesis_config`') AND COLUMN_NAME = 'copywriting_generation_type');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_ai_persona_synthesis_config` ADD COLUMN `copywriting_generation_type` tinyint NOT NULL DEFAULT 1 COMMENT ''文案生成类型:1干货科普2带货种草3观点评论4剧情段子5情感共鸣6揭秘避坑7自定义'' AFTER `speech_rate`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_ai_persona_synthesis_config`') AND COLUMN_NAME = 'copywriting_generation_custom');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_ai_persona_synthesis_config` ADD COLUMN `copywriting_generation_custom` varchar(500) NOT NULL DEFAULT '''' COMMENT ''自定义文案生成方向,仅类型7使用'' AFTER `copywriting_generation_type`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
-ALTER TABLE `la_auto_task_scene_config` 
-  ADD COLUMN `allow_platforms` json NULL COMMENT '平台开关 [{account_type,status}] status=1开0关' AFTER `allow_add`;
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_auto_task_scene_config`') AND COLUMN_NAME = 'allow_platforms');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_auto_task_scene_config` ADD COLUMN `allow_platforms` json NULL COMMENT ''平台开关 [{account_type,status}] status=1开0关'' AFTER `allow_add`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;
 
 -- 默认全开 status=1；只回填 NULL，不覆盖已保存配置
 UPDATE `la_auto_task_scene_config` SET `allow_platforms` = CAST('[{"account_type":3,"status":1},{"account_type":4,"status":1},{"account_type":5,"status":1}]' AS JSON), `update_time` = UNIX_TIMESTAMP() WHERE `scene` = 1 AND `allow_platforms` IS NULL;
@@ -357,5 +448,8 @@ UPDATE `la_system_menu` SET `is_show` = 0, `update_time` = UNIX_TIMESTAMP() WHER
 UPDATE `la_system_menu` SET `is_show` = 0, `update_time` = UNIX_TIMESTAMP() WHERE `perms` = 'setting.web.web_setting/client' AND `is_show` = 1;
 
 
-ALTER TABLE `la_shanjian_clip_template` 
-  ADD COLUMN `sort` int(11) NOT NULL DEFAULT '0' COMMENT '排序权重(越大越靠前)' AFTER `auto_type`;
+SET @c := (SELECT COUNT(1) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_shanjian_clip_template`') AND COLUMN_NAME = 'sort');
+SET @s := IF(@c = 0, 'ALTER TABLE `la_shanjian_clip_template` ADD COLUMN `sort` int(11) NOT NULL DEFAULT ''0'' COMMENT ''排序权重(越大越靠前)'' AFTER `auto_type`', 'DO 0');
+PREPARE p FROM @s;
+EXECUTE p;
+DEALLOCATE PREPARE p;

@@ -37,6 +37,7 @@
                 <el-table-column type="selection" width="55" fixed="left" reserve-selection />
                 <el-table-column label="ID" prop="id" min-width="80" />
                 <el-table-column label="任务ID" prop="task_id" width="160" show-overflow-tooltip />
+                <el-table-column label="回调ID" prop="result_id" width="160" show-overflow-tooltip />
                 <el-table-column label="视频名称" prop="name" min-width="160" show-overflow-tooltip />
                 <el-table-column label="形象视频" min-width="180">
                     <template #default="{ row }">
@@ -77,6 +78,7 @@
                         </div>
                     </template>
                 </el-table-column>
+                <el-table-column label="视频标题" prop="title" min-width="180" show-overflow-tooltip />
                 <el-table-column label="口播文案" prop="msg" min-width="180" show-overflow-tooltip />
                 <el-table-column label="生成状态" min-width="120">
                     <template #default="{ row }">
@@ -154,6 +156,7 @@ const getStatus = (status: number) => {
     const statusMap = {
         1: "生成中",
         2: "形象合成失败",
+        3: "生成成功",
         5: "合成失败",
         6: "生成成功",
     };

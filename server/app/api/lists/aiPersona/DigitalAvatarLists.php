@@ -44,7 +44,26 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
      */
     public function lists(): array
     {
-        $list = AiPersonaDigitalAvatar::availableQuery()
+        $fields = [
+            'ad.id',
+            'ad.user_id',
+            'ad.persona_id',
+            'ad.dh_id',
+            'ad.avatar_name',
+            'ad.cover_url',
+            'ad.video_url',
+            'ad.duration',
+            'ad.width',
+            'ad.height',
+            'ad.third_avatar_id',
+            'ad.third_voice_id',
+            'ad.is_original_voice',
+            'ad.voice_url',
+            'ad.voice_name',
+            'ad.create_time',
+        ];
+
+        $list = AiPersonaDigitalAvatar::listQuery()
                                      ->with([
                                                 // 关联人设主表
                                                 'persona'     => function ($query) {
@@ -55,24 +74,7 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
                                                     $query->field('id,name,image,result_url,width,height,status');
                                                 },
                                      ])
-                                     ->field([
-                                                 'ad.id',
-                                                 'ad.user_id',
-                                                 'ad.persona_id',
-                                                 'ad.dh_id',
-                                                 'ad.avatar_name',
-                                                 'ad.cover_url',
-                                                 'ad.video_url',
-                                                 'ad.duration',
-                                                 'ad.width',
-                                                 'ad.height',
-                                                 'ad.third_avatar_id',
-                                                 'ad.third_voice_id',
-                                                 'ad.is_original_voice',
-                                                 'ad.voice_url',
-                                                 'ad.voice_name',
-                                                 'ad.create_time'
-                                             ])
+                                     ->field($fields)
                                      ->where($this->where())
                                      ->where($this->searchWhere)
                                      ->order('ad.create_time desc')
@@ -106,7 +108,8 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
         }
         unset($item);
 
-        return $list;
+        // 冻结/失效的绑定照常列出来，但要标清楚，别让用户以为自己被删了形象
+        return AiPersonaDigitalAvatar::markAvailability($list, $this->userId);
     }
 
     /**
@@ -116,7 +119,7 @@ class DigitalAvatarLists extends BaseApiDataLists implements ListsSearchInterfac
      */
     public function count(): int
     {
-        return AiPersonaDigitalAvatar::availableQuery()
+        return AiPersonaDigitalAvatar::listQuery()
                                      ->where($this->where())
                                      ->where($this->searchWhere)
                                      ->count('ad.id');

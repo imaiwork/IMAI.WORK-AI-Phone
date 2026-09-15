@@ -3,6 +3,7 @@
 
 namespace app\common\command;
 
+use app\common\model\aiPersona\AiPersona;
 use app\common\model\sv\SvDevice;
 use app\common\service\aiPersona\AiPersonaOptionService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
@@ -39,12 +40,13 @@ class AutoDeviceFristCreateCron extends Command
             ];
 
             $devices = SvDevice::alias('d')
-                ->field('d.*, p.is_configured, p.status, p.persona_type, p.publish_mode, p.wechat_publish_mode')
+                ->field('d.*, p.is_configured, p.status, p.persona_type, p.publish_mode, p.wechat_publish_mode, p.run_mode')
                 ->join('ai_persona p', 'd.persona_id = p.id')
                 ->where('d.auto_type', 1)
                 //->where('p.status', 1)
                 ->where('d.is_first', 1)
                 ->where('d.persona_id', '>', 0)
+                // 无手机模式只砍发布，其余任务照建（口径与 AutoDeviceCreateCron 一致）
                 ->select();
             \think\facade\Log::channel('auto')->write("\n初次创建设备相关任务SQL：" . \think\facade\Db::getLastSql(), 'create');
             \think\facade\Log::channel('auto')->write("初次创建设备相关任务设备列表：" . json_encode(array_column($devices->toArray(), 'device_code')), 'create');
@@ -107,14 +109,20 @@ class AutoDeviceFristCreateCron extends Command
                 } else {
                     Log::channel('auto')->write($device->device_code . ' global_option.customer_service=0，跳过智能客服任务', 'create');
                 }
-                if ($device->publish_mode == 2) {
+                // 无手机模式只砍发布：成片在云端产出、由用户自己发，手机不建发布任务
+                $isCloudRun = (int)($device->run_mode ?? AiPersona::RUN_MODE_PHONE) === AiPersona::RUN_MODE_CLOUD;
+                if ($isCloudRun) {
+                    Log::channel('auto')->write($device->device_code . ' 无手机模式，跳过素材发布/朋友圈素材发布任务', 'create');
+                }
+
+                if (!$isCloudRun && $device->publish_mode == 2) {
                     $deviceSlotResult = SvDeviceTaskExistenceService::mergeSlotResult(
                         $deviceSlotResult,
                         $this->normalizeSlotResult(\app\api\logic\aiPersona\PublishLogic::materialPersonaPublishCron($device))
                     );
                 }
 
-                if ($device->wechat_publish_mode == 2) {
+                if (!$isCloudRun && $device->wechat_publish_mode == 2) {
                     $deviceSlotResult = SvDeviceTaskExistenceService::mergeSlotResult(
                         $deviceSlotResult,
                         $this->normalizeSlotResult(\app\api\logic\aiPersona\PublishLogic::materialCirclePersonaPublishCron($device))

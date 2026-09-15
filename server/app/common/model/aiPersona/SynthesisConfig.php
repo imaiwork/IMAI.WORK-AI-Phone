@@ -16,6 +16,10 @@ class SynthesisConfig extends BaseModel
     const VISUAL_MATERIAL_SOURCE_AI = 1;
     const VISUAL_MATERIAL_SOURCE_AI_MATERIAL = 2;
     const VISUAL_MATERIAL_SOURCE_MATERIAL = 3;
+
+    //闪剪素材使用方式: 1-切片 2-原片
+    const MATERIAL_USE_MODE_SLICE = 1;
+    const MATERIAL_USE_MODE_ORIGINAL = 2;
    //'文案来源: 1-仿写, 2-AI生成, 3-无需, 4-文案库'
     const COPYWRITING_SOURCE_IMITATE = 1;
     const COPYWRITING_SOURCE_AI = 2;
@@ -66,6 +70,22 @@ class SynthesisConfig extends BaseModel
 
     protected $json = ['generation_types', 'template_config'];
     protected $jsonAssoc = true;
+
+    /** 每日出片条数：0=未配置。仅无手机模式消费，手机模式仍按发布时段数出片 */
+    const DAILY_VIDEO_COUNT_UNSET = 0;
+    /** 无手机模式未配置条数时的兜底，取 1 而不是 0，避免云端人设一条都不出 */
+    const DAILY_VIDEO_COUNT_CLOUD_DEFAULT = 1;
+    const DAILY_VIDEO_COUNT_MAX = 20;
+
+    /** 归一每日出片条数：非法或越界回落到未配置(0)，由调用方决定兜底 */
+    public static function normalizeDailyVideoCount($value): int
+    {
+        $count = (int)$value;
+        if ($count < 0 || $count > self::DAILY_VIDEO_COUNT_MAX) {
+            return self::DAILY_VIDEO_COUNT_UNSET;
+        }
+        return $count;
+    }
 
     public static function normalizeNewsMixcutDuration($duration): int
     {

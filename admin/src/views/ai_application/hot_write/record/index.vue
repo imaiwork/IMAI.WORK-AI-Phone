@@ -10,6 +10,14 @@
                         clearable
                         @keyup.enter="resetPage" />
                 </el-form-item>
+                <el-form-item label="标题">
+                    <el-input
+                        class="w-[200px]"
+                        v-model="queryParams.title"
+                        placeholder="请输入标题"
+                        clearable
+                        @keyup.enter="resetPage" />
+                </el-form-item>
                 <el-form-item label="类型">
                     <el-select
                         class="!w-[120px]"
@@ -200,6 +208,7 @@ import {
 
 const queryParams = reactive({
     keyword: '',
+    title: '',
     media_type: '',
     platform_type: '',
     status: '',

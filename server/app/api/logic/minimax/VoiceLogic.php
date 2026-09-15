@@ -1290,12 +1290,7 @@ class VoiceLogic extends ApiLogic
             if (isset($response['code']) && $response['code'] == 10000) {
                 return true;
             }
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
 
             return true;
         } catch (\Throwable $e) {

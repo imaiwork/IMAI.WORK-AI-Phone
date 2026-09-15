@@ -1,39 +1,26 @@
+
+# Build and Release Folders
+bin-debug/
+bin-release/
+[Oo]bj/
+[Bb]in/
+
+# Other files and folders
+.settings/
+
+# Executables
+*.swf
+*.air
+*.ipa
+*.apk
+
+# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
+# should NOT be excluded as they contain compiler settings and other important
+# information for Eclipse / Flash Builder.
+
 /.idea
-/.vscode
-*.log
-/.env
-!/public/uploads/index.html
-!/runtime/index.html
-/config/install.lock
-/public/*.htaccess
-/public/.DS_Store
-.DS_Store
+
+.env
 install.lock
 composer.lock
-/runtime/*
-!/runtime/.gitkeep
-/public/uploads/*
-!/public/uploads/.gitkeep
-/vendor
-/public/pc
-/public/admin
-swoole.php
-.history
-/public/.well-known
-/public/.user.ini
-/app/api/controller/TestController.php
-/public/qrcode/user/*
-/.agents
-.env*
-Makefile
-/.trae
-/AGENTS.md
-/imai.code-workspace
-/tests/unit
-/config/api_tools.php
-/tests
-/test
-.worktrees/
-.cursor
-docs/apipost
-/docs
+runtime/

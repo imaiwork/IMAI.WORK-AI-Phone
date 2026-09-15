@@ -128,6 +128,17 @@ class User extends BaseModel
 
 
     /**
+     * @notes 获取器-资质证书图片(库里存相对路径,读出时补全访问地址)
+     * @param $value
+     * @return string
+     */
+    public function getCertificateImageAttr($value)
+    {
+        return trim((string)$value) ? FileService::getFileUrl($value) : '';
+    }
+
+
+    /**
      * @notes 获取器-性别描述
      * @param $value
      * @param $data

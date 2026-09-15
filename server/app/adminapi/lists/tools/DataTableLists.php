@@ -23,14 +23,25 @@ class DataTableLists extends BaseAdminDataLists
      */
     public function queryResult()
     {
-        $sql = 'SHOW TABLE STATUS WHERE 1=1 ';
-        if (!empty($this->params['name'])) {
-            $sql .= "AND name LIKE '%" . $this->params['name'] . "%'";
+        // 表清单只有几百行，筛选放到 PHP 侧做：SHOW TABLE STATUS 不能稳定走预处理绑定，
+        // 直接把入参拼进 LIKE 就是注入口子
+        $name = trim((string)($this->params['name'] ?? ''));
+        $comment = trim((string)($this->params['comment'] ?? ''));
+
+        $rows = Db::query('SHOW TABLE STATUS');
+        if ($name === '' && $comment === '') {
+            return $rows;
         }
-        if (!empty($this->params['comment'])) {
-            $sql .= "AND comment LIKE '%" . $this->params['comment'] . "%'";
-        }
-        return Db::query($sql);
+        return array_values(array_filter($rows, function ($row) use ($name, $comment) {
+            $row = array_change_key_case($row);
+            if ($name !== '' && stripos((string)($row['name'] ?? ''), $name) === false) {
+                return false;
+            }
+            if ($comment !== '' && mb_stripos((string)($row['comment'] ?? ''), $comment) === false) {
+                return false;
+            }
+            return true;
+        }));
     }
 
 

@@ -2,12 +2,27 @@
     <popup-bottom
         v-model="show"
         title="请选择形象"
-        custom-class="bg-[#F7F9FC]"
+        :custom-class="plain ? 'bg-white' : 'bg-[#F7F9FC]'"
+        :clearable="!plain"
         :is-disabled-touch="true"
         @close="close">
+        <template v-if="plain" #header>
+            <view class="selector-handle"></view>
+            <view class="selector-header">
+                <view class="flex-1 min-w-0">
+                    <text class="selector-title">添加数字人形象</text>
+                    <text class="selector-subtitle">
+                        {{ limit === 1 ? "选择一个形象" : "可多选加入当前人设" }} · 已选 {{ chooseLists.length }} 个
+                    </text>
+                </view>
+                <view class="selector-close" @click="close">
+                    <u-icon name="close" color="#5B6B80" size="24"></u-icon>
+                </view>
+            </view>
+        </template>
         <template #content>
-            <view class="h-full flex flex-col bg-[#F7F9FC]">
-                <view class="flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1">
+            <view class="h-full flex flex-col bg-[#F7F9FC]" :class="{ 'persona-anchor--plain': plain }">
+                <view class="flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1 && !plain">
                     <text class="text-[#666666] font-medium">请选择形象</text>
                     <view class="text-xs text-[#999999]">
                         已选
@@ -23,15 +38,15 @@
                         :fixed="false"
                         :safe-area-inset-bottom="true"
                         @query="queryList">
-                        <view class="py-[20rpx] px-[30rpx] grid grid-cols-3 gap-x-3 gap-y-5">
+                        <view class="anchor-grid py-[20rpx] px-[30rpx] grid grid-cols-3 gap-x-3 gap-y-5">
                             <view class="flex flex-col gap-2 group" @click="toClone">
                                 <view
-                                    class="relative w-full aspect-[3/4] rounded-[24rpx] bg-[#F0F4F8] border-2 border-dashed border-[#D2DCE6] flex flex-col items-center justify-center active:bg-[#E2E8F0] transition-colors">
+                                    class="anchor-clone relative w-full aspect-[3/4] rounded-[24rpx] bg-[#F0F4F8] border-2 border-dashed border-[#D2DCE6] flex flex-col items-center justify-center active:bg-[#E2E8F0] transition-colors">
                                     <view
-                                        class="w-[64rpx] h-[64rpx] rounded-full bg-white shadow-[0_4rpx_12rpx_rgba(0,0,0,0.05)] flex items-center justify-center mb-2">
+                                        class="anchor-clone-icon w-[64rpx] h-[64rpx] rounded-full bg-white shadow-[0_4rpx_12rpx_rgba(0,0,0,0.05)] flex items-center justify-center mb-2">
                                         <u-icon name="plus" color="#0065fb" size="32"></u-icon>
                                     </view>
-                                    <text class="text-xs text-[#666666] font-medium">去克隆</text>
+                                    <text class="anchor-clone-label text-xs text-[#666666] font-medium">去克隆</text>
                                 </view>
                             </view>
 
@@ -41,7 +56,7 @@
                                 class="flex flex-col gap-2"
                                 @click.stop="handleSelect(item)">
                                 <view
-                                    class="relative w-full aspect-[3/4] rounded-[24rpx] overflow-hidden bg-[#F4F5F7] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.03)] border border-[#000000]/5">
+                                    class="anchor-preview relative w-full aspect-[3/4] rounded-[24rpx] overflow-hidden bg-[#F4F5F7] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.03)] border border-[#000000]/5">
                                     <image :src="item.pic" class="w-full aspect-[3/4]" mode="aspectFill"></image>
 
                                     <view
@@ -85,7 +100,7 @@
                                 </view>
 
                                 <text
-                                    class="font-bold text-center truncate px-1"
+                                    class="anchor-name font-bold text-center truncate px-1"
                                     :class="isDisabled(item) ? 'text-[#BBBBBB]' : 'text-[#333333]'">
                                     {{ item.name || "形象名称" }}
                                 </text>
@@ -99,7 +114,7 @@
                 </view>
 
                 <view
-                    class="bg-[#ffffff]/90 px-[30rpx] pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] flex items-center justify-between gap-4 z-50">
+                    class="selector-footer bg-[#ffffff]/90 px-[30rpx] pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] flex items-center justify-between gap-4 z-50">
                     <view
                         class="flex items-center gap-2 active:opacity-70 transition-opacity py-2"
                         @click="toggleSelect"
@@ -122,15 +137,24 @@
                     <view class="flex-1">
                         <u-button
                             type="primary"
-                            shape="circle"
+                            :shape="plain ? 'square' : 'circle'"
                             ripple
-                            :custom-style="{
-                                fontSize: '28rpx',
-                                fontWeight: 'bold',
-                                height: '88rpx',
-                            }"
+                            :custom-style="
+                                plain
+                                    ? {
+                                          fontSize: '28rpx',
+                                          fontWeight: '600',
+                                          height: '94rpx',
+                                          borderRadius: '24rpx',
+                                      }
+                                    : {
+                                          fontSize: '28rpx',
+                                          fontWeight: 'bold',
+                                          height: '88rpx',
+                                      }
+                            "
                             @click="confirm">
-                            确定选择
+                            {{ plain ? "确认加入" : "确定选择" }}
                             {{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
                         </u-button>
                     </view>
@@ -147,10 +171,12 @@ const props = withDefaults(
     defineProps<{
         modelValue: boolean;
         limit?: number;
+        plain?: boolean;
     }>(),
     {
         modelValue: false,
         limit: 99,
+        plain: false,
     },
 );
 
@@ -275,3 +301,64 @@ defineExpose({
     },
 });
 </script>
+
+<style lang="scss" scoped>
+.selector-handle {
+    @apply w-[64rpx] h-[8rpx] rounded-[8rpx] bg-[#DCE3EC] mx-auto mt-[20rpx] mb-[4rpx];
+}
+
+.selector-header {
+    @apply flex items-center gap-[24rpx] px-[36rpx] pt-[18rpx] pb-[26rpx]
+        border-[0] border-b-[2rpx] border-solid border-[#EEF1F5];
+}
+
+.selector-title {
+    @apply block text-[34rpx] font-semibold text-[#202937];
+}
+
+.selector-subtitle {
+    @apply block mt-[8rpx] text-[24rpx] leading-[36rpx] text-[#647184];
+}
+
+.selector-close {
+    @apply relative w-[56rpx] h-[56rpx] rounded-full bg-[#F1F4F8] flex items-center justify-center shrink-0 active:opacity-70;
+
+    &::after {
+        content: "";
+        @apply absolute inset-[-16rpx];
+    }
+}
+
+.persona-anchor--plain {
+    @apply bg-white;
+
+    .anchor-grid {
+        @apply px-[36rpx] py-[36rpx] gap-x-[24rpx] gap-y-[28rpx];
+    }
+
+    .anchor-clone {
+        @apply rounded-[22rpx] border-[2rpx] border-[#C5D8F0] bg-[#F3F7FC];
+    }
+
+    .anchor-clone-icon {
+        @apply rounded-[20rpx] bg-[#E6EFFF] shadow-none;
+    }
+
+    .anchor-clone-label {
+        @apply text-[#456181];
+    }
+
+    .anchor-preview {
+        @apply rounded-[22rpx] border-[2rpx] border-solid border-[#DDE5EF] shadow-none;
+    }
+
+    .anchor-name {
+        @apply text-[26rpx] leading-[38rpx] font-medium;
+    }
+
+    .selector-footer {
+        @apply bg-white px-[36rpx] pt-[24rpx] pb-[calc(40rpx+env(safe-area-inset-bottom))] gap-[24rpx]
+            border-[0] border-t-[2rpx] border-solid border-[#E7ECF2];
+    }
+}
+</style>

@@ -8,6 +8,7 @@ use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
 use app\common\service\ffmpeg\MaterialService as VideoSliceMaterialService;
 use app\common\service\MusicDurationService;
+use app\common\service\OriginalMaterialSpec;
 use app\common\model\sv\SvDevice;
 use think\facade\Cache;
 use think\facade\Db;
@@ -24,8 +25,20 @@ class MaterialLogic extends ApiLogic
             }
             $params['user_id'] = self::$uid;
             $params['use_status'] = $params['use_status'] ?? 1;
-            $params['publish_mode'] = $params['publish_mode'] ?? 1;
+            $params['publish_mode'] = $params['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO;
             $params['material_type'] = (int)($params['material_type'] ?? 1);
+            if (OriginalMaterialSpec::wantsOriginal($params)) {
+                $guard = self::evaluateOriginalIngestGuard($params);
+                if ($guard !== true) {
+                    self::setError($guard);
+                    return false;
+                }
+                $params['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                $params['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
+            } else {
+                unset($params['keep_original']);
+            }
+            unset($params['material_kind'], $params['fps'], $params['codec'], $params['format_name']);
             if ($params['material_type'] === Material::MATERIAL_TYPE_MUSIC) {
                 $params['thumbnail_url'] = $params['thumbnail_url'] ?? '';
                 // 前端不取音频时长，服务端 ffprobe 补全后校验闪剪 300s 上限；
@@ -97,10 +110,23 @@ class MaterialLogic extends ApiLogic
                     'is_wechat' => $item['is_wechat'] ?? 0,
                     'height' => $item['height'] ?? 0,
                     'use_status' => $item['use_status'] ?? 1,
-                    'publish_mode' => $item['publish_mode'] ?? 1,
+                    'publish_mode' => (int)($item['publish_mode'] ?? $params['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO),
                     'create_time' => time(),
                     'update_time' => time(),
                 ];
+                if (OriginalMaterialSpec::wantsOriginal($item) || OriginalMaterialSpec::wantsOriginal($params)) {
+                    $guard = self::evaluateOriginalIngestGuard(array_merge($item, [
+                        'material_type' => $materialType,
+                        'file_url' => $file_url,
+                        'publish_mode' => $itemData['publish_mode'],
+                    ]), $params);
+                    if ($guard !== true) {
+                        self::setError($guard);
+                        return false;
+                    }
+                    $itemData['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                    $itemData['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
+                }
 
                 if ($materialType === Material::MATERIAL_TYPE_MUSIC) {
                     // 前端不取音频时长，服务端 ffprobe 补全后校验闪剪 300s 上限；
@@ -318,8 +344,14 @@ class MaterialLogic extends ApiLogic
                 ];
             }
 
+            $materialData = $material->toArray();
+            $materialData['source_type_text'] = Material::getSourceTypeText(
+                (string)($materialData['source_type'] ?? ''),
+                (int)($materialData['keep_original'] ?? 0)
+            );
+
             self::$returnData = [
-                'material' => $material->toArray(),
+                'material' => $materialData,
                 'devicelist' => $devicelist,
                 'devicenum' => count($devicelist),
 
@@ -358,6 +390,56 @@ class MaterialLogic extends ApiLogic
             self::setError($th->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 成品库直发不走闪剪合成，跳过原图入库硬规格（59秒/编码/帧率/分辨率）。
+     * 以素材条目 publish_mode 为准，缺省再看批量参数；不看人设工作方式。
+     */
+    public static function shouldSkipOriginalIngestGuard(array $item, array $batchParams = []): bool
+    {
+        $mode = (int)($item['publish_mode'] ?? $batchParams['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO);
+        return $mode === Material::PUBLISH_MODE_DIRECT_SEND;
+    }
+
+    /**
+     * 原图入库门禁。非原图或成品直发返回 true；剪辑原片库走闪剪硬规格。
+     *
+     * @return true|string
+     */
+    public static function evaluateOriginalIngestGuard(array $item, array $batchParams = [])
+    {
+        if (!OriginalMaterialSpec::wantsOriginal($item) && !OriginalMaterialSpec::wantsOriginal($batchParams)) {
+            return true;
+        }
+        if (self::shouldSkipOriginalIngestGuard($item, $batchParams)) {
+            return true;
+        }
+        return self::assertOriginalMaterialParams($item);
+    }
+
+    /**
+     * @return true|string
+     */
+    private static function assertOriginalMaterialParams(array $params)
+    {
+        $type = (int)($params['material_type'] ?? 0);
+        $payload = [
+            'url'         => (string)($params['file_url'] ?? $params['url'] ?? ''),
+            'name'        => (string)($params['material_name'] ?? $params['name'] ?? ''),
+            'duration'    => (float)($params['duration'] ?? 0),
+            'width'       => (int)($params['width'] ?? 0),
+            'height'      => (int)($params['height'] ?? 0),
+            'fps'         => (float)($params['fps'] ?? 0),
+            'codec'       => (string)($params['codec'] ?? ''),
+            'format_name' => (string)($params['format_name'] ?? ''),
+        ];
+        return match ($type) {
+            Material::MATERIAL_TYPE_VIDEO => OriginalMaterialSpec::assertVideoForIngest($payload),
+            Material::MATERIAL_TYPE_IMAGE => OriginalMaterialSpec::assertImage($payload),
+            Material::MATERIAL_TYPE_MUSIC => OriginalMaterialSpec::assertMusic($payload),
+            default => '原图模式不支持该素材类型',
+        };
     }
 
     private static function normalizeIds(array $ids): array

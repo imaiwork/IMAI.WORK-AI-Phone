@@ -122,13 +122,13 @@
 </template>
 
 <script setup lang="ts">
-import type { CozeField } from "@/utils/coze";
+import type { FollowupField } from "@/api/drawing";
 import feedback from "@/utils/feedback";
 
 interface Props {
     description?: string;
     pptType?: string;
-    fields: CozeField[];
+    fields: FollowupField[];
     /** 提交按钮文字(PPT 模式默认"提交并生成 PPT",数字人 AI 追问模式传"提交生成文案") */
     submitLabel?: string;
 }
@@ -161,10 +161,10 @@ const OTHER_LABELS = ["其他", "其它", "other", "Other", "OTHER"];
 function isOtherOption(opt: any) {
     return OTHER_LABELS.includes(String(opt));
 }
-function isOtherSelected(_field: CozeField, value: any) {
+function isOtherSelected(_field: FollowupField, value: any) {
     return value !== undefined && value !== null && isOtherOption(value);
 }
-function isOtherInArray(_field: CozeField, value: any) {
+function isOtherInArray(_field: FollowupField, value: any) {
     return Array.isArray(value) && value.some((v) => isOtherOption(v));
 }
 

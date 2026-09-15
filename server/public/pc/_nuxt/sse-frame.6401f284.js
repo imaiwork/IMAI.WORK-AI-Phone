@@ -1,0 +1,1 @@
+const a="data:";function i(s,t,r){for(const e of o(s))try{t(JSON.parse(e))}catch(n){c(e,n,r)}}function o(s){return s.split(/\r?\n/).map(t=>(t.startsWith(a)?t.slice(a.length):t).trim()).filter(t=>t.startsWith("{"))}function c(s,t,r){if(r)return r(s,t);console.warn("[sse] 帧处理失败:",s,t)}export{i as h};

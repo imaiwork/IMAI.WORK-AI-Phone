@@ -38,9 +38,12 @@ class SynthesisConfigLogic extends BaseLogic
             self::sendSynthesisNotice($userId, $hasAvatar, $hasVoice);
 
             $saveData = self::getSaveData($params, $config);
-            if (empty($saveData)) {
+            // 运行模式存人设表，不进配置表
+            $runMode = array_key_exists('run_mode', $params) ? AiPersona::requireValidRunMode($params['run_mode']) : null;
+            if (empty($saveData) && $runMode === null) {
                 throw new Exception('保存参数不能为空');
             }
+            $finalRunMode = $runMode ?? AiPersona::resolveRunMode($personaId);
             $saveData['update_time'] = time();
 
             $shouldResetVideoLibraryUse = CopywritingLibraryLogic::hasVideoLibraryRuleChanged(
@@ -53,6 +56,15 @@ class SynthesisConfigLogic extends BaseLogic
             if (array_key_exists('work_mode', $saveData)) {
                 ApiSynthesisConfigLogic::syncPersonaPublishMode($personaId, (int)$saveData['work_mode']);
             }
+            if ($runMode !== null) {
+                ApiSynthesisConfigLogic::syncPersonaRunMode($personaId, $runMode);
+            }
+            if (array_key_exists('material_use_mode', $saveData)) {
+                \app\api\logic\shanjian\ShanjianVideoSettingLogic::syncMaterialUseMode(
+                    $personaId,
+                    (int)$saveData['material_use_mode']
+                );
+            }
             if ($shouldResetVideoLibraryUse) {
                 CopywritingLibraryLogic::resetVideoDriverUseCounts($personaId);
             }
@@ -63,6 +75,7 @@ class SynthesisConfigLogic extends BaseLogic
             $data['has_avatar'] = $hasAvatar;
             $data['has_voice'] = $hasVoice;
             $data['publish_mode'] = (int)AiPersona::where('id', $personaId)->value('publish_mode');
+            $data['run_mode'] = $finalRunMode;
 
             Db::commit();
             self::$returnData = self::appendTemplateConfig($data);
@@ -123,6 +136,7 @@ class SynthesisConfigLogic extends BaseLogic
             $data['has_avatar'] = $hasAvatar;
             $data['has_voice'] = $hasVoice;
             $data['publish_mode'] = (int)$persona->publish_mode;
+            $data['run_mode'] = AiPersona::normalizeRunMode($persona->run_mode);
             $data = self::appendTemplateConfig($data);
 
             Db::commit();
@@ -141,6 +155,8 @@ class SynthesisConfigLogic extends BaseLogic
             'generation_types',
             'template_config',
             'visual_material_source',
+            'material_use_mode',
+            'daily_video_count',
             'copywriting_source',
             'library_use_mode',
             'library_reuse_mode',
@@ -170,6 +186,14 @@ class SynthesisConfigLogic extends BaseLogic
 
         if (array_key_exists('visual_material_source', $data)) {
             $data['visual_material_source'] = self::validateEnum((int)$data['visual_material_source'], [1, 2, 3], '画面素材来源值只能是1、2或3');
+        }
+
+        if (array_key_exists('material_use_mode', $data)) {
+            $data['material_use_mode'] = self::validateEnum((int)$data['material_use_mode'], [1, 2], '素材使用方式不正确，1=自动适配 2=原图');
+        }
+
+        if (array_key_exists('daily_video_count', $data)) {
+            $data['daily_video_count'] = AiPersonaSynthesisConfig::normalizeDailyVideoCount($data['daily_video_count']);
         }
 
         if (array_key_exists('copywriting_source', $data)) {

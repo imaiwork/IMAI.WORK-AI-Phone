@@ -7,6 +7,7 @@
                 show-close
                 :is-bar="isBar"
                 :border-radius="0"
+                poster-fit="contain"
                 :poster="poster"
                 :video-url="videoUrl"
                 @close="emit('update:show', false)"

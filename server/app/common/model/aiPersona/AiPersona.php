@@ -30,6 +30,19 @@ class AiPersona extends BaseModel
     public const TRACKING_MODE_AUTO = 1;
     public const TRACKING_MODE_ACCOUNT = 2;
 
+    /** 素材模式:1自动适配 2原图 */
+    public const MATERIAL_USE_MODE_SLICE = 1;
+    public const MATERIAL_USE_MODE_ORIGINAL = 2;
+
+    /** 运行模式:1手机模式(绑定手机制作发布) 2无手机模式(云端制作,小程序审核发布) */
+    public const RUN_MODE_PHONE = 1;
+    public const RUN_MODE_CLOUD = 2;
+
+    /** 启用状态:1启用中 0冻结(会员到期由 MemberService::ENTITIES['persona'] 软降级写入) */
+    public const STATUS_ENABLED = 1;
+    public const STATUS_FROZEN = 0;
+    public const FROZEN_USAGE_MESSAGE = '该人设已冻结，恢复会员权益后可继续使用';
+
     /** 追踪视频时长：0不限 1一分钟内 2一到五分钟 35分钟以上；默认1分钟以下 */
     public const TRACKING_DURATION_UNLIMITED = 0;
     public const TRACKING_DURATION_WITHIN_1MIN = 1;
@@ -645,5 +658,76 @@ class AiPersona extends BaseModel
         }
 
         return 'ID:' . $id;
+    }
+
+    /** 运行模式取值归一：只有 2 算无手机模式，其余一律手机模式 */
+    public static function normalizeRunMode($value): int
+    {
+        return (int)$value === self::RUN_MODE_CLOUD ? self::RUN_MODE_CLOUD : self::RUN_MODE_PHONE;
+    }
+
+    /**
+     * 入参校验：非法值直接拒，不静默归一
+     * @throws \Exception
+     */
+    public static function requireValidRunMode($value): int
+    {
+        $invalid = is_bool($value) || is_array($value) || is_object($value)
+            || (is_string($value) && !is_numeric(trim($value)));
+        $mode = $invalid ? 0 : (int)$value;
+        if ($mode !== self::RUN_MODE_PHONE && $mode !== self::RUN_MODE_CLOUD) {
+            throw new \Exception('运行模式不正确，1=手机模式 2=无手机模式');
+        }
+        return $mode;
+    }
+
+    /** 读人设表运行模式；无人设归手机模式 */
+    public static function resolveRunMode(int $personaId): int
+    {
+        if ($personaId <= 0) {
+            return self::RUN_MODE_PHONE;
+        }
+        return self::normalizeRunMode(self::where('id', $personaId)->value('run_mode'));
+    }
+
+    public static function isCloudRun(int $personaId): bool
+    {
+        return self::resolveRunMode($personaId) === self::RUN_MODE_CLOUD;
+    }
+
+    /**
+     * 爆款仿写地点约束。Coze 工作流只稳定读取 persona 入参，地点要求必须挂在这里，
+     * 不能只写进 keywords，否则会沿用原文城市（如河北廊坊）而丢掉人设经营地。
+     */
+    public static function buildViralRewriteLocationRule(mixed $persona): string
+    {
+        $storePosition = trim((string)(is_array($persona) ? ($persona['store_position'] ?? '') : ($persona->store_position ?? '')));
+        $mainBusiness = trim((string)(is_array($persona) ? ($persona['main_business'] ?? '') : ($persona->main_business ?? '')));
+
+        $lines = [
+            '仿写地点要求（必须遵守）：',
+            '1. 只借鉴原文的叙事结构和卖点，不要沿用原文里的城市、区县、商圈、仓库地址。',
+        ];
+        if ($storePosition !== '') {
+            $lines[] = '2. 文案和标题里的地点必须使用人设经营地点：' . $storePosition . '。';
+        } else {
+            $lines[] = '2. 文案和标题里的地点必须使用人设主营业务里已经写明的经营城市；没有写明则不要点名具体城市。';
+        }
+        if ($mainBusiness !== '') {
+            $lines[] = '3. 人设主营业务是：' . $mainBusiness . '。其中已写明的经营城市优先于原文城市。';
+            $lines[] = '4. 如果原文出现其它城市，必须改写成上述经营地点，不得保留原文城市。';
+        } else {
+            $lines[] = '3. 如果原文出现其它城市，必须改写成上述经营地点，不得保留原文城市。';
+        }
+        $lines[] = '禁止编造人设里没有的城市。';
+
+        return implode("\n", $lines);
+    }
+
+    public static function withViralRewriteLocationRule(string $personaContent, mixed $persona): string
+    {
+        $rule = self::buildViralRewriteLocationRule($persona);
+        $personaContent = trim($personaContent);
+        return $personaContent === '' ? $rule : ($personaContent . "\n\n" . $rule);
     }
 }

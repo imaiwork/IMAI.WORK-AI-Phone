@@ -5,6 +5,7 @@ import config from "@/config";
 import { chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
 import { useCopy } from "@/hooks/useCopy";
+import { ClueSourceEnum } from "@/ai_modules/device/enums";
 import type { AddFriendFormData } from "./types";
 
 export function useTaskList(formData: AddFriendFormData) {
@@ -27,7 +28,12 @@ export function useTaskList(formData: AddFriendFormData) {
 
     const handleAddTask = () => {
         uni.showActionSheet({
-            itemList: ["复制模版链接", "从聊天记录中选择文件（需要符合模板）", "从获客任务中选择线索"],
+            itemList: [
+                "复制模版链接",
+                "从聊天记录中选择文件（需要符合模板）",
+                "从获客任务中选择线索",
+                "从抖音获客任务中选择线索",
+            ],
             success: async (res) => {
                 if (res.tapIndex === 0) {
                     copy(config.baseUrl + "static/file/template/wechatidcsv.csv");
@@ -55,7 +61,7 @@ export function useTaskList(formData: AddFriendFormData) {
                             const fileRes: any = await uploadFile("file", { filePath: item.path }, (progress) =>
                                 progressCallback(progress, item),
                             );
-                            if (formData.source === 2) formData.source = 1;
+                            if (formData.source !== ClueSourceEnum.FILE) formData.source = ClueSourceEnum.FILE;
                             taskList.value.length = 0;
                             taskList.value.push({
                                 url: fileRes.uri,
@@ -74,7 +80,11 @@ export function useTaskList(formData: AddFriendFormData) {
                     }
                 } else if (res.tapIndex === 2) {
                     uni.navigateTo({
-                        url: "/ai_modules/device/pages/wechat_clue/wechat_clue",
+                        url: `/ai_modules/device/pages/wechat_clue/wechat_clue?source=${ClueSourceEnum.AUTO_CLUE}`,
+                    });
+                } else if (res.tapIndex === 3) {
+                    uni.navigateTo({
+                        url: `/ai_modules/device/pages/wechat_clue/wechat_clue?source=${ClueSourceEnum.DY_SEARCH}`,
                     });
                 }
             },

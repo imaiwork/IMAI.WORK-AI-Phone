@@ -498,6 +498,11 @@
                             </navigator>
                         </view>
 
+                        <view
+                            class="bg-white rounded-[28rpx] px-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <advanced-setting v-model="formData.extra" />
+                        </view>
+
                         <view class="h-[20rpx]" />
                     </view>
                 </scroll-view>
@@ -612,6 +617,11 @@ import ChooseAgent from "@/ai_modules/digital_human/components/choose-agent/choo
 import RecorderControl from "@/ai_modules/digital_human/components/recorder-control/recorder-control.vue";
 import CopywriterEmpty from "@/ai_modules/digital_human/components/copywriter-empty/copywriter-empty.vue";
 import VideoCoverUpload from "@/ai_modules/digital_human/components/video-cover-upload/video-cover-upload.vue";
+import AdvancedSetting from "@/ai_modules/digital_human/components/advanced-setting/advanced-setting.vue";
+import {
+    createPackSwitchSetting,
+    type PackSwitchSetting,
+} from "@/ai_modules/digital_human/config/advanced-setting";
 // ─── 本页专属 Hooks ──────────────────────────────────────────────
 import { useSteps } from "./hooks/useSteps";
 import { useMaterialGroup } from "./hooks/useMaterialGroup";
@@ -628,7 +638,7 @@ const formData = reactive<{
     shanjian_type: MontageTypeEnum;
     voice: string;
     music: any[];
-    extra: {
+    extra: PackSwitchSetting & {
         ai_music: boolean;
         soundSwitch: boolean;
         volume: number;
@@ -647,6 +657,7 @@ const formData = reactive<{
     voice: "",
     music: [],
     extra: {
+        ...createPackSwitchSetting(),
         ai_music: true,
         soundSwitch: false,
         volume: 0.5,

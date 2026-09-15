@@ -33,6 +33,20 @@ export const getCommentTimeIndex = (value: unknown): number[] => {
     return [index >= 0 ? index : 0]
 }
 
+// 任务表 touch_type：1=固定话术 2=AI回复（后端校验 in:1,2；3=AI根据固话优化本期不支持）
+// ⚠️ 与人设 shutoff_msg_type 的 1=AI / 2=固定话术 正好相反，禁止互相拷贝
+export const TouchTypeEnum = {
+    FIXED: 1,
+    AI: 2
+} as const
+export type TouchType = (typeof TouchTypeEnum)[keyof typeof TouchTypeEnum]
+
+export const TOUCH_MODE_TABS = [
+    { value: TouchTypeEnum.FIXED, label: '固定话术' },
+    { value: TouchTypeEnum.AI, label: 'AI 接管' }
+] as const
+
+// 下面这个是勾选的互动动作（提交字段是 marker_method），与 touch_type 无关
 export const TOUCH_TYPE_LIST_DEFAULT = [
     { name: 1, label: '点赞评论', checked: false },
     { name: 2, label: '关注', checked: false },
@@ -81,6 +95,9 @@ export interface ClosureFormData {
     task_exec_type: number
     minutes: number
     task_ids: string[]
+    touch_type: TouchType
+    agent_id: string
+    agent_name: string
 }
 
 export function createDefaultFormData(): ClosureFormData {
@@ -116,6 +133,9 @@ export function createDefaultFormData(): ClosureFormData {
         comment_type: 1,
         task_exec_type: 1,
         minutes: 30,
-        task_ids: []
+        task_ids: [],
+        touch_type: TouchTypeEnum.FIXED,
+        agent_id: '',
+        agent_name: ''
     }
 }

@@ -44,6 +44,11 @@ export function accountLog(data: any) {
     return request.get({ url: '/account_log/lists', data })
 }
 
+// 小程序算力消耗分类账单：按日 + 大类汇总，传 cat 时返回该大类逐笔明细
+export function accountLogMnpLists(data: any) {
+    return request.get({ url: '/account_log/mnpLists', data })
+}
+
 export function feedbackPost(data: any) {
     return request.post({ url: '/feedback/add', data })
 }

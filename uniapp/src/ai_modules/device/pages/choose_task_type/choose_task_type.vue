@@ -191,6 +191,16 @@ const menuMap: Record<number, any[]> = {
             navUrl: `/ai_modules/device/pages/create_closure/create_closure?type=${CreateTypeEnum.COMMENT_MARKETING}`,
         },
         {
+            title: "抖音账号搜寻获客",
+            icon: "search",
+            desc: "搜词找号·抓联系方式",
+            color: "#7C4DFF",
+            lightColor: "#F2EEFF",
+            platforms: ["抖音"],
+            key: CreateTypeEnum.ACCOUNT_SEARCH,
+            navUrl: "/ai_modules/device/pages/create_account_search/create_account_search",
+        },
+        {
             title: "留痕获客",
             icon: "account-fill",
             desc: "点赞/关注等互动",
@@ -311,8 +321,12 @@ const videoUrls: Record<string, string> = {
     [CreateTypeEnum.WECHAT_MSG]: `${config.baseUrl}static/videos/task_wechat_msg.mp4`,
 };
 
-// 点击卡片 → 跳转创建任务
+// 点击卡片 → 跳转创建任务；未开放的类型只提示，不跳空路由
 const handleNav = (item: any) => {
+    if (!item.navUrl) {
+        uni.$u.toast("功能即将上线，敬请期待");
+        return;
+    }
     uni.navigateTo({ url: item.navUrl });
 };
 

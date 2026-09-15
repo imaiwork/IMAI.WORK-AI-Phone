@@ -1,51 +1,81 @@
 <template>
     <popup-bottom
         v-model="show"
-        :title="isPublish ? '批量导入发布文案' : '批量导入文案'"
         :height="isPublish ? '44%' : '62%'"
-        border-radius="44"
+        border-radius="48"
         custom-class="bg-white"
         :z-index="5002"
-        :mask-close-able="true">
+        :clearable="false"
+        :mask-close-able="true"
+        @input="emit('update:modelValue', $event)">
+        <template #header>
+            <view class="copy-import-handle"></view>
+            <view class="copy-import-header">
+                <view class="flex-1 min-w-0">
+                    <text class="copy-import-title">{{ isPublish ? "批量导入发布文案" : "批量导入文案" }}</text>
+                    <text class="copy-import-sub">支持 XLSX / XLS / CSV</text>
+                </view>
+                <view class="copy-import-close" @click="emit('update:modelValue', false)">
+                    <u-icon name="close" color="#5B6B80" size="24"></u-icon>
+                </view>
+            </view>
+        </template>
         <template #content>
             <view class="copy-import">
-                <text class="copy-import-sub">
-                    {{
-                        isPublish
-                            ? "按模板整理「标题 + 内容 + 话题」，上传 Excel / CSV 一键批量导入"
-                            : "选择要导入的文案类型，点击后上传 Excel / CSV 文件"
-                    }}
-                </text>
-
-                <template v-if="isPublish">
-                    <view class="copy-import-upload" @click="handleSelect(CopyDriverTypeEnum.PUBLISH)">
-                        <view class="copy-import-upload-ic">
-                            <u-icon name="download" color="#FFFFFF" size="40"></u-icon>
+                <view class="grow min-h-0">
+                    <scroll-view scroll-y class="h-full">
+                        <view class="copy-import-body">
+                            <view v-if="!isPublish" class="copy-import-field">
+                                <text class="copy-import-label">导入类型</text>
+                                <view class="copy-import-select" @click="showDriveOptions = !showDriveOptions">
+                                    <text>{{ selectedDriveOption.name }}</text>
+                                    <u-icon
+                                        :name="showDriveOptions ? 'arrow-up' : 'arrow-down'"
+                                        color="#647184"
+                                        size="24"></u-icon>
+                                </view>
+                                <view v-if="showDriveOptions" class="copy-import-options">
+                                    <view
+                                        v-for="(option, index) in driveOptions"
+                                        :key="option.key"
+                                        class="copy-import-option"
+                                        :class="{ 'copy-import-option--on': selectedDriveIndex === index }"
+                                        @click="handleDriveChange(index)">
+                                        <text class="flex-1 min-w-0">{{ option.name }}</text>
+                                        <u-icon
+                                            v-if="selectedDriveIndex === index"
+                                            name="checkmark"
+                                            color="#0065FB"
+                                            size="26"></u-icon>
+                                    </view>
+                                </view>
+                                <text class="copy-import-hint">{{ selectedDriveOption.desc }}</text>
+                            </view>
+                            <view class="copy-import-field">
+                                <text class="copy-import-label">选择表格文件</text>
+                                <view class="copy-import-file" @click="handleSelect(selectedDriverType)">
+                                    <u-icon name="file-text" color="#5B6B80" size="36"></u-icon>
+                                    <text class="flex-1 min-w-0">选择文案文件</text>
+                                    <u-icon name="arrow-right" color="#647184" size="24"></u-icon>
+                                </view>
+                                <text class="copy-import-hint">
+                                    {{
+                                        isPublish
+                                            ? "按模板整理标题、内容与话题，选择文件后开始上传并导入。"
+                                            : "按所选类型整理表格，选择文件后开始上传并导入。"
+                                    }}
+                                </text>
+                            </view>
+                            <view class="copy-import-tpl" @click="handleCopyTemplate">
+                                <u-icon name="attach" color="#0761D9" size="28"></u-icon>
+                                <text>复制模板链接</text>
+                            </view>
                         </view>
-                        <text class="copy-import-upload-t">点击上传文案文件</text>
-                        <text class="copy-import-upload-s">支持 .xlsx / .xls / .csv 格式</text>
-                    </view>
-                </template>
-
-                <template v-else>
-                    <view
-                        v-for="opt in driveOptions"
-                        :key="opt.key"
-                        class="copy-import-row"
-                        @click="handleSelect(opt.key)">
-                        <view class="copy-import-ic" :style="{ background: opt.bg }">
-                            <u-icon :name="opt.icon" :color="opt.color" size="36"></u-icon>
-                        </view>
-                        <view class="flex-1 min-w-0">
-                            <text class="copy-import-name">{{ opt.name }}</text>
-                            <text class="copy-import-desc">{{ opt.desc }}</text>
-                        </view>
-                        <u-icon name="arrow-right" color="#C9CDD4" size="26"></u-icon>
-                    </view>
-                </template>
-
-                <view class="copy-import-tpl" @click="handleCopyTemplate">
-                    <text>复制模板链接</text>
+                    </scroll-view>
+                </view>
+                <view class="copy-import-footer">
+                    <view class="copy-import-cancel" @click="emit('update:modelValue', false)">取消</view>
+                    <view class="copy-import-confirm" @click="handleSelect(selectedDriverType)">选择文件并导入</view>
                 </view>
             </view>
         </template>
@@ -80,27 +110,38 @@ const driveOptions = [
         key: CopyDriverTypeEnum.NEWS,
         name: "新闻体",
         desc: "仅标题，批量导入新闻体驱动文案",
-        icon: "file-text",
-        color: "#2F73F6",
-        bg: "#EBF3FF",
     },
     {
         key: CopyDriverTypeEnum.VOICEOVER,
         name: "口播文案",
         desc: "标题 + 内容，批量导入数字人口播",
-        icon: "mic",
-        color: "#4B8EFF",
-        bg: "#F0F7FF",
     },
     {
         key: CopyDriverTypeEnum.CLIPS,
         name: "素材混剪口播",
         desc: "标题 + 内容，批量导入混剪口播",
-        icon: "list",
-        color: "#10B981",
-        bg: "#EEF6EE",
     },
 ];
+
+const selectedDriveIndex = ref(0);
+const showDriveOptions = ref(false);
+const selectedDriveOption = computed(() => driveOptions[selectedDriveIndex.value] ?? driveOptions[0]);
+const selectedDriverType = computed(() =>
+    isPublish.value ? CopyDriverTypeEnum.PUBLISH : selectedDriveOption.value.key,
+);
+
+const handleDriveChange = (index: number): void => {
+    selectedDriveIndex.value = index;
+    showDriveOptions.value = false;
+};
+
+watch(
+    () => props.modelValue,
+    (visible) => {
+        showDriveOptions.value = false;
+        if (visible) selectedDriveIndex.value = 0;
+    },
+);
 
 const handleSelect = (driverType: CopyDriverTypeEnum): void => {
     emit("select", driverType);
@@ -114,51 +155,92 @@ const handleCopyTemplate = () => {
 </script>
 
 <style lang="scss" scoped>
+.copy-import-handle {
+    @apply w-[64rpx] h-[8rpx] rounded-[8rpx] bg-[#DCE3EC] mx-auto mt-[20rpx] mb-[4rpx];
+}
+
+.copy-import-header {
+    @apply flex items-center gap-[24rpx] px-[36rpx] pt-[18rpx] pb-[26rpx]
+        border-[0] border-b-[2rpx] border-solid border-[#EEF1F5];
+}
+
+.copy-import-title {
+    @apply block text-[34rpx] font-semibold text-[#202937];
+}
+
+.copy-import-close {
+    @apply relative w-[56rpx] h-[56rpx] rounded-full bg-[#F1F4F8] flex items-center justify-center shrink-0 active:opacity-70;
+
+    &::after {
+        content: "";
+        @apply absolute inset-[-16rpx];
+    }
+}
+
 .copy-import {
-    @apply px-[36rpx] pt-[8rpx] pb-[calc(28rpx+env(safe-area-inset-bottom))];
+    @apply h-full flex flex-col;
 }
 
 .copy-import-sub {
-    @apply block text-[24rpx] text-[#9ca3af] mb-[28rpx];
+    @apply block mt-[8rpx] text-[24rpx] leading-[36rpx] text-[#647184];
 }
 
-.copy-import-row {
-    @apply flex items-center gap-[24rpx] bg-[#F7F9FC] rounded-[24rpx] px-[28rpx] py-[26rpx] mb-[18rpx] active:bg-[#EBF2FF];
+.copy-import-body {
+    @apply p-[36rpx];
 }
 
-.copy-import-ic {
-    @apply w-[80rpx] h-[80rpx] rounded-[22rpx] flex items-center justify-center shrink-0;
+.copy-import-field {
+    @apply mb-[36rpx];
 }
 
-.copy-import-name {
-    @apply block text-sm font-bold text-[#1F2937];
+.copy-import-label {
+    @apply block mb-[16rpx] text-[26rpx] font-semibold text-[#475971];
 }
 
-.copy-import-desc {
-    @apply block text-[22rpx] text-[#9CA3AF] mt-[6rpx];
+.copy-import-select,
+.copy-import-file {
+    @apply min-h-[92rpx] flex items-center justify-between gap-[16rpx] px-[24rpx] py-[20rpx]
+        rounded-[22rpx] border-[2rpx] border-solid border-[#DBE3EE] bg-[#F9FBFD]
+        text-[30rpx] leading-[44rpx] text-[#26364E] active:opacity-70;
 }
 
-.copy-import-upload {
-    @apply flex flex-col items-center justify-center gap-[14rpx] rounded-[24rpx] py-[48rpx] mb-[8rpx];
-    background: #f2f7ff;
-    border: 3rpx dashed #9cc3ff;
+.copy-import-hint {
+    @apply block mt-[12rpx] text-[24rpx] leading-[38rpx] text-[#647184];
 }
 
-.copy-import-upload-ic {
-    @apply w-[96rpx] h-[96rpx] rounded-full flex items-center justify-center;
-    background: linear-gradient(135deg, #2680f7, #3e9bff);
-    box-shadow: 0 0 0 16rpx rgba(38, 128, 247, 0.12);
+.copy-import-options {
+    @apply mt-[12rpx] p-[8rpx] rounded-[22rpx] border-[2rpx] border-solid border-[#DBE3EE] bg-white;
 }
 
-.copy-import-upload-t {
-    @apply text-sm font-semibold text-[#1F2937] mt-[8rpx];
+.copy-import-option {
+    @apply min-h-[88rpx] px-[20rpx] flex items-center gap-[16rpx] rounded-[16rpx]
+        text-[28rpx] text-[#26364E] active:opacity-70;
 }
 
-.copy-import-upload-s {
-    @apply text-[22rpx] text-[#9CA3AF];
+.copy-import-option--on {
+    @apply bg-[#EDF4FF] text-[#0761D9];
 }
 
 .copy-import-tpl {
-    @apply flex items-center justify-center gap-[8rpx] text-[24rpx] text-[#9CA3AF] mt-[28rpx] active:text-primary;
+    @apply min-h-[76rpx] flex items-center gap-[10rpx] text-[26rpx] text-[#0761D9] active:opacity-70;
+}
+
+.copy-import-footer {
+    @apply flex gap-[20rpx] px-[36rpx] pt-[24rpx] pb-[calc(40rpx+env(safe-area-inset-bottom))]
+        border-[0] border-t-[2rpx] border-solid border-[#E7ECF2];
+}
+
+.copy-import-cancel,
+.copy-import-confirm {
+    @apply min-h-[94rpx] flex-1 flex items-center justify-center rounded-[24rpx]
+        text-[28rpx] font-semibold active:opacity-80;
+}
+
+.copy-import-cancel {
+    @apply bg-white text-[#36516F] border-[2rpx] border-solid border-[#D8E2ED];
+}
+
+.copy-import-confirm {
+    @apply bg-primary text-white;
 }
 </style>

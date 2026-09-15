@@ -17,6 +17,8 @@ use app\common\model\user\User;
 use app\common\service\ConfigService;
 use app\common\service\device\RpaDeviceDispatchService;
 use app\common\service\FileService;
+use app\common\service\sv\SvAccountBindService;
+use app\common\service\sv\SvAccountChangeLog;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -214,7 +216,12 @@ class ClawLogic extends ApiLogic
             ]);
 
             try {
-                self::checkAccountBindConflict($params['accounts'], $deviceCode);
+                self::checkAccountBindConflict(
+                    $params['accounts'],
+                    $deviceCode,
+                    (int)$device->user_id,
+                    $traceId
+                );
             } catch (\Throwable $conflict) {
                 self::logSetAccount('set_account_conflict', [
                     'trace_id' => $traceId,
@@ -241,15 +248,22 @@ class ClawLogic extends ApiLogic
                 if (!isset($existingMap[$key])) {
                     $created = SvAccount::create($payload);
                     $stats['inserted']++;
-                    self::logSetAccount('set_account_action', [
-                        'trace_id' => $traceId,
-                        'device_code' => $deviceCode,
-                        'action' => 'insert',
-                        'type' => (int)$payload['type'],
-                        'account' => (string)$payload['account'],
-                        'account_id' => (int)($created->id ?? 0),
-                        'msg' => '新增账号',
-                    ]);
+                    SvAccountChangeLog::record(
+                        SvAccountChangeLog::SOURCE_SET_ACCOUNT,
+                        SvAccountChangeLog::ACTION_INSERT,
+                        [
+                            'user_id' => (int)$device->user_id,
+                            'device_code' => $deviceCode,
+                            'type' => (int)$payload['type'],
+                            'account' => (string)$payload['account'],
+                            'account_id' => (int)($created->id ?? 0),
+                            'after_json' => SvAccountChangeLog::snapshot(array_merge($payload, [
+                                'id' => (int)($created->id ?? 0),
+                            ])),
+                            'trace_id' => $traceId,
+                            'msg' => '新增账号',
+                        ]
+                    );
                     $settingAction = self::ensureSvSetting(
                         (string)$payload['account'],
                         (int)$device->user_id,
@@ -270,7 +284,8 @@ class ClawLogic extends ApiLogic
                     continue;
                 }
 
-                $changedFields = self::diffAccountFields($existing->toArray(), $payload);
+                $before = $existing->toArray();
+                $changedFields = self::diffAccountFields($before, $payload);
                 SvAccount::where('id', (int)$existing->id)->update([
                     'user_id' => $payload['user_id'],
                     'device_code' => $payload['device_code'],
@@ -283,16 +298,22 @@ class ClawLogic extends ApiLogic
                     'extra' => $payload['extra'],
                 ]);
                 $stats['updated']++;
-                self::logSetAccount('set_account_action', [
-                    'trace_id' => $traceId,
-                    'device_code' => $deviceCode,
-                    'action' => 'update',
-                    'type' => (int)$payload['type'],
-                    'account' => (string)$payload['account'],
-                    'account_id' => (int)$existing->id,
-                    'changed_fields' => $changedFields,
-                    'msg' => '更新账号资料',
-                ]);
+                SvAccountChangeLog::record(
+                    SvAccountChangeLog::SOURCE_SET_ACCOUNT,
+                    SvAccountChangeLog::ACTION_UPDATE,
+                    [
+                        'user_id' => (int)$device->user_id,
+                        'device_code' => $deviceCode,
+                        'type' => (int)$payload['type'],
+                        'account' => (string)$payload['account'],
+                        'account_id' => (int)$existing->id,
+                        'changed_fields' => $changedFields,
+                        'before_json' => SvAccountChangeLog::snapshot($before),
+                        'after_json' => SvAccountChangeLog::snapshot(array_merge($before, $payload)),
+                        'trace_id' => $traceId,
+                        'msg' => '更新账号资料',
+                    ]
+                );
             }
 
             $deleted = self::removeOrphanAccounts($deviceCode, $keepKeys, $traceId);
@@ -330,6 +351,15 @@ class ClawLogic extends ApiLogic
                     'result' => 'fail',
                     'msg' => '唯一键冲突，账号可能已被其他设备绑定',
                 ]);
+                SvAccountChangeLog::record(
+                    SvAccountChangeLog::SOURCE_SET_ACCOUNT,
+                    SvAccountChangeLog::ACTION_CONFLICT,
+                    [
+                        'device_code' => $deviceCode,
+                        'msg' => '唯一键冲突，账号可能已被其他设备绑定',
+                        'trace_id' => $traceId,
+                    ]
+                );
             }
             self::setError($errorMsg);
             self::logSetAccount('set_account_fail', [
@@ -387,17 +417,41 @@ class ClawLogic extends ApiLogic
         return $normalized;
     }
 
-    private static function checkAccountBindConflict(array $accounts, string $deviceCode): void
-    {
+    private static function checkAccountBindConflict(
+        array $accounts,
+        string $deviceCode,
+        int $userId = 0,
+        string $traceId = ''
+    ): void {
         foreach ($accounts as $account) {
-            $boundAccount = SvAccount::where('account', $account['userId'])
-                ->where('type', $account['account_type'])
-                ->where('device_code', '<>', $deviceCode)
-                ->findOrEmpty();
-
-            if (!$boundAccount->isEmpty()) {
-                throw new \Exception('账号' . $account['userId'] . '已绑定在设备：' . $boundAccount->device_code . '，请先解绑后重试');
+            $occupied = SvAccountBindService::findOccupiedRow(
+                (int)$account['account_type'],
+                (string)$account['userId'],
+                $deviceCode
+            );
+            if ($occupied === null) {
+                continue;
             }
+
+            $msg = SvAccountBindService::formatSetAccountOccupiedMessage(
+                (string)$account['userId'],
+                (string)($occupied['device_code'] ?? '')
+            );
+            SvAccountChangeLog::record(
+                SvAccountChangeLog::SOURCE_SET_ACCOUNT,
+                SvAccountChangeLog::ACTION_CONFLICT,
+                [
+                    'user_id' => $userId,
+                    'device_code' => $deviceCode,
+                    'type' => (int)$account['account_type'],
+                    'account' => (string)$account['userId'],
+                    'account_id' => (int)($occupied['id'] ?? 0),
+                    'before_json' => SvAccountChangeLog::snapshot($occupied),
+                    'trace_id' => $traceId,
+                    'msg' => $msg,
+                ]
+            );
+            throw new \Exception($msg);
         }
     }
 
@@ -561,17 +615,23 @@ class ClawLogic extends ApiLogic
             $account = (string)$row->account;
             $type = (int)$row->type;
             $accountId = (int)$row->id;
+            $before = $row->toArray();
             SvAccount::where('id', $accountId)->delete();
             $deleted++;
-            self::logSetAccount('set_account_action', [
-                'trace_id' => $traceId,
-                'device_code' => $deviceCode,
-                'action' => 'delete',
-                'type' => $type,
-                'account' => $account,
-                'account_id' => $accountId,
-                'msg' => '删除设备孤儿账号',
-            ]);
+            SvAccountChangeLog::record(
+                SvAccountChangeLog::SOURCE_SET_ACCOUNT,
+                SvAccountChangeLog::ACTION_DELETE,
+                [
+                    'user_id' => (int)($before['user_id'] ?? 0),
+                    'device_code' => $deviceCode,
+                    'type' => $type,
+                    'account' => $account,
+                    'account_id' => $accountId,
+                    'before_json' => SvAccountChangeLog::snapshot($before),
+                    'trace_id' => $traceId,
+                    'msg' => '删除设备孤儿账号',
+                ]
+            );
 
             $stillUsed = SvAccount::where('account', $account)->findOrEmpty();
             if ($stillUsed->isEmpty()) {

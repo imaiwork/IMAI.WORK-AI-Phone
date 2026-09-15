@@ -6,6 +6,7 @@ namespace app\common\workerman\wechat\traits;
 
 use app\api\logic\ChatLogic;
 use app\api\logic\wechat\sop\StageLogic;
+use app\common\enum\ChatEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\model\chat\ChatLog;
 use app\common\model\ChatPrompt;
@@ -690,7 +691,7 @@ trait AichatTrait
 
     private function _handleResponse(array $response, array $request)
     {
-        $modelAlias = $request['model'] ?? 'gpt-4o';
+        $modelAlias = $request['model'] ?? ChatEnum::DEFAULT_CHAT_MODEL_ALIAS;
         ChatBillingService::checkBalance((int)$request['user_id'], $modelAlias);
 
         $reply = $response['data']['message'] ?? '';

@@ -85,3 +85,13 @@ export enum AppTypeEnum {
     DOUYIN = 4,
     KUAISHOU = 5,
 }
+
+// 当前版本新增的扣费场景，工作台/价格配置的场景卡片会打「新增」标识。
+// 每次发版把上一版的场景移除、换成本版新增的场景，标识才有意义。
+export const NEW_BILLING_SCENES: string[] = [
+    "play_face",
+    "play_dance",
+    "play_splice",
+    "work_data_fetch",
+    "dy_search_clue",
+];

@@ -49,6 +49,8 @@ class UserLogic extends BaseLogic
             'avatar',
             'real_name',
             'sex',
+            'store_name',
+            'certificate_image',
             'mobile',
             'create_time',
             'login_time',
@@ -187,9 +189,15 @@ class UserLogic extends BaseLogic
      */
     public static function setUserInfo(array $params)
     {
+        $value = $params['value'];
+        // 图片类字段库里存相对路径,存前去掉域名
+        if (in_array($params['field'], ['avatar', 'certificate_image'])) {
+            $value = FileService::setFileUrl($value);
+        }
+
         return User::update([
             'id' => $params['id'],
-            $params['field'] => $params['value']
+            $params['field'] => $value
         ]);
     }
 

@@ -36,7 +36,7 @@ class DeviceLists extends BaseAdminDataLists implements ListsSearchInterface
                 $item['auth_type_name'] = ($lastCdk && !$lastCdk->isEmpty()) ? self::authTypeFormat($lastCdk->type) : '';
                 $item['cdk_type_name'] = $item['auth_type_name'];
                 $item['auth_start_time'] = !empty($item['auth_start_time']) && $item['auth_start_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_start_time']) : '';
-                $item['auth_expire_time'] = !empty($item['auth_expire_time']) && $item['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_expire_time']) : '永久';
+                $item['auth_expire_time'] = !empty($item['auth_expire_time']) && $item['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_expire_time']) : (!empty($item['auth_start_time']) && $item['auth_start_time'] > 0 ? '永久' : $item['create_time']);
                 $item['auth_code'] = ($lastCdk && !$lastCdk->isEmpty()) ? (string)$lastCdk->code : '';
                 unset($item['last_cdk_code_id']);
                 return $item;

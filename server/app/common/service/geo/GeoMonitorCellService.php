@@ -191,7 +191,9 @@ class GeoMonitorCellService
                 ];
                 $input = json_decode((string)($row['input'] ?? ''), true) ?: [];
                 $status = self::finalizeBatchStatus($ref, (int)($input['total'] ?? 0));
-                if ($status !== null) {
+                // 用户取消后在跑 cell 仍会回写计数(结果真实发生、照常计费),
+                // 但不许把 canceled 等已收口的终态再改成 success/failed
+                if ($status !== null && (string)$row['status'] === 'running') {
                     $update['status'] = $status;
                 }
                 Db::name('geo_task')->where('id', $batchTaskId)->update($update);

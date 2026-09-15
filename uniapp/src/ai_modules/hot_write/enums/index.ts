@@ -53,6 +53,42 @@ export enum WashGenerationType {
     NEWS = 3,
 }
 
+/**
+ * 仿写文案目标字数档位。成片时长按「字数/3」估算，字数≈秒数×3。
+ * 与后端 VideoImitationTask::COPYWRITING_LENGTH_OPTIONS 对齐，改动需两边同步。
+ */
+export const HOT_WRITE_COPY_LENGTH_OPTIONS = [
+    { val: 100, label: "短", desc: "约100字 · 30秒" },
+    { val: 200, label: "中", desc: "约200字 · 1分钟" },
+    { val: 350, label: "长", desc: "约350字 · 2分钟" },
+    { val: 600, label: "超长", desc: "约600字 · 3分钟" },
+] as const;
+
+/** 洗稿背景音乐来源：1 系统音乐随机（默认） 2 用户自传 */
+export enum WashMusicSource {
+    SYSTEM = 1,
+    UPLOAD = 2,
+}
+
+export const HOT_WRITE_COPY_LENGTH_DEFAULT = 200;
+
+/** 闪剪成片时长换算：每秒 3 字，与后端 duration = 字数/3 同一口径 */
+export const SPEECH_CHARS_PER_SECOND = 3;
+
+/** 按文案字数估算成片时长文案，如「1分12秒」 */
+export function formatEstimatedDuration(text: string): string {
+    const chars = String(text || "").trim().length;
+    if (!chars) return "";
+    const seconds = Math.max(1, Math.round(chars / SPEECH_CHARS_PER_SECOND));
+    if (seconds < 60) return `${seconds}秒`;
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return rest ? `${minutes}分${rest}秒` : `${minutes}分钟`;
+}
+
+/** 「形象原音」音色哨兵：没有音色库记录，服务端按所选形象克隆出的原音下发 */
+export const WASH_ORIGIN_VOICE_ID = -1;
+
 export const WASH_GENERATION_TYPE_OPTIONS = [
     {
         val: WashGenerationType.DIGITAL_HUMAN,

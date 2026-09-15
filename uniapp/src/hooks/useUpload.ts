@@ -52,6 +52,9 @@ interface UploadItem {
     status: "pending" | "success" | "fail";
 }
 
+/** 失败明细最多列几条，超出只报总数，避免弹窗被刷屏 */
+const FAILED_DETAIL_LIMIT = 5;
+
 const DEFAULT_OPTIONS = {
     // #ifdef MP-WEIXIN
     count: 20,
@@ -133,6 +136,9 @@ export default function useUpload(options: UseUploadOptions = {}) {
                 return false;
             }
         } catch {
+            // 不转码的场景（原图模式/直发）才会走到这里；读不出图片信息就丢文件，
+            // 不给提示的话用户在相册选完什么都不会发生
+            uni.$u.toast("读取图片信息失败，请更换文件重试");
             return false;
         }
         return true;
@@ -226,6 +232,13 @@ export default function useUpload(options: UseUploadOptions = {}) {
             (progress: number) => progressCallback(progress, item.tempFilePath),
         );
 
+        // 上传接口业务失败会 reject 到外层；这里再兜一层"200 但没返回可用文件"的情况，
+        // 不显式抛错的话下面会拿 undefined 拼出一条假的成功记录，用户只会看到"传了个寂寞"
+        const uploadedUri = typeof fileRes?.uri === "string" ? fileRes.uri.trim() : "";
+        if (!uploadedUri) {
+            throw new Error("上传失败，未返回可用文件");
+        }
+
         const resolvedType = ["file", "all"].includes(fileCategory) ? getFileTypeByUrl(fileRes.uri) : fileCategory;
         const mType = resolvedType === "video" ? 1 : 2;
 
@@ -241,6 +254,25 @@ export default function useUpload(options: UseUploadOptions = {}) {
             height: fileRes.height ?? item.height ?? 0,
             m_type: mType,
         };
+    };
+
+    // 默认兜底提示：一条时用 toast，多条时列出文件名与原因，避免只弹最后一个错误
+    const showFailedDetail = (failedList: UploadFailedItem[]): void => {
+        if (!failedList.length) return;
+        if (failedList.length === 1) {
+            uni.$u.toast(failedList[0].reason || "上传失败");
+            return;
+        }
+        const lines = failedList
+            .slice(0, FAILED_DETAIL_LIMIT)
+            .map((item) => `${item.name}：${item.reason || "上传失败"}`);
+        if (failedList.length > FAILED_DETAIL_LIMIT) lines.push(`…等 ${failedList.length} 个文件`);
+        uni.showModal({
+            title: `${failedList.length} 个文件上传失败`,
+            content: lines.join("\n"),
+            showCancel: false,
+            confirmText: "知道了",
+        });
     };
 
     const uploadAndProcessFiles = async (
@@ -314,17 +346,15 @@ export default function useUpload(options: UseUploadOptions = {}) {
                 onSuccess?.(successList);
             }
 
-            // if (failedList.length > 0) {
-            //     if (onPartialFail) {
-            //         onPartialFail(failedList)
-            //     } else {
-            //         uni.showToast({
-            //             title: `${failedList.length} 个文件上传失败`,
-            //             icon: 'none',
-            //             duration: 3000
-            //         })
-            //     }
-            // }
+            // 失败明细：业务侧接管就交给它（如原图模式要列出被拦下的文件与原因），
+            // 没接管则统一弹一次聚合提示——上传失败必须让用户知道原因，不能静默
+            if (failedList.length > 0) {
+                if (onPartialFail) {
+                    onPartialFail(failedList);
+                } else {
+                    showFailedDetail(failedList);
+                }
+            }
         } catch (error: unknown) {
             const err = error as any;
             if (!err?.errMsg?.includes("cancel")) {

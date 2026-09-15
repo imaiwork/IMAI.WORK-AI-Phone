@@ -103,6 +103,29 @@ class ShanjianVideoTask extends BaseModel
     }
 
     /**
+     * 热点追踪来源判定（extra 为 text 存 json，JSON_VALID 防无效串报错；命中为真、其余为假）
+     * @param string $prefix 表别名前缀，如 'sj.'
+     */
+    public static function hotspotSourceCond(string $prefix = ''): string
+    {
+        $col = $prefix . 'extra';
+        return "({$col} IS NOT NULL AND {$col} <> '' AND JSON_VALID({$col})"
+            . " AND JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) = 'hotspot')";
+    }
+
+    /**
+     * 非热点来源判定：显式枚举各空值/无效分支，规避 SQL 三值逻辑把无 source 键的行误过滤
+     * @param string $prefix 表别名前缀，如 'sj.'
+     */
+    public static function notHotspotSourceCond(string $prefix = ''): string
+    {
+        $col = $prefix . 'extra';
+        return "({$col} IS NULL OR {$col} = '' OR NOT JSON_VALID({$col})"
+            . " OR JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) IS NULL"
+            . " OR JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) <> 'hotspot')";
+    }
+
+    /**
      * 关联用户
      * @return \think\model\relation\BelongsTo
      */

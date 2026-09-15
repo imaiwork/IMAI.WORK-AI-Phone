@@ -98,6 +98,12 @@ class WorkerEnum
     public const RPA_DEVICE_VIRAL_RITER_TASK = 1004; #设备爆款仿写任务发送
     public const RPA_DEVICE_VIRAL_RITER_TASK_INTERACT = 1005; #设备爆款仿写任务交互
     public const RPA_DEVICE_PRECISE_CLUES_TASK = 1006; #设备精准获客任务发送
+    public const RPA_DY_SEARCH_TASK_SEND = 1007; #抖音获客任务下发
+    public const RPA_DY_SEARCH_TASK_RECORD_SAVE = 1008; #抖音获客任务上报
+    public const RPA_DY_SEARCH_TASK_PAUSE = 1009; #抖音获客任务暂停
+    public const RPA_DY_SEARCH_TASK_RESUME = 1010; #抖音获客任务恢复
+    public const RPA_DY_SEARCH_TASK_CANCEL = 1011; #抖音获客任务取消
+    public const RPA_DY_SEARCH_TASK_COMPLETED = 1012; #抖音获客任务完成
     public const RPA_PHONE_AGENT_EXEC = 1100; # AutoGLM-Phone执行
     public const RPA_PHONE_AGENT_REPORT = 1101; # AutoGLM-Phone上报
     public const RPA_PHONE_AGENT_CANCEL = 1102; # AutoGLM-Phone取消
@@ -194,6 +200,7 @@ class WorkerEnum
     public const RPA_DEVICE_VIRAL_RITER_TASK_FAIL = 4063; // 设备爆款仿写任务失败
     public const RPA_DEVICE_PRECISE_CLUES_TASK_FAIL = 4064; // 设备精准获客任务失败
     public const RPA_DEVICE_RUNNING_LOG_FAIL = 4065; // 设备运行日志失败
+    public const RPA_DEVICE_DY_SEARCH_TASK_FAIL = 4066; // 抖音获客任务异常
 
 
 
@@ -324,6 +331,13 @@ class WorkerEnum
         self::RPA_DEVICE_VIRAL_RITER_TASK_FAIL => '爆款仿写任务异常',
         self::RPA_DEVICE_PRECISE_CLUES_TASK_FAIL => '精准获客任务异常',
         self::RPA_DEVICE_RUNNING_LOG_FAIL => '设备运行日志异常',
+        self::RPA_DY_SEARCH_TASK_SEND => '抖音获客任务下发',
+        self::RPA_DY_SEARCH_TASK_RECORD_SAVE => '抖音获客任务上报',
+        self::RPA_DY_SEARCH_TASK_PAUSE => '抖音获客任务暂停',
+        self::RPA_DY_SEARCH_TASK_RESUME => '抖音获客任务恢复',
+        self::RPA_DY_SEARCH_TASK_CANCEL => '抖音获客任务取消',
+        self::RPA_DY_SEARCH_TASK_COMPLETED => '抖音获客任务完成',
+        self::RPA_DEVICE_DY_SEARCH_TASK_FAIL => '抖音获客任务异常',
         self::RPA_PHONE_AGENT_EXEC => 'AutoGLM-Phone执行',
         self::RPA_PHONE_AGENT_REPORT => 'AutoGLM-Phone上报',
         self::RPA_PHONE_AGENT_CANCEL => 'AutoGLM-Phone取消',

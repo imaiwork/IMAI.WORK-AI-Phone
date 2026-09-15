@@ -222,11 +222,12 @@
                         <div class="w-16 h-16 rounded-2xl bg-[#F5F7FF] text-primary grid place-items-center mx-auto mb-5">
                             <Icon name="el-icon-DataLine" :size="28" />
                         </div>
-                        <div class="text-xl font-semibold text-slate-800 mb-2">诊断已提交</div>
+                        <div class="text-xl font-semibold text-slate-800 mb-2">{{ batchCanceled ? '诊断已取消' : '诊断已提交' }}</div>
                         <div class="text-slate-500 text-sm mb-5">
-                            已完成 {{ diagDone }} / {{ diagTotal }} 项监测{{ diagDone >= diagTotal && diagTotal > 0 ? '，全部完成' : '，采集在后台进行，可先进入工作台' }}
+                            <template v-if="batchCanceled">已完成 {{ diagDone }} / {{ diagTotal }} 项监测，已完成的结果保留可用，未执行的部分不产生扣费</template>
+                            <template v-else>已完成 {{ diagDone }} / {{ diagTotal }} 项监测{{ diagDone >= diagTotal && diagTotal > 0 ? '，全部完成' : '，采集在后台进行，可先进入工作台' }}</template>
                         </div>
-                        <ElProgress :percentage="diagTotal ? Math.round(diagDone / diagTotal * 100) : 0" :stroke-width="10" class="mb-6" />
+                        <ElProgress :percentage="diagTotal ? Math.round(diagDone / diagTotal * 100) : 0" :stroke-width="10" class="mb-6" :status="batchCanceled ? 'warning' : undefined" />
                       
                     </div>
                 </div>
@@ -579,6 +580,8 @@ const addQuestion = async () => {
 const diagTotal = ref(0)
 const diagDone = ref(0)
 const diagRunning = ref(false)
+// 批次被取消(工作台/其他标签页发起):终态话术从"完成"换成"已取消"
+const batchCanceled = ref(false)
 // 组件卸载(用户点「查看报告」离开)后停止循环,避免在死组件里继续发几十个慢请求
 let diagCancelled = false
 
@@ -657,6 +660,7 @@ const diagStalled = ref(false)
 const pollProgress = async (since: number) => {
     if (progressTimer) { clearTimeout(progressTimer); progressTimer = null }
     diagStalled.value = false
+    batchCanceled.value = false
     let ticks = 0
     const tick = async () => {
         if (diagCancelled || !diagRunning.value) return
@@ -664,7 +668,7 @@ const pollProgress = async (since: number) => {
             const p: any = await geoMonitorProgress(projectId.value, since)
             diagDone.value = Number(p?.done || 0)
             diagTotal.value = Number(p?.total || diagTotal.value)
-            if (p?.finished) { diagRunning.value = false; diagStalled.value = false; return }
+            if (p?.finished) { batchCanceled.value = !!p?.canceled; diagRunning.value = false; diagStalled.value = false; return }
             // 失速检测：任务已入队但两分钟内一条都没落库，基本可以断定
             // 后台没有 queue:work 常驻。不提示的话用户只会看到进度条永远 0%。
             if (++ticks >= 24 && diagDone.value === 0) diagStalled.value = true

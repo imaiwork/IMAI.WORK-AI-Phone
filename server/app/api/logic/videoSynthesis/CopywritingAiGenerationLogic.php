@@ -4,12 +4,14 @@ namespace app\api\logic\videoSynthesis;
 
 use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\aiPersona\CopywritingLibraryLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryUseLog;
 use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
 use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\minimax\MinimaxShanjianTask;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\model\sv\CloudSvDevice;
 use app\common\model\sv\SvDevice;
 use think\facade\Cache;
 use app\common\exception\MaterialNotReadyException;
@@ -34,7 +36,8 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
     {
         $device = null;
         try {
-            $device = SvDevice::where('device_code', $deviceCode)->findOrEmpty();
+            // 真设备查表；无手机模式的 cloud:{persona_id} 按人设造虚拟设备
+            $device = CloudSvDevice::resolve($deviceCode);
             if ($device->isEmpty()) {
                 throw new \Exception('-不存在');
             }
@@ -68,7 +71,9 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                 throw new \Exception('-绑定的人设未配置文案来源为无需文案的合成规则');
             }
 
-            $execTimes = self::getExecTime(self::getTimesByType($persona->persona_type), $device, $persona->persona_type);
+            $execTimes = self::isCloudRunDevice($device)
+                ? self::buildCloudPublishTimeSlots(self::resolveCloudDailyVideoCount($device))
+                : self::getExecTime(self::getTimesByType($persona->persona_type), $device, $persona->persona_type);
             if (empty($execTimes)) {
                 throw new \Exception('-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的执行时间');
             }
@@ -91,7 +96,10 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             $resolvedType = self::resolveTaskTypeByVoice(3, (int)$device->persona_id, (int)$device->user_id);
             $selectedTypesForToday = array_fill(0, $taskCountNeeded, $resolvedType);
 
-            $groupedData = self::getMaterialsForImitation($device);
+            $groupedData = self::getMaterialsForImitation(
+                $device,
+                ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$device->persona_id)
+            );
             self::assertGroupedMaterialsAvailable($groupedData, (int)$device->persona_id, $selectedTypesForToday, 3);
 
             return self::createNoCopywritingDeviceVideoTasks($device, $persona, $config, $groupedData, $taskCountNeeded, $resolvedType);
@@ -193,6 +201,13 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
 
     private static function getContentPublishTimeSlots(AiPersona $persona, SvDevice $device): array
     {
+        // 无手机模式不发布，也就没有"发布时段"可言：条数改由「视频剪辑」员工的每日出片条数决定。
+        // 这里仍然返回等量的时段字符串，是为了让下游的配额差集(resolveRemainingPublishTimeSlots)、
+        // 类型轮转、extra.exec_time 记账原样复用，手机模式一行都不用改。
+        if (self::isCloudRunDevice($device)) {
+            return self::buildCloudPublishTimeSlots(self::resolveCloudDailyVideoCount($device));
+        }
+
         if ((int)$persona->workflow_template_id > 0) {
             $hasConfig = MarketingTemplateSchedule::where('template_id', $persona->workflow_template_id)
                 ->where('scene', self::CONTENT_PUBLISH_SCENE)
@@ -425,6 +440,51 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
         return array_values(array_unique($slots));
     }
 
+    /** 是否无手机模式的虚拟设备（真设备恒 false，手机模式行为完全不受影响） */
+    private static function isCloudRunDevice(SvDevice $device): bool
+    {
+        return $device instanceof CloudSvDevice;
+    }
+
+    /**
+     * 无手机模式的每日出片条数：取「视频剪辑」员工配置的 daily_video_count，
+     * 未配置(0)时兜底 1 条——不能回落到发布时段，否则又绕回了要配发布时段才出片。
+     */
+    private static function resolveCloudDailyVideoCount(SvDevice $device): int
+    {
+        $count = AiPersonaSynthesisConfig::normalizeDailyVideoCount(
+            AiPersonaSynthesisConfig::where('persona_id', (int)$device->persona_id)
+                ->where('user_id', (int)$device->user_id)
+                ->value('daily_video_count')
+        );
+        return $count > 0 ? $count : AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+    }
+
+    /**
+     * 按条数造等量且互不相同的时段串。
+     * 必须互不相同：下游 resolveRemainingPublishTimeSlots 用 exec_time 做差集去重，
+     * 串重复会被并成一条，当天配额算错、多出片。08:00-20:00 均分，20 条时仍相隔 36 分钟。
+     */
+    private static function buildCloudPublishTimeSlots(int $count): array
+    {
+        $count = max(1, $count);
+        $startMinute = 8 * 60;
+        $step = intdiv(12 * 60, $count);
+        $slots = [];
+        for ($i = 0; $i < $count; $i++) {
+            $begin = $startMinute + $i * $step;
+            $end = $begin + max(1, min($step, 30));
+            $slots[] = sprintf(
+                '%02d:%02d-%02d:%02d',
+                intdiv($begin, 60),
+                $begin % 60,
+                intdiv($end, 60) % 24,
+                $end % 60
+            );
+        }
+        return $slots;
+    }
+
     private static function getDefaultContentPublishTimeSlots(int $personaType, SvDevice $device): array
     {
         $slots = [];
@@ -493,7 +553,8 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
     {
         $device = null;
         try {
-            $device = SvDevice::where('device_code', $deviceCode)->findOrEmpty();
+            // 真设备查表；无手机模式的 cloud:{persona_id} 按人设造虚拟设备
+            $device = CloudSvDevice::resolve($deviceCode);
             if ($device->isEmpty()) {
                 throw new \Exception('-不存在');
             }
@@ -577,7 +638,10 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                 );
             }
 
-            $groupedData = self::getMaterialsForImitation($device);
+            $groupedData = self::getMaterialsForImitation(
+                $device,
+                ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$device->persona_id)
+            );
             self::assertGroupedMaterialsAvailable($groupedData, (int)$device->persona_id, $selectedTypesForToday, $visualMaterialSource);
 
             return self::createLibraryDeviceVideoTasks($device, $persona, $config, $groupedData, $selectedTypesForToday, $publishTimeSlots);
@@ -598,7 +662,8 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
     {
         $device = null;
         try {
-            $device = SvDevice::where('device_code', $deviceCode)->findOrEmpty();
+            // 真设备查表；无手机模式的 cloud:{persona_id} 按人设造虚拟设备
+            $device = CloudSvDevice::resolve($deviceCode);
             if ($device->isEmpty()) {
                 throw new \Exception('-不存在');
             }
@@ -703,7 +768,10 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
 
             // 仅预加载素材，不在批次入口拦截。缺素材时由单条任务捕获异常并落失败任务，
             // 数字人口播的 AI/AI+素材库模式仍可继续尝试 AI 找素材。
-            $groupedData = self::getMaterialsForImitation($device);
+            $groupedData = self::getMaterialsForImitation(
+                $device,
+                ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$device->persona_id)
+            );
 
             return self::createDeviceVideoTasks($device, $persona, $config, $groupedData, $selectedTypesForToday, $publishTimeSlots);
         } catch (MaterialNotReadyException $e) {
@@ -745,8 +813,10 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             $taskTitle = '';
             $taskMsg = '';
             try {
-                $canUseAiMaterials = $shanjianType === 1
-                    && in_array((int)$config->visual_material_source, [1, 2], true);
+                $canUseAiMaterials = ShanjianVideoSettingLogic::canUseAiMaterials(
+                    $shanjianType,
+                    ShanjianVideoSettingLogic::resolveVisualMaterialSource($config)
+                );
                 if (!$canUseAiMaterials) {
                     self::assertGroupedMaterialsAvailable(
                         $groupedData,

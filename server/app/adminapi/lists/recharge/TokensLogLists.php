@@ -5,6 +5,7 @@ namespace app\adminapi\lists\recharge;
 use app\adminapi\lists\BaseAdminDataLists;
 use app\adminapi\logic\WorkbenchLogic;
 use app\common\enum\user\AccountLogEnum;
+use app\common\lists\ListsExcelInterface;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\ModelConfig;
 use app\common\model\user\UserTokensLog;
@@ -15,7 +16,7 @@ use app\common\service\FileService;
  * Class TokensLogLists
  * @package app\Adminapi\lists\recharge
  */
-class TokensLogLists extends BaseAdminDataLists implements ListsSearchInterface
+class TokensLogLists extends BaseAdminDataLists implements ListsSearchInterface, ListsExcelInterface
 {
     /**
      * @notes 列表
@@ -28,6 +29,8 @@ class TokensLogLists extends BaseAdminDataLists implements ListsSearchInterface
     {
         //加载算力计费列表
         $tokensLists = WorkbenchLogic::tokensLists();
+        // 计费模型名一次性载入，避免逐行查询（导出最多 2.5 万行）；倒序取值让最小 id 最后覆盖，与原逐行 value() 结果一致
+        $modelNames = ModelConfig::order('id', 'desc')->column('name', 'code');
 
         return UserTokensLog::alias('l')
             ->join('user u', 'u.id = l.user_id')
@@ -51,12 +54,12 @@ class TokensLogLists extends BaseAdminDataLists implements ListsSearchInterface
             ->order('l.id', 'desc')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
-            ->each(function ($item) use ($tokensLists) {
+            ->each(function ($item) use ($tokensLists, $modelNames) {
                 $item['avatar']         = FileService::getFileUrl($item['avatar']);
                 $item['team_id']        = (int)($item['team_id'] ?? 0);
                 $item['team_name']      = $item['team_id'] > 0 ? (string)($item['team_name'] ?? '') : '';
                 // ModelConfig 优先（计费模型名），其次枚举描述，避免未配置类型误显示为「充值」
-                $modelName = ModelConfig::where('code', $item['change_type'])->value('name');
+                $modelName = $modelNames[(int)$item['change_type']] ?? '';
                 $enumName  = AccountLogEnum::getChangeTypeDesc($item['change_type']);
                 $item['type_name'] = $modelName ?: ($enumName ?: ($item['remark'] ?: '未知类型'));
                 $extra = json_decode((string)$item['extra'], true);
@@ -90,6 +93,13 @@ class TokensLogLists extends BaseAdminDataLists implements ListsSearchInterface
                 }
 
                 $item['points'] = $points;
+
+                // 导出用文本字段：Excel 没有标签和 tooltip，把团队标记、增减符号、消耗明细摊平成列
+                $item['team_text']   = $item['team_id'] > 0 ? ($item['team_name'] ?: '团队空间') : '';
+                $item['change_text'] = ((int)$item['action'] === AccountLogEnum::INC ? '' : '-') . $item['change_amount'];
+                $item['extra_text']  = implode('；', array_map(function ($key, $value) {
+                    return $key . ':' . (is_scalar($value) ? $value : json_encode($value, JSON_UNESCAPED_UNICODE));
+                }, array_keys($extra), $extra));
             })
             ->toArray();
     }
@@ -113,7 +123,11 @@ class TokensLogLists extends BaseAdminDataLists implements ListsSearchInterface
                 $query->where('u.nickname', 'like', '%' . $this->request->get('user') . '%');
             })
             ->when($this->request->get('type_id'), function ($query) {
-                $query->where('l.change_type', $this->request->get('type_id'));
+                if ($this->request->get('type_id') == 9001) {
+                    $query->where('l.change_type', 'in', [9001, 9102]);
+                } else {
+                    $query->where('l.change_type', $this->request->get('type_id'));
+                }
             })
             ->count();
     }
@@ -128,5 +142,37 @@ class TokensLogLists extends BaseAdminDataLists implements ListsSearchInterface
     {
 
         return [];
+    }
+
+
+    /**
+     * @notes 设置导出字段
+     * @return array
+     * @author L
+     */
+    public function setExcelFields(): array
+    {
+        return [
+            'id'          => 'ID',
+            'nickname'    => '昵称',
+            'mobile'      => '手机号',
+            'type_name'   => '调用类型',
+            'team_text'   => '所属团队',
+            'change_text' => '当前算力',
+            'extra_text'  => '消耗明细',
+            'remark'      => '备注',
+            'create_time' => '创建时间',
+        ];
+    }
+
+
+    /**
+     * @notes 设置导出文件名
+     * @return string
+     * @author L
+     */
+    public function setFileName(): string
+    {
+        return '消耗记录';
     }
 }

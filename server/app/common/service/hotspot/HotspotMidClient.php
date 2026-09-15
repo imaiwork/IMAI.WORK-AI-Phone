@@ -13,25 +13,37 @@ class HotspotMidClient
 {
     public const KIND_TIKHUB = 'tikhub';
     public const KIND_ARK = 'ark';
+    public const KIND_ANALYTICS = 'analytics';
+
+    /** @var (callable(string, array, string): mixed)|null */
+    private static $testClient = null;
+
+    public static function setTestClient(?callable $client): void
+    {
+        self::$testClient = $client;
+    }
 
     /**
      * @param array<string, mixed> $body
      * @return array<string, mixed>
      */
-    public static function request(string $path, array $body = [], string $kind = self::KIND_TIKHUB): array
+    public static function request(string $path, array $body = [], string $kind = self::KIND_TIKHUB, ?int $timeoutSeconds = null): array
     {
-        $timeout = max(1, (int)config('hotspot.http_timeout', 120));
+        $timeout = self::resolveTimeout($kind, $timeoutSeconds);
         HotspotLog::write(sprintf('中台请求：路径=%s 类型=%s', $path, $kind));
-
         try {
-            $client = app(ToolsService::class)
-                ->setApiUrl($path)
-                ->setMethod('POST')
-                ->setTimeout(10, $timeout);
-            if ($body !== []) {
-                $client->setRequest($body);
+            if (self::$testClient !== null) {
+                $response = (self::$testClient)($path, $body, $kind);
+            } else {
+                $client = app(ToolsService::class)
+                    ->setApiUrl($path)
+                    ->setMethod('POST')
+                    ->setTimeout(10, $timeout);
+                if ($body !== []) {
+                    $client->setRequest($body);
+                }
+                $response = $client->sendWithoutThrow()->response;
             }
-            $response = $client->sendWithoutThrow()->response;
         } catch (HotspotUpstreamException $e) {
             throw $e;
         } catch (\Throwable $e) {
@@ -45,9 +57,33 @@ class HotspotMidClient
         }
         HotspotLog::json('中台原始返回：路径=' . $path . ' ', HotspotLog::safe($response), 3000);
 
-        return $kind === self::KIND_ARK
-            ? self::unwrapArk($response)
-            : self::unwrapTikHub($response);
+        return self::unwrapByKind($kind, $response);
+    }
+
+    private static function resolveTimeout(string $kind, ?int $timeoutSeconds): int
+    {
+        if ($timeoutSeconds !== null) {
+            return max(1, $timeoutSeconds);
+        }
+        if ($kind === self::KIND_ANALYTICS) {
+            return max(30, (int)config('work_data.mid_timeout', 180));
+        }
+        return max(1, (int)config('hotspot.http_timeout', 120));
+    }
+
+    /**
+     * @param array<string, mixed> $response
+     * @return array<string, mixed>
+     */
+    private static function unwrapByKind(string $kind, array $response): array
+    {
+        if ($kind === self::KIND_ARK) {
+            return self::unwrapArk($response);
+        }
+        if ($kind === self::KIND_ANALYTICS) {
+            return self::unwrapAnalytics($response);
+        }
+        return self::unwrapTikHub($response);
     }
 
     /**
@@ -82,6 +118,22 @@ class HotspotMidClient
         }
 
         return ['data' => $data];
+    }
+
+    /**
+     * 解包作品数据聚合信封：code===10000 时直接返回 data，不再包一层。
+     *
+     * @param array<string, mixed> $response
+     * @return array<string, mixed>
+     */
+    public static function unwrapAnalytics(array $response): array
+    {
+        $code = (int)($response['code'] ?? 0);
+        if ($code !== 10000) {
+            throw self::failByCode($code, $response);
+        }
+        $data = $response['data'] ?? [];
+        return is_array($data) ? $data : [];
     }
 
     /**

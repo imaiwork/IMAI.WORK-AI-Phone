@@ -130,6 +130,26 @@
                         <text class="text-sm text-primary font-medium px-[8rpx]" @click="onPaste"> 粘贴 </text>
                     </view>
 
+                    <view v-if="isDouyinPlatform" class="flex items-center gap-[12rpx] mt-[20rpx]">
+                        <text class="text-[22rpx] text-[#9CA3AF] flex-shrink-0">文案长度</text>
+                        <view class="flex items-center bg-[#F3F4F6] rounded-full p-[6rpx]">
+                            <view
+                                v-for="opt in copyLengthOptions"
+                                :key="opt.val"
+                                class="px-[16rpx] py-[12rpx] rounded-full text-[22rpx]"
+                                :class="
+                                    copyLength === opt.val
+                                        ? 'bg-white text-primary font-semibold'
+                                        : 'text-[#9CA3AF]'
+                                "
+                                :style="copyLength === opt.val ? 'box-shadow: 0 1px 2px rgba(0,0,0,0.05)' : ''"
+                                @click="copyLength = opt.val">
+                                {{ opt.label }}
+                            </view>
+                        </view>
+                        <text class="text-[20rpx] text-[#C4C8D0]">{{ currentCopyLengthOption.desc }}</text>
+                    </view>
+
                     <view
                         v-if="isDouyinPlatform && currentMaterialOption.needExtraPower"
                         class="inline-flex items-center gap-[10rpx] mt-[24rpx] px-[24rpx] py-[12rpx] rounded-full border border-[#FDE68A] bg-[#FFFBEB]">
@@ -340,6 +360,8 @@ import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import usePolling from "@/hooks/usePolling";
 import {
+    HOT_WRITE_COPY_LENGTH_DEFAULT,
+    HOT_WRITE_COPY_LENGTH_OPTIONS,
     HOT_WRITE_IMAGE_MODEL_ALIAS,
     HOT_WRITE_IMAGE_MODEL_NAME,
     HOT_WRITE_PLATFORM_OPTIONS,
@@ -455,6 +477,13 @@ const materialSource = ref(2);
 // ✅ 当前选中素材选项的完整信息
 const currentMaterialOption = computed(
     () => materialSourceOptions.find((o) => o.val === materialSource.value) ?? materialSourceOptions[0],
+);
+
+// 文案长度：直接决定成片时长（后端按「字数/3」估算秒数），默认「中」约 1 分钟
+const copyLengthOptions = HOT_WRITE_COPY_LENGTH_OPTIONS;
+const copyLength = ref<number>(HOT_WRITE_COPY_LENGTH_DEFAULT);
+const currentCopyLengthOption = computed(
+    () => copyLengthOptions.find((o) => o.val === copyLength.value) ?? copyLengthOptions[1],
 );
 
 // ────────── 文案模式：人设仿写 / 洗稿 ──────────
@@ -770,6 +799,7 @@ const handleCreate = async () => {
                 url: inputUrl.value,
                 persona_id: personaId,
                 visual_material_source: isWashMode.value ? 1 : materialSource.value,
+                copywriting_length: copyLength.value,
                 rewrite_mode: rewriteMode.value,
             });
         }
@@ -855,6 +885,7 @@ const onRetryTask = async (task: any) => {
                 url,
                 persona_id: personaId,
                 visual_material_source: washTask ? 1 : task.visual_material_source ?? 3,
+                copywriting_length: Number(task.copywriting_length) || HOT_WRITE_COPY_LENGTH_DEFAULT,
                 rewrite_mode: taskRewriteMode,
             });
         }

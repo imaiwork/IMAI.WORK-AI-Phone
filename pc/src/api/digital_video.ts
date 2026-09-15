@@ -11,6 +11,7 @@
  * 2) 纯数字人视频(无混剪):
  *    POST /human/createVideo
  */
+import type { FollowupField } from "./drawing";
 
 export type ShanjianType = 1 | 2 | 3 | 4;
 
@@ -82,4 +83,32 @@ export function createPlainDigitalHumanVideo(payload: PlainDigitalHumanPayload) 
         url: "/human/createVideo",
         params: payload,
     });
+}
+
+/* ---------- 数字人 AI 追问（走后端 → 中台 Coze；后端接口尚未实现，数字人入口恢复前需先落地） ---------- */
+
+/** 第 1 步：用户描述 → 动态问卷 {description, ppt_type, fields[]} */
+export function genDigitalFollowupForm(text: string) {
+    return $request.post<{ description: string; ppt_type: string; fields: FollowupField[] }>({
+        url: "/human/followupForm",
+        params: { text },
+    });
+}
+
+/** 第 2 步：用户填好的表单答案 → 文案参数 */
+export function genDigitalFollowupParams(answers: Record<string, any>) {
+    return $request.post<any>({ url: "/human/followupParams", params: { answers } });
+}
+
+/** 第 3 步：文案参数 → 文案列表；amountOverride 用于单条「重新生成」时只要 1 条 */
+export function genDigitalFinalCopy(params: any, options?: { amountOverride?: number }) {
+    return $request.post<string[]>({
+        url: "/human/generateCopy",
+        params: { params, amount: options?.amountOverride },
+    });
+}
+
+/** 按文案生成视频标题 */
+export function genVideoTitle(copyText: string) {
+    return $request.post<string>({ url: "/human/generateTitle", params: { text: copyText } });
 }

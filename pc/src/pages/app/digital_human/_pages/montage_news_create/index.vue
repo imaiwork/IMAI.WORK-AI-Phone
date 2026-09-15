@@ -160,6 +160,10 @@
                                     :show-tooltip="false" />
                             </div>
                         </div>
+
+                        <div class="bg-slate-50 rounded-[20px] border border-br px-4">
+                            <advanced-setting v-model="formData.extra" />
+                        </div>
                     </section>
 
                     <div
@@ -294,6 +298,11 @@ import MontageStylesChoose from "@/pages/app/digital_human/_components/montage-s
 import ChooseMusic from "@/pages/app/digital_human/_components/choose-music.vue";
 import VideoCoverUpload from "@/pages/app/digital_human/_components/video-cover-upload.vue";
 import CostPop from "@/pages/app/digital_human/_components/cost-pop.vue";
+import AdvancedSetting from "@/pages/app/digital_human/_components/advanced-setting.vue";
+import {
+    createPackSwitchSetting,
+    type PackSwitchSetting,
+} from "@/pages/app/digital_human/_config/advanced-setting";
 
 const userStore = useUserStore();
 const { userTokens } = toRefs(userStore);
@@ -322,7 +331,7 @@ const formData = reactive<{
     shanjian_type: MontageTypeEnum;
     music: any[];
     clip: any[];
-    extra: {
+    extra: PackSwitchSetting & {
         ai_music: boolean;
         volume: number;
         soundSwitch: boolean;
@@ -343,6 +352,7 @@ const formData = reactive<{
     music: [],
     clip: [],
     extra: {
+        ...createPackSwitchSetting(),
         ai_music: true,
         volume: 0.5,
         soundSwitch: false,

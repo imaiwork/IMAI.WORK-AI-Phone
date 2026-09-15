@@ -112,6 +112,9 @@ class TeamConsumptionLists extends BaseApiDataLists implements ListsExtendInterf
                 AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_CHAT,
                 AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_SEARCH,
             ], []],
+            'work_data' => ['作品数据报表', [
+                AccountLogEnum::TOKENS_DEC_WORK_DATA_FETCH,
+            ], []],
         ];
     }
 
@@ -207,6 +210,9 @@ class TeamConsumptionLists extends BaseApiDataLists implements ListsExtendInterf
             AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_SEARCH,
         ], true)) {
             return ['hotspot', '热点追踪', 'text'];
+        }
+        if ($ct === AccountLogEnum::TOKENS_DEC_WORK_DATA_FETCH) {
+            return ['work_data', '作品数据报表', 'text'];
         }
         // 图文爆款仿写(勿落入下方社媒获客段)
         if ($ct === AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE) {

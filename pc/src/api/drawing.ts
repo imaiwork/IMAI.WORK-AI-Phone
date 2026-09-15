@@ -155,6 +155,19 @@ export function drawConversationDelete(params: { id: number | string }) {
     return $request.post({ url: "/draw.draw/conversationDelete", params });
 }
 
+/** 追问表单字段（pptFollowup 等接口返回的 fields[] 元素，ppt-followup 组件按 field_type 渲染） */
+export interface FollowupField {
+    id: string;
+    label: string;
+    description?: string;
+    field_type: "input" | "text" | "textarea" | "number" | "select" | "radio" | "checkbox" | string;
+    default_value: string | number;
+    options: string[];
+    placeholder?: string;
+    required: boolean;
+    max_length?: number;
+}
+
 /** PPT 智能追问（中台 Coze，不计费） */
 export function drawPptFollowup(params: { topic: string }) {
     return $request.post({ url: "/draw.draw/pptFollowup", params });

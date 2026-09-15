@@ -53,6 +53,8 @@ class WechatVideoSynthesis extends Command
                 // 过渡期交集条件：旧布尔锁与完成日期都判定"今天未完成"才挑选，日期化稳定后旧条件下线
                 ->whereRaw(SvDevice::synthesisPendingDateSql(SvDevice::SYNTHESIS_SCENE_WECHAT, 'd'))
                 ->where('p.status', 1)
+                // 无手机模式人设不走朋友圈手机链路
+                ->where('p.run_mode', \app\common\model\aiPersona\AiPersona::RUN_MODE_PHONE)
                 ->where('d.is_first', 0)
                 ->where('d.persona_id', '>', 0)
                 ->select();

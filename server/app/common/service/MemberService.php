@@ -2,9 +2,9 @@
 
 namespace app\common\service;
 
+use app\common\enum\ChatEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
-use think\facade\Log;
 use app\common\model\chat\Models;
 use app\common\model\chat\ModelsCost;
 use app\common\model\member\MemberUser;
@@ -12,6 +12,7 @@ use app\common\model\user\User;
 use app\common\model\user\UserLevel;
 use app\common\service\chat\ChatModelsService;
 use think\facade\Db;
+use think\facade\Log;
 
 /**
  * 会员业务核心服务
@@ -244,6 +245,12 @@ class MemberService
             return [];
         }
 
+        foreach (self::unrestrictedChatModelIds() as $id) {
+            if (!in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+
         $names = Models::whereIn('id', $ids)->column('name', 'id');
         $result = [];
         foreach ($ids as $id) {
@@ -473,6 +480,9 @@ class MemberService
         if ($modelId <= 0) {
             return true;
         }
+        if (in_array($modelId, self::unrestrictedChatModelIds(), true)) {
+            return true;
+        }
         $allowed = self::parseAllowedModelIds(self::getQuota($userId)['allowed_models'] ?? []);
         if (empty($allowed)) {
             return true; // 等级没限制就放
@@ -480,6 +490,27 @@ class MemberService
         return in_array($modelId, $allowed, true);
     }
 
+    /**
+     * 不受会员白名单限制的对话主模型 id（按兜底 alias 查找）
+     *
+     * @return int[]
+     */
+    private static function unrestrictedChatModelIds(): array
+    {
+        static $ids = null;
+        if ($ids !== null) {
+            return $ids;
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map(
+            'intval',
+            ModelsCost::where('type', ChatEnum::MODEL_TYPE_CHAT)
+                ->where('alias', ChatEnum::DEFAULT_CHAT_MODEL_ALIAS)
+                ->column('model_id')
+        ), static fn($id) => $id > 0)));
+
+        return $ids;
+    }
 
     /**
      * 为用户随机选一对可用对话模型（主模型 + 匹配的启用子模型）
@@ -702,20 +733,27 @@ class MemberService
         self::syncUserLevelId((int)$m->user_id, self::defaultUserLevelId());
         $free = self::getQuota($m->user_id);   // 此时已无有效会员,getQuota 会落到 free 配额
         foreach (self::ENTITIES as $type => $cfg) {
+            // 配额原值直接传下去：max(0,...) 会把 -1(禁止) 压成 0(不限),两种相反的语义被抹平
             $limit = (int)($free[$cfg['quota_field']] ?? 0);
-            self::freezeExcess($m->user_id, $type, max(0, $limit));
+            self::freezeExcess($m->user_id, $type, $limit);
         }
     }
 
     /**
      * 把用户某类实体超出 keep 个的"最近创建之外"冻结
-     * keep=0 时全部冻结(免费禁止)
-     * keep=-1 在 canCreate 已挡,无需处理
+     *
+     * keep 的口径与 canCreate / 后台等级表(user_level lists 的 fmt)完全一致:
+     *   -1 = 禁止, 0 = 不限, N = 最多 N 个
+     * 原来这里把 keep=0 当成"免费禁止"全部冻结,与上面三处的口径正好相反:
+     * 默认等级把人设配额留成 0(界面显示"不限")时,会员一到期就把用户所有人设冻成 status=0,
+     * 两条 24h 合成 cron 只捞 status=1,于是整个账号一条内容都不再生成(2026-09-10 实遇)。
      */
     public static function freezeExcess(int $userId, string $type, int $keep): void
     {
         if (!isset(self::ENTITIES[$type])) return;
         if ($keep < 0) return;
+        // 不限:一个都不冻
+        if ($keep === 0) return;
         $cfg = self::ENTITIES[$type];
         $table = $cfg['table'];
 
@@ -724,6 +762,9 @@ class MemberService
         $query = Db::name($table)
             ->where($cfg['user_field'], $userId)
             ->where($cfg['status_field'], $cfg['active_value']);
+        if (!empty($cfg['extra_active_where'])) {
+            $query->where($cfg['extra_active_where']);
+        }
         if ($type === 'robot') {
             $query->where('quota_exempt', 0);
         }
@@ -896,6 +937,25 @@ class MemberService
         ]);
     }
 
+    /**
+     * 按用户当前配额重新对齐各类实体:超出的冻结,配额放开的解冻。
+     *
+     * 到期冻结与续费解冻各自只走一个方向,而后台改等级配额是双向的
+     * (调小要收、调大要放),所以单独给一个入口,由等级编辑在保存后调用。
+     * 先冻后解:冻结把活跃数收到 N,解冻再从冻结里补回空出的名额,两步不会互相抵消。
+     */
+    public static function applyQuota(int $userId): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+        $quota = self::getQuota($userId);
+        foreach (self::ENTITIES as $type => $cfg) {
+            self::freezeExcess($userId, $type, (int)($quota[$cfg['quota_field']] ?? 0));
+        }
+        self::thawWithinQuota($userId);
+    }
+
     /** 用户续费后:解冻可允许范围内的项 */
     public static function thawWithinQuota(int $userId): void
     {
@@ -914,6 +974,10 @@ class MemberService
                     ->where($cfg['status_field'], $cfg['active_value']);
                 $frozenQuery = Db::name($table)->where($cfg['user_field'], $userId)
                     ->where($cfg['status_field'], $cfg['frozen_value']);
+                if (!empty($cfg['extra_active_where'])) {
+                    $activeQuery->where($cfg['extra_active_where']);
+                    $frozenQuery->where($cfg['extra_active_where']);
+                }
                 if ($type === 'robot') {
                     $activeQuery->where('quota_exempt', 0);
                     $frozenQuery->where('quota_exempt', 0);

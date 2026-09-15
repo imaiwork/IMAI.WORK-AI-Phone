@@ -9,7 +9,7 @@ import {
     getCommentTimeIndex,
     normalizeCommentTimeValue
 } from './types'
-import type { ClosureFormData, CommentFilterItem } from './types'
+import type { ClosureFormData, CommentFilterItem, TouchType } from './types'
 
 type KeywordsEditType = 'clue' | 'comment' | 'comment_content' | 'fixed_comment'
 
@@ -25,8 +25,10 @@ export function useCommentStep(
     const keywordsEditRef = ref<any>()
     const commentFilterRef = ref<any>()
     const chooseAgeRef = ref<any>()
+    const chooseAgentRef = ref<any>()
 
     // ── show flags ────────────────────────────────────────────────
+    const showChooseAgent = ref(false)
     const showKeywordsEdit = ref(false)
     const showCommentFilterEdit = ref(false)
     const showAgePopup = ref(false)
@@ -244,11 +246,32 @@ export function useCommentStep(
         })
     }
 
+    // ── 截流私信触达方式（固定话术 / AI 接管）─────────────────────
+    const switchTouchType = (type: TouchType) => {
+        formData.touch_type = type
+    }
+
+    const handleChooseAgent = () => {
+        showChooseAgent.value = true
+        chooseAgentRef.value?.setChooseLists(formData.agent_id ? [{ id: formData.agent_id }] : [])
+    }
+
+    const handleChooseAgentConfirm = (agent: any) => {
+        if (!agent) return
+        formData.agent_id = String(agent.id ?? '')
+        formData.agent_name = String(agent.name ?? '')
+    }
+
     return {
         keywordsEditIndex,
         keywordsEditRef,
         commentFilterRef,
         chooseAgeRef,
+        chooseAgentRef,
+        showChooseAgent,
+        switchTouchType,
+        handleChooseAgent,
+        handleChooseAgentConfirm,
         showKeywordsEdit,
         showCommentFilterEdit,
         showAgePopup,

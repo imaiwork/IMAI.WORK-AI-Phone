@@ -8,6 +8,7 @@ use app\api\logic\service\AudioService;
 use app\common\model\audio\Audio;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 
 class AudioController extends BaseApiController
 {
@@ -167,6 +168,11 @@ class AudioController extends BaseApiController
 
         try {
             $data = request()->all();
+            if (!CallbackTokenService::guard('file', '音频转文字', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
 
             AudioLogic::updateAudioInfo($data);
 

@@ -89,6 +89,77 @@
                             </template>
 
                             <template v-else>
+                                <!-- 运行模式：这个人设的视频在哪生产、靠什么发布，比生成类型更上位所以放最前；对应人设 run_mode -->
+                                <view class="rule-sec">
+                                    <view class="rule-sec-hd">
+                                        <view class="rule-sec-title"><text>运行模式</text></view>
+                                        <text class="rule-sec-hint">决定视频在哪生产、靠什么发布</text>
+                                    </view>
+                                    <view class="rule-seg">
+                                        <view
+                                            v-for="opt in RUN_MODE_OPTIONS"
+                                            :key="opt.val"
+                                            class="rule-seg-btn"
+                                            :class="{ sel: innerState.runMode === opt.val }"
+                                            @click="innerState.runMode = opt.val">
+                                            <text>{{ opt.label }}</text>
+                                        </view>
+                                    </view>
+                                    <view class="rule-note">
+                                        <text class="block rule-note-text">{{ currentRunModeNote.text }}</text>
+                                        <text class="block rule-note-extra" :class="{ free: currentRunModeNote.tipOk }">
+                                            {{ currentRunModeNote.tip }}
+                                        </text>
+                                    </view>
+                                </view>
+
+                                <!-- 素材模式：开关在「人设详情 › 素材库」（按人设存本机），这里只读回显，不给第二个入口 -->
+                                <view class="rule-sec">
+                                    <view class="rule-sec-hd">
+                                        <view class="rule-sec-title"><text>素材模式</text></view>
+                                        <text class="rule-sec-hint">在「人设详情 › 素材库」里切换</text>
+                                    </view>
+                                    <view class="rule-note">
+                                        <text class="block rule-note-text">{{ currentMaterialKindNote }}</text>
+                                    </view>
+                                </view>
+
+                                <!-- 每日出片条数：只在无手机模式下有意义，手机模式仍按发布时段数出片 -->
+                                <view v-if="isCloudRun" class="rule-sec">
+                                    <view class="rule-sec-hd">
+                                        <view class="rule-sec-title"><text>每日出片条数</text></view>
+                                        <text class="rule-sec-hint">不看发布时段，按条数出片</text>
+                                    </view>
+                                    <view class="rule-dur">
+                                        <view
+                                            class="rule-dur-btn"
+                                            :class="{ disabled: dailyCountMinusDisabled }"
+                                            @click="stepDailyCount(-1)">
+                                            <u-icon name="minus" color="#4B5563" size="26"></u-icon>
+                                        </view>
+                                        <view class="rule-dur-input-wrap">
+                                            <input
+                                                class="rule-dur-input"
+                                                type="number"
+                                                :value="String(innerState.dailyVideoCount)"
+                                                @input="handleDailyCountInput"
+                                                @blur="handleDailyCountBlur" />
+                                            <text class="rule-dur-unit">条</text>
+                                        </view>
+                                        <view
+                                            class="rule-dur-btn"
+                                            :class="{ disabled: dailyCountPlusDisabled }"
+                                            @click="stepDailyCount(1)">
+                                            <u-icon name="plus" color="#4B5563" size="26"></u-icon>
+                                        </view>
+                                    </view>
+                                    <view class="rule-note">
+                                        <text class="block rule-note-text">
+                                            每天云端自动生成这么多条，按下方生成类型顺序轮流出。
+                                        </text>
+                                    </view>
+                                </view>
+
                                 <view class="rule-sec">
                                     <view class="rule-sec-hd">
                                         <view class="rule-sec-title"><text>生成类型</text></view>
@@ -430,12 +501,14 @@ import { addAiSynthesisRule, updateAiSynthesisRule, getAiSynthesisRuleDetail, ge
 import useUpload from "@/hooks/useUpload";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import VideoIcon from "@/ai_modules/person/static/icons/employee/video-blue.svg";
+import { MaterialKindEnum, normalizeMaterialUseMode } from "@/ai_modules/person/enums";
 import {
     SynthTypeEnum,
     MaterialSourceEnum,
     CopySourceEnum,
     CopyStyleEnum,
     CoverSourceEnum,
+    RunModeEnum,
     TemplateConfigMap,
     VIDEO_TEMPLATE_CONFIRM_EVENT,
     VIDEO_TEMPLATE_DRAFT_KEY,
@@ -471,6 +544,8 @@ enum LibRuleEnum {
 const COPY_LIB_VALUE = "lib";
 
 const NEWS_DURATION = { min: 5, max: 300, step: 5, default: 60 } as const;
+/** 每日出片条数：仅无手机模式使用，与后端 DAILY_VIDEO_COUNT_MAX 对齐 */
+const DAILY_VIDEO_COUNT = { min: 1, max: 20, default: 1 } as const;
 
 /** 背景音乐来源：1 系统 / 2 人设音乐库 / 3 无 */
 enum MusicSourceEnum {
@@ -519,6 +594,10 @@ interface InnerState {
     coverImage: string;
     // 工作方式 / 成品库 / 文案库规则（成品库模式下 library_* 取成品库选项）
     workMode: string;
+    /** 运行模式：人设接口 run_mode（1 手机 / 2 无手机），随规则一起提交 */
+    runMode: RunModeEnum;
+    /** 每日出片条数：仅无手机模式提交与生效 */
+    dailyVideoCount: number;
     libUseMode: string;
     libRandomRule: string;
     newsDuration: number;
@@ -591,6 +670,31 @@ const WORK_MODE_OPTIONS = [
 const WORK_MODE_NOTES: Record<string, string> = {
     [WorkModeEnum.Ai]: "AI 自动合成数字人口播 / 新闻体混剪 / 纯素材混剪短视频。",
     [WorkModeEnum.Lib]: "从「素材库 · 成品直发库」按规则取用已上传的成品视频，跳过 AI 合成，不消耗算力。",
+};
+
+const RUN_MODE_OPTIONS = [
+    { val: RunModeEnum.Phone, label: "手机模式" },
+    { val: RunModeEnum.Cloud, label: "无手机模式" },
+];
+
+/** 运行模式说明：text 讲在哪生产、靠什么发布；tip 讲前置条件（tipOk 绿字，否则橙字提醒） */
+const RUN_MODE_NOTES: Record<RunModeEnum, { text: string; tip: string; tipOk: boolean }> = {
+    [RunModeEnum.Phone]: {
+        text: "交给绑定的 AI 手机制作并发布，自动化最全。",
+        tip: "没绑手机 / 手机掉线时不会自动开工",
+        tipOk: false,
+    },
+    [RunModeEnum.Cloud]: {
+        text: "不用绑手机，云端自动制作，成片进内容记录，自己下载发布。",
+        tip: "无需准备设备",
+        tipOk: true,
+    },
+};
+
+/** 素材模式只读回显文案：讲合成时怎么取用素材 */
+const MATERIAL_KIND_NOTES: Record<MaterialKindEnum, string> = {
+    [MaterialKindEnum.AUTO]: "自动适配模式：什么规格都能传，合成时统一缩放到模板分辨率。",
+    [MaterialKindEnum.ORIGINAL]: "原图模式：合成时不缩放，只取原图模式下传的素材。",
 };
 
 const LIB_USE_MODE_OPTIONS = [
@@ -730,6 +834,12 @@ const COVER_SOURCE_TO_API: Record<string, number> = {
     [CoverSourceEnum.Manual]: 3,
 };
 
+/** 运行模式：枚举 ↔ 人设接口 run_mode（1 手机模式 / 2 无手机模式） */
+const RUN_MODE_TO_API: Record<string, number> = {
+    [RunModeEnum.Phone]: 1,
+    [RunModeEnum.Cloud]: 2,
+};
+
 /** 工具函数：将映射表反转，用于回显 */
 const invertMap = <K extends string, V extends string | number>(map: Record<K, V>) =>
     Object.fromEntries(Object.entries(map).map(([k, v]) => [v, k])) as Record<string, K>;
@@ -740,6 +850,7 @@ const API_TO_COVER_SOURCE = invertMap(COVER_SOURCE_TO_API);
 const API_TO_SYNTH_TYPE = invertMap(SYNTH_TYPE_TO_API);
 const API_TO_LIB_USE_MODE = invertMap(LIB_USE_MODE_TO_API);
 const API_TO_LIB_RULE = invertMap(LIB_RULE_TO_API);
+const API_TO_RUN_MODE = invertMap(RUN_MODE_TO_API);
 
 // ─── 组件内部状态 ─────────────────────────────────────────────────
 const innerState = reactive<InnerState>({
@@ -753,6 +864,8 @@ const innerState = reactive<InnerState>({
     coverSource: CoverSourceEnum.AI,
     coverImage: "",
     workMode: WorkModeEnum.Ai,
+    runMode: RunModeEnum.Phone,
+    dailyVideoCount: DAILY_VIDEO_COUNT.default,
     libUseMode: LibUseModeEnum.Random,
     libRandomRule: LibRuleEnum.Once,
     newsDuration: NEWS_DURATION.default,
@@ -784,9 +897,17 @@ const activeSynthApiTypes = computed(() =>
 const templateSummary = computed(() => buildTemplateSummary(activeSynthApiTypes.value, innerState.templateConfig));
 
 const currentWorkModeNote = computed(() => WORK_MODE_NOTES[innerState.workMode]);
+const currentRunModeNote = computed(() => RUN_MODE_NOTES[innerState.runMode]);
+const isCloudRun = computed(() => innerState.runMode === RunModeEnum.Cloud);
+
+// 素材模式只读回显：人设接口 material_use_mode（合成配置详情双写同一份），开关在「人设详情 › 素材库」
+const materialKind = ref<MaterialKindEnum>(MaterialKindEnum.AUTO);
+const currentMaterialKindNote = computed(() => MATERIAL_KIND_NOTES[materialKind.value]);
 const currentEditorLibRuleNote = computed(() => EDITOR_LIB_RULE_NOTES[innerState.libRandomRule]);
 const currentCopyLibRuleNote = computed(() => COPY_LIB_RULE_NOTES[innerState.copyLibRandomRule]);
 
+const dailyCountMinusDisabled = computed(() => innerState.dailyVideoCount <= DAILY_VIDEO_COUNT.min);
+const dailyCountPlusDisabled = computed(() => innerState.dailyVideoCount >= DAILY_VIDEO_COUNT.max);
 const newsDurationMinusDisabled = computed(() => innerState.newsDuration <= NEWS_DURATION.min);
 const newsDurationPlusDisabled = computed(() => innerState.newsDuration >= NEWS_DURATION.max);
 
@@ -808,7 +929,14 @@ const isMaterialConflict = computed(
 );
 
 const currentMaterialHint = computed(() => MATERIAL_HINTS[innerState.materialSource]);
-const currentCopyHint = computed(() => COPY_HINTS[innerState.copySource]);
+const currentCopyHint = computed(() => {
+    const hint = COPY_HINTS[innerState.copySource] ?? "";
+    // 无手机模式下仿写照常可用，但爆款来源只剩手动导入：热点追踪的自动抓取要靠绑定手机去平台搜
+    if (isCloudRun.value && innerState.copySource === CopySourceEnum.Rewrite) {
+        return hint + "无手机模式下爆款需要在爆款库手动导入分享链接（热点追踪的自动抓取要绑手机）。";
+    }
+    return hint;
+});
 const currentCoverHint = computed(() => COVER_HINTS[innerState.coverSource]);
 const currentMusicSourceHint = computed(
     () => MUSIC_SOURCE_HINTS[innerState.musicSource] || MUSIC_SOURCE_HINTS[MusicSourceEnum.System],
@@ -857,6 +985,7 @@ watch(
     { immediate: true },
 );
 
+// 切到无手机模式时文案来源若还是找爆款仿写，自动改为 AI 直接生成并提示
 onEventBus(VIDEO_TEMPLATE_CONFIRM_EVENT, (payload: TemplateConfigMap) => {
     if (!payload || typeof payload !== "object") return;
     Object.keys(payload).forEach((key) => {
@@ -882,6 +1011,25 @@ const clampNewsDuration = (value: unknown): number => {
     return Math.max(NEWS_DURATION.min, Math.min(NEWS_DURATION.max, num));
 };
 
+const clampDailyCount = (value: unknown): number => {
+    const num = Math.round(Number(value));
+    if (!Number.isFinite(num)) return DAILY_VIDEO_COUNT.default;
+    return Math.max(DAILY_VIDEO_COUNT.min, Math.min(DAILY_VIDEO_COUNT.max, num));
+};
+
+const stepDailyCount = (dir: 1 | -1): void => {
+    innerState.dailyVideoCount = clampDailyCount(innerState.dailyVideoCount + dir);
+};
+
+const handleDailyCountInput = (e: any): void => {
+    const raw = Number(e?.detail?.value);
+    innerState.dailyVideoCount = Number.isFinite(raw) ? raw : innerState.dailyVideoCount;
+};
+
+const handleDailyCountBlur = (): void => {
+    innerState.dailyVideoCount = clampDailyCount(innerState.dailyVideoCount);
+};
+
 const stepNewsDuration = (dir: 1 | -1): void => {
     innerState.newsDuration = clampNewsDuration(innerState.newsDuration + dir * NEWS_DURATION.step);
 };
@@ -896,7 +1044,9 @@ const handleNewsDurationBlur = (): void => {
 };
 
 const { uploadAndProcessFiles } = useUpload({
-    imageResolution: [99999, 99999],
+    // 封面直接原样交给闪剪，不走素材那套转码压缩，所以这里必须按合成端的硬限制拦：
+    // 之前写成 [99999, 99999] 等于没拦，一张 2176x1952 的封面把人设每天每条视频都判失败了
+    imageResolution: [2000, 2000],
     onSuccess: (res) => {
         innerState.coverImage = res[0]?.url;
     },
@@ -999,6 +1149,13 @@ const buildApiParams = () => ({
     news_mixcut_duration: innerState.newsDuration,
     pic: innerState.coverImage,
     work_mode: innerState.workMode === WorkModeEnum.Lib ? 2 : 1,
+    // 成品直发没有运行模式：上面那一节压根不渲染，这里再把回显来的旧值提交回去，
+    // 就会让一个成品直发人设背着 run_mode=2，发布 cron 直接跳过它，界面上还看不出来
+    run_mode: innerState.workMode === WorkModeEnum.Lib
+        ? RUN_MODE_TO_API[RunModeEnum.Phone]
+        : RUN_MODE_TO_API[innerState.runMode],
+    // 手机模式不提交条数，避免把无手机模式的配置带进按发布时段出片的链路
+    daily_video_count: isCloudRun.value ? innerState.dailyVideoCount : 0,
     product_use_mode: LIB_USE_MODE_TO_API[innerState.libUseMode],
     product_reuse_mode: LIB_RULE_TO_API[innerState.libRandomRule],
     music_source: normalizeMusicSource(innerState.musicSource),
@@ -1011,7 +1168,10 @@ const buildApiParams = () => ({
 /** 数字人检测 */
 const checkDigitalHuman = async (): Promise<boolean> => {
     const { lists } = await getAvatarList({ persona_id: props.personId });
-    if (lists.length === 0) {
+    // 列表会把冻结/失效的绑定一并列出来（available=false），合成时它们照样会被跳过，
+    // 所以这里只数真正能用的，别因为界面上还看得见形象就不提醒降级
+    const usable = (lists ?? []).filter((item: any) => item.available !== false);
+    if (usable.length === 0) {
         return new Promise((resolve) => {
             uni.showModal({
                 title: "提示",
@@ -1104,6 +1264,9 @@ const getDetail = async (): Promise<void> => {
     innerState.musicSource = normalizeMusicSource(res.music_source);
     innerState.musicVolume = normalizeMusicVolume(res.music_volume ?? MUSIC_VOLUME_DEFAULT);
     innerState.speechRate = normalizeSpeechRate(res.speech_rate ?? SPEECH_RATE_DEFAULT);
+    materialKind.value = normalizeMaterialUseMode(res.material_use_mode);
+    innerState.runMode = (API_TO_RUN_MODE[String(res.run_mode)] as RunModeEnum) ?? RunModeEnum.Phone;
+    innerState.dailyVideoCount = clampDailyCount(res.daily_video_count || DAILY_VIDEO_COUNT.default);
 
     // 回显全部类型模板（含当前未启用），以便重新勾选生成类型时恢复
     innerState.templateConfig = buildTemplateConfigForTypes(
@@ -1113,7 +1276,11 @@ const getDetail = async (): Promise<void> => {
 };
 
 watch(visible, (newVal) => {
-    if (newVal) getDetail();
+    if (!newVal) return;
+    // 运行模式与素材模式先回默认，等 getDetail 按接口值回显
+    innerState.runMode = RunModeEnum.Phone;
+    materialKind.value = MaterialKindEnum.AUTO;
+    getDetail();
 });
 
 defineExpose({

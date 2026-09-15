@@ -22,7 +22,8 @@ return [
             'connection' => null,
         ],
         'redis'    => [
-            'type'       => 'redis',
+            // 加固连接器：重连后强制重新 SELECT，防止 worker 掉回 db 0 消费不到任务
+            'type'       => \app\common\queue\RedisConnector::class,
             'queue'      => 'default',
             'host'       => env('redis.HOST', '127.0.0.1'),
             'port'       => env('redis.PORT', 6379),

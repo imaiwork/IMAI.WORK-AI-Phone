@@ -44,7 +44,19 @@ class DigitalVoiceLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function lists(): array
     {
-        $list = AiPersonaDigitalVoice::availableQuery()
+        $fields = [
+            'ad.id',
+            'ad.user_id',
+            'ad.persona_id',
+            'ad.voice_id',
+            'ad.voice_name',
+            'ad.provider',
+            'ad.preview_audio_url',
+            'ad.third_voice_id',
+            'ad.create_time',
+        ];
+
+        $list = AiPersonaDigitalVoice::listQuery()
                                      ->with([
                                                 // 关联人设主表
                                                 'persona'     => function ($query) {
@@ -55,17 +67,7 @@ class DigitalVoiceLists extends BaseApiDataLists implements ListsSearchInterface
                                                     $query->field('id,model_version,gender,name,voice_id,voice_urls,status');
                                                 }
                                             ])
-                                     ->field([
-                                                 'ad.id',
-                                                 'ad.user_id',
-                                                 'ad.persona_id',
-                                                 'ad.voice_id',
-                                                 'ad.voice_name',
-                                                 'ad.provider',
-                                                 'ad.preview_audio_url',
-                                                 'ad.third_voice_id',
-                                                 'ad.create_time'
-                                             ])
+                                     ->field($fields)
                                      ->where($this->where())
                                      ->where($this->searchWhere)
                                      ->order('ad.create_time desc')
@@ -92,7 +94,8 @@ class DigitalVoiceLists extends BaseApiDataLists implements ListsSearchInterface
         }
         unset($item);
 
-        return $list;
+        // 冻结/失效的绑定照常列出来，但要标清楚，别让用户以为自己被删了音色
+        return AiPersonaDigitalVoice::markAvailability($list, $this->userId);
     }
 
     /**
@@ -102,7 +105,7 @@ class DigitalVoiceLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function count(): int
     {
-        return AiPersonaDigitalVoice::availableQuery()
+        return AiPersonaDigitalVoice::listQuery()
                                      ->where($this->where())
                                      ->where($this->searchWhere)
                                      ->count('ad.id');

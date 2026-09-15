@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import { montageConfig } from "@/enums/montageEnums";
 
 const props = withDefaults(defineProps<{ modelValue: boolean }>(), {
     modelValue: false,

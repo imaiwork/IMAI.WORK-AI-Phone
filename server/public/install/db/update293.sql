@@ -8,40 +8,44 @@ CREATE TABLE IF NOT EXISTS `la_minimax_upload_file` (
 `bytes` int(11) DEFAULT NULL COMMENT '文件大小',
 `create_time` int(11) DEFAULT NULL COMMENT '创建时间',
 `update_time` int(11) DEFAULT NULL COMMENT '更新时间',
-`delete_time` int(11) DEFAULT NULL COMMENT '删除时间',
+`delete_time` int(11) DEFAULT NULL COMMENT '删除时间', 
 PRIMARY KEY (`id`) USING BTREE,
 KEY `idx_user_id` (`user_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='minimax音色上传文件表';
 
 DELETE FROM `la_models`
 WHERE `id` = 19
-AND `name` = '微聚云科'
-AND `channel` = '微聚云科';
+  AND `name` = '微聚云科'
+  AND `channel` = '微聚云科';
 
 DELETE FROM `la_models_cost`
 WHERE `id` = 19
-AND `name` = '微聚云科'
-AND `channel` = '微聚云科';
+  AND `name` = '微聚云科'
+  AND `channel` = '微聚云科';
 
 DELETE FROM `la_models`
 WHERE `id` = 8
-AND `name` = '优秘V5'
-AND `channel` = '优秘';
+  AND `name` = '优秘V5'
+  AND `channel` = '优秘';
 
 DELETE FROM `la_models_cost`
 WHERE `id` = 8
-AND `name` = '优秘V5'
-AND `channel` = '优秘';
+  AND `name` = '优秘V5'
+  AND `channel` = '优秘';
 
 UPDATE `la_config`
 SET `value` = JSON_REMOVE(CAST(`value` AS JSON), '$.channel')
 WHERE `type` = 'model' AND `name` = 'list';
 
-ALTER TABLE `la_models` ADD COLUMN `model_version` INT(11) NULL COMMENT '模型版本' AFTER `channel`;
+
+ALTER TABLE `iw_models`
+ADD COLUMN `model_version` INT(11) NULL COMMENT '模型版本'
+AFTER `channel`;
+
 
 UPDATE `la_models` SET `model_version` = CASE `id`
-WHEN 7 THEN 7
-WHEN 9 THEN 8
+    WHEN 7 THEN 7
+    WHEN 9 THEN 8
 END
 WHERE `id` IN (7, 9);
 

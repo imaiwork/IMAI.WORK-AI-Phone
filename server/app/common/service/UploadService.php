@@ -661,6 +661,9 @@ class UploadService
                     if (!empty($videoInfo['size']))            $result['size']     = (int)$videoInfo['size'];
                     if (!empty($videoInfo['video']['width']))  $result['width']    = (int)$videoInfo['video']['width'];
                     if (!empty($videoInfo['video']['height'])) $result['height']   = (int)$videoInfo['video']['height'];
+                    if (!empty($videoInfo['video']['codec']))  $result['codec']    = (string)$videoInfo['video']['codec'];
+                    if (!empty($videoInfo['video']['fps']))    $result['fps']      = (float)$videoInfo['video']['fps'];
+                    if (!empty($videoInfo['format_name']))     $result['format_name'] = (string)$videoInfo['format_name'];
                     // 上传前未写入时长时，补写供转码中切割预估
                     if ($sliceModeFlag === 2 && (float)($file['duration'] ?? 0) <= 0 && !empty($videoInfo['duration'])) {
                         File::where('id', (int)$file['id'])->update([
@@ -1145,6 +1148,7 @@ class UploadService
         ];
     }
 
+
     /**
      * 投递转码任务到队列（强制队列）
      *
@@ -1157,10 +1161,14 @@ class UploadService
             // 入队前标记文件待转码,供生成视频侧的就绪门禁查询
             $fileId = (int)($data['file_id'] ?? 0);
             if ($fileId > 0) {
-                \app\common\model\file\File::where('id', $fileId)->update([
-                    'transcode_status' => 1,
-                    'update_time' => time(),
-                ]);
+                // 已在转码中的重投递不要刷新 update_time，否则巡检恢复会把
+                // 提交侧 30 分钟超时一直往后推，爆款/自动合成任务会永久卡在等待。
+                $current = (int)(File::where('id', $fileId)->value('transcode_status') ?? 0);
+                $update = ['transcode_status' => 1];
+                if (!in_array($current, [1, 2], true)) {
+                    $update['update_time'] = time();
+                }
+                File::where('id', $fileId)->update($update);
             }
 
             // 投递到队列
@@ -2882,7 +2890,8 @@ class UploadService
         int $cid = 0,
         int $sourceId = 0,
         int $source = FileEnum::SOURCE_ADMIN,
-        int $timeout = 0
+        int $timeout = 0,
+        bool $skipTranscode = false
     ): array {
         if (empty($url)) {
             throw new Exception("URL不能为空");
@@ -3000,16 +3009,22 @@ class UploadService
         ]);
 
         // 6. 投递转码任务
-        self::dispatchTranscodeJob([
-            'file_id'      => $file['id'],
-            'local_path'   => $localPath, // 本地绝对路径
-            'oss_uri'      => $fileUri,   // 云端/相对路径
-            'save_dir'     => $saveDir,
-            'clip'         => [],
-            'custom_specs' => null,
-        ]);
+        // 原图口径的转存只落文件不重编码：file 行 transcode_status 保持默认 0(无需转码)、
+        // slice_mode 保持 0(原样入库)，提交侧就绪门禁据此直接放行。
+        if ($skipTranscode) {
+            Log::channel('ffmpeg')->write("[Source仅转存] 类型:{$type} | URL:{$url} | FileID:{$file['id']}");
+        } else {
+            self::dispatchTranscodeJob([
+                'file_id'      => $file['id'],
+                'local_path'   => $localPath, // 本地绝对路径
+                'oss_uri'      => $fileUri,   // 云端/相对路径
+                'save_dir'     => $saveDir,
+                'clip'         => [],
+                'custom_specs' => null,
+            ]);
 
-        Log::channel('ffmpeg')->write("[Source转码投递] 类型:{$type} | URL:{$url} | FileID:{$file['id']}");
+            Log::channel('ffmpeg')->write("[Source转码投递] 类型:{$type} | URL:{$url} | FileID:{$file['id']}");
+        }
 
         if ($fileSize <= 0) {
             $fileSize = self::localFileSize($localPath);
@@ -3042,6 +3057,7 @@ class UploadService
      * @param int $cid 分类ID
      * @param int $timeout 下载超时秒数，0 表示沿用原路径（无硬超时）
      * @param int|null $outSize 上传前算出的字节数
+     * @param bool $skipTranscode 只转存不重编码（原图口径）
      * @return string
      */
     public static function transcodeRemoteFileBySource(
@@ -3050,7 +3066,8 @@ class UploadService
         int $userId = 0,
         int $cid = 0,
         int $timeout = 0,
-        ?int &$outSize = null
+        ?int &$outSize = null,
+        bool $skipTranscode = false
     ): string {
         $outSize = 0;
         if (empty($url)) {
@@ -3060,7 +3077,7 @@ class UploadService
             return $url;
         }
 
-        $transRes = self::transcodeBySource($url, $type, $cid, $userId, FileEnum::SOURCE_USER, $timeout);
+        $transRes = self::transcodeBySource($url, $type, $cid, $userId, FileEnum::SOURCE_USER, $timeout, $skipTranscode);
         $outSize = (int)($transRes['size'] ?? 0);
         $path = !empty($transRes['oss_uri']) ? $transRes['oss_uri'] : ($transRes['url'] ?? '');
         if (!empty($path)) {
@@ -3172,10 +3189,28 @@ class UploadService
                 $saveDir = 'uploads/file/' . date('Ymd');
             }
 
+            // 图片转码走本机 ffmpeg，读的是 local_path。OSS 存储下上传完本地就没有副本了，
+            // 投出去必然 10 次 fopen 失败并把这个文件永久标成 transcode_status=4，
+            // 之后每一轮预检都判"转码失败且分辨率仍超标"→不可恢复。与其留一个坏状态，
+            // 不如这里就判定不可自动恢复，让调用方（封面丢弃 / 素材报错）自己决定怎么处理。
+            $localPath = public_path() . ltrim($fileUri, '/');
+            if (!is_file($localPath)) {
+                $result['skipped'][] = ['uri' => $fileUri, 'reason' => '本地无文件，无法自动转码（对象存储）'];
+                $result['unrecoverable'][] = [
+                    'file_id' => $fileId,
+                    'uri' => $fileUri,
+                    'reason' => '本地无文件，无法自动转码（对象存储）',
+                ];
+                Log::channel('ffmpeg')->write(
+                    '[分辨率超标自动转码] 跳过投递:本地无文件 file_id=' . $fileId . ' uri=' . $fileUri
+                );
+                continue;
+            }
+
             try {
                 self::dispatchTranscodeJob([
                     'file_id' => $fileId,
-                    'local_path' => public_path() . ltrim($fileUri, '/'),
+                    'local_path' => $localPath,
                     'oss_uri' => $fileUri,
                     'save_dir' => $saveDir,
                     'clip' => [],
@@ -3197,13 +3232,12 @@ class UploadService
                 ];
                 Log::channel('ffmpeg')->write(
                     '[分辨率超标自动转码] 投递失败 file_id=' . $fileId
-                    . ' uri=' . $fileUri
-                    . ' err=' . $e->getMessage()
+                        . ' uri=' . $fileUri
+                        . ' err=' . $e->getMessage()
                 );
             }
         }
 
         return $result;
     }
-
 }

@@ -69,6 +69,12 @@ class HandlerRegistry
             WorkerEnum::RPA_DEVICE_VIRAL_RITER_TASK => \app\common\workerman\rpa\handlers\device\ViralRewriterHandler::class, #设备爆款复
             WorkerEnum::RPA_SPH_COMMENT_THUMB => \app\common\workerman\rpa\handlers\wechat\SphCommentThumbSaveHandler::class, #评论点赞
             WorkerEnum::RPA_DEVICE_PRECISE_CLUES_TASK => \app\common\workerman\rpa\handlers\touch\PreciseCluesTaskHandler::class, #设备精准获客任务发送
+            WorkerEnum::RPA_DY_SEARCH_TASK_SEND => \app\common\workerman\rpa\handlers\dysearch\TaskSendHandler::class,
+            WorkerEnum::RPA_DY_SEARCH_TASK_RECORD_SAVE => \app\common\workerman\rpa\handlers\dysearch\TaskRecordSaveHandler::class,
+            WorkerEnum::RPA_DY_SEARCH_TASK_PAUSE => \app\common\workerman\rpa\handlers\dysearch\TaskPauseHandler::class,
+            WorkerEnum::RPA_DY_SEARCH_TASK_RESUME => \app\common\workerman\rpa\handlers\dysearch\TaskRecoveryHandler::class,
+            WorkerEnum::RPA_DY_SEARCH_TASK_CANCEL => \app\common\workerman\rpa\handlers\dysearch\TaskDeleteHandler::class,
+            WorkerEnum::RPA_DY_SEARCH_TASK_COMPLETED => \app\common\workerman\rpa\handlers\dysearch\TaskCompletedHandler::class,
             WorkerEnum::RPA_PHONE_AGENT_REPORT => \app\common\workerman\rpa\handlers\phoneAgent\PhoneAgentReportHandler::class,
             WorkerEnum::RPA_DEVICE_RUNNING_LOG => \app\common\workerman\rpa\handlers\device\RunningLogHandler::class, #设备运行日志
         ];

@@ -2,11 +2,27 @@
     <popup-bottom
         v-model="show"
         title="请选择音色"
-        custom-class="bg-[#F9FAFB]"
+        :custom-class="plain ? 'bg-white' : 'bg-[#F9FAFB]'"
+        :clearable="!plain"
         :is-disabled-touch="true"
         @close="close">
+        <template v-if="plain" #header>
+            <view class="selector-handle"></view>
+            <view class="selector-header">
+                <view class="flex-1 min-w-0">
+                    <text class="selector-title">{{ limit === 1 ? "选择音色" : "添加音色" }}</text>
+                    <text class="selector-subtitle">
+                        {{ limit === 1 ? "选择一个音色，确认后完成绑定" : "可多选加入当前人设" }} · 已选
+                        {{ chooseLists.length }} 个
+                    </text>
+                </view>
+                <view class="selector-close" @click="close">
+                    <u-icon name="close" color="#5B6B80" size="24"></u-icon>
+                </view>
+            </view>
+        </template>
         <template #content>
-            <view class="h-full flex flex-col">
+            <view class="h-full flex flex-col" :class="{ 'persona-voice--plain': plain }">
                 <view class="px-[32rpx]" v-if="getTabsList.length > 1">
                     <u-tabs
                         :list="getTabsList"
@@ -17,7 +33,7 @@
                         @change="handleChange" />
                 </view>
 
-                <view class="flex items-center justify-between px-[32rpx] mt-3 mb-1" v-if="limit > 1">
+                <view class="flex items-center justify-between px-[32rpx] mt-3 mb-1" v-if="limit > 1 && !plain">
                     <text class="text-[#666666] font-medium">请选择音色</text>
                     <view class="text-xs text-[#999999]">
                         已选
@@ -34,34 +50,44 @@
                         :fixed="false"
                         :safe-area-inset-bottom="true"
                         @query="queryList">
-                        <view class="py-[24rpx] px-[32rpx] flex flex-col gap-[16rpx]">
+                        <view class="voice-list py-[24rpx] px-[32rpx] flex flex-col gap-[16rpx]">
                             <navigator
                                 :url="`/ai_modules/digital_human/pages/tone_clone/tone_clone?model_version=${modelVersion}`"
                                 hover-class="none"
-                                class="flex items-center gap-x-[24rpx] rounded-[24rpx] p-[32rpx] border-[2rpx] border-dashed border-[#C5D9FF] bg-[#F0F7FF] active:opacity-70">
+                                class="voice-clone flex items-center gap-x-[24rpx] rounded-[24rpx] p-[32rpx] border-[2rpx] border-dashed border-[#C5D9FF] bg-[#F0F7FF] active:opacity-70">
                                 <view
-                                    class="w-[72rpx] h-[72rpx] rounded-full flex items-center justify-center flex-shrink-0"
-                                    style="background: linear-gradient(135deg, #4da3ff 0%, #0065fb 100%)">
-                                    <u-icon name="plus" size="28" color="#fff" />
+                                    class="voice-clone-icon w-[72rpx] h-[72rpx] rounded-full flex items-center justify-center flex-shrink-0"
+                                    :style="
+                                        plain ? {} : { background: 'linear-gradient(135deg, #4da3ff 0%, #0065fb 100%)' }
+                                    ">
+                                    <u-icon name="plus" size="28" :color="plain ? '#0065FB' : '#fff'" />
                                 </view>
                                 <view class="flex-1">
-                                    <text class="text-[28rpx] font-bold text-primary block">去克隆音色</text>
-                                    <text class="text-[23rpx] text-[#7AABFF] mt-[4rpx] block">复刻您的专属声音</text>
+                                    <text class="voice-clone-title text-[28rpx] font-bold text-primary block"
+                                        >去克隆音色</text
+                                    >
+                                    <text class="voice-clone-description text-[23rpx] text-[#7AABFF] mt-[4rpx] block"
+                                        >复刻您的专属声音</text
+                                    >
                                 </view>
-                                <u-icon name="arrow-right" color="#7AABFF" size="28" />
+                                <u-icon name="arrow-right" :color="plain ? '#647184' : '#7AABFF'" size="28" />
                             </navigator>
 
                             <view
                                 v-for="(item, index) in dataLists"
                                 :key="index"
-                                class="flex items-center gap-x-[24rpx] rounded-[24rpx] p-[32rpx] transition-opacity"
-                                :class="
+                                class="voice-option flex items-center gap-x-[24rpx] rounded-[24rpx] p-[32rpx] transition-opacity"
+                                :class="[
                                     isDisabled(item)
                                         ? 'bg-[#F5F5F5] opacity-60'
                                         : isChooseItem(item)
                                         ? 'bg-[#F0F7FF] shadow-[0px_0px_0px_2rpx_rgba(0,101,251,1)] active:opacity-80'
-                                        : 'bg-white active:opacity-80'
-                                "
+                                        : 'bg-white active:opacity-80',
+                                    {
+                                        'voice-option--selected': isChooseItem(item),
+                                        'voice-option--disabled': isDisabled(item),
+                                    },
+                                ]"
                                 @click="handleSelect(item)">
                                 <view class="flex-shrink-0 leading-[0] relative">
                                     <image
@@ -83,19 +109,19 @@
 
                                 <view class="flex-1 min-w-0">
                                     <text
-                                        class="text-[28rpx] font-medium line-clamp-1 break-all block"
+                                        class="voice-name text-[28rpx] font-medium line-clamp-1 break-all block"
                                         :class="isDisabled(item) ? 'text-[#BBBBBB]' : 'text-[#212121]'">
                                         {{ item.name }}
                                     </text>
                                     <text
-                                        class="text-[22rpx] mt-[4rpx] block"
+                                        class="voice-description text-[22rpx] mt-[4rpx] block"
                                         :class="isDisabled(item) ? 'text-[#CCCCCC]' : 'text-[#b4b4b4]'">
                                         {{ isDisabled(item) ? "已使用" : item.type === 0 ? "用户音色" : "系统音色" }}
                                     </text>
                                 </view>
 
                                 <view
-                                    class="flex items-center justify-center gap-x-[8rpx] rounded-[16rpx] px-[20rpx] py-[12rpx] flex-shrink-0"
+                                    class="voice-preview flex items-center justify-center gap-x-[8rpx] rounded-[16rpx] px-[20rpx] py-[12rpx] flex-shrink-0"
                                     :class="
                                         isDisabled(item)
                                             ? 'bg-[#F0F0F0] border border-solid border-[#E0E0E0]'
@@ -138,7 +164,7 @@
                 </view>
 
                 <view
-                    class="bg-[#ffffff]/90 px-[32rpx] pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] flex items-center justify-between gap-4 z-50 border-t border-solid border-[#F0F0F0]">
+                    class="selector-footer bg-[#ffffff]/90 px-[32rpx] pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] flex items-center justify-between gap-4 z-50 border-t border-solid border-[#F0F0F0]">
                     <view
                         v-if="limit && limit > 1"
                         class="flex items-center gap-2 active:opacity-70 transition-opacity py-2"
@@ -157,15 +183,25 @@
                     <view class="flex-1">
                         <u-button
                             type="primary"
-                            shape="circle"
+                            :shape="plain ? 'square' : 'circle'"
                             ripple
-                            :custom-style="{
-                                fontSize: '28rpx',
-                                fontWeight: 'bold',
-                                height: '88rpx',
-                            }"
+                            :custom-style="
+                                plain
+                                    ? {
+                                          fontSize: '28rpx',
+                                          fontWeight: '600',
+                                          height: '94rpx',
+                                          borderRadius: '24rpx',
+                                      }
+                                    : {
+                                          fontSize: '28rpx',
+                                          fontWeight: 'bold',
+                                          height: '88rpx',
+                                      }
+                            "
                             @click="handleConfirm">
-                            确定选择{{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
+                            {{ plain ? (limit === 1 ? "确认绑定" : "确认加入") : "确定选择"
+                            }}{{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
                         </u-button>
                     </view>
                 </view>
@@ -185,6 +221,7 @@ const props = defineProps({
     showOriginalTone: { type: Boolean, default: false },
     showFreeTone: { type: Boolean, default: true },
     limit: { type: Number, default: 99 },
+    plain: { type: Boolean, default: false },
 });
 const emit = defineEmits(["update:modelValue", "select", "close"]);
 
@@ -344,3 +381,90 @@ defineExpose({
     },
 });
 </script>
+
+<style lang="scss" scoped>
+.selector-handle {
+    @apply w-[64rpx] h-[8rpx] rounded-[8rpx] bg-[#DCE3EC] mx-auto mt-[20rpx] mb-[4rpx];
+}
+
+.selector-header {
+    @apply flex items-center gap-[24rpx] px-[36rpx] pt-[18rpx] pb-[26rpx]
+        border-[0] border-b-[2rpx] border-solid border-[#EEF1F5];
+}
+
+.selector-title {
+    @apply block text-[34rpx] font-semibold text-[#202937];
+}
+
+.selector-subtitle {
+    @apply block mt-[8rpx] text-[24rpx] leading-[36rpx] text-[#647184];
+}
+
+.selector-close {
+    @apply relative w-[56rpx] h-[56rpx] rounded-full bg-[#F1F4F8] flex items-center justify-center shrink-0 active:opacity-70;
+
+    &::after {
+        content: "";
+        @apply absolute inset-[-16rpx];
+    }
+}
+
+.persona-voice--plain {
+    @apply bg-white;
+
+    .voice-list {
+        @apply p-[36rpx] gap-[20rpx];
+    }
+
+    .voice-clone {
+        @apply p-[24rpx] rounded-[22rpx] border-[#C5D8F0] bg-[#F3F7FC];
+    }
+
+    .voice-clone-icon {
+        @apply rounded-[20rpx] bg-[#E6EFFF];
+    }
+
+    .voice-clone-title {
+        @apply font-medium text-[#202937];
+    }
+
+    .voice-clone-description {
+        @apply text-[24rpx] text-[#647184] leading-[36rpx];
+    }
+
+    .voice-option {
+        @apply min-h-[108rpx] p-[24rpx] gap-x-[20rpx] rounded-[22rpx]
+            border-[2rpx] border-solid border-[#DDE5EF] bg-white shadow-none;
+    }
+
+    .voice-option--selected {
+        @apply border-[#87B7FF] bg-[#F1F6FF];
+    }
+
+    .voice-name {
+        @apply text-[#202937];
+    }
+
+    .voice-description {
+        @apply text-[24rpx] text-[#647184] leading-[36rpx];
+    }
+
+    .voice-option--disabled {
+        @apply border-[#E4E9EF] bg-[#F6F8FA];
+
+        .voice-name,
+        .voice-description {
+            @apply text-[#8390A1];
+        }
+    }
+
+    .voice-preview {
+        @apply min-h-[76rpx] px-[16rpx] rounded-[18rpx];
+    }
+
+    .selector-footer {
+        @apply bg-white px-[36rpx] pt-[24rpx] pb-[calc(40rpx+env(safe-area-inset-bottom))] gap-[24rpx]
+            border-[0] border-t-[2rpx] border-solid border-[#E7ECF2];
+    }
+}
+</style>

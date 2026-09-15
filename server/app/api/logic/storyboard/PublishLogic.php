@@ -944,7 +944,6 @@ class PublishLogic extends SvBaseLogic
                 ->where('vs.id', 'in', $video_ids)
                 ->where('vt.id', 'NOT IN', $usedVideoIds[$account['account_type']])
                 ->where('vt.status', 'in', $status)
-                ->where('vt.persona_id', '=', 0)
                 ->limit($account['count'])
                 ->select()->toArray();
 

@@ -25,6 +25,33 @@ class VideoImitationTask extends BaseModel
     public const REWRITE_MODE_PERSONA = 1;
     public const REWRITE_MODE_WASH = 2;
 
+    /** 洗稿音乐音量/语速未设置哨兵（0 是合法音量，不能当哨兵） */
+    public const WASH_PARAM_UNSET = -1.0;
+
+    /**
+     * 仿写文案目标字数档位。成片时长按「字数/3」估算，所以字数≈秒数×3：
+     * 100≈30秒 200≈1分钟 350≈2分钟 600≈3分钟。
+     * 不设「不限」档：中台 /api/coze/settext 对 length=0 会强制补 150，
+     * 表达不了「不限」，最长档 600 已覆盖接入前的实际长度。
+     */
+    public const COPYWRITING_LENGTH_OPTIONS = [100, 200, 350, 600];
+    public const COPYWRITING_LENGTH_DEFAULT = 200;
+
+    /** 口播语速估算：闪剪成片时长按每秒 3 字换算 */
+    public const SPEECH_CHARS_PER_SECOND = 3;
+
+    /**
+     * 归一目标字数：非法值一律回落默认档，绝不把脏值发给中台
+     */
+    public static function normalizeCopywritingLength($value): int
+    {
+        $length = is_numeric($value) ? (int)$value : 0;
+
+        return in_array($length, self::COPYWRITING_LENGTH_OPTIONS, true)
+            ? $length
+            : self::COPYWRITING_LENGTH_DEFAULT;
+    }
+
     /** 洗稿视频生成类型 */
     public const GENERATION_TYPE_NONE = 0;
     public const GENERATION_TYPE_DIGITAL_HUMAN = 1;

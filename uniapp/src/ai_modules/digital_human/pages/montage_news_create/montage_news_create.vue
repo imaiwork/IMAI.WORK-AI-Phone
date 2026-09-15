@@ -505,6 +505,11 @@
                             </navigator>
                         </view>
 
+                        <view
+                            class="bg-white rounded-[28rpx] px-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <advanced-setting v-model="formData.extra" />
+                        </view>
+
                         <view class="h-[20rpx]" />
                     </view>
                 </scroll-view>
@@ -594,6 +599,11 @@ import VideoPreview from "@/components/video-preview/video-preview.vue";
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
 import CopywriterEmpty from "@/ai_modules/digital_human/components/copywriter-empty/copywriter-empty.vue";
 import VideoCoverUpload from "@/ai_modules/digital_human/components/video-cover-upload/video-cover-upload.vue";
+import AdvancedSetting from "@/ai_modules/digital_human/components/advanced-setting/advanced-setting.vue";
+import {
+    createPackSwitchSetting,
+    type PackSwitchSetting,
+} from "@/ai_modules/digital_human/config/advanced-setting";
 
 import { useNewsBodySteps, NEWS_BODY_COPYWRITER_LIMIT } from "./hooks/useSteps";
 import { useMaterialGroup } from "./hooks/useMaterialGroup";
@@ -613,7 +623,7 @@ const formData = reactive<{
     person_introduction: string;
     shanjian_type: MontageTypeEnum;
     music: any[];
-    extra: {
+    extra: PackSwitchSetting & {
         ai_music: boolean;
         volume: number;
         clip: number;
@@ -634,6 +644,7 @@ const formData = reactive<{
     shanjian_type: MontageTypeEnum.NEWS_BODY,
     music: [],
     extra: {
+        ...createPackSwitchSetting(),
         ai_music: true,
         volume: 0.5,
         clip: 0,

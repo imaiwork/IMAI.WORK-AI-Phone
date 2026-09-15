@@ -235,7 +235,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
                 StoryboardVideoSetting::update($update, ['id' => $setting->id]);
                 self::$returnData['result_id'] = $update['result_id'];
                 $mnpMessage                    = [
-                    'openid'   => UserAuth::where('user_id', self::$uid)->order('id', 'desc')->value('openid'),
+                    'openid'   => UserAuth::mnpOpenid((int)self::$uid),
                     'scene_id' => 402,
                     'name'     => $name,
                     'time'     => date('Y-m-d H:i:s', time()),
@@ -426,7 +426,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
                     continue;
                 }
                 $mnpMessage = [
-                    'openid'   => UserAuth::where('user_id', $setting['user_id'])->order('id', 'desc')->value('openid'),
+                    'openid'   => UserAuth::mnpOpenid((int)$setting['user_id']),
                     'scene_id' => 402,
                     'name'     => $setting['name'],
                     'time'     => date('Y-m-d H:i:s', time()),
@@ -588,12 +588,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
             $userId = $task['user_id'];
             $typeID = AccountLogEnum::TOKENS_DEC_STORYBOARD_VIDEO;
             $taskId = $task['task_id'];
-            $count  = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
         }
         return true;
     }

@@ -22,6 +22,7 @@ class DigitalAvatarLists extends BaseAdminDataLists implements ListsSearchInterf
     {
         return [
             '=' => ['ad.persona_id','ad.user_id'],
+            '%like%' => ['ad.avatar_name'],
         ];
     }
 

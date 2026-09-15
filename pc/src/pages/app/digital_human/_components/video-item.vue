@@ -368,6 +368,11 @@ const getStatus = (item: any) => {
             return 1;
         }
         return 0;
+    } else if (type === 11) {
+        // 爆款玩法:2成功 3失败/4超时 其余生成中
+        if (status === 2) return 1;
+        if (status === 3 || status === 4) return 2;
+        return 3;
     } else {
         if (status === 0) {
             return 0;
@@ -400,6 +405,7 @@ const getTypeName = (type: number) => {
         { name: "分镜混剪", key: CreateVideoTypeEnum.STORYBOARD },
         { name: "爆款仿写", key: CreateVideoTypeEnum.HOT_WRITE },
         { name: "热点追踪", key: CreateVideoTypeEnum.HOTSPOT },
+        { name: "爆款玩法", key: CreateVideoTypeEnum.PLAY_VIDEO },
     ].find((item: any) => item.key === type)?.name;
 };
 

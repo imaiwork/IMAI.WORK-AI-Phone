@@ -129,6 +129,21 @@
                         </el-button>
                     </popover-input>
                 </el-form-item>
+                <el-form-item label="所在门店：">
+                    {{ formData.store_name || "-" }}
+                    <popover-input
+                        class="ml-[10px]"
+                        @confirm="handleEdit($event, 'store_name')"
+                        :limit="100"
+                        v-perms="['user.user/edit']">
+                        <el-button type="primary" link>
+                            <icon name="el-icon-EditPen" />
+                        </el-button>
+                    </popover-input>
+                </el-form-item>
+                <el-form-item label="资质证书：">
+                    <material-picker v-model="certificateImage" :limit="1" size="60px" @change="changeCertificate" />
+                </el-form-item>
                 <el-form-item label="联系电话：">
                     {{ formData.mobile || "-" }}
                     <popover-input
@@ -486,6 +501,8 @@ const formData = reactive({
     company_name: "",
     team_name: "",
     sex: 0,
+    store_name: "",
+    certificate_image: "",
     sn: "",
     account: "",
     used_tokens: 0,
@@ -511,6 +528,7 @@ const formData = reactive({
 });
 
 const avatar = ref("");
+const certificateImage = ref("");
 const showVip = ref<boolean>(false);
 const vipRef = shallowRef();
 const adjustState = reactive({
@@ -634,6 +652,7 @@ const getDetails = async () => {
         formData[key] = data[key];
     });
     avatar.value = data.avatar;
+    certificateImage.value = data.certificate_image || "";
     tabFetchMap[activeTab.value]?.();
 };
 
@@ -646,6 +665,11 @@ onBeforeUnmount(() => {
 const changeAvatar = (value: string) => {
     avatar.value = value;
     handleEdit(value, "avatar");
+};
+
+const changeCertificate = (value: string) => {
+    certificateImage.value = value;
+    handleEdit(value, "certificate_image");
 };
 
 const handleEdit = async (value: string | number, field: string) => {

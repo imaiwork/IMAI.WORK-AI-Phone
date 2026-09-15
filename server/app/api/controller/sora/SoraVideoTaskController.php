@@ -8,6 +8,7 @@ use app\api\logic\sora\SoraVideoTaskLogic;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 
 /**
  * SoraVideoController
@@ -23,7 +24,12 @@ class SoraVideoTaskController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('sora')->write('接收sora参数' . json_encode($data));
+            Log::channel('sora')->write('接收sora参数' . json_encode(CallbackTokenService::maskForLog($data)));
+            if (!CallbackTokenService::guard('sora', 'Sora视频', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val) {
@@ -46,7 +52,12 @@ class SoraVideoTaskController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('sora')->write('接收sora参数' . json_encode($data));
+            Log::channel('sora')->write('接收sora参数' . json_encode(CallbackTokenService::maskForLog($data)));
+            if (!CallbackTokenService::guard('sora', 'Sora视频New', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $key = md5(json_encode($data));
             $val = cache($key);
             $taskId = $data['task_id'] ?? '';
@@ -75,7 +86,12 @@ class SoraVideoTaskController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('seedance')->write('接收seedance参数' . json_encode($data));
+            Log::channel('seedance')->write('接收seedance参数' . json_encode(CallbackTokenService::maskForLog($data)));
+            if (!CallbackTokenService::guard('seedance', 'Seedance视频', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val) {

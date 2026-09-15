@@ -38,11 +38,14 @@ class MediaTranscodeRecoverCron extends Command
         }
 
         $deadline = time() - $staleSeconds;
+        // 重投递不刷新 update_time（否则会把提交侧 30 分钟超时无限往后推），
+        // 因此同一批卡住文件每分钟都会被查出来。这里多取一批候选，用缓存标记
+        // 保证每个文件在一个 stale 窗口内只重投一次，避免 worker 停摆时队列被重复作业灌爆。
         $rows = File::whereIn('transcode_status', [1, 2])
             ->where('update_time', '<', $deadline)
             ->field('id,uri,transcode_status,update_time')
             ->order('update_time asc,id asc')
-            ->limit($limit)
+            ->limit(500)
             ->select()
             ->toArray();
 
@@ -50,7 +53,12 @@ class MediaTranscodeRecoverCron extends Command
 
         $requeued = 0;
         $failed = 0;
+        $skipped = 0;
+        $handled = 0;
         foreach ($rows as $row) {
+            if ($handled >= $limit) {
+                break;
+            }
             $fileId = (int)($row['id'] ?? 0);
             $uri = trim((string)($row['uri'] ?? ''));
             $status = (int)($row['transcode_status'] ?? 0);
@@ -59,6 +67,13 @@ class MediaTranscodeRecoverCron extends Command
             if ($fileId <= 0) {
                 continue;
             }
+
+            $dispatchKey = 'media_transcode_recover_dispatch_' . $fileId;
+            if (cache($dispatchKey)) {
+                $skipped++;
+                continue;
+            }
+            $handled++;
 
             if ($uri === '') {
                 if (!$dryRun) {
@@ -79,6 +94,29 @@ class MediaTranscodeRecoverCron extends Command
             }
             $localPath = public_path() . ltrim($uri, '/');
 
+            if (!$dryRun && is_file($localPath)) {
+                try {
+                    $check = UploadService::checkTranscodeNeeded($localPath);
+                    $reason = (string)($check['reason'] ?? '');
+                    // 只认明确“已符合规范”。探测失败/无视频流时 checkTranscodeNeeded 也会返回
+                    // need_transcode=false，不能当成成功，否则人设切片/爆款提交会吃到坏素材。
+                    if (in_array($reason, ['已符合视频规范', '已符合图片规范'], true)) {
+                        File::where('id', $fileId)->update([
+                            'transcode_status' => 3,
+                            'update_time' => time(),
+                        ]);
+                        $requeued++;
+                        $this->logRecover(
+                            "素材已符合规范，仅标记转码成功、不触发入库/切割 file_id={$fileId} uri={$uri} reason={$reason}"
+                        );
+                        $output->writeln("就绪 file_id={$fileId} uri={$uri}");
+                        continue;
+                    }
+                } catch (\Throwable $e) {
+                    $this->logRecover("规范检查失败，继续重投递 file_id={$fileId} err=" . $e->getMessage());
+                }
+            }
+
             $payload = [
                 'file_id' => $fileId,
                 'local_path' => $localPath,
@@ -93,6 +131,7 @@ class MediaTranscodeRecoverCron extends Command
             if (!$dryRun) {
                 try {
                     UploadService::dispatchTranscodeJob($payload);
+                    cache($dispatchKey, 1, $staleSeconds);
                     $requeued++;
                     $this->logRecover("已重新投递 file_id={$fileId} uri={$uri} old_status={$status} update_time={$updateTime}");
                 } catch (\Throwable $e) {
@@ -113,7 +152,7 @@ class MediaTranscodeRecoverCron extends Command
             $output->writeln("恢复 file_id={$fileId} uri={$uri}");
         }
 
-        $output->writeln("完成 requeued={$requeued} failed={$failed} dry_run=" . ($dryRun ? 'yes' : 'no'));
+        $output->writeln("完成 requeued={$requeued} failed={$failed} skipped={$skipped} dry_run=" . ($dryRun ? 'yes' : 'no'));
         return 0;
     }
 

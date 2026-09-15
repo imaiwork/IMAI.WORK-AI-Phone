@@ -1,5 +1,12 @@
 <template>
-    <popup ref="popupRef" :title="title" async width="640px" @confirm="handleSave" @close="close">
+    <popup
+        ref="popupRef"
+        :title="title"
+        async
+        width="640px"
+        :confirm-loading="isLock"
+        @confirm="lockSave"
+        @close="close">
         <el-form ref="formRef" :model="formData" :rules="rules" label-width="140px" class="ls-form">
             <el-form-item label="等级名称" prop="level_name">
                 <el-input v-model="formData.level_name" maxlength="30" placeholder="如:体验会员 / 标准会员 / 年度尊享" class="w-[360px]" />
@@ -81,6 +88,7 @@
 import type { FormInstance } from "element-plus";
 import { addUserLevel, editUserLevel } from "@/api/consumer";
 import { getAiModel } from "@/api/ai_setting/model";
+import { useLockFn } from "@/hooks/useLockFn";
 import { setFormData } from "@/utils/util";
 import QuotaInput from "./quota-input.vue";
 
@@ -186,6 +194,7 @@ const handleSave = async () => {
     emit("success");
     close();
 };
+const { isLock, lockFn: lockSave } = useLockFn(handleSave);
 
 const open = (type: "add" | "edit") => {
     mode.value = type;

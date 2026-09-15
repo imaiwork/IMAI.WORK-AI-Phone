@@ -1,8 +1,27 @@
 <template>
-    <popup-bottom v-model="show" title="选择设备" custom-class="bg-[#F4F7FA]" :is-disabled-touch="true" @close="close">
+    <popup-bottom
+        v-model="show"
+        title="选择设备"
+        :custom-class="plain ? 'bg-white' : 'bg-[#F4F7FA]'"
+        :height="plain ? '88%' : '85%'"
+        :clearable="!plain"
+        :is-disabled-touch="true"
+        @close="close">
+        <template v-if="plain" #header>
+            <view class="choose-sheet-handle"></view>
+            <view class="choose-sheet-head">
+                <view class="flex-1 min-w-0">
+                    <text class="choose-sheet-title">选择关联设备</text>
+                    <text class="choose-sheet-sub">选择设备后确认关联到当前人设</text>
+                </view>
+                <view class="choose-sheet-close" @click="close">
+                    <u-icon name="close" color="#647184" size="24"></u-icon>
+                </view>
+            </view>
+        </template>
         <template #content>
-            <view class="h-full flex flex-col">
-                <view class="flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1">
+            <view class="h-full flex flex-col" :class="{ 'choose-device--plain': plain }">
+                <view class="choose-count flex items-center justify-between px-[30rpx] mt-3 mb-1" v-if="limit > 1">
                     <text class="text-[#666666] font-medium">请选择设备</text>
                     <view class="flex items-center gap-[10rpx]">
                         <text class="text-xs text-[#00000080]">
@@ -35,17 +54,19 @@
                         :fixed="false"
                         :safe-area-inset-bottom="true"
                         @query="queryList">
-                        <view class="px-[30rpx] py-4 flex flex-col gap-y-3.5">
+                        <view class="choose-list px-[30rpx] py-4 flex flex-col gap-y-3.5">
                             <view
-                                class="rounded-[24rpx] p-4 bg-white border-[2rpx] border-dashed border-[#0065fb]/40 flex items-center gap-x-3 active:scale-[0.98] transition-all duration-300"
+                                class="choose-bind rounded-[24rpx] p-4 bg-white border-[2rpx] border-dashed border-[#0065fb]/40 flex items-center gap-x-3 active:scale-[0.98] transition-all duration-300"
                                 @click="goBindDevice">
                                 <view
-                                    class="w-[88rpx] h-[88rpx] rounded-[20rpx] flex-shrink-0 flex items-center justify-center bg-[#EEF4FF]">
+                                    class="choose-icon w-[88rpx] h-[88rpx] rounded-[20rpx] flex-shrink-0 flex items-center justify-center bg-[#EEF4FF]">
                                     <u-icon name="plus" color="#0065fb" size="40"></u-icon>
                                 </view>
                                 <view class="flex-1 min-w-0">
-                                    <text class="font-bold text-[30rpx] text-primary block mb-1">绑定新设备</text>
-                                    <text class="text-xs text-[#999999]">扫码或输入设备码快速绑定</text>
+                                    <text class="choose-name font-bold text-[30rpx] text-primary block mb-1"
+                                        >绑定新设备</text
+                                    >
+                                    <text class="choose-desc text-xs text-[#999999]">扫码或输入设备码快速绑定</text>
                                 </view>
                                 <u-icon name="arrow-right" color="#0065fb" size="28"></u-icon>
                             </view>
@@ -53,7 +74,7 @@
                             <view
                                 v-for="(item, index) in deviceList"
                                 :key="index"
-                                class="rounded-[24rpx] p-4 flex flex-col gap-y-3 relative transition-all duration-300 border-[2rpx] border-solid"
+                                class="choose-card rounded-[24rpx] p-4 flex flex-col gap-y-3 relative transition-all duration-300 border-[2rpx] border-solid"
                                 :class="
                                     isDisabled(item)
                                         ? 'bg-[#F5F5F5] border-[transparent] shadow-none opacity-60'
@@ -62,9 +83,9 @@
                                         : 'bg-white border-[transparent] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.06)] active:scale-[0.98]'
                                 "
                                 @click="handleSelect(item)">
-                                <view class="flex items-center gap-x-3">
+                                <view class="choose-card-top flex items-center gap-x-3">
                                     <view
-                                        class="w-[88rpx] h-[88rpx] rounded-[20rpx] flex-shrink-0 flex items-center justify-center"
+                                        class="choose-icon w-[88rpx] h-[88rpx] rounded-[20rpx] flex-shrink-0 flex items-center justify-center"
                                         :class="
                                             isDisabled(item)
                                                 ? 'bg-[#EFEFEF]'
@@ -76,14 +97,14 @@
                                     </view>
 
                                     <view class="flex-1 min-w-0">
-                                        <view class="flex items-center gap-x-2 mb-1">
+                                        <view class="choose-name-row flex items-center gap-x-2 mb-1">
                                             <text
-                                                class="font-extrabold text-[30rpx] truncate"
+                                                class="choose-name font-extrabold text-[30rpx] truncate"
                                                 :class="isDisabled(item) ? 'text-[#BBBBBB]' : 'text-[#1A1A1A]'">
                                                 {{ item.device_name || item.device_model }}
                                             </text>
                                             <view
-                                                class="flex-shrink-0 px-2 py-[2rpx] rounded-full"
+                                                class="choose-status flex-shrink-0 px-2 py-[2rpx] rounded-full"
                                                 :class="
                                                     isDisabled(item)
                                                         ? 'bg-[#EFEFEF]'
@@ -111,7 +132,7 @@
                                             </view>
                                         </view>
                                         <text
-                                            class="text-xs truncate block"
+                                            class="choose-desc text-xs truncate block"
                                             :class="isDisabled(item) ? 'text-[#CCCCCC]' : 'text-[#999999]'">
                                             {{ item.sdk_version }} ·
                                             {{ item.auto_type === 1 ? "24H" : "手动" }}
@@ -119,7 +140,7 @@
                                     </view>
 
                                     <view
-                                        class="w-[44rpx] h-[44rpx] rounded-full border-[3rpx] flex items-center justify-center transition-colors duration-300 flex-shrink-0"
+                                        class="choose-check w-[44rpx] h-[44rpx] rounded-full border-[3rpx] flex items-center justify-center transition-colors duration-300 flex-shrink-0"
                                         :class="
                                             isDisabled(item)
                                                 ? 'border-[#E5E7EB] bg-[#F0F0F0]'
@@ -135,8 +156,8 @@
                                     </view>
                                 </view>
 
-                                <view class="h-[1rpx] bg-[#F0F0F0]"></view>
-                                <view v-if="item.accounts?.length" class="flex items-center">
+                                <view class="choose-divider h-[1rpx] bg-[#F0F0F0]"></view>
+                                <view v-if="item.accounts?.length" class="choose-accounts flex items-center">
                                     <view class="flex items-center">
                                         <view
                                             v-for="(acc, accIdx) in item.accounts.slice(0, 5)"
@@ -172,7 +193,7 @@
                 </view>
 
                 <view
-                    class="bg-[#ffffff]/90 flex-shrink-0 pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] px-5 shadow-[0_-8rpx_30rpx_rgba(0,0,0,0.04)] z-50 flex items-center gap-4">
+                    class="choose-footer bg-[#ffffff]/90 flex-shrink-0 pt-3 pb-[calc(20rpx+env(safe-area-inset-bottom))] px-5 shadow-[0_-8rpx_30rpx_rgba(0,0,0,0.04)] z-50 flex items-center gap-4">
                     <view v-if="limit > 1" class="flex flex-col gap-[6rpx] flex-shrink-0">
                         <view
                             class="flex items-center gap-2 active:opacity-70 transition-opacity py-2"
@@ -196,15 +217,22 @@
                     <view class="flex-1">
                         <u-button
                             type="primary"
-                            shape="circle"
+                            :shape="plain ? 'square' : 'circle'"
                             ripple
-                            :custom-style="{
-                                fontSize: '28rpx',
-                                fontWeight: 'bold',
-                                height: '88rpx',
-                            }"
+                            :custom-style="
+                                plain
+                                    ? {
+                                          fontSize: '28rpx',
+                                          fontWeight: '600',
+                                          height: '88rpx',
+                                          borderRadius: '24rpx',
+                                          backgroundColor: '#0065fb',
+                                      }
+                                    : { fontSize: '28rpx', fontWeight: 'bold', height: '88rpx' }
+                            "
                             @click="confirm">
-                            确定保存{{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
+                            {{ plain ? "确认关联" : "确定保存"
+                            }}{{ limit > 1 && chooseLists.length > 0 ? `(${chooseLists.length})` : "" }}
                         </u-button>
                     </view>
                 </view>
@@ -221,10 +249,12 @@ const props = withDefaults(
         modelValue: boolean;
         deviceId?: number | string;
         limit?: number;
+        plain?: boolean;
     }>(),
     {
         modelValue: false,
         limit: 1,
+        plain: false,
     },
 );
 
@@ -341,3 +371,103 @@ defineExpose({
     },
 });
 </script>
+
+<style scoped lang="scss">
+.choose-sheet-handle {
+    @apply w-[64rpx] h-[8rpx] rounded-[8rpx] bg-[#DCE3EC] mx-auto mt-[20rpx] mb-[4rpx];
+}
+
+.choose-sheet-head {
+    @apply flex items-center justify-between gap-[24rpx] px-[36rpx] pt-[18rpx] pb-[26rpx] border-[0] border-b-[2rpx] border-solid border-[#EEF1F5];
+}
+
+.choose-sheet-title {
+    @apply block text-[34rpx] font-semibold text-[#202937] leading-[1.4];
+}
+
+.choose-sheet-sub {
+    @apply block text-[24rpx] text-[#6C7C91] mt-[8rpx] leading-[1.5];
+}
+
+.choose-sheet-close {
+    @apply relative w-[56rpx] h-[56rpx] shrink-0 flex items-center justify-center rounded-full bg-[#F1F4F8] active:opacity-70;
+
+    &::after {
+        content: "";
+        @apply absolute inset-[-16rpx];
+    }
+}
+
+.choose-device--plain {
+    .choose-count {
+        @apply mx-[0rpx] px-[36rpx] mt-[24rpx] mb-[0rpx];
+    }
+
+    .choose-list {
+        @apply p-[36rpx] gap-[0rpx];
+    }
+
+    .choose-bind {
+        @apply p-[28rpx] mb-[12rpx] gap-[24rpx] rounded-[24rpx] border-solid border-[#D8E2ED] bg-white;
+        transform: none;
+    }
+
+    .choose-card {
+        @apply rounded-[0rpx] px-[0rpx] py-[28rpx] gap-[16rpx] border-[0] border-b-[2rpx] border-solid border-[#E7ECF2] bg-white shadow-none;
+        transform: none;
+
+        &:last-child {
+            @apply border-b-[0];
+        }
+    }
+
+    .choose-card-top {
+        @apply gap-[24rpx];
+    }
+
+    .choose-icon {
+        @apply w-[96rpx] h-[96rpx] rounded-[28rpx] bg-[#EDF3FF];
+    }
+
+    .choose-name {
+        @apply text-[28rpx] font-semibold text-[#202937] leading-[1.5];
+    }
+
+    .choose-bind .choose-name {
+        @apply text-[#075ECF];
+    }
+
+    .choose-name-row {
+        @apply gap-[12rpx];
+
+        .choose-name {
+            @apply flex-1 min-w-0;
+        }
+    }
+
+    .choose-desc {
+        @apply text-[24rpx] text-[#647184] leading-[1.6];
+    }
+
+    .choose-status {
+        @apply px-[12rpx] py-[4rpx] text-[20rpx];
+    }
+
+    .choose-check {
+        @apply w-[38rpx] h-[38rpx] border-[2rpx] border-solid;
+    }
+
+    .choose-divider {
+        @apply hidden;
+    }
+
+    .choose-accounts {
+        @apply pl-[120rpx];
+    }
+
+    .choose-footer {
+        @apply bg-white px-[36rpx] pt-[24rpx] gap-[20rpx] border-[0] border-t-[2rpx] border-solid border-[#E7ECF2] shadow-none;
+        padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+    }
+}
+</style>

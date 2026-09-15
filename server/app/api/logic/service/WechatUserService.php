@@ -243,6 +243,13 @@ class WechatUserService
         $this->user->avatar = $avatar;
         $this->user->channel = $this->terminal;
         $this->user->mobile = $this->mobile;
+        // 带手机号建号(小程序手机号授权注册)与手机号注册一致:初始密码为当前站点域名
+        if (!empty($this->mobile)) {
+            $this->user->password = create_password(
+                \app\api\logic\LoginLogic::getRegisterDefaultPassword(),
+                config('project.unique_identification')
+            );
+        }
         $this->user->is_new_user = YesNoEnum::YES;
         $this->user->tokens = $tokens;
         $this->user->source = \app\api\logic\LoginLogic::getDefaultInviteSource();
@@ -310,10 +317,37 @@ class WechatUserService
     }
 
     /**
+     * 本次授权所属的微信应用 appid（openid 只在该 appid 下有意义）
+     * - 小程序：按当前站点租户取，OEM 独立小程序与主站是两个 appid
+     * - 公众号 / PC 扫码：平台唯一配置
+     */
+    private function currentAppId(): string
+    {
+        try {
+            switch ((int)$this->terminal) {
+                case UserTerminalEnum::WECHAT_MMP:
+                    $teamId = \app\api\logic\TeamLogic::currentRequestSiteTeamId();
+                    return (string)(\app\common\service\wechat\WeChatConfigService::getMnpConfig($teamId)['app_id'] ?? '');
+                case UserTerminalEnum::WECHAT_OA:
+                    return (string)(\app\common\service\wechat\WeChatConfigService::getOaConfig()['app_id'] ?? '');
+                case UserTerminalEnum::PC:
+                    // PC 扫码登录走开放平台网站应用
+                    return (string)(\app\common\service\wechat\WeChatConfigService::getOpConfig()['app_id'] ?? '');
+            }
+        } catch (\Throwable $e) {
+            return '';
+        }
+        return '';
+    }
+
+    /**
      * 绑定/更新当前端授权：
      * - 优先复用已有 openid 记录（避免 UNIQUE openid 冲突）
-     * - 否则按 user_id + terminal 更新/创建
+     * - 否则按 user_id + terminal + app_id 更新/创建
      * - 禁止把小程序 openid 写到公众号等其他端授权行上
+     * - 同一用户在 OEM 独立小程序与主站小程序下是两个 appid、两个 openid，
+     *   各留一条互不覆盖；否则谁最后登录谁的 openid 留下，另一端下单必报
+     *   「appid和openid不匹配」
      */
     private function bindUserAuth(): void
     {
@@ -323,6 +357,7 @@ class WechatUserService
         }
 
         $userId = (int)$this->user->id;
+        $appId = $this->currentAppId();
 
         // 1) openid 已存在：归并到当前用户
         $byOpenid = UserAuth::where('openid', $openid)->findOrEmpty();
@@ -339,18 +374,19 @@ class WechatUserService
                 if ((int)$byOpenid->terminal !== (int)$this->terminal) {
                     $byOpenid->terminal = $this->terminal;
                 }
+                // 历史行补齐 appid（同一 openid 必然属于同一 appid）
+                if ($appId !== '' && (string)$byOpenid->app_id !== $appId) {
+                    $byOpenid->app_id = $appId;
+                }
                 $byOpenid->save();
-                // 清理同用户同端的其他脏行，避免支付时按 terminal 查到旧 openid
-                self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, (int)$byOpenid->id);
+                // 清理同用户同端同 appid 的其他脏行，避免支付时查到旧 openid
+                self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, $appId, (int)$byOpenid->id);
                 return;
             }
         }
 
-        // 2) 当前用户在该端是否已有授权行（取 id 最小的一条作为主记录）
-        $byTerminal = UserAuth::where([
-            'user_id'  => $userId,
-            'terminal' => (int)$this->terminal,
-        ])->order('id', 'asc')->findOrEmpty();
+        // 2) 当前用户在「该端 + 该 appid」下是否已有授权行（取 id 最小的一条作为主记录）
+        $byTerminal = self::findAuthForAppId($userId, (int)$this->terminal, $appId);
 
         if (!$byTerminal->isEmpty()) {
             if ((string)$byTerminal->openid !== $openid) {
@@ -359,8 +395,11 @@ class WechatUserService
             if (empty($byTerminal->unionid) && !empty($this->unionid)) {
                 $byTerminal->unionid = $this->unionid;
             }
+            if ($appId !== '') {
+                $byTerminal->app_id = $appId;
+            }
             $byTerminal->save();
-            self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, (int)$byTerminal->id);
+            self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, $appId, (int)$byTerminal->id);
             return;
         }
 
@@ -370,27 +409,51 @@ class WechatUserService
             'openid'   => $openid,
             'unionid'  => $this->unionid,
             'terminal' => (int)$this->terminal,
+            'app_id'   => $appId,
         ]);
-        self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, (int)$created->id);
+        self::retireDuplicateTerminalAuth($userId, (int)$this->terminal, $appId, (int)$created->id);
     }
 
     /**
-     * 同用户同端只保留一条有效授权，其余改写 openid 退役，避免唯一键与支付校验冲突
+     * 取该端指定 appid 下的主记录；appid 取不到（未配置）时退回旧的「按端取」行为
+     * @remark 历史数据 app_id='' 不在这里认领：它可能是另一个 appid 的 openid，
+     *         认领等于把对方的 openid 覆盖掉。新建一条本 appid 的行即可，
+     *         历史行留作支付时的兜底，等同 openid 再次登录时自动补齐 app_id。
      */
-    private static function retireDuplicateTerminalAuth(int $userId, int $terminal, int $keepId): void
+    private static function findAuthForAppId(int $userId, int $terminal, string $appId)
     {
-        $duplicates = UserAuth::where([
+        $query = UserAuth::where([
             'user_id'  => $userId,
             'terminal' => $terminal,
-        ])->where('id', '<>', $keepId)->select();
+        ]);
+        if ($appId !== '') {
+            $query->where('app_id', $appId);
+        }
+        return $query->order('id', 'asc')->findOrEmpty();
+    }
+
+    /**
+     * 同用户同端同 appid 只保留一条有效授权，其余改写 openid 退役，避免唯一键与支付校验冲突
+     * @remark 只清同 appid：不同 appid（主站/OEM 小程序）的 openid 必须共存
+     */
+    private static function retireDuplicateTerminalAuth(int $userId, int $terminal, string $appId, int $keepId): void
+    {
+        $query = UserAuth::where([
+            'user_id'  => $userId,
+            'terminal' => $terminal,
+        ])->where('id', '<>', $keepId);
+        if ($appId !== '') {
+            $query->where('app_id', $appId);
+        }
+        $duplicates = $query->select();
 
         foreach ($duplicates as $row) {
             $oldOpenid = (string)$row->openid;
             // 已退役过的不再重复改写
-            if (str_contains($oldOpenid, '_retired_')) {
+            if (str_contains($oldOpenid, UserAuth::RETIRED_FLAG)) {
                 continue;
             }
-            $row->openid = $oldOpenid . '_retired_' . $row->id . '_' . time();
+            $row->openid = $oldOpenid . UserAuth::RETIRED_FLAG . $row->id . '_' . time();
             $row->save();
         }
     }

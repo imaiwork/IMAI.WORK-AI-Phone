@@ -20,6 +20,7 @@ use app\common\model\ModelConfig;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
+use app\common\service\digitalHuman\PublicAnchorBindService;
 use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
 use think\db\exception\DataNotFoundException;
@@ -60,6 +61,32 @@ class HumanLogic extends ApiLogic
     const VIDEO_TRAINING_CHANJING = 'videoTrainingChanjing'; //视频训练
 
     /**
+     * 回调落库的终态 CAS：只在该行仍是 status=0（生成中）时写入
+     *
+     * 四个 update* 回调都是「按 status=0 取行 → 下载文件 → save」，中间可能隔几十秒到几分钟，
+     * 这期间 setTimeoutTask() 可能已把同一行收口成失败并退费；这时再无条件 save 会把终态
+     * 翻回成功，用户既拿到结果又拿到退款。抢不到就丢弃本次写入，退费幂等由 refundTaskOnce 保证。
+     *
+     * @param \think\Model $item 由 where('status', 0) 取出的模型实例
+     * @return bool 是否真的写入
+     */
+    private static function saveIfPending($item): bool
+    {
+        $changed = $item->getChangedData();
+        if (!$changed) {
+            return true;
+        }
+        $changed['update_time'] = time();
+        $modelClass = get_class($item);
+        $affected = $modelClass::where('id', $item->id)->where('status', 0)->update($changed);
+        if (!$affected) {
+            Log::channel('human')->warning('回调落库被跳过：行已不是生成中, ' . get_class($item) . ' id=' . $item->id);
+            return false;
+        }
+        return true;
+    }
+
+    /**
      * 更新形象
      * @param array $data
      * @param string $modelVersion
@@ -86,10 +113,16 @@ class HumanLogic extends ApiLogic
 
         $model->select()
             ->each(function ($item) use ($data) {
-                // 公共数字人形象
-                if (!empty($item->dh_id)){
-                    $digitalHuman = DigitalHumanAnchor::where('id', $item->dh_id)->find();
-                    $task_ids = json_decode($digitalHuman->task_ids,true);
+                // 公共数字人形象：必须与子任务同属一个用户
+                $digitalHuman = null;
+                $task_ids = [];
+                if (!empty($item->dh_id)) {
+                    $digitalHuman = PublicAnchorBindService::ownedPublic((int)$item->dh_id, (int)$item->user_id);
+                    if (empty($digitalHuman)) {
+                        PublicAnchorBindService::logSkipUnowned((int)$item->dh_id, (int)$item->user_id, 'HumanLogic::updateAnchor');
+                    } else {
+                        $task_ids = json_decode((string)$digitalHuman->task_ids, true) ?: [];
+                    }
                 }
 
                 if ($item->model_version === 1) { //标准版
@@ -97,7 +130,7 @@ class HumanLogic extends ApiLogic
                     if (in_array($data['current_status'], ['completed', 'failed'])) {
 
                         $item->status = ($data['current_status'] == 'completed') ? 1 : 2;
-                        if (!empty($item->dh_id)){
+                        if (!empty($digitalHuman)){
                             $task_ids['weiju']['status'] = 1;
                             $digitalHuman->task_ids = json_encode($task_ids);
                             $digitalHuman->status = 1;
@@ -105,7 +138,7 @@ class HumanLogic extends ApiLogic
 
                         // TODO 失败退费
                         if ($item->status == 2) {
-                            if (!empty($item->dh_id)){
+                            if (!empty($digitalHuman)){
                                 $task_ids['weiju']['status'] = 2;
                                 $digitalHuman->task_ids = json_encode($task_ids);
                                 $digitalHuman->status = 3;
@@ -123,7 +156,7 @@ class HumanLogic extends ApiLogic
                         $item->status = ($data['status'] == 2) ? 1 : 2;
                         // TODO 失败退费
                         if ($item->status == 2) {
-                            if (!empty($item->dh_id)){
+                            if (!empty($digitalHuman)){
                                 $task_ids['chanjing']['status'] = 2;
                                 $digitalHuman->task_ids = json_encode($task_ids);
                                 $digitalHuman->status = 3;
@@ -132,7 +165,7 @@ class HumanLogic extends ApiLogic
                             }
                             self::refundTokens($item->user_id, $item->anchor_id, $item->task_id, 'human_anchor_chanjing');
                         }else{
-                            if (!empty($item->dh_id) && $digitalHuman->status == 4){
+                            if (!empty($digitalHuman) && (int)$digitalHuman->status === 4){
                                     $shanjianAuth = ConfigService::get('digital_human', 'shanjian_auth', '数字人');
                                     $shanjianAuth = UserDisplaySanitizer::digitalHumanAuthName($shanjianAuth);
                                     $sqmsg = "我授权" . $shanjianAuth . "使用视频中的肖像、声音，为我生成定制数字人及声音，并在本人账号中创作使用。";
@@ -192,7 +225,7 @@ class HumanLogic extends ApiLogic
                     }
                     $item->remark = $data['err_reason'] ?? '';
                 }
-                $item->save();
+                self::saveIfPending($item);
             });
 
         return true;
@@ -243,13 +276,15 @@ class HumanLogic extends ApiLogic
                         $item->status = ($data['status'] == 2) ? 1 : 2;
                         // TODO 失败退费
                         if ($item->status == 2) {
-                           $dh_id  = HumanAnchor::where('model_version', 7)->where('task_id', $item->task_id)->value('dh_id');
-                           if (!empty($dh_id)){
+                           $dh_id  = HumanAnchor::where('model_version', 7)->where('task_id', $item->task_id)->where('user_id', $item->user_id)->value('dh_id');
+                           if (!empty($dh_id) && PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$item->user_id)){
                                $squpdate= [
                                    'status' => 3,
                                    'remark'=> 'ai生成授权视频音色克隆失败'
                                ];
                                DigitalHumanAnchor::where('id', $dh_id)->update($squpdate);
+                           } else if (!empty($dh_id)) {
+                               PublicAnchorBindService::logSkipUnowned((int)$dh_id, (int)$item->user_id, 'HumanLogic::updateVoice');
                            }
                             self::refundTokens($item->user_id, $item->voice_id, $item->task_id, 'human_voice_chanjing');
 
@@ -261,7 +296,7 @@ class HumanLogic extends ApiLogic
                     }
                     $item->remark       = $data['err_msg'] ?? '';
                 }
-                $item->save();
+                self::saveIfPending($item);
             });
 
         return true;
@@ -334,7 +369,7 @@ class HumanLogic extends ApiLogic
                     }
 
                 }
-                $item->save();
+                self::saveIfPending($item);
             });
 
         return true;
@@ -409,13 +444,15 @@ class HumanLogic extends ApiLogic
                         $item->status = ($data['status'] == 30) ? 1 : 2;
                         $notice = true;
                         if ($item->status == 2) {
-                            $dh_id  = HumanAnchor::where('model_version', 7)->where('task_id', $item->task_id)->value('dh_id');
-                            if (!empty($dh_id)){
+                            $dh_id  = HumanAnchor::where('model_version', 7)->where('task_id', $item->task_id)->where('user_id', $item->user_id)->value('dh_id');
+                            if (!empty($dh_id) && PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$item->user_id)){
                                 $squpdate= [
                                     'status' => 3,
                                     'remark'=> 'ai生成授权视频视频合成失败'
                                 ];
                                 DigitalHumanAnchor::where('id', $dh_id)->update($squpdate);
+                            } else if (!empty($dh_id)) {
+                                PublicAnchorBindService::logSkipUnowned((int)$dh_id, (int)$item->user_id, 'HumanLogic::updateVideo.fail');
                             }
                             self::refundTokens($item->user_id, $item->result_id, $item->task_id, 'human_video_chanjing');
                             $statusmsg = '合成失败';
@@ -488,26 +525,31 @@ class HumanLogic extends ApiLogic
                             );
                         }
 
-                        $dh_id  = HumanAnchor::where('model_version', 7)->where('task_id', $item->task_id)->value('dh_id');
-                        if (!empty($dh_id)){
+                        $dh_id  = HumanAnchor::where('model_version', 7)->where('task_id', $item->task_id)->where('user_id', $item->user_id)->value('dh_id');
+                        $digitalHumanAnchor = !empty($dh_id)
+                            ? PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$item->user_id)
+                            : null;
+                        if (!empty($digitalHumanAnchor)){
                             $squpdate= [
                                 'authorized_url' => $item->result_url,
                                 'authorized_pic'=> $item->pic
                             ];
-                            DigitalHumanAnchor::where('id', $dh_id)->update($squpdate);
+                            DigitalHumanAnchor::where('id', $digitalHumanAnchor->id)->update($squpdate);
                             $shanjianData = [
                                 'user_id'        => $item->user_id,
-                                'dh_id'          => $dh_id,
+                                'dh_id'          => $digitalHumanAnchor->id,
                                 'name'           => $item->name,
                                 'anchor_url'     => $item->upload_video_url,
                                 'pic'            => $item->pic,
                                 'authorized_url' => $item->result_url,
                                 'authorized_pic' =>  $item->pic,
                             ];
-                            ShanjianAnchorLogic::add($shanjianData);
+                            $addOk = ShanjianAnchorLogic::add($shanjianData);
                             Log::channel('digital')->write('ai授权视频,闪剪视频头像克隆：' . json_encode($shanjianData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                            if ($addOk) {
+                                PublicAnchorBindService::markPartialAfterShanjianSubmit((int)$digitalHumanAnchor->id, (int)$item->user_id);
+                            }
                             // 一克三：AI 授权视频就绪后随极速克隆一起提交专业克隆
-                            $digitalHumanAnchor = DigitalHumanAnchor::where('id', $dh_id)->find();
                             if ((int)($digitalHumanAnchor['clone_mode'] ?? 2) === 3) {
                                 try {
                                     $shanjianData['resolution'] = DigitalHumanLogic::resolveShanjianResolution($digitalHumanAnchor['width'] ?? 0, $digitalHumanAnchor['height'] ?? 0);
@@ -515,9 +557,11 @@ class HumanLogic extends ApiLogic
                                     Log::channel('digital')->write('ai授权视频,闪剪专业形象克隆：' . json_encode($shanjianData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                                 } catch (\Exception $e) {
                                     // 回调链路中隔离异常（如算力不足），避免第三方重推回调导致极速克隆重复提交
-                                    Log::channel('digital')->write('ai授权视频,闪剪专业形象克隆提交失败: dh_id=' . $dh_id . ' err=' . $e->getMessage());
+                                    Log::channel('digital')->write('ai授权视频,闪剪专业形象克隆提交失败: dh_id=' . $digitalHumanAnchor->id . ' err=' . $e->getMessage());
                                 }
                             }
+                        } else if (!empty($dh_id)) {
+                            PublicAnchorBindService::logSkipUnowned((int)$dh_id, (int)$item->user_id, 'HumanLogic::updateVideo.success');
                         }
                     }
                     $item->remark = $data['msg'] ?? '';
@@ -573,7 +617,7 @@ class HumanLogic extends ApiLogic
                         'status' => $statusmsg
                     ], 402);
                 }
-                $item->save();
+                self::saveIfPending($item);
             });
 
         return true;
@@ -635,12 +679,7 @@ class HumanLogic extends ApiLogic
             if(isset($response['data']['task_status']) && $response['data']['task_status'] == 1) {
                 return true;
             }
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
 
             return true;
         } catch (\Throwable $e) {
@@ -1177,6 +1216,45 @@ class HumanLogic extends ApiLogic
     public static function createAnchor($data)
     {
         $user_id       = $data['user_id'] ?? self::$uid;
+        $model_version = $data['model_version'] ?? '';
+        $dh_id         = $data['dh_id'] ?? 0;
+        $digitalHuman  = null;
+        $task_ids      = [];
+        if (!empty($dh_id)) {
+            $digitalHuman = PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$user_id);
+            if (empty($digitalHuman)) {
+                self::setError('公共形象不属于当前用户');
+                return false;
+            }
+            $task_ids = json_decode((string)$digitalHuman->task_ids, true) ?: [];
+            if ((int)$model_version === 7) {
+                $active = HumanAnchor::where('dh_id', $dh_id)
+                    ->where('user_id', $user_id)
+                    ->where('model_version', 7)
+                    ->where('status', 'in', [0, 1])
+                    ->order('id', 'desc')
+                    ->find();
+                if (!empty($active)) {
+                    Log::channel('digital')->write(
+                        '蝉镜形象已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id . ' id=' . $active->id
+                    );
+                    return true;
+                }
+                $failedRows = HumanAnchor::where('dh_id', $dh_id)
+                    ->where('user_id', $user_id)
+                    ->where('model_version', 7)
+                    ->where('status', 2)
+                    ->select();
+                foreach ($failedRows as $failedRow) {
+                    $oldId = (int)$failedRow->id;
+                    $failedRow->delete();
+                    Log::channel('digital')->write(
+                        '失败蝉镜记录已清理，准备重提：dh_id=' . $dh_id . ' user_id=' . $user_id . ' old_id=' . $oldId
+                    );
+                }
+            }
+        }
+
         // 检查余额
         if ($data['model_version'] == 1) {
             TokenLogService::checkToken($user_id, 'human_anchor');
@@ -1195,8 +1273,6 @@ class HumanLogic extends ApiLogic
         $height        = $data['height'] ?? '';
         $gender        = $data['gender'] ?? 'male';
         $anchor_url    = $data['url'] ?? '';
-        $model_version = $data['model_version'] ?? '';
-        $dh_id         = $data['dh_id'] ?? 0;
 
         if (empty($name) || !in_array($model_version, [1, 2, 4, 6, 7]) || !in_array($gender, ['male', 'female']) || empty($anchor_url)) {
             message('参数错误');
@@ -1248,12 +1324,6 @@ class HumanLogic extends ApiLogic
             'gender' => $gender,
         ];
 
-        //数字人公共形象
-        if (!empty($dh_id)){
-            $digitalHuman = DigitalHumanAnchor::where('id', $dh_id)->find();
-            $task_ids     = json_decode($digitalHuman->task_ids, true);
-        }
-
         switch ($model_version)
         {
             case  1:
@@ -1282,7 +1352,7 @@ class HumanLogic extends ApiLogic
 
         if (!empty($result) && isset($result['id'])) {
             // 更新数字人公共形象
-            if (!empty($dh_id)) {
+            if (!empty($digitalHuman)) {
                 $digitalHuman->task_ids = json_encode($task_ids);
                 $digitalHuman->save();
             }
@@ -1305,7 +1375,7 @@ class HumanLogic extends ApiLogic
             ];
             HumanAnchor::create($addData);
         } else {
-            if (!empty($dh_id)) {
+            if (!empty($digitalHuman)) {
                 $digitalHuman->task_ids = json_encode($task_ids);
                 $digitalHuman->status = 3;
                 $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion((int)$model_version) ?: '数字人';
@@ -3467,12 +3537,7 @@ class HumanLogic extends ApiLogic
         }
 
         if ($data['status'] == 4){
-            $count = UserTokensLog::where('user_id', $model['user_id'])->where('change_type', '5101')->where('action', 2)->where('task_id', $data['task_id'])->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id',  $model['user_id'])->where('change_type', '5101')->where('action', 1)->where('task_id', $data['task_id'])->count() < $count) {
-                $points = UserTokensLog::where('user_id', $model['user_id'])->where('change_type', '5101')->where('task_id', $data['task_id'])->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $model['user_id'], '5101', $points, $data['task_id']);
-            }
+            AccountLogLogic::refundTaskOnce((int)$model['user_id'], (int)5101, (string)$data['task_id']);
         }
         $url = '';
         if($data['url'] != ''){

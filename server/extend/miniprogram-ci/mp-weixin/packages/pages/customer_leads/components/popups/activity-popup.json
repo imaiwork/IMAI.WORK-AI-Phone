@@ -2,8 +2,9 @@
   "component": true,
   "usingComponents": {
     "u-loading": "../../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
-    "empty": "../../../../../components/empty/empty",
+    "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "popup-bottom": "../../../../../components/popup-bottom/popup-bottom",
-    "popup-header": "../popup-header"
+    "popup-header": "../popup-header",
+    "leads-empty": "../leads-empty"
   }
 }

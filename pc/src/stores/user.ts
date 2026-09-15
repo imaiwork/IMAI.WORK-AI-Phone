@@ -10,6 +10,8 @@ interface UserSate {
     token: string | null;
     temToken: string | null;
     showLogin: boolean;
+    /** 注册成功后的「完善资料」弹窗(性别/所在门店/资质证书,均选填) */
+    showCompleteProfile: boolean;
     loginPopupType: LoginPopupTypeEnum;
     tokensConfig: any[];
     visitorId: string;
@@ -31,6 +33,7 @@ export const useUserStore = defineStore("userStore", {
             token: TOKEN.value,
             temToken: null,
             showLogin: false,
+            showCompleteProfile: false,
             loginPopupType: LoginPopupTypeEnum.LOGIN,
             tokensConfig: [],
             agentUserParentQrcode: "",

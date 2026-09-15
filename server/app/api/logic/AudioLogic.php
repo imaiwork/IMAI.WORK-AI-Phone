@@ -511,12 +511,7 @@ class AudioLogic extends ApiLogic
         if ($audioInfo->status === 5) {
 
             //查询是否已返还
-            if (UserTokensLog::where('user_id', $audioInfo->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_MEETING)->where('action', 1)->where('task_id', $audioInfo->task_id)->count() == 0) {
-
-                $points = UserTokensLog::where('user_id', $audioInfo->user_id)->where('change_type', AccountLogEnum::TOKENS_DEC_MEETING)->where('task_id', $audioInfo->task_id)->value('change_amount') ?? 0;
-
-                AccountLogLogic::recordUserTokensLog(false, $audioInfo->user_id, AccountLogEnum::TOKENS_DEC_MEETING, $points, $audioInfo->task_id);
-            }
+            AccountLogLogic::refundTaskOnce((int)$audioInfo->user_id, (int)AccountLogEnum::TOKENS_DEC_MEETING, (string)$audioInfo->task_id);
         }
 
         return true;

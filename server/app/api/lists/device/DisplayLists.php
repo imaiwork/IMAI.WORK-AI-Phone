@@ -7,11 +7,15 @@ use app\api\lists\BaseApiDataLists;
 use app\common\lists\ListsSearchInterface;
 
 use app\common\enum\DeviceEnum;
+use app\common\service\display\DySearchIntentionMapper;
 use app\common\model\sv\SvCrawlingManualTaskRecord;
 use app\common\model\sv\SvCrawlingWechatTask;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvCrawlingRecord;
 use app\common\model\sv\SvAddWechatRecord;
+use app\common\model\sv\SvDySearchRecord;
+use app\common\model\sv\SvDySearchTask;
+use app\common\model\sv\SvDySearchTaskDevice;
 use app\common\model\sv\SvDeviceActive;
 use app\common\model\sv\SvDeviceActiveAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
@@ -55,10 +59,10 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
         if (isset($params['account_type']) && !empty($params['account_type'])) {
             if ($params['account_type'] == 2) {
                 $this->searchWhere[] = ['account_type', '=', 1];
-                $this->searchWhere[] = ['task_type', 'in', [5, 7, 8, 9, 10, 25]];
+                $this->searchWhere[] = ['task_type', 'in', [5, 7, 8, 9, 10, 19, 25]];
             } else if ($params['account_type'] == 1) {
                 $this->searchWhere[] = ['account_type', '=', 1];
-                $this->searchWhere[] = ['task_type', 'not in', [5, 7, 8, 9, 10, 25]];
+                $this->searchWhere[] = ['task_type', 'not in', [5, 7, 8, 9, 10, 19, 25]];
             } else {
                 $this->searchWhere[] = ['account_type', '=', $params['account_type']];
             }
@@ -95,7 +99,7 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
 
                     case DeviceEnum::TASK_SOURCE_FRIENDS: //5
                         if ($item->sub_task_id > 0) {
-                            $taskinfo = SvCrawlingManualTaskRecord::where('task_id', $item->sub_task_id)->count();
+                            $taskinfo = SvCrawlingManualTaskRecord::where('task_id', $item->sub_task_id)->where('status', 'in', [0, 1, 2])->count();
                             $item->data_info = [
                                 'add_wechat_number' => $taskinfo,
                             ];
@@ -154,8 +158,31 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
                             'add_wechat_number' => SvAddWechatRecord::where('device_code', $item->device_code)->where('crawling_task_id', 'in', $info['craw_task_ids'])->count(),
                         ];
                         break;
+                    case DeviceEnum::TASK_SOURCE_DY_SEARCH: //18
+                        $item->data_info = [
+                            'keyword_number' => self::dySearchKeywordNumber((int)$item->sub_task_id, (string)$item->device_code),
+                            // 客资口径：result=1 已入库
+                            'clues_number' => SvDySearchRecord::where('task_id', $item->sub_task_id)
+                                ->where('result', 1)
+                                ->count(),
+                        ];
+                        break;
+                    case DeviceEnum::TASK_SOURCE_DY_SEARCH_WECHAT: //19
+                        $item->data_info = [
+                            'add_wechat_number' => SvAddWechatRecord::where('device_code', $item->device_code)
+                                ->where('dy_search_task_id', $item->sub_task_id)
+                                ->where('channel', DySearchIntentionMapper::ADD_CHANNEL)
+                                ->count(),
+                        ];
+                        break;
                     default:
                         break;
+                }
+                if (DeviceEnum::isWechatAccountDisplay($item->source)) {
+                    $item->account_type = 2;
+                    if (is_array($item->account) && $item->account !== []) {
+                        $item->account['type'] = 2;
+                    }
                 }
                 $item->start_time_text = date('Y-m-d H:i',  $item->start_time);
                 $item->start_time = date('H:i',  $item->start_time);
@@ -175,5 +202,30 @@ class DisplayLists extends BaseApiDataLists implements ListsSearchInterface
         return SvDeviceTask::field('id')
             ->where($this->searchWhere)
             ->count();
+    }
+
+    /**
+     * 优先取本设备 bind 关键词数，没有则回落主任务 keywords
+     */
+    private static function dySearchKeywordNumber(int $taskId, string $deviceCode): int
+    {
+        if ($taskId <= 0) {
+            return 0;
+        }
+        $bind = SvDySearchTaskDevice::where('task_id', $taskId)
+            ->where('device_code', $deviceCode)
+            ->findOrEmpty();
+        if (!$bind->isEmpty()) {
+            $keywords = $bind->keywords;
+            if (is_array($keywords) && $keywords !== []) {
+                return count($keywords);
+            }
+        }
+        $task = SvDySearchTask::where('id', $taskId)->findOrEmpty();
+        if ($task->isEmpty()) {
+            return 0;
+        }
+        $keywords = $task->keywords;
+        return is_array($keywords) ? count($keywords) : 0;
     }
 }

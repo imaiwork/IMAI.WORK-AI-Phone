@@ -37,6 +37,8 @@ class VideoLogic extends ApiLogic
         $imitationWhere  = [
             ['media_type', '=', VideoImitationTask::MEDIA_TYPE_VIDEO],
         ];
+        // 爆款玩法(type=11):status 2=成功
+        $playWhere = [];
 
         // type → shanjian_type：2→1, 3→2, 4→3, 5→4, 9→5；type=10 为热点追踪（按 extra.source 区分，不看 shanjian_type）
         $shanjianTypeMap = [2 => 1, 3 => 2, 4 => 3, 5 => 4, 9 => 5];
@@ -83,6 +85,7 @@ class VideoLogic extends ApiLogic
                 ['status', '=', 3]
             ];
             $imitationWhere[] = ['status', '=', 3];
+            $playWhere[]      = ['status', '=', 2];
         }
 
         // 查询条件
@@ -282,6 +285,32 @@ class VideoLogic extends ApiLogic
                     ->where($imitationWhere)
                     ->buildSql();
 
+        $query6 = Db::name('play_video_task')
+                    ->field([
+                                'id',
+                                'name',
+                                'sn as task_id',
+                                "'12' as model_version",
+                                'status',
+                                'pic',
+                                'video_url as video_result_url',
+                                "'0' as automatic_clip",
+                                "'1' as clip_status",
+                                'video_url as clip_result_url',
+                                'create_time',
+                                'update_time',
+                                'fail_reason as remark',
+                                "'11' as type",
+                                'duration',
+                                "'' as queue_status",
+                                '0 as queue_position',
+                                '0 as queue_updated_time',
+                                '2 as download_status'
+                            ])
+                    ->where($where)
+                    ->where($playWhere)
+                    ->buildSql();
+
         // 按选中 type 拼接 UNION（空 = 全部）
         $unionParts = [];
         if (empty($types) || in_array(1, $types, true)) {
@@ -298,6 +327,9 @@ class VideoLogic extends ApiLogic
         }
         if (empty($types) || in_array(8, $types, true)) {
             $unionParts[] = $query5;
+        }
+        if (empty($types) || in_array(11, $types, true)) {
+            $unionParts[] = $query6;
         }
         if (empty($unionParts)) {
             return [
@@ -361,7 +393,7 @@ class VideoLogic extends ApiLogic
             ];
         }
 
-        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, $types, $success, $shanjianRaw);
+        $total = self::getTotalCount($where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, $types, $success, $shanjianRaw, $playWhere);
 
         return [
             'count'      => $total,
@@ -381,9 +413,7 @@ class VideoLogic extends ApiLogic
      */
     private static function shanjianHotspotCond(string $prefix = ''): string
     {
-        $col = $prefix . 'extra';
-        return "({$col} IS NOT NULL AND {$col} <> '' AND JSON_VALID({$col})"
-            . " AND JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) = 'hotspot')";
+        return ShanjianVideoTask::hotspotSourceCond($prefix);
     }
 
     /**
@@ -391,10 +421,7 @@ class VideoLogic extends ApiLogic
      */
     private static function shanjianNotHotspotCond(string $prefix = ''): string
     {
-        $col = $prefix . 'extra';
-        return "({$col} IS NULL OR {$col} = '' OR NOT JSON_VALID({$col})"
-            . " OR JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) IS NULL"
-            . " OR JSON_UNQUOTE(JSON_EXTRACT({$col}, '$.source')) <> 'hotspot')";
+        return ShanjianVideoTask::notHotspotSourceCond($prefix);
     }
 
     private static function parseCreationRecordTypes($typeParam): array
@@ -549,7 +576,7 @@ class VideoLogic extends ApiLogic
     /**
      * 计算选中类型的总记录数，$types 为空表示全部
      */
-    private static function getTotalCount(array $where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, array $types, $success, string $shanjianRaw = ''): int
+    private static function getTotalCount(array $where, $shanjianWhere, $humanWhere, $soraWhere, $storyboardWhere, $imitationWhere, array $types, $success, string $shanjianRaw = '', array $playWhere = []): int
     {
         $shanjianCount = function () use ($where, $shanjianWhere, $shanjianRaw): int {
             $query = Db::name('shanjian_video_task')->where($where)->where($shanjianWhere)
@@ -568,6 +595,7 @@ class VideoLogic extends ApiLogic
                 $count3 = Db::name('sora_video_task')->where($where)->where($soraWhere)->count();
                 $count4 = Db::name('storyboard_video_task')->where($where)->where($storyboardWhere)->count();
                 $count5 = Db::name('video_imitation_task')->where($where)->where($imitationWhere)->count();
+                $count6 = Db::name('play_video_task')->where($where)->where($playWhere)->count();
             } else {
                 // 与列表一致：默认仍排除 is_ai!=0 时由调用方 humanWhere 控制；此处非 success 原先未带 humanWhere，保持兼容并叠加桥接过滤
                 $count1 = self::countHumanVideoTaskWithoutType5Bridge($where, [['is_ai', '=', 0]]);
@@ -575,8 +603,9 @@ class VideoLogic extends ApiLogic
                 $count3 = Db::name('sora_video_task')->where($where)->count();
                 $count4 = Db::name('storyboard_video_task')->where($where)->count();
                 $count5 = Db::name('video_imitation_task')->where($where)->where($imitationWhere)->count();
+                $count6 = Db::name('play_video_task')->where($where)->count();
             }
-            return $count1 + $count2 + $count3 + $count4 + $count5;
+            return $count1 + $count2 + $count3 + $count4 + $count5 + $count6;
         }
 
         $total = 0;
@@ -606,6 +635,11 @@ class VideoLogic extends ApiLogic
         }
         if (in_array(8, $types, true)) {
             $total += Db::name('video_imitation_task')->where($where)->where($imitationWhere)->count();
+        }
+        if (in_array(11, $types, true)) {
+            $total += $success
+                ? Db::name('play_video_task')->where($where)->where($playWhere)->count()
+                : Db::name('play_video_task')->where($where)->count();
         }
         return $total;
     }
@@ -688,6 +722,21 @@ class VideoLogic extends ApiLogic
                 }
                 $task->delete();
             }
+
+            if ($type == 11) {
+                $task = \app\common\model\playVideo\PlayVideoTask::where('id', $id)
+                                            ->where('sn', $task_id)
+                                            ->where('user_id', self::$uid)
+                                            ->find();
+                if (!$task) {
+                    throw new \Exception('视频任务不存在');
+                }
+                // 生成中不允许删：软删后回调/兜底查不到任务，退款链会断
+                if (in_array((int)$task->status, [0, 1], true)) {
+                    throw new \Exception('任务生成中，完成后再删除');
+                }
+                $task->delete();
+            }
             return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());
@@ -759,6 +808,18 @@ class VideoLogic extends ApiLogic
                     throw new \Exception('视频任务不存在');
                 }
                 $task->title = $name;
+                $task->save();
+            }
+
+            if ($type == 11) {
+                $task = \app\common\model\playVideo\PlayVideoTask::where('id', $id)
+                                            ->where('sn', $task_id)
+                                            ->where('user_id', self::$uid)
+                                            ->find();
+                if (!$task) {
+                    throw new \Exception('视频任务不存在');
+                }
+                $task->name = $name;
                 $task->save();
             }
             return true;

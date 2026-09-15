@@ -10,6 +10,7 @@ use app\common\model\sv\SvLeadScrapingRecord;
 use app\common\model\sv\SvLeadScrapingSetting;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvLeadScrapingFilterHistory;
+use app\common\service\sv\ShutoffDmTouchHelper;
 use think\facade\Db;
 
 /**
@@ -54,64 +55,73 @@ class LeadScrapingLogic extends SvBaseLogic
             }
             unset($params['task_ids']);
 
-
+            \think\facade\Log::channel('device')->write('截流任务请求参数：'.json_encode($params, JSON_UNESCAPED_UNICODE), 'lead_scraping');
             $leadScraping = SvLeadScrapingSetting::create($insertData);
             $leadScraping = $leadScraping->refresh();
 
             if (isset($params['filter']) && is_array($params['filter'])) {
                 $params['filter'] = json_encode($params['filter'], JSON_UNESCAPED_UNICODE);
             } else {
-                self::setError('过滤词不能为空');
-                return false;
+                return self::failInTrans('过滤词不能为空');
             }
 
+            $industryList = [];
             if (isset($params['industry']) && !empty($params['industry'])) {
-                $params['industry'] = json_encode(explode(';', $params['industry']), JSON_UNESCAPED_UNICODE);
+                $industryList = explode(';', (string)$params['industry']);
+                $params['industry'] = json_encode($industryList, JSON_UNESCAPED_UNICODE);
             } else {
-                if ((int)$params['industry_type'] === 0) {
-                    self::setError('行业不能为空');
-                    return false;
-                } else {
-                    $params['industry'] = json_encode(explode(';', $params['industry']), JSON_UNESCAPED_UNICODE);
+                if ((int)($params['industry_type'] ?? 0) === 0) {
+                    return self::failInTrans('行业不能为空');
                 }
+                $industryList = explode(';', (string)($params['industry'] ?? ''));
+                $params['industry'] = json_encode($industryList, JSON_UNESCAPED_UNICODE);
             }
 
-            if (isset($params['content']) && is_array($params['content'])) {
-                $params['content'] = json_encode($params['content'], JSON_UNESCAPED_UNICODE);
-            } else {
-                self::setError('内容不能为空');
-                return false;
+            $dmParams = ShutoffDmTouchHelper::normalizeManualDmParams(
+                (int)($params['task_type'] ?? 1),
+                $params['touch_type'] ?? null,
+                $params['agent_id'] ?? 0,
+                $params['content'] ?? null
+            );
+            if (!$dmParams['ok']) {
+                return self::failInTrans($dmParams['error']);
             }
+            $params['touch_type'] = $dmParams['touch_type'];
+            $params['agent_id'] = $dmParams['agent_id'];
+            $params['content'] = json_encode($dmParams['content'], JSON_UNESCAPED_UNICODE);
 
 
-            if (isset($params['accounts']) && is_array($params['accounts'])) {
-                foreach ($params['accounts'] as &$account) {
+            $accountList = [];
+            if (isset($params['accounts']) && is_array($params['accounts']) && $params['accounts'] !== []) {
+                $accountList = $params['accounts'];
+                foreach ($accountList as &$account) {
                     $account['device_code'] = SvAccount::where('id', $account['id'])->value('device_code');
                 }
-                $params['accounts'] = json_encode($params['accounts'], JSON_UNESCAPED_UNICODE);
+                unset($account);
+                $params['accounts'] = json_encode($accountList, JSON_UNESCAPED_UNICODE);
             } else {
-                self::setError('账号不能为空');
-                return false;
+                return self::failInTrans('账号不能为空');
             }
 
             $params['task_frequency'] = $params['task_frep'];
             unset($params['task_frep']);
-            if (isset($params['task_date']) && is_array($params['task_date']) && !empty($params['task_date'])) {
-                $params['task_date'] = json_encode($params['task_date'], JSON_UNESCAPED_UNICODE);
-            } else {
-                for ($i = 0; $i < $params['task_frequency']; $i++) {
-                    $params['task_date'][$i] = date('Y-m-d', strtotime("+{$i} day"));
+            $dateList = self::decodeJsonList($params['task_date'] ?? null);
+            if ($dateList === []) {
+                for ($i = 0; $i < (int)$params['task_frequency']; $i++) {
+                    $dateList[$i] = date('Y-m-d', strtotime("+{$i} day"));
                 }
-                $params['task_date'] = json_encode($params['task_date'], JSON_UNESCAPED_UNICODE);
             }
+            if ($dateList === []) {
+                return self::failInTrans('任务日期不能为空');
+            }
+            $params['task_date'] = json_encode($dateList, JSON_UNESCAPED_UNICODE);
 
-            if (!empty($params['time_config'])) {
-                $params['time_config'] = json_encode($params['time_config'], JSON_UNESCAPED_UNICODE);
-                $params['status']      = 1;
-            } else {
-                self::setError('时间不能为空');
-                return false;
+            $timeList = self::decodeJsonList($params['time_config'] ?? null);
+            if ($timeList === []) {
+                return self::failInTrans('时间不能为空');
             }
+            $params['time_config'] = json_encode($timeList, JSON_UNESCAPED_UNICODE);
+            $params['status']      = 1;
             if (isset($params['ip_address']) && is_array($params['ip_address'])) {
                 $params['ip_address'] = json_encode($params['ip_address'], JSON_UNESCAPED_UNICODE);
             }
@@ -123,19 +133,19 @@ class LeadScrapingLogic extends SvBaseLogic
             // 更新
             SvLeadScrapingSetting::where('id', $leadScraping->id)->update($params);
             $result = $leadScraping->refresh()->toArray();
+             \think\facade\Log::channel('device')->write('截流任务详情：'.json_encode($result, JSON_UNESCAPED_UNICODE), 'lead_scraping');
             if ($result['status'] == 1) {
                 $accountTask = SvLeadScrapingSettingAccount::where('scraping_id', $result['id'])->findOrEmpty();
                 if (!$accountTask->isEmpty()) {
                     throw new \Exception('任务已创建');
                 }
 
-                $industries = json_decode($result['industry'], true);
-                foreach ($industries as $industry) {
+                foreach ($industryList as $industry) {
                     $log = SvLeadScrapingIndustryLog::where('user_id', self::$uid)->where('task_type', $params['task_type'])->where('keyword', $industry)->findOrEmpty();
                     if (!$log->isEmpty()) {
                         continue;
                     }
-                    if (trim($industry) == '') {
+                    if (trim((string)$industry) == '') {
                         continue;
                     }
                     SvLeadScrapingIndustryLog::create([
@@ -146,10 +156,10 @@ class LeadScrapingLogic extends SvBaseLogic
                     ]);
                 }
                 $times = [];
-                foreach ($result['task_date'] as $date) {
-                    $date = date('Y-m-d', strtotime($date));
-                    foreach (json_decode($result['time_config'], true) as $time) {
-                        $time      = explode('-', $time);
+                foreach ($dateList as $date) {
+                    $date = date('Y-m-d', strtotime((string)$date));
+                    foreach ($timeList as $time) {
+                        $time      = explode('-', (string)$time);
                         $startTime = $date . ' ' . $time[0] . ':00';
                         $endTime   = $date . ' ' . $time[1] . ':00';
                         $times[]   = [
@@ -159,7 +169,8 @@ class LeadScrapingLogic extends SvBaseLogic
                     }
                 }
 
-                foreach (json_decode($result['accounts'], true) as $account) {
+                $allTaskInstall = [];
+                foreach ($accountList as $account) {
                     $find = SvAccount::where('account', $account['account'])->where('type', $account['type'])->where('user_id', self::$uid)->limit(1)->find()->toArray();
                     $account = array_merge($account, $find);
                     foreach ($times as $time) {
@@ -217,19 +228,46 @@ class LeadScrapingLogic extends SvBaseLogic
             }
             self::updateFilterHistory($params);
             Db::commit();
-            $result['filter']      = !empty($result['filter']) ? json_decode($result['filter'], true) : [];
-            $result['industry']    = !empty($result['industry']) ? implode(';', json_decode($result['industry'], true)) : [];
-            $result['content']     = !empty($result['content']) ? json_decode($result['content'], true) : [];
-            $result['accounts']    = !empty($result['accounts']) ? json_decode($result['accounts'], true) : [];
-            $result['time_config'] = !empty($result['time_config']) ? json_decode($result['time_config'], true) : [];
-            $result['task_date']   = !empty($result['task_date']) ? $result['task_date'] : [];
+            $industryDecoded       = self::decodeJsonList($result['industry'] ?? null);
+            $result['filter']      = self::decodeJsonList($result['filter'] ?? null);
+            $result['industry']    = $industryDecoded !== [] ? implode(';', $industryDecoded) : [];
+            $result['content']     = self::decodeJsonList($result['content'] ?? null);
+            $result['accounts']    = self::decodeJsonList($result['accounts'] ?? null);
+            $result['time_config'] = self::decodeJsonList($result['time_config'] ?? null);
+            $result['task_date']   = self::decodeJsonList($result['task_date'] ?? null);
             self::$returnData = $result;
             return true;
         } catch (\Exception $e) {
             Db::rollback();
             self::setError($e->getMessage());
+            \think\facade\Log::channel('device')->write($e->__toString(), 'lead_scraping');
             return false;
         }
+    }
+
+    private static function failInTrans(string $message): bool
+    {
+        Db::rollback();
+        self::setError($message);
+        return false;
+    }
+
+    /**
+     * 将库字段或访问器结果规范为数组，避免 foreach(null)
+     */
+    private static function decodeJsonList(mixed $value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        if ($value === null || $value === '') {
+            return [];
+        }
+        if (!is_string($value)) {
+            return [];
+        }
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
     private static function updateFilterHistory(array $params)
@@ -311,11 +349,13 @@ class LeadScrapingLogic extends SvBaseLogic
                 return false;
             }
 
-            $result              = $leadScraping->toArray();
-            $result['filter']    = !empty($result['filter']) ? json_decode($result['filter'], true) : [];
-            $result['content']   = !empty($result['content']) ? json_decode($result['content'], true) : [];
-            $result['accounts']  = !empty($result['accounts']) ? json_decode($result['accounts'], true) : [];
-            $result['task_date'] = !empty($result['task_date']) ? json_decode($result['task_date'], true) : [];
+            $result               = $leadScraping->toArray();
+            $result['filter']     = self::decodeJsonList($result['filter'] ?? null);
+            $result['content']    = self::decodeJsonList($result['content'] ?? null);
+            $result['accounts']   = self::decodeJsonList($result['accounts'] ?? null);
+            $result['task_date']  = self::decodeJsonList($result['task_date'] ?? null);
+            $result['touch_type'] = (int)($result['touch_type'] ?? ShutoffDmTouchHelper::TOUCH_TYPE_SPEECH);
+            $result['agent_id'] = (int)($result['agent_id'] ?? 0);
             self::$returnData    = $result;
 
             return true;

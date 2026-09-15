@@ -183,7 +183,7 @@ class MarketingTemplateLogic extends BaseLogic
     }
 
     /**
-     * 剥离已关平台并重算视频发布等锁定结束时间
+     * 剥离已关平台；内容发布保留原窗，其它锁定场景重算结束时间
      *
      * @param array $schedules
      * @return array

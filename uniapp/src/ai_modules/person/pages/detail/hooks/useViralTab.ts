@@ -130,9 +130,9 @@ const ACCOUNT_TYPE_TO_PLATFORM: Record<number, ViralRealPlatformKey> = {
 };
 
 const viralPlatformTabs: ViralPlatformTab[] = [
-    { key: "all", label: "全部", short: "", color: "#2B6EFF", type: "" },
+    { key: "all", label: "全部", short: "", color: "#0065FB", type: "" },
     { key: "douyin", label: "抖音", short: "抖", color: "#111827", type: AppTypeEnum.DOUYIN },
-    { key: "xiaohongshu", label: "小红书", short: "红", color: "#EF4444", type: AppTypeEnum.XHS },
+    { key: "xiaohongshu", label: "小红书", short: "红", color: "#F56C6C", type: AppTypeEnum.XHS },
     // { key: 'kuaishou', label: '快手', short: '快', color: '#FF6800', type: AppTypeEnum.KUAISHOU },
     // { key: 'shipinhao', label: '视频号', short: '视', color: '#22C55E' }
 ];

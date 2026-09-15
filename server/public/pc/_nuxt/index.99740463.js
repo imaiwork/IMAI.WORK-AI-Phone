@@ -1,0 +1,1 @@
+import{d as a,o as n,e as _,a as o,q as s,aJ as c}from"./entry.e74542fa.js";const p=a({__name:"index",props:{width:{type:String,default:"48px"},height:{type:String,default:"48px"}},setup(t){const e=t;return(d,i)=>(n(),_("div",null,[o("div",{class:"loader",style:s({width:e.width,height:e.height})},null,4)]))}});const r=c(p,[["__scopeId","data-v-39a1c487"]]);export{r as _};

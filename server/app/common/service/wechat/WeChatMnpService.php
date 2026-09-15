@@ -49,6 +49,17 @@ class WeChatMnpService
 
 
     /**
+     * @notes 本实例(主站或某个 OEM 团队)使用的小程序 appid
+     * @return string
+     * @remark 换到的 openid 只在该 appid 下有效,写授权表时必须一起记录
+     */
+    public function getAppId(): string
+    {
+        return (string)($this->config['app_id'] ?? '');
+    }
+
+
+    /**
      * @notes 小程序-根据code获取微信信息
      * @param string $code
      * @return array

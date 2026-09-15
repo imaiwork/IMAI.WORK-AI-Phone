@@ -8,7 +8,6 @@ use app\common\logic\BaseLogic;
 use app\common\logic\RechargeStatsLogic;
 use app\common\model\distribution\DistributionAgent;
 use app\common\model\user\User;
-use app\common\service\ConfigService;
 use app\common\service\FileService;
 use app\common\service\wechat\WeChatMnpService;
 use think\facade\Db;
@@ -207,11 +206,11 @@ class DistributionAgentLogic extends BaseLogic
 
         if (!$agent->isEmpty()) {
             if ($agent->parent_id == 0) {
-                $qrCode = ConfigService::get('website', 'customer_service');
-                if (is_string($qrCode)) {
-                    $qrCode = json_decode($qrCode, true);
-                }
-                return ['qr_code' => FileService::getFileUrl($qrCode['wx_image'])];
+                // 顶级代理没有上级,回落站点客服码。必须走 IndexLogic 这条 OEM 感知的取值:
+                // 裸读平台 website.customer_service 会让 OEM 站点/小程序露出主站客服二维码,
+                // 且前端「联系客服」把本接口的结果排在站点客服码之前,会直接盖掉 OEM 管理员二维码。
+                $service = \app\api\logic\IndexLogic::getCustomerService();
+                return ['qr_code' => (string)($service['wx_image'] ?? '')];
             } else {
                 $parentAgent = DistributionAgent::where('user_id', $agent->parent_id)->findOrEmpty();
                 if (!$parentAgent->isEmpty() && !empty($parentAgent->qr_code)) {

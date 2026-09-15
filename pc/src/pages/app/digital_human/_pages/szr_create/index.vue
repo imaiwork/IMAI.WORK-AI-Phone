@@ -352,6 +352,10 @@
                             :step="0.1"
                             :show-tooltip="false" />
                     </div>
+
+                    <div class="bg-slate-50 border border-br rounded-2xl px-5 mb-6" v-if="showAdvancedSetting">
+                        <advanced-setting v-model="formData.packaging" show-music />
+                    </div>
                 </ElScrollbar>
             </div>
 
@@ -420,6 +424,8 @@ import ChooseTone from "@/pages/app/digital_human/_components/choose-tone.vue";
 import Upload from "@/components/upload/index.vue";
 import UploadForm from "./_components/upload-form.vue";
 import CreatePanel from "./_components/create-panel.vue";
+import AdvancedSetting from "@/pages/app/digital_human/_components/advanced-setting.vue";
+import { createAdvancedSetting } from "@/pages/app/digital_human/_config/advanced-setting";
 
 const router = useRouter();
 const appStore = useAppStore();
@@ -449,6 +455,8 @@ const formData = reactive<Record<string, any>>({
         video_count: 1,
         volume: 0.3,
     },
+    // 视频包装的高级设置，只有开启包装时才随 packaging 提交
+    packaging: createAdvancedSetting(),
 });
 
 const randomCopywriter = [
@@ -848,6 +856,9 @@ const handleChooseOriginalTone = () => {
     isOriginalVoice.value = true;
     applyOriginalTone(anchor);
 };
+
+// 关掉视频包装就没有包装可调，高级设置整块收起
+const showAdvancedSetting = computed(() => clipConfig.is_open && formData.ai_clip_enabled == 1);
 
 // 文案字数：蝉镜无包装 4000，蝉镜有包装 / 标准版 / 优质版 1500
 const textLimit = computed(() => {

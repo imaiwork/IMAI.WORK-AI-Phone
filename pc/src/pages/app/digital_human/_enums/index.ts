@@ -27,9 +27,9 @@ export const DIGITAL_HUMAN_DRIVE_MODEL_VERSIONS: number[] = [
 /** 蝉镜「视频原音」占位 voice_id，提交时不传 voice_id，由服务端从形象视频克隆原音 */
 export const CHANJING_ORIGINAL_VOICE_ID = "-1";
 
-/** 纯口播文案字数：蝉镜无包装 4000，蝉镜有包装 / 标准版 / 优质版 1500 */
+/** 纯口播文案字数：蝉镜无包装 3900，蝉镜有包装 / 标准版 / 优质版 1500 */
 export const SPEECH_TEXT_LIMIT = {
-    CHANJING_NO_PACK: 4000,
+    CHANJING_NO_PACK: 3900,
     DEFAULT: 1500,
 } as const;
 
@@ -39,6 +39,16 @@ export enum SpeechEngineTypeEnum {
     SHANJIAN = 1,
     /** 蝉镜 */
     CHANJING = 2,
+}
+
+/** 视频包装高级设置的背景音乐来源，与后端 music_source 一致 */
+export enum MusicSourceEnum {
+    /** 自己上传 */
+    CUSTOM = 1,
+    /** 系统推荐 */
+    SYSTEM = 2,
+    /** 不要音乐 */
+    NONE = 3,
 }
 
 // 数字人模型版本枚举映射
@@ -118,6 +128,8 @@ export enum SidebarTypeEnum {
     MY_WORKS = 10,
     // 我的形象
     MY_ANCHOR = 11,
+    // 爆款玩法复刻
+    PLAY_VIDEO = 12,
 }
 
 // 创作视频类型
@@ -135,6 +147,8 @@ export enum CreateVideoTypeEnum {
     DIGITAL_HUMAN_SHANJIAN = 9,
     /** 热点追踪（闪剪任务按 extra.source=hotspot 区分） */
     HOTSPOT = 10,
+    /** 爆款玩法（影视换脸改词/跳舞换脸） */
+    PLAY_VIDEO = 11,
 }
 
 /** 闪剪成片下载状态 */
@@ -159,6 +173,12 @@ export enum MontageTypeEnum {
     ONE_SENTENCE_VIDEO = 5,
     // 分镜混剪
     STORYBOARD_MIX = 6,
+    // 爆款玩法-影视换脸改词
+    PLAY_FACE = 7,
+    // 爆款玩法-跳舞换脸
+    PLAY_DANCE = 8,
+    // 爆款玩法-影视引流拼接
+    PLAY_SPLICE = 9,
 }
 
 export enum MontageStylesType {

@@ -38,6 +38,13 @@ export interface ImageTask {
     height: number
     count: number
     optimized: boolean
+    /** 本轮参考图的远端地址，首轮上传后回填，供「重新生成」复用 */
+    refUrls: string[]
+    /** 本轮使用的模型，重新生成时复现原轮参数，不跟随当前选择 */
+    modelAlias: string
+    modelName: string
+    /** 本条气泡的「重新生成」进行中，防连点重复提交 */
+    regenerating: boolean
     images: ImageItem[]
 }
 
@@ -49,6 +56,11 @@ const SEEDREAM40_MODEL_NAME = 'seedream4.0'
 
 function isSeedream40Model(m: DrawModelItem | null | undefined): boolean {
     return (m?.name || '').trim().toLowerCase() === SEEDREAM40_MODEL_NAME
+}
+
+/** seedream4.0 中台只出 1 张；按任务自己的模型算上限，重新生成才不跟着当前选择变 */
+function maxCountForModelName(name: string): number {
+    return (name || '').trim().toLowerCase() === SEEDREAM40_MODEL_NAME ? 1 : 9
 }
 
 function resolveImageBillingScene(alias: string, hasRef: boolean): string {
@@ -63,8 +75,9 @@ export function useWelcomeImageDraw(deps: {
     drawConvId: DrawConvIdMap
     appStore: ReturnType<typeof useAppStore>
     pollDrawTask: (taskNo: string, callbacks?: { onProgress?: (p: number) => void }) => Promise<any>
-    uploadFilesToUrls: (files: File[]) => Promise<string[]>
     refreshHistoryIfOpen: () => void
+    scrollChatToLatest: () => void
+    syncUserTokens: () => void
     bindDrawConversation: (mode: 'image' | 'video' | 'ppt', id: number | string) => void
     ensureEnoughTokens: (scene: string, count: number) => boolean
     ensureHasTokens: () => boolean
@@ -75,8 +88,9 @@ export function useWelcomeImageDraw(deps: {
         drawConvId,
         appStore,
         pollDrawTask,
-        uploadFilesToUrls,
         refreshHistoryIfOpen,
+        scrollChatToLatest,
+        syncUserTokens,
         bindDrawConversation,
         ensureEnoughTokens,
         ensureHasTokens,
@@ -115,7 +129,7 @@ export function useWelcomeImageDraw(deps: {
         { immediate: true }
     )
 
-    const imageMaxCount = computed(() => (isSeedream40Model(currentImageDrawModel.value) ? 1 : 9))
+    const imageMaxCount = computed(() => maxCountForModelName(currentImageDrawModel.value?.name || ''))
 
     function selectImageDrawModel(m: DrawModelItem) {
         selectedImageModelId.value = m.id
@@ -156,12 +170,23 @@ export function useWelcomeImageDraw(deps: {
         height: number
         count: number
         optimized: boolean
+        refUrls?: string[]
+        modelAlias?: string
+        modelName?: string
+        /** 仅新一轮发送时把对齐后的宽高回写规格面板；重新生成/历史恢复不能动面板 */
+        syncPanel?: boolean
     }): ImageTask {
         const width = snapDimToMultipleOf16(payload.width || 1024)
         const height = snapDimToMultipleOf16(payload.height || 1024)
         // 自定义输入未失焦时也强制对齐，并回写到规格面板
-        if (imageState.width !== width) imageState.width = width
-        if (imageState.height !== height) imageState.height = height
+        if (payload.syncPanel) {
+            if (imageState.width !== width) imageState.width = width
+            if (imageState.height !== height) imageState.height = height
+        }
+
+        const selected = currentImageDrawModel.value
+        const modelName = payload.modelName || selected?.name || ''
+        const modelAlias = payload.modelAlias || selected?.alias || selected?.name || ''
 
         const task: ImageTask = {
             id: ++_imgChatId,
@@ -170,8 +195,12 @@ export function useWelcomeImageDraw(deps: {
             resolution: payload.resolution,
             width,
             height,
-            count: Math.max(1, Math.min(imageMaxCount.value, payload.count)),
+            count: Math.max(1, Math.min(maxCountForModelName(modelName), payload.count)),
             optimized: payload.optimized,
+            refUrls: [...(payload.refUrls ?? [])],
+            modelAlias,
+            modelName,
+            regenerating: false,
             images: []
         }
         for (let i = 0; i < task.count; i++) {
@@ -223,15 +252,19 @@ export function useWelcomeImageDraw(deps: {
         if (text && !opts?.silent) feedback.msgError(text)
     }
 
-    async function runDrawImage(task: ImageTask, prompt: string, refFiles: File[]) {
+    async function runDrawImage(task: ImageTask, prompt: string) {
         const selected = currentImageDrawModel.value
-        const modelAlias = (selected?.alias || selected?.name || '').trim()
+        // 用任务自己的模型，保证「重新生成」和历史会话复现原来那一轮
+        const modelAlias = (task.modelAlias || selected?.alias || selected?.name || '').trim()
+        const modelName = task.modelName || selected?.name || modelAlias
         if (!modelAlias) {
             markImageTaskFailed(task, '请选择生图模型')
             return
         }
 
-        const hasRef = refFiles.length > 0
+        // 参考图在发送时就已传好（传不上去那一轮根本不会开），这里只认远端地址
+        const attachments = [...task.refUrls]
+        const hasRef = attachments.length > 0
         const billingScene = resolveImageBillingScene(modelAlias, hasRef)
         if (!ensureEnoughTokens(billingScene, task.count)) {
             const text = '算力不足，请充值！'
@@ -247,13 +280,12 @@ export function useWelcomeImageDraw(deps: {
         }
 
         try {
-            const attachments = hasRef ? await uploadFilesToUrls(refFiles) : []
             const res: any = await drawGenerateImage({
                 conversation_id: drawConvId.image || undefined,
                 prompt,
                 attachments,
                 model: modelAlias,
-                model_name: selected?.name || modelAlias,
+                model_name: modelName,
                 billing_scene: billingScene,
                 params: {
                     prompt,
@@ -274,11 +306,13 @@ export function useWelcomeImageDraw(deps: {
             fillImagesFromAssets(task, t)
         } catch (e: any) {
             markImageTaskFailed(task, resolveDrawErrorMsg(e))
+        } finally {
+            syncUserTokens()
         }
     }
 
-    async function callGptImage(task: ImageTask, prompt: string, refFiles: File[]) {
-        await runDrawImage(task, prompt, refFiles)
+    async function callGptImage(task: ImageTask, prompt: string) {
+        await runDrawImage(task, prompt)
     }
 
     function setRatio(k: string) {
@@ -323,7 +357,10 @@ export function useWelcomeImageDraw(deps: {
                 width: turn.assistant.width,
                 height: turn.assistant.height,
                 count: turn.assistant.count,
-                optimized: false
+                optimized: false,
+                refUrls: turn.user.attachments,
+                modelAlias: turn.assistant.modelAlias,
+                modelName: turn.assistant.modelName
             })
 
             if (isDrawTaskSuccess(turn.assistant.taskStatus) && turn.assistant.assets.length) {
@@ -354,7 +391,8 @@ export function useWelcomeImageDraw(deps: {
         }
     }
 
-    function onImageRegenerate(oldTask: ImageTask) {
+    async function onImageRegenerate(oldTask: ImageTask) {
+        if (oldTask.regenerating) return
         if (!ensureHasTokens()) return
         const newShell = createImageTaskShell({
             prompt: oldTask.prompt,
@@ -363,7 +401,10 @@ export function useWelcomeImageDraw(deps: {
             width: oldTask.width,
             height: oldTask.height,
             count: oldTask.count,
-            optimized: oldTask.optimized
+            optimized: oldTask.optimized,
+            refUrls: oldTask.refUrls,
+            modelAlias: oldTask.modelAlias,
+            modelName: oldTask.modelName
         })
         const newId = ++_imgChatId
         imageChat.value.push({
@@ -372,8 +413,14 @@ export function useWelcomeImageDraw(deps: {
             task: newShell
         })
         const newMsg = imageChat.value.find((m) => m.id === newId)
-        if (newMsg && newMsg.role === 'assistant') {
-            callGptImage(newMsg.task, oldTask.prompt, [])
+        if (!newMsg || newMsg.role !== 'assistant') return
+        // 新气泡追加在最下面，不滚过去用户会以为没反应，接着再点一次就重复扣费
+        scrollChatToLatest()
+        oldTask.regenerating = true
+        try {
+            await callGptImage(newMsg.task, oldTask.prompt)
+        } finally {
+            oldTask.regenerating = false
         }
     }
 

@@ -1,6 +1,6 @@
 import useUpload from "@/hooks/useUpload";
 import { useMaterial } from "@/ai_modules/digital_human/hooks/useMaterial";
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import { montageConfig } from "@/enums/montageEnums";
 import { UploadCategoryEnum, UploadAlbumTypeEnum } from "@/enums/appEnums";
 
 interface UseMaterialStepOptions {

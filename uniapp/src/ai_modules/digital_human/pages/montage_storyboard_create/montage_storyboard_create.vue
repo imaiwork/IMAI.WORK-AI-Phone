@@ -535,7 +535,7 @@
             v-model="showChooseTone"
             :limit="1"
             :type="2"
-            :model-version="DigitalHumanModelVersionEnum.MINIMAX_HD"
+            :model-version="`${DigitalHumanModelVersionEnum.MINIMAX_HD},${DigitalHumanModelVersionEnum.MINIMAX_TURBO}`"
             :show-user-tone="copywriterTypeIndex === 0"
             :show-original-tone="false"
             @select="handleSelectTone" />

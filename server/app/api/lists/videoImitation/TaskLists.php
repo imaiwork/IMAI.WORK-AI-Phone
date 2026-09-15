@@ -112,6 +112,8 @@ class TaskLists extends BaseApiDataLists
             $item['generation_config_confirmed'] = (int)($item['generation_config_confirmed'] ?? 0);
             $item['wash_avatar_id'] = (int)($item['wash_avatar_id'] ?? 0);
             $item['wash_voice_id'] = (int)($item['wash_voice_id'] ?? 0);
+            $item['wash_voice_is_original'] = (int)($item['wash_voice_is_original'] ?? 0);
+            $item['copywriting_length'] = VideoImitationTask::normalizeCopywritingLength($item['copywriting_length'] ?? 0);
             if ($item['rewrite_mode'] === VideoImitationTask::REWRITE_MODE_WASH
                 && $item['media_type'] === VideoImitationTask::MEDIA_TYPE_VIDEO
             ) {

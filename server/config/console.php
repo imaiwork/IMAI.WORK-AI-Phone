@@ -5,6 +5,7 @@
 return [
     // 指令定义
     'commands' => [
+        'work_data_sync' => 'app\\common\\command\\WorkDataSyncCron',
         // GEO官网SEO定时发布
         'geo_site_publish'   => 'app\\common\\command\\GeoSitePublish',
         // GEO每日自动监测
@@ -63,10 +64,13 @@ return [
         'sph_clues_add_wechat' => 'app\common\command\SphCluesAddWechat',
         //闪剪视频合成
         'shanjian_video_task' => 'app\common\command\ShanjianVideoTaskCron',
+        'play_video_task' => 'app\common\command\PlayVideoTaskCron',
         //热点追踪视频后台下发
         'hotspot_video_dispatch' => 'app\common\command\HotspotVideoDispatchCron',
         //闪剪中台单队列状态
         'shanjian_queue_status' => 'app\common\command\ShanjianQueueStatusCron',
+        //闪剪多key池：存量形象/音色资产上报中台
+        'shanjian_asset_sync' => 'app\common\command\ShanjianAssetSyncCron',
         //手动加微信任务
         'crawling_manual_cron' => 'app\common\command\CrawlingManualCron',
         //设备任务调度
@@ -78,8 +82,10 @@ return [
         'hd_puzzle_cron' => 'app\common\command\HdPuzzleCron',
         //sora视频合成
         'sora_video_task' => 'app\common\command\SoraVideoTaskCron',
-        //设备自动线索词生成
+        //设备运营/爆款任务生成（0:00-3:00，每分钟 15 台）
         'auto_device_create_cron' => 'app\common\command\AutoDeviceCreateCron',
+        //设备素材发布/朋友圈建单（0:00-6:00，每分钟 2 台，与运营分锁）
+        'auto_device_publish_create_cron' => 'app\common\command\AutoDevicePublishCreateCron',
         //设备自动加微任务生成
         'auto_device_frist_create_cron' => 'app\common\command\AutoDeviceFristCreateCron',
         //设备自动任务调度
@@ -106,6 +112,8 @@ return [
         'material:split-recover' => 'app\common\command\MaterialSliceRecoverCron',
         // 切割素材缺少封面时补生成 thumbnail_url
         'material:slice-thumb-backfill' => 'app\common\command\MaterialSliceThumbBackfill',
+        // 出图任务轮询与提交中断回收退费
+        'draw:recover' => 'app\common\command\DrawRecoverCron',
         //本地自动合成设备视频任务
         // 'local_video_synthesis' => 'app\common\command\LocalVideoSynthesis',
         // //企业自动合成设备视频任务
@@ -122,6 +130,10 @@ return [
         'reset_video_synthesis' => 'app\common\command\ResetVideoSynthesis',
         // 自动合成视频任务覆盖率核对
         'video_synthesis_coverage' => 'app\common\command\VideoSynthesisCoverageCheck',
+        //运行模式自检（手动执行，不进 crontab）
+        'run-mode:selfcheck' => 'app\common\command\RunModeSelfCheck',
+        //无手机模式手动出片并实时打印每一步（手动执行，不进 crontab）
+        'run-mode:run' => 'app\common\command\RunModeRun',
         // 【已合并】自动合成模仿视频任务 -> 统一入口 auto_video_synthesis
         // 'auto_imitation_video_synthesis' => 'app\common\command\AutoImitationVideoSynthesis',
         // 合成minimax音频，兼容闪剪任务

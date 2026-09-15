@@ -117,6 +117,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
     const copyDriveType = ref<CopyDriverTypeEnum>(CopyDriverTypeEnum.NEWS);
     const copyList = ref<CopyItem[]>([]);
     const copyLoading = ref(false);
+    let copyRequestId = 0;
 
     const showCopyEdit = ref(false);
     const editingCopy = ref<CopyFormData | null>(null);
@@ -165,7 +166,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
         uni.showModal({
             title: "批量删除",
             content: `确定删除已选的 ${selectedCopyIds.value.length} 条文案吗？`,
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             confirmText: "删除",
             success: async ({ confirm }) => {
                 if (!confirm) return;
@@ -186,6 +187,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
 
     const queryCopyList = async (): Promise<void> => {
         if (!personId.value) return;
+        const requestId = ++copyRequestId;
         try {
             copyLoading.value = true;
             const { lists = [] } = await getCopywritingLibraryList({
@@ -194,11 +196,12 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
                 driver_type: currentDriverType.value,
                 page_size: 9999,
             });
+            if (requestId !== copyRequestId) return;
             copyList.value = lists;
         } catch {
-            copyList.value = [];
+            if (requestId === copyRequestId) copyList.value = [];
         } finally {
-            copyLoading.value = false;
+            if (requestId === copyRequestId) copyLoading.value = false;
         }
     };
 
@@ -263,7 +266,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
         uni.showModal({
             title: "提示",
             content: "确定删除该文案吗？",
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             success: async ({ confirm }) => {
                 if (!confirm) return;
                 uni.showLoading({ title: "删除中...", mask: true });

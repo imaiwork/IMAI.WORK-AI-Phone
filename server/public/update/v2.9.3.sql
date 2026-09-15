@@ -37,7 +37,11 @@ UPDATE `la_config`
 SET `value` = JSON_REMOVE(CAST(`value` AS JSON), '$.channel')
 WHERE `type` = 'model' AND `name` = 'list';
 
-ALTER TABLE `la_models` ADD COLUMN `model_version` INT(11) NULL COMMENT '模型版本' AFTER `channel`;
+
+ALTER TABLE `iw_models`
+ADD COLUMN `model_version` INT(11) NULL COMMENT '模型版本'
+AFTER `channel`;
+
 
 UPDATE `la_models` SET `model_version` = CASE `id`
     WHEN 7 THEN 7

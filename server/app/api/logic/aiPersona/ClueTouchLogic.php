@@ -1197,6 +1197,29 @@ class ClueTouchLogic extends BasePersonaLogic
                     continue;
                 }
 
+                $touchType = (int)$agentConfig->shutoff_comment_type;
+                $agentId = 0;
+                if ($scene === 1 || $scene === 2) {
+                    $agentResolved = \app\common\service\sv\ShutoffDmTouchHelper::resolveAutoDmCreate(
+                        $scene,
+                        $scene === 2
+                            ? (int)$agentConfig->shutoff_msg_type
+                            : (int)$agentConfig->shutoff_comment_type,
+                        $scene === 2
+                            ? (int)$agentConfig->shutoff_msg_agent_id
+                            : (int)$agentConfig->shutoff_comment_agent_id
+                    );
+                    if ($agentResolved['skip']) {
+                        \think\facade\Log::channel('auto')->write(
+                            $item->device_code . $agentResolved['reason'],
+                            'create'
+                        );
+                        continue;
+                    }
+                    $touchType = $agentResolved['touch_type'];
+                    $agentId = $agentResolved['agent_id'];
+                }
+
                 //截流任务
                 $params = [
                     'user_id' => $item->user_id,
@@ -1211,6 +1234,8 @@ class ClueTouchLogic extends BasePersonaLogic
                     'industry_num' => count($acquireKeywords),
                     'industry_type' => $industryType,
                     'content' => $scene === 2 ? json_encode($agentConfig->shutoff_msg_speech, JSON_UNESCAPED_UNICODE) : json_encode($agentConfig->shutoff_comment_speech, JSON_UNESCAPED_UNICODE),
+                    'touch_type' => $touchType,
+                    'agent_id' => $agentId,
                     'filter' => json_encode($item->intercept_keywords, JSON_UNESCAPED_UNICODE),
                     'send_num' => count($acquireKeywords) * $item->intercept_max_number,
                     'is_like' => 1,

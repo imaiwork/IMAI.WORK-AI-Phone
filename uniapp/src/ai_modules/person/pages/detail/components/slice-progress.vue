@@ -10,7 +10,7 @@
             </text>
         </view>
 
-        <view class="h-[12rpx] rounded-full overflow-hidden bg-[#EEF1F6]">
+        <view class="h-[12rpx] rounded-full overflow-hidden bg-[#F2F3F5]">
             <view class="slice-bar h-full rounded-full bg-primary" :style="{ width: percent }"></view>
         </view>
     </view>

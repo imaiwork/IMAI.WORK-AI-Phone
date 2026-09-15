@@ -61,9 +61,14 @@ class MaterialService
             $thumbnailUrl = self::makeVideoThumbnail($fileUrl, $seek);
         }
 
+        $keepOriginal = (int)($meta['keep_original'] ?? 0) === Material::KEEP_ORIGINAL_YES
+            ? Material::KEEP_ORIGINAL_YES
+            : Material::KEEP_ORIGINAL_NO;
+
         $existing = Material::where('persona_id', $personaId)
             ->where('material_type', Material::MATERIAL_TYPE_VIDEO)
-            ->where('source_type', 'original')
+            ->where('source_type', Material::SOURCE_TYPE_ORIGINAL)
+            ->where('keep_original', $keepOriginal)
             ->where('source_video_id', $fileId)
             ->where('delete_time', null)
             ->when($userId > 0, fn ($query) => $query->where('user_id', $userId))
@@ -96,7 +101,9 @@ class MaterialService
             'width' => $meta['width'] ?? '',
             'height' => $meta['height'] ?? '',
             'use_status' => Material::USE_STATUS_ENABLED,
-            'source_type' => 'original',
+            'source_type' => Material::SOURCE_TYPE_ORIGINAL,
+            'keep_original' => $keepOriginal,
+            'original_video_id' => $fileId,
             'source_video_id' => $fileId,
             'slice_status' => Material::SLICE_STATUS_NONE,
         ]);
@@ -463,7 +470,7 @@ class MaterialService
 
     private static function createVideo(array $params): Material
     {
-        $originalVideoId = (int)($params['original_video_id'] ?? 0);
+        $originalVideoId = (int)($params['original_video_id'] ?? $params['source_video_id'] ?? 0);
         $userId = (int)($params['user_id'] ?? 0);
         if ($userId <= 0 && $originalVideoId > 0) {
             $userId = (int)File::where('id', $originalVideoId)->value('source_id');
@@ -486,7 +493,10 @@ class MaterialService
             'height' => self::formatDimension($params['height'] ?? ''),
             'use_status' => (int)($params['use_status'] ?? Material::USE_STATUS_ENABLED),
             'publish_mode' => Material::PUBLISH_MODE_MAKE_VIDEO,
-            'source_type' => (string)($params['source_type'] ?? 'slice'),
+            'source_type' => (string)($params['source_type'] ?? Material::SOURCE_TYPE_SLICE),
+            'keep_original' => (int)($params['keep_original'] ?? Material::KEEP_ORIGINAL_NO) === Material::KEEP_ORIGINAL_YES
+                ? Material::KEEP_ORIGINAL_YES
+                : Material::KEEP_ORIGINAL_NO,
             'source_video_id' => $originalVideoId,
             'slice_status' => (int)($params['slice_status'] ?? Material::SLICE_STATUS_NONE),
             'create_time' => time(),

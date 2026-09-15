@@ -138,6 +138,18 @@ class YxEnv
                 $value = $keyInfo['sign_key'];
             }
 
+            //回调鉴权令牌：新装站点直接生成随机值，不留给站长手填；只在本站闭环，无需与中台协调
+            if ($index == 'NOTIFY.TOKEN' && empty($value)) {
+
+                $value = bin2hex(random_bytes(24));
+            }
+
+            //回调迁移宽限期：随令牌一起填成安装时刻+1天的时间戳，到点自动失效
+            if ($index == 'NOTIFY.LEGACY_UNTIL' && empty($value)) {
+
+                $value = time() + 86400;
+            }
+
             //TODO 域名
             if ($index == 'APP.HOST') {
 

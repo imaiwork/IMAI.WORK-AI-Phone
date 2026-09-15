@@ -15,7 +15,7 @@ use app\common\model\human\HumanAnchor;
 use app\common\model\material\FfmpegFile;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\user\User;
-use app\common\model\user\UserTokensLog;
+use app\common\service\digitalHuman\PublicAnchorBindService;
 use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
 use think\db\exception\DbException;
@@ -55,10 +55,10 @@ class DigitalHumanLogic extends ApiLogic
             ['delete_time', '=', null]
         ];
 
-        // 展示生成中+成功
+        // 展示生成中+成功（4=AI视频合成中）
         if ($status == 1) {
             $publicWhere   = [
-                ['status', 'in', [0, 1, 2]]
+                ['status', 'in', [0, 1, 2, 4]]
             ];
             $humanWhere    = [
                 ['status', 'in', [0, 1]]
@@ -89,13 +89,14 @@ class DigitalHumanLogic extends ApiLogic
                                      Db::raw("'' as anchor_id"),
                                      'name',
                                      'image as pic',  // 数字人封面
-                                     'status', // 原生状态：0生成中 1部分完成 2已完成 3生成失败
+                                     'status', // 原生状态：0生成中 1部分完成 2已完成 3生成失败 4 AI视频合成中
                                      'remark', // 失败原因
                                      'result_url', // 视频链接
                                      'create_time',
                                      'update_time',
                                      'width',
                                      'height',
+                                     'clone_mode',
                                      Db::raw("'public_anchor' as source_type"), // 标记数据来源：公共表
                                      Db::raw("0 as dh_id"), // 公共表无外键，默认0
                                      Db::raw("0 as model_version"), // 公共表无模型版本，默认0
@@ -120,6 +121,7 @@ class DigitalHumanLogic extends ApiLogic
                                     'update_time',
                                     'width',
                                     'height',
+                                    Db::raw("0 as clone_mode"),
                                     Db::raw("'human_anchor' as source_type"),
                                     'dh_id',
                                     'model_version',
@@ -149,6 +151,7 @@ class DigitalHumanLogic extends ApiLogic
                                        'update_time',
                                        Db::raw("0 as width"),
                                        Db::raw("0 as height"),
+                                       Db::raw("0 as clone_mode"),
                                        Db::raw("'shanjian_anchor' as source_type"), // 标记数据来源：闪剪表
                                        'dh_id',
                                        Db::raw("8 as model_version"), // 公共表无模型版本，默认0
@@ -217,9 +220,9 @@ class DigitalHumanLogic extends ApiLogic
             ['clone_mode', '=', 3],
         ];
 
-        // 展示生成中+成功
+        // 展示生成中+成功（4=AI视频合成中）
         if ($status == 1) {
-            $publicWhere[] = ['status', 'in', [0, 1, 2]];
+            $publicWhere[] = ['status', 'in', [0, 1, 2, 4]];
         }
 
         // 展示成功
@@ -495,7 +498,7 @@ class DigitalHumanLogic extends ApiLogic
 
     public static function getDigitalHumanAnchorStatusCron()
     {
-        $lists = DigitalHumanAnchor::where('status', '=', 1)->select();
+        $lists = DigitalHumanAnchor::where('status', 'in', [1, 4])->select();
         if ($lists->isEmpty()) {
             return true;
         }
@@ -505,19 +508,16 @@ class DigitalHumanLogic extends ApiLogic
             if (empty($task_ids)) {
                 continue;
             }
+            $ownerId   = (int)$item['user_id'];
             $cloneMode = (int)($item['clone_mode'] ?? 2);
-            $shanjian  = ShanjianAnchor::where('dh_id', $item['id'])
-                ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_FAST)
-                ->find();
+            $shanjian  = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_FAST);
             $shanjianPro = null;
             if ($cloneMode === 3) {
-                $shanjianPro = ShanjianAnchor::where('dh_id', $item['id'])
-                    ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_PRO)
-                    ->find();
+                $shanjianPro = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_PRO);
             }
             //隐藏微聚
 //            $weiju                           = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->find();
-            $chanjing                        = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->find();
+            $chanjing                        = PublicAnchorBindService::ownChanjing((int)$item['id'], $ownerId);
             $task_ids['shanjian']['task_id'] = $shanjian['task_id'] ?? '';
             $task_ids['shanjian']['status']  = $shanjian['status'] ?? 0;
             $task_ids['weiju']['task_id']    = $weiju['task_id'] ?? '';
@@ -549,41 +549,92 @@ class DigitalHumanLogic extends ApiLogic
         return true;
     }
 
-    //1小时以上的失败任务处理
+    // status=0/1 超1小时缺子任务收口；status=4 超2小时写清卡点后失败
     public static function getDigitalHumanAnchorFailedStatusCron()
     {
         $lists = DigitalHumanAnchor::where('status', 'in', [0,1])->where('create_time', '<', time() - 3600)->select();
-        if ($lists->isEmpty()) {
-            return true;
+        if (!$lists->isEmpty()) {
+            $lists = $lists->toArray();
+            foreach ($lists as $item) {
+                $task_ids = json_decode($item['task_ids'], true) ?? [];
+                if (empty($task_ids)) {
+                    continue;
+                }
+                $ownerId   = (int)$item['user_id'];
+                $cloneMode = (int)($item['clone_mode'] ?? 2);
+                $shanjian = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_FAST);
+                $shanjianPro = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_PRO);
+                //隐藏微聚
+//            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
+                $chanjing = PublicAnchorBindService::ownChanjing((int)$item['id'], $ownerId);
+                // ai_type=1 只走蝉镜；ai_type=0 需蝉镜+闪剪都有子任务；一克三还需专业子任务
+                $aiType = (int)($item['ai_type'] ?? 0);
+                $failed = $aiType === 1
+                    ? empty($chanjing)
+                    : (empty($chanjing) || empty($shanjian) || ($cloneMode === 3 && empty($shanjianPro)));
+                if ($failed) {
+                    $update['status'] = 3;
+                    $update['remark'] = '形象生成失败';
+                    DigitalHumanAnchor::where('id', $item['id'])->update($update);
+                }
+            }
         }
-        $lists = $lists->toArray();
+
+        self::closeStuckStatus4();
+        return true;
+    }
+
+    /** status=4 且超过两小时无进展 → 失败，remark 写清卡在哪一步 */
+    private static function closeStuckStatus4(): void
+    {
+        $deadline = time() - 7200;
+        // 在 SQL 层按 unix 时间筛，避免 toArray 把时间格式化成日期串后 (int)'2026-…' = 2026 被当成已超时
+        $lists = DigitalHumanAnchor::where('status', 4)
+            ->where(function ($q) use ($deadline) {
+                $q->where(function ($q1) use ($deadline) {
+                    $q1->where('update_time', '>', 0)->where('update_time', '<', $deadline);
+                })->whereOr(function ($q2) use ($deadline) {
+                    $q2->where(function ($q3) {
+                        $q3->whereNull('update_time')->whereOr('update_time', '=', 0);
+                    })->where('create_time', '<', $deadline);
+                });
+            })
+            ->select();
+        if ($lists->isEmpty()) {
+            return;
+        }
         foreach ($lists as $item) {
-            $task_ids = json_decode($item['task_ids'], true) ?? [];
-            if (empty($task_ids)) {
+            $row = is_array($item) ? $item : $item->toArray();
+            $ts  = self::parseUnixTime($row['update_time'] ?? 0);
+            if ($ts <= 0) {
+                $ts = self::parseUnixTime($row['create_time'] ?? 0);
+            }
+            if ($ts <= 0 || $ts >= $deadline) {
                 continue;
             }
-            $cloneMode = (int)($item['clone_mode'] ?? 2);
-            $shanjian = ShanjianAnchor::where('dh_id', $item['id'])
-                ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_FAST)
-                ->findOrEmpty();
-            $shanjianPro = ShanjianAnchor::where('dh_id', $item['id'])
-                ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_PRO)
-                ->findOrEmpty();
-            //隐藏微聚
-//            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
-            $chanjing = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->findOrEmpty();
-            // ai_type=1 只走蝉镜；ai_type=0 需蝉镜+闪剪都有子任务；一克三还需专业子任务
-            $aiType = (int)($item['ai_type'] ?? 0);
-            $failed = $aiType === 1
-                ? $chanjing->isEmpty()
-                : ($chanjing->isEmpty() || $shanjian->isEmpty() || ($cloneMode === 3 && $shanjianPro->isEmpty()));
-            if ($failed) {
-                $update['status'] = 3;
-                $update['remark'] = '形象生成失败';
-                DigitalHumanAnchor::where('id', $item['id'])->update($update);
-            }
+            $remark = PublicAnchorBindService::diagnoseStatus4Stuck($row);
+            DigitalHumanAnchor::where('id', $row['id'])->where('status', 4)->update([
+                'status' => 3,
+                'remark' => $remark,
+            ]);
+            Log::channel('digital')->write(
+                '公共形象status=4超时收口：id=' . $row['id'] . ' user_id=' . $row['user_id'] . ' remark=' . $remark
+            );
         }
-        return true;
+    }
+
+    /** 兼容 unix 秒、日期串；禁止 (int)'2026-09-08 12:00:00' 变成 2026 */
+    private static function parseUnixTime($value): int
+    {
+        if ($value === null || $value === '' || $value === false) {
+            return 0;
+        }
+        if (is_numeric($value)) {
+            $n = (int)$value;
+            return $n > 1_000_000_000 ? $n : 0;
+        }
+        $ts = strtotime((string)$value);
+        return $ts !== false ? $ts : 0;
     }
 
     /**
@@ -604,20 +655,17 @@ class DigitalHumanLogic extends ApiLogic
             if (empty($task_ids)) {
                 continue;
             }
+            $ownerId   = (int)$item['user_id'];
             $cloneMode = (int)($item['clone_mode'] ?? 2);
-            $shanjian = ShanjianAnchor::where('dh_id', $item['id'])
-                ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_FAST)
-                ->findOrEmpty();
-            $shanjianPro = ShanjianAnchor::where('dh_id', $item['id'])
-                ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_PRO)
-                ->findOrEmpty();
+            $shanjian = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_FAST);
+            $shanjianPro = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_PRO);
 //            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
-            $chanjing = HumanAnchor::where('model_version', 7)->where('dh_id', $item['id'])->findOrEmpty();
+            $chanjing = PublicAnchorBindService::ownChanjing((int)$item['id'], $ownerId);
 //            if ($shanjian->isEmpty() || $weiju->isEmpty() || $chanjing->isEmpty()) {
-            if ($shanjian->isEmpty() || $chanjing->isEmpty()) {
+            if (empty($shanjian) || empty($chanjing)) {
                 continue;
             }
-            if ($cloneMode === 3 && $shanjianPro->isEmpty()) {
+            if ($cloneMode === 3 && empty($shanjianPro)) {
                 continue;
             }
             Log::channel('digital')->write('退费处理开始：' . $item['id']);
@@ -641,7 +689,7 @@ class DigitalHumanLogic extends ApiLogic
 
 //            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
             if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['chanjing']['status'] == 1) {
-                if ($cloneMode === 3 && !$shanjianPro->isEmpty()
+                if ($cloneMode === 3 && !empty($shanjianPro)
                     && !self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
                     Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
                     continue;
@@ -663,7 +711,7 @@ class DigitalHumanLogic extends ApiLogic
                 self::refundTokens($chanjing->user_id, $chanjing->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_CHANJING);
                 $chanjing->status = 2;
                 $chanjing->save();
-                if ($cloneMode === 3 && !$shanjianPro->isEmpty()) {
+                if ($cloneMode === 3 && !empty($shanjianPro)) {
                     self::refundTokens($shanjianPro->user_id, $shanjianPro->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN_PRO);
                     $shanjianPro->status = 2;
                     if ($item['ai_type'] == 0) {
@@ -675,7 +723,7 @@ class DigitalHumanLogic extends ApiLogic
             } else
 //                if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 2 && $task_ids['chanjing']['status'] == 1) {
                 if ($task_ids['shanjian']['status'] == 6 && $task_ids['chanjing']['status'] == 1) {
-                    if ($cloneMode === 3 && !$shanjianPro->isEmpty()
+                    if ($cloneMode === 3 && !empty($shanjianPro)
                         && !self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
                         Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
                         continue;
@@ -693,7 +741,7 @@ class DigitalHumanLogic extends ApiLogic
                     self::refundTokens($chanjing->user_id, $chanjing->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_CHANJING);
                     $chanjing->status = 2;
                     $chanjing->save();
-                    if ($cloneMode === 3 && !$shanjianPro->isEmpty()) {
+                    if ($cloneMode === 3 && !empty($shanjianPro)) {
                         self::refundTokens($shanjianPro->user_id, $shanjianPro->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN_PRO);
                         $shanjianPro->status = 2;
                         if ($item['ai_type'] == 0) {
@@ -745,7 +793,7 @@ class DigitalHumanLogic extends ApiLogic
                 $task_ids['weiju']['status']     = $weiju->status ?? 0;
                 $task_ids['chanjing']['task_id'] = $chanjing['task_id'] ?? '';
                 $task_ids['chanjing']['status']  = $chanjing->status ?? 0;
-                if ($cloneMode === 3 && !$shanjianPro->isEmpty()) {
+                if ($cloneMode === 3 && !empty($shanjianPro)) {
                     $task_ids['shanjian_pro'] = $task_ids['shanjian_pro'] ?? ['task_id' => '', 'status' => 0];
                     $task_ids['shanjian_pro']['task_id'] = $shanjianPro->task_id ?? '';
                     $task_ids['shanjian_pro']['status']  = $shanjianPro->status ?? 0;
@@ -809,12 +857,7 @@ class DigitalHumanLogic extends ApiLogic
      */
     public static function refundTokens(int $userId, string $taskId, int $typeID): bool
     {
-        $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-        //查询是否已返还
-        if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-            $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-            AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-        }
+        AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
         return true;
     }
 
@@ -834,7 +877,7 @@ class DigitalHumanLogic extends ApiLogic
         ];
         if ($status == 1) {
             $publicWhere   = [
-                ['status', 'in', [0, 1, 2]]
+                ['status', 'in', [0, 1, 2, 4]]
             ];
             $humanWhere    = [
                 ['status', 'in', [0, 1]]
@@ -887,17 +930,14 @@ class DigitalHumanLogic extends ApiLogic
             $item['result_url']  = !empty($item['result_url']) ? FileService::getFileUrl($item['result_url']) : '';
             $item['remark']      = $item['remark'] ?? '';
             $item['extra_info']  = !empty($item['extra_info']) ? json_decode($item['extra_info'], true) : '';
-            if ($item['model_version'] === 0) {
-                $weiju              = HumanAnchor::where('model_version', '=', 1)->where('dh_id', '=', $item['id'])->find();
-                $chanjing           = HumanAnchor::where('model_version', '=', 7)->where('dh_id', '=', $item['id'])->find();
+            if ((int)($item['model_version'] ?? -1) === 0) {
+                $ownerId            = (int)($item['user_id'] ?? 0);
+                $weiju              = PublicAnchorBindService::ownWeiju((int)$item['id'], $ownerId);
+                $chanjing           = PublicAnchorBindService::ownChanjing((int)$item['id'], $ownerId);
                 $cloneMode          = (int)($item['clone_mode'] ?? 2);
-                $shanjianFast       = ShanjianAnchor::where('dh_id', '=', $item['id'])
-                    ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_FAST)
-                    ->find();
+                $shanjianFast       = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_FAST);
                 $shanjianPro        = $cloneMode === 3
-                    ? ShanjianAnchor::where('dh_id', '=', $item['id'])
-                        ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_PRO)
-                        ->find()
+                    ? PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_PRO)
                     : null;
                 // 指定 cloneType 时强制取对应渠道形象（1极速/2专业）；默认一克三优先专业 anchor_id
                 // 音色始终取极速记录（专业不串联音色）
@@ -918,14 +958,28 @@ class DigitalHumanLogic extends ApiLogic
                     'height'            => $weiju->height ?? ($chanjing->height ?? ''),
                     'shanjian_voice_id' => !empty($shanjianFast) ? ($shanjianFast->voice_id ?? '') : '',
                 ];
-                // 普通列表：一克三只要标准渠道（极速+蝉镜）就绪，就按已完成展示
+                // 普通列表：标准渠道就绪可提前展示已完成；一克三还要等专业克隆到终态
                 if ($cloneType === ShanjianAnchorLogic::CLONE_TYPE_FAST) {
                     $fastOk     = !empty($shanjianFast) && (int)($shanjianFast->status ?? 0) === 6;
                     $chanjingOk = !empty($chanjing) && (int)($chanjing->status ?? 0) === 1;
-                    if ($fastOk && $chanjingOk) {
+                    $proOk      = $cloneMode !== 3 || (!empty($shanjianPro) && (int)($shanjianPro->status ?? 0) === 3);
+                    if ($fastOk && $chanjingOk && $proOk) {
                         $item['status'] = 2;
                     }
+                }else if ($cloneType === ShanjianAnchorLogic::CLONE_TYPE_PRO){
+                    $fastOk     = !empty($shanjianFast) && (int)($shanjianFast->status ?? 0) === 6;
+                    $chanjingOk = !empty($chanjing) && (int)($chanjing->status ?? 0) === 1;
+                    $proOk      = $cloneMode === 3
+                                  && (!empty($shanjianPro) && (int)($shanjianPro->status ?? 0) === 3);
+                    if (!empty($shanjianPro) && $shanjianPro->status === 2){
+                        $item['status'] = 3;
+                    }else if ($fastOk && $chanjingOk && $proOk) {
+                        $item['status'] = 2;
+                    }else if ($fastOk && $chanjingOk && !$proOk){
+                        $item['status'] = 1;
+                    }
                 }
+                $item['status_text'] = PublicAnchorBindService::publicStatusText((int)$item['status']);
             } else {
                 $item['anchor_ids'] = [];
             }
@@ -979,7 +1033,8 @@ class DigitalHumanLogic extends ApiLogic
                     'height' => $anchorFile->height,
                 ];
                 if ($ok) {
-                    $update['status'] = 4;
+                    $update['status']      = 4;
+                    $update['update_time'] = time();
                 } else {
                     Log::channel('digital')->write(
                         'ai授权视频蝉镜形象创建失败: id=' . $item['id'] . ' err=' . (HumanLogic::getError() ?: '')

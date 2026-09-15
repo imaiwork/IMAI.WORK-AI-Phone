@@ -1,0 +1,14 @@
+{
+  "navigationBarTitleText": "影视引流拼接",
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
+    "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
+    "tokens-cost": "../../components/tokens-cost/tokens-cost",
+    "play-section-title": "../../components/play-video/play-section-title",
+    "play-template-card": "../../components/play-video/play-template-card",
+    "play-bottom-bar": "../../components/play-video/play-bottom-bar",
+    "play-gen-modal": "../../components/play-video/play-gen-modal"
+  }
+}

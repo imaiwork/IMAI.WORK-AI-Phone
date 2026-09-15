@@ -1,5 +1,5 @@
 import { computed, reactive, ref, watch, type Ref } from 'vue'
-import { drawPptChapters, drawPptSubmitSlides } from '@/api/drawing'
+import { drawPptChapters, drawPptSubmitSlides, type FollowupField } from '@/api/drawing'
 import {
     buildPptTurnsFromDetail,
     fetchDrawConversationDetail,
@@ -8,7 +8,6 @@ import {
 import { resolveDrawErrorMsg, type DrawConvIdMap, type DrawModelItem } from './useWelcomeDrawShared'
 import feedback from '@/utils/feedback'
 import { exportSlidesToPptx } from '@/utils/ppt-export'
-import type { CozeField } from '@/utils/coze'
 import type { useAppStore } from '@/stores/app'
 
 export interface PptSlide {
@@ -34,7 +33,7 @@ export interface PptChatMsg {
     summary?: Record<string, string>
     conversationId?: number
     turnKey?: string
-    fuFields?: CozeField[]
+    fuFields?: FollowupField[]
     fuDescription?: string
     fuPptType?: string
     pptScene?: string
@@ -49,6 +48,7 @@ export function useWelcomePptDraw(deps: {
     userTokens: Ref<number>
     pollDrawTask: (taskNo: string) => Promise<any>
     refreshHistoryIfOpen: () => void
+    syncUserTokens: () => void
     bindDrawConversation: (mode: 'image' | 'video' | 'ppt', id: number | string) => void
     ensureHasTokens: () => boolean
     displayedMode: Ref<string>
@@ -61,6 +61,7 @@ export function useWelcomePptDraw(deps: {
         userTokens,
         pollDrawTask,
         refreshHistoryIfOpen,
+        syncUserTokens,
         bindDrawConversation,
         ensureHasTokens,
         displayedMode,
@@ -265,6 +266,7 @@ export function useWelcomePptDraw(deps: {
             }
         } finally {
             msg.state = 'done'
+            syncUserTokens()
         }
     }
 
@@ -381,6 +383,8 @@ export function useWelcomePptDraw(deps: {
         } catch (e: any) {
             slide.imageLoading = false
             slide.imageError = resolveDrawErrorMsg(e)
+        } finally {
+            syncUserTokens()
         }
     }
 

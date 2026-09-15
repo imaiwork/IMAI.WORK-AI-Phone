@@ -178,7 +178,8 @@
 <script setup lang="ts">
 import useUpload from "@/hooks/useUpload";
 import { useStudioScrollBottom } from "../../composables/useStudioScrollBottom";
-import { useStudioKeyboardSpacer, useStudioSendGuard } from "../../composables/useStudioKeyboardSpacer";
+import { useKeyboardSpacer } from "../../composables/useKeyboardSpacer";
+import { useStudioSendGuard } from "../../composables/useStudioGuards";
 import { useStableTextareaAutoHeight } from "../../composables/useStableTextareaAutoHeight";
 import ImageOptimizeCard from "../image-optimize-card.vue";
 import VideoResultCard from "./video-result-card.vue";
@@ -233,7 +234,7 @@ const {
 } = useStableTextareaAutoHeight(localInput);
 const { scrollTop, scrollToBottom } = useStudioScrollBottom();
 const { keyboardOpen, spacerHeight, showToolbar, guardToolbarAction, dismissKeyboard, hideKeyboard } =
-    useStudioKeyboardSpacer(() => props.tabbarVisible);
+    useKeyboardSpacer({ tabbarVisible: () => !!props.tabbarVisible });
 const { guardSend, markSent, isUploadMisfire } = useStudioSendGuard();
 const canSend = computed(() => !props.sendDisabled && !!localInput.value.trim());
 

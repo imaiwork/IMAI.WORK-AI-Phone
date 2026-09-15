@@ -38,7 +38,7 @@ SET @idx_exists := (
     SELECT COUNT(1)
     FROM INFORMATION_SCHEMA.STATISTICS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'la_device_auth_code'
+      AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_device_auth_code`')
       AND INDEX_NAME = 'uk_middle_license_id'
 );
 SET @sql := IF(@idx_exists > 0, 'ALTER TABLE `la_device_auth_code` DROP INDEX `uk_middle_license_id`', 'SELECT 1');
@@ -50,7 +50,7 @@ SET @idx_exists := (
     SELECT COUNT(1)
     FROM INFORMATION_SCHEMA.STATISTICS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'la_device_auth_code'
+      AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_device_auth_code`')
       AND INDEX_NAME = 'idx_middle_license_id'
 );
 SET @sql := IF(@idx_exists = 0, 'ALTER TABLE `la_device_auth_code` ADD KEY `idx_middle_license_id` (`middle_license_id`)', 'SELECT 1');
@@ -138,7 +138,7 @@ SET @column_exists := (
     SELECT COUNT(1)
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'la_sv_device'
+      AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_device`')
       AND COLUMN_NAME = 'last_cdk_code_id'
 );
 SET @sql := IF(@column_exists = 0, 'ALTER TABLE `la_sv_device` ADD COLUMN `last_cdk_code_id` int unsigned NOT NULL DEFAULT ''0'' COMMENT ''最近一次兑换使用的设备CDK ID'' AFTER `last_auth_code_id`', 'SELECT 1');
@@ -150,7 +150,7 @@ SET @idx_exists := (
     SELECT COUNT(1)
     FROM INFORMATION_SCHEMA.STATISTICS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'la_sv_device'
+      AND TABLE_NAME = TRIM(BOTH '`' FROM '`la_sv_device`')
       AND INDEX_NAME = 'idx_last_cdk_code_id'
 );
 SET @sql := IF(@idx_exists = 0, 'ALTER TABLE `la_sv_device` ADD KEY `idx_last_cdk_code_id` (`last_cdk_code_id`) USING BTREE', 'SELECT 1');

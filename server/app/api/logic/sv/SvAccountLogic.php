@@ -7,6 +7,8 @@ use think\facade\Db;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\sv\SvSetting;
+use app\common\service\sv\SvAccountBindService;
+use app\common\service\sv\SvAccountChangeLog;
 
 /**
  * SvAccountLogic
@@ -29,50 +31,158 @@ class SvAccountLogic extends SvBaseLogic
      */
     public static function addSvAccount(array $params)
     {
-
         try {
-            //self::checkAccount($params);
-            // 获取设备信息
             $device = self::deviceInfo($params['device_code']);
             if (is_bool($device)) {
                 return false;
             }
 
-            SvAccount::where('device_code', $params['device_code'])->where('type', $params['type'])->select()->delete();
-            
+            $account = trim((string)($params['account'] ?? ''));
+            $deviceCode = trim((string)($params['device_code'] ?? ''));
+            $type = (int)($params['type'] ?? 0);
+            if ($account === '' || $deviceCode === '' || $type <= 0) {
+                self::setError('账号不能为空');
+                return false;
+            }
 
-            //获取信息
-            $account = self::accountInfo($params['account'], false, $params['type']);
-            if ($account instanceof SvAccount) {
-                if ($account->device_code != $params['device_code']) {
-                    self::setError('该账号已经绑定在设备：' . $account->device_code);
+            $occupied = SvAccountBindService::findOccupiedRow($type, $account, $deviceCode);
+            if ($occupied !== null) {
+                $msg = '该账号已经绑定在设备：' . ($occupied['device_code'] ?? '');
+                self::setError($msg);
+                SvAccountChangeLog::record(
+                    SvAccountChangeLog::SOURCE_ADD_SV_ACCOUNT,
+                    SvAccountChangeLog::ACTION_CONFLICT,
+                    [
+                        'user_id' => (int)self::$uid,
+                        'device_code' => $deviceCode,
+                        'type' => $type,
+                        'account' => $account,
+                        'account_id' => (int)($occupied['id'] ?? 0),
+                        'before_json' => SvAccountChangeLog::snapshot($occupied),
+                        'msg' => $msg,
+                    ]
+                );
+                return false;
+            }
+
+            $extra = $params['extra'] ?? [];
+            if (is_string($extra)) {
+                $extra = json_decode($extra, true) ?: [];
+            }
+            if (!is_array($extra)) {
+                $extra = [];
+            }
+
+            $payload = [
+                'user_id' => (int)self::$uid,
+                'device_code' => $deviceCode,
+                'account' => $account,
+                'account_no' => (string)($params['account_no'] ?? $account),
+                'nickname' => (string)($params['nickname'] ?? $account),
+                'avatar' => (string)($params['avatar'] ?? ''),
+                'status' => (int)($params['status'] ?? 1),
+                'type' => $type,
+                'is_verified' => (int)($extra['is_verified'] ?? $params['is_verified'] ?? 0),
+                'extra' => json_encode($extra, JSON_UNESCAPED_UNICODE),
+            ];
+
+            Db::startTrans();
+            try {
+                $existing = SvAccount::where('type', $type)->where('account', $account)->findOrEmpty();
+                if ($existing->isEmpty()) {
+                    $accountModel = SvAccount::create($payload);
+                    SvAccountChangeLog::record(
+                        SvAccountChangeLog::SOURCE_ADD_SV_ACCOUNT,
+                        SvAccountChangeLog::ACTION_INSERT,
+                        [
+                            'user_id' => (int)self::$uid,
+                            'device_code' => $deviceCode,
+                            'type' => $type,
+                            'account' => $account,
+                            'account_id' => (int)($accountModel->id ?? 0),
+                            'after_json' => SvAccountChangeLog::snapshot(array_merge($payload, [
+                                'id' => (int)($accountModel->id ?? 0),
+                            ])),
+                            'msg' => '新增账号',
+                        ]
+                    );
+                } else {
+                    $before = $existing->toArray();
+                    $changed = [];
+                    foreach (['user_id', 'status', 'type', 'is_verified'] as $intField) {
+                        if ((int)($before[$intField] ?? 0) !== (int)$payload[$intField]) {
+                            $changed[] = $intField;
+                        }
+                    }
+                    foreach (['device_code', 'account', 'account_no', 'nickname', 'avatar'] as $strField) {
+                        if ((string)($before[$strField] ?? '') !== (string)$payload[$strField]) {
+                            $changed[] = $strField;
+                        }
+                    }
+                    $beforeExtra = $before['extra'] ?? '';
+                    if (is_array($beforeExtra)) {
+                        $beforeExtra = json_encode($beforeExtra, JSON_UNESCAPED_UNICODE);
+                    }
+                    if ((string)$beforeExtra !== (string)$payload['extra']) {
+                        $changed[] = 'extra';
+                    }
+
+                    if ($changed !== []) {
+                        SvAccount::where('id', (int)$existing->id)->update($payload);
+                        SvAccountChangeLog::record(
+                            SvAccountChangeLog::SOURCE_ADD_SV_ACCOUNT,
+                            SvAccountChangeLog::ACTION_UPDATE,
+                            [
+                                'user_id' => (int)self::$uid,
+                                'device_code' => $deviceCode,
+                                'type' => $type,
+                                'account' => $account,
+                                'account_id' => (int)$existing->id,
+                                'changed_fields' => $changed,
+                                'before_json' => SvAccountChangeLog::snapshot($before),
+                                'after_json' => SvAccountChangeLog::snapshot(array_merge($before, $payload)),
+                                'msg' => '更新账号资料',
+                            ]
+                        );
+                    }
+                    $accountModel = $existing->refresh();
+                }
+
+                $setting = SvSetting::where('account', $account)->findOrEmpty();
+                if ($setting->isEmpty()) {
+                    SvSetting::create([
+                        'takeover_type' => 1,
+                        'account' => $account,
+                        'user_id' => self::$uid,
+                    ]);
+                }
+
+                Db::commit();
+                self::$returnData = $accountModel->toArray();
+                return true;
+            } catch (\Throwable $e) {
+                Db::rollback();
+                if (SvAccountBindService::isDuplicateEntry($e)) {
+                    $occupiedDevice = SvAccountBindService::findOccupiedDeviceCode($type, $account, $deviceCode);
+                    $msg = $occupiedDevice !== ''
+                        ? ('该账号已经绑定在设备：' . $occupiedDevice)
+                        : '账号已存在，请先解绑后重试';
+                    self::setError($msg);
+                    SvAccountChangeLog::record(
+                        SvAccountChangeLog::SOURCE_ADD_SV_ACCOUNT,
+                        SvAccountChangeLog::ACTION_CONFLICT,
+                        [
+                            'user_id' => (int)self::$uid,
+                            'device_code' => $deviceCode,
+                            'type' => $type,
+                            'account' => $account,
+                            'msg' => $msg,
+                        ]
+                    );
                     return false;
                 }
+                throw $e;
             }
-            SvSetting::where('account', $params['account'])->select()->delete();
-
-            $params['user_id'] = self::$uid;
-            $extra = json_decode($params['extra'], true);
-            $params['is_verified'] = $extra['is_verified'] ?? 0;
-            $params['extra'] = json_encode($extra, JSON_UNESCAPED_UNICODE);
-            // 添加
-            $account = SvAccount::create($params);
-
-            // 添加默认设置
-            $setting = SvSetting::where('account', $account->account)->findOrEmpty();
-            if ($setting->isEmpty()) {
-                $setting = [
-                    'takeover_type' => 1,
-                    'account' => $account->account,
-                    'user_id' => self::$uid
-                ];
-                SvSetting::create($setting);
-            }
-
-            // 返回设备信息 
-            $data = $account->toArray();
-            self::$returnData = $data;
-            return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());
             return false;

@@ -2,8 +2,8 @@
 
 namespace app\adminapi\logic\aiPersona;
 
-use app\adminapi\logic\kb\KbRobotLogic;
 use app\api\logic\aiPersona\CopywritingLibraryLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\api\logic\ApiLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\aiPersona\AiPersona;
@@ -19,10 +19,10 @@ use app\common\model\aiPersona\Material;
 use app\common\model\sv\SvDevice;
 use app\common\service\aiPersona\AiPersonaOptionService;
 use app\common\service\aiPersona\AiPersonaTextService;
+use app\common\service\aiPersona\PersonaAgentProvisionService;
+use app\common\service\aiPersona\PersonaRunModeSwitchService;
 use app\common\service\aiPersona\PersonaWorkflowService;
-use app\common\service\ConfigService;
 use app\common\service\FileService;
-use app\common\service\MemberService;
 use Exception;
 use GuzzleHttp\Client;
 use think\facade\Db;
@@ -441,6 +441,14 @@ class AiPersonaLogic extends BaseLogic
                 }
                 \app\api\logic\aiPersona\AiPersonaLogic::syncSynthesisWorkModeByPublishMode($personaId, (int)$params['publish_mode']);
             }
+            if (array_key_exists('material_use_mode', $params)) {
+                $personaData['material_use_mode'] = ShanjianVideoSettingLogic::requireValidMaterialUseMode(
+                    $params['material_use_mode']
+                );
+            }
+            if (array_key_exists('run_mode', $params)) {
+                $personaData['run_mode'] = AiPersona::requireValidRunMode($params['run_mode']);
+            }
 
             // 切换人设类型、内容变动时需重新生成报告
             if (isset($params['is_create_report']) && $params['is_create_report'] == 1) {
@@ -456,6 +464,17 @@ class AiPersonaLogic extends BaseLogic
                 $personaData['persona_type'] = $persona['persona_type'];
             }
             AiPersona::update($personaData, ['id' => $personaId]);
+            if (isset($personaData['material_use_mode'])) {
+                ShanjianVideoSettingLogic::syncMaterialUseMode($personaId, (int)$personaData['material_use_mode']);
+            }
+            if (isset($personaData['run_mode'])) {
+                // 24h 任务的两条生成 cron 都只认手机模式，模式一变当天的任务就得跟着重置
+                PersonaRunModeSwitchService::apply(
+                    $personaId,
+                    (int)($persona['run_mode'] ?? AiPersona::RUN_MODE_PHONE),
+                    (int)$personaData['run_mode']
+                );
+            }
 
             // 3. 更新对应子表
             $personaType = $persona['persona_type'];
@@ -643,10 +662,26 @@ class AiPersonaLogic extends BaseLogic
             if (isset($params['persona_desc']) && $params['persona_desc'] !== '') {
                 $personaData['persona_desc'] = $params['persona_desc'];
             }
+            if (array_key_exists('material_use_mode', $params)) {
+                $mode = ShanjianVideoSettingLogic::requireValidMaterialUseMode($params['material_use_mode']);
+                $personaData['material_use_mode'] = $mode;
+                ShanjianVideoSettingLogic::syncMaterialUseMode($personaId, $mode);
+            }
+            if (array_key_exists('run_mode', $params)) {
+                $personaData['run_mode'] = AiPersona::requireValidRunMode($params['run_mode']);
+            }
 
             if (!empty($personaData)) {
                 $personaData['update_time'] = time();
                 AiPersona::update($personaData, ['id' => $personaId]);
+            }
+            if (isset($personaData['run_mode'])) {
+                // 24h 任务的两条生成 cron 都只认手机模式，模式一变当天的任务就得跟着重置
+                PersonaRunModeSwitchService::apply(
+                    $personaId,
+                    (int)($persona['run_mode'] ?? AiPersona::RUN_MODE_PHONE),
+                    (int)$personaData['run_mode']
+                );
             }
 
             Db::commit();
@@ -1024,166 +1059,21 @@ class AiPersonaLogic extends BaseLogic
     }
 
     /**
-     * autoCreateAgent工作流请求
+     * 人设报告生成后自动开通四个场景智能体，实现见 PersonaAgentProvisionService。
+     * $userId 必须是人设所属用户，不能传后台管理员id，否则智能体归属会落到全站可见分支
      */
-    private static function agentFlowRequest($params): array
-    {
-        $automationService = \app\common\service\ToolsService::AiPersona();
-        $url               = $automationService::URL;
-        $workflow_id       = $automationService::AGENT_WORKFLOW_ID;
-        Log::channel('ipPersona')->write(
-            '自动创建智能体请求：' . json_encode([
-                'url' => $url,
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-        );
-        $body     = [
-            'workflow_id' => $workflow_id,
-            'parameters'  => $params,
-        ];
-        $request  = [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $automationService::TOKEN,
-                'Content-Type'  => 'application/json',
-            ],
-            'json'    => $body
-        ];
-        $client   = new Client(['timeout' => 600, 'verify' => false]);
-        $rsp      = $client->post($url, $request);
-        $contents = $rsp->getBody()->getContents();
-        $data     = json_decode($contents, true);
-        Log::channel('ipPersona')->write('自动创建智能体请求结果' . $contents);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [];
-        }
-        if (($data['code'] ?? -1) !== 0) {
-            return [];
-        }
-        $data['data'] = json_decode($data['data'], true);
-        if (!empty($data['data'])) {
-            return $data['data'];
-        }
-        return [];
-    }
-
     public static function autoCreateAgent($params, $personaId, $userId)
     {
-        $createdIds = [];
         $userId = (int)$userId;
-        try {
-            $params['Content'] = json_encode($params['Content'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            $res = self::agentFlowRequest($params);
-            if (empty($res)) {
-                return true;
-            }
-
-            $modelPair = MemberService::pickRandomChatModelPair($userId);
-            if ($modelPair === null) {
-                self::setError('当前等级暂无可用对话模型，请联系站长开启');
-                return false;
-            }
-
-            $commentAgentRule = $res['Comment_agent']; //社媒评论区智能体
-            $dmAgentRule = $res['Reply_agent']; //社媒私信智能体
-            $momentsAgentRule = $res['Wechat_Moment_agent']; //微信朋友圈互动智能体
-            $wechatChatAgentRule = $res['Wechat_agent']; //微信1V1私聊智能体
-            $agentRuleArray = [$commentAgentRule, $dmAgentRule, $momentsAgentRule, $wechatChatAgentRule];
-            $ids = [];
-            foreach ($agentRuleArray as $key => $agent) {
-                $name = match ($key) {
-                    0       => '社媒评论区智能体',
-                    1       => '社媒私信智能体',
-                    2       => '微信朋友圈互动智能体',
-                    3       => '微信私聊智能体',
-                    default => ''
-                };
-                $robotAdd = [
-                    'context_num' => 3,
-                    'kb_type' => 2,
-                    'quota_exempt' => 1,
-                ];
-                $robot = KbRobotLogic::add($robotAdd, $userId);
-                if ($robot === false || empty($robot['id'])) {
-                    self::rollbackAutoCreatedRobots($createdIds);
-                    self::setError(KbRobotLogic::getError() ?: '创建智能体失败');
-                    return false;
-                }
-                $createdIds[] = (int)$robot['id'];
-                $ids[$key] = $robot['id'];
-
-                $robotEdit = [
-                    "id" => $robot['id'],
-                    "roles_prompt" => $agent,
-                    "kb_type" => 2,
-                    "kb_ids" => [],
-                    "icons" => "",
-                    "image" => FileService::getFileUrl(ConfigService::get('website', 'shop_logo')) ?? '',
-                    "bg_image" => "",
-                    "name" => $params['Model'] . ' - ' . $name,
-                    "intro" => "默认助理简介",
-                    "model_id" => $modelPair['model_id'],
-                    "model_sub_id" => $modelPair['model_sub_id'],
-                    "search_mode" => "similar",
-                    "search_tokens" => 3000,
-                    "search_similar" => 0.5,
-                    "ranking_status" => 0,
-                    "ranking_score" => 0.5,
-                    "context_num" => 3,
-                    "is_public" => 0,
-                    "is_enable" => 1,
-                    "optimize_ask" => 0,
-                    "optimize_m_id" => "",
-                    "optimize_s_id" => "",
-                    "search_empty_type" => 1,
-                    "search_empty_text" => "",
-                    "top_p" => 0.8,
-                    "temperature" => 0.3,
-                    "presence_penalty" => 0,
-                    "frequency_penalty" => 0,
-                    "logprobs" => 0,
-                    "top_logprobs" => 0,
-                    "welcome_introducer" => "",
-                    "copyright" => "",
-                    "menus" => [],
-                    "flow_status" => 0,
-                    "flow_config" => [
-                        "workflow_id" => "",
-                        "bot_id" => "",
-                        "app_id" => "",
-                        "api_token" => ""
-                    ],
-                    "threshold" => 0.7,
-                    "mode_type" => 3,
-                    "max_tokens" => 4096
-                ];
-                if (!KbRobotLogic::edit($robotEdit, $userId)) {
-                    self::rollbackAutoCreatedRobots($createdIds);
-                    self::setError(KbRobotLogic::getError() ?: '配置智能体失败');
-                    return false;
-                }
-            }
-            AiPersonaAgentConfig::syncAutoCreatedAgentConfig($userId, (int)$personaId, $ids);
-            return true;
-        } catch (\Exception $e) {
-            self::rollbackAutoCreatedRobots($createdIds);
-            self::setError($e->getMessage());
+        if ($userId <= 0) {
+            self::setError('人设所属用户无效，无法创建智能体');
             return false;
         }
-    }
-
-    /**
-     * 回滚本轮自动创建失败留下的智能体空壳
-     */
-    private static function rollbackAutoCreatedRobots(array $robotIds): void
-    {
-        $robotIds = array_values(array_filter(array_map('intval', $robotIds)));
-        if (empty($robotIds)) {
-            return;
+        if (PersonaAgentProvisionService::provision((array)$params, (int)$personaId, $userId)) {
+            return true;
         }
-        try {
-            KbRobotLogic::del($robotIds);
-        } catch (\Throwable $e) {
-            Log::channel('ipPersona')->write('回滚自动创建智能体失败 ids=' . json_encode($robotIds) . ' err=' . $e->getMessage());
-        }
+        self::setError(PersonaAgentProvisionService::getError());
+        return false;
     }
 
     public static function publishConfigDetail(int $personaId): bool

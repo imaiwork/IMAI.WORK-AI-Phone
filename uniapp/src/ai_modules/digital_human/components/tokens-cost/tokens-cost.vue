@@ -181,6 +181,21 @@ const getScene = computed(() => {
                 desc: "分镜混剪",
                 key: TokensSceneEnum.STORYBOARD_MIX,
             },
+            [MontageTypeEnum.PLAY_FACE]: {
+                title: "影视换脸改词",
+                desc: "经典片段换你的脸、说你的词",
+                key: TokensSceneEnum.PLAY_FACE,
+            },
+            [MontageTypeEnum.PLAY_DANCE]: {
+                title: "跳舞换脸",
+                desc: "热门舞蹈换你出镜",
+                key: TokensSceneEnum.PLAY_DANCE,
+            },
+            [MontageTypeEnum.PLAY_SPLICE]: {
+                title: "影视引流拼接",
+                desc: "吸睛切片开场拼接你的视频",
+                key: TokensSceneEnum.PLAY_SPLICE,
+            },
         };
     return descriptions[props.type];
 });

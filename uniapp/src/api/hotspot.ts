@@ -40,11 +40,17 @@ export const getHotspotAvatars = (data: { persona_id: number | string }) => {
     return request.get({ url: '/hotspot.hotspot/avatars', data })
 }
 
-// 热点追踪 · 人设混剪素材列表
+// 热点追踪 · 不选人设时可自选的数字人形象与音色（与爆款复刻洗稿模式同源）
+export const getHotspotGenerationOptions = () => {
+    return request.get({ url: '/hotspot.hotspot/generationOptions' })
+}
+
+// 热点追踪 · 人设混剪素材列表（ids 为逗号串时按 id 回捞，用于核对还原出来的已选素材是否仍可选）
 export const getHotspotClipMaterials = (data: {
     persona_id: number | string
     page_no?: number
     page_size?: number
+    ids?: string
 }) => {
     return request.get({ url: '/hotspot.hotspot/clipMaterials', data })
 }

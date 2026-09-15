@@ -557,14 +557,8 @@ class MnpVirtualPayService extends BaseLogic
      */
     private static function queryOrderByUser(string $orderSn, int $userId): array
     {
-        $openids = UserAuth::where([
-            'user_id'  => $userId,
-            'terminal' => UserTerminalEnum::WECHAT_MMP,
-        ])
-            ->where('openid', 'not like', '%\_retired\_%')
-            ->order('id', 'desc')
-            ->column('openid');
-        $openids = array_values(array_unique(array_filter(array_map('strval', $openids))));
+        // 优先本 appid 名下的 openid（access_token 也取自同一 appid），历史未标记 appid 的行兜底
+        $openids = UserAuth::openidsByAppId($userId, UserTerminalEnum::WECHAT_MMP, self::mnpAppId());
         if (empty($openids)) {
             throw new \Exception('用户小程序openid不存在');
         }
@@ -702,19 +696,22 @@ class MnpVirtualPayService extends BaseLogic
 
     private static function getUserMnpOpenid(int $userId): string
     {
-        // 排除历史退役脏数据，取最新有效小程序授权
-        $auth = UserAuth::where([
-            'user_id'  => $userId,
-            'terminal' => UserTerminalEnum::WECHAT_MMP,
-        ])
-            ->where('openid', 'not like', '%\_retired\_%')
-            ->order('id', 'desc')
-            ->findOrEmpty();
+        // 排除历史退役脏数据，取本 appid 名下最新有效小程序授权
+        $auth = UserAuth::findByAppId($userId, UserTerminalEnum::WECHAT_MMP, self::mnpAppId());
         $openid = (string)($auth->openid ?? '');
         if ($openid === '') {
             throw new \Exception('用户小程序openid不存在');
         }
         return $openid;
+    }
+
+    /**
+     * 虚拟支付使用的小程序 appid（与 access_token / code2session 同一套配置）
+     * @remark 虚拟支付只在主站小程序开放（OEM 站算力走卡密兑换），故不按租户取
+     */
+    private static function mnpAppId(): string
+    {
+        return (string)(WeChatConfigService::getMnpConfig()['app_id'] ?? '');
     }
 
     /**

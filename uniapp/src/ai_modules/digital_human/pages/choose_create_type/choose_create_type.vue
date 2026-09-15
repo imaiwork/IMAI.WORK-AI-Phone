@@ -93,6 +93,12 @@ const typeList = [
         path: "/ai_modules/digital_human/pages/montage_create/montage_create",
     },
     {
+        key: "play_video",
+        title: "爆款玩法复刻",
+        desc: "拆解全网爆火玩法做成模板：影视换脸改台词、跳舞换脸、影视引流拼接，选模板即可复刻同款流量",
+        path: "/ai_modules/digital_human/pages/play_video/play_video",
+    },
+    {
         key: "real_person",
         title: "真人口播视频混剪",
         desc: "上传真人口播视频+素材，AI自动剪辑气口、加包装，输出网感口播视频",

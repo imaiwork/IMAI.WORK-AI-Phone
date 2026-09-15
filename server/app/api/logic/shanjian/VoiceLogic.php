@@ -8,7 +8,6 @@ use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\human\HumanVoice;
 use app\common\model\user\User;
-use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
 use think\exception\HttpResponseException;
@@ -85,6 +84,11 @@ class VoiceLogic extends ApiLogic
             $find->update_time = time();
 
             $find->save();
+
+            // 多 key 池：独立音色 status=1 成功终态，实时上报资产绑定
+            if ((int)$find->status === 1) {
+                \app\common\service\ShanjianAssetReportService::reportVoiceRow($find);
+            }
             self::$returnData = $find->toArray();
             return true;
         } catch (\Exception $e) {
@@ -157,16 +161,100 @@ class VoiceLogic extends ApiLogic
             if (isset($response['code']) && $response['code'] == 10000) {
                 return true;
             }
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            self::refundOnce($userId, $taskId, $typeID);
 
             return true;
         } catch (\Throwable $e) {
             Log::channel('shanjian')->write('闪剪退费失败' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /** 按流水幂等退一次，统一走 AccountLogLogic::refundTaskOnce（带锁） */
+    private static function refundOnce(int $userId, string $taskId, int $typeID): void
+    {
+        AccountLogLogic::refundTaskOnce($userId, $typeID, $taskId);
+    }
+
+    /**
+     * 音色任务兜底（挂在 shanjian_video_task cron 里）
+     *
+     * 回调是主链路，这里只补两件事：
+     * 1. 提交超过 30 分钟仍 status=0 的，查中台状态，拿到终态就走 notify() 同一套落库/退费/资产上报；
+     * 2. 超过 24 小时中台仍不给终态的，直接标失败并按流水幂等退费。
+     *    不能复用 refundTokens()：它只在中台明确回失败码时才退，对「永远 processing」的任务一分不退。
+     * 僵尸行在第 2 步就被收口，不会像成片那样长期占死 limit 名额，所以这里不需要年龄上界。
+     * 中台 shanjian_status 场景为 free 计费，轮询不消耗算力。
+     */
+    public static function check(): bool
+    {
+        try {
+            $voices = HumanVoice::where('model_version', 8)
+                ->where('status', 0)
+                ->where('create_time', '<=', strtotime('-30 minutes'))
+                ->order('id', 'asc')
+                ->limit(5)
+                ->select();
+
+            foreach ($voices as $voice) {
+                try {
+                    $notifyData = null;
+                    if ((string)$voice->result_task_id !== '') {
+                        $response = \app\common\service\ToolsService::Shanjian()->status([
+                            'taskId'  => $voice->result_task_id,
+                            'task_id' => $voice->task_id,
+                        ]);
+                        Log::channel('shanjian')->write(
+                            '音色check查询状态 task_id: ' . $voice->task_id
+                            . ' 响应: ' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                        );
+
+                        // 失败码沿用 ShanjianVideoTaskLogic::check() 的 22901/22902；
+                        // 终态只认 succeed / failed 两个词，其它一律当在途，宁可等 24 小时收口也不误判成失败去退费
+                        if (isset($response['code']) && in_array((int)$response['code'], [22901, 22902], true)) {
+                            $notifyData = ['status' => 'failed', 'errorMessage' => $response['message'] ?? '处理失败'];
+                        } elseif (
+                            isset($response['code'])
+                            && !empty($response['data']) && is_array($response['data'])
+                            && in_array($response['data']['status'] ?? '', ['succeed', 'failed'], true)
+                        ) {
+                            $notifyData = $response['data'];
+                        }
+                    }
+
+                    if ($notifyData !== null) {
+                        $notifyData['task_id'] = $voice->task_id;
+                        $notifyData['user_id'] = $voice->user_id;
+                        $notifyData['taskId'] = $notifyData['taskId'] ?? $voice->result_task_id;
+                        if (!self::notify($notifyData)) {
+                            Log::channel('shanjian')->write('音色check补偿notify失败 task_id: ' . $voice->task_id . ' err: ' . self::getError());
+                        }
+                        continue;
+                    }
+
+                    // create_time 属性读出来是格式化日期串，(int) 会得到 2026；要拿原始时间戳用 getData
+                    if ((int)$voice->getData('create_time') > strtotime('-1440 minutes')) {
+                        continue;
+                    }
+
+                    // 24 小时收口：CAS 只改仍为 0 的行，避免与同时到达的回调互相覆盖
+                    $closed = HumanVoice::where('id', $voice->id)->where('status', 0)->update([
+                        'status'      => 2,
+                        'remark'      => '超过24小时未返回结果，已自动标记失败',
+                        'update_time' => time(),
+                    ]);
+                    if ($closed) {
+                        self::refundOnce((int)$voice->user_id, (string)$voice->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN);
+                        Log::channel('shanjian')->write('音色任务超时收口并退费 task_id: ' . $voice->task_id);
+                    }
+                } catch (\Throwable $e) {
+                    Log::channel('shanjian')->write('音色check处理失败 task_id: ' . ($voice->task_id ?? '') . ' err: ' . $e->getMessage());
+                }
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            self::setError($e->getMessage());
             return false;
         }
     }

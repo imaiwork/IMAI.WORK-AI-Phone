@@ -1,0 +1,1 @@
+<view class="flex flex-wrap gap-_16rpx_"><view wx:for="{{a}}" wx:for-item="v" wx:key="c" class="{{['px-_26rpx_', 'py-_14rpx_', 'rounded-_18rpx_', 'border-_3rpx_', v.d]}}" bindtap="{{v.e}}"><text class="{{['text-_22rpx_', 'font-semibold', v.b]}}">{{v.a}}</text></view></view>

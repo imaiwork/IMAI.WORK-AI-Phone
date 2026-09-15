@@ -32,6 +32,8 @@ class DeviceEnum
     const TASK_TYPE_SPH_THUMB = 15; // 视频号点赞
     const TASK_TYPE_VIRAL_REWRITER = 16; // 爆款仿写任务
     const TASK_TYPE_PRECISE_CLUES = 17; // 精准获客任务
+    const TASK_TYPE_DY_SEARCH = 18; // 抖音获客
+    const TASK_TYPE_DY_SEARCH_WECHAT = 19; // 抖音获客加微
 
     # 自动化任务类型
     const AUTO_TYPE_CLUES = 21; // 获客
@@ -84,6 +86,8 @@ class DeviceEnum
     const TASK_SOURCE_SPH_THUMB = 15; // 视频号点赞
     const TASK_SOURCE_VIRAL_REWRITER = 16; // 爆款仿写任务
     const TASK_SOURCE_PRECISE_CLUES = 17; // 精准获客任务
+    const TASK_SOURCE_DY_SEARCH = 18; // 抖音获客
+    const TASK_SOURCE_DY_SEARCH_WECHAT = 19; // 抖音获客加微
 
 
 
@@ -151,6 +155,8 @@ class DeviceEnum
     const AUTO_TASK_SCENE_COMMENT_LIKE = 15; // 评论点赞
     const AUTO_TASK_SCENE_VIRAL_REWRITER = 16; // 爆款仿写任务  
     const AUTO_TASK_SCENE_PRECISE_CLUES = 17; // 精准获客任务
+    const AUTO_TASK_SCENE_DY_SEARCH = 18; // 抖音获客
+    const AUTO_TASK_SCENE_DY_SEARCH_WECHAT = 19; // 抖音获客加微
 
 
 
@@ -228,6 +234,8 @@ class DeviceEnum
             15 => '评论点赞',
             16 => '爆款仿写任务',
             17 => '精准获客',
+            18 => '抖音获客',
+            19 => '抖音获客加微',
 
             21 => '获客',
             22 => '发布',
@@ -244,6 +252,17 @@ class DeviceEnum
             return $desc;
         }
         return $desc[$type] ?? '';
+    }
+
+    /**
+     * 日历/详情里按微信展示的来源：个微 RPA、抖音获客加微。
+     */
+    public static function isWechatAccountDisplay($source): bool
+    {
+        return in_array((int)$source, [
+            self::TASK_SOURCE_WECHAT_RPA,
+            self::TASK_SOURCE_DY_SEARCH_WECHAT,
+        ], true);
     }
 
     public static function getAccountTypeDesc($type, $flag = false)
@@ -282,6 +301,8 @@ class DeviceEnum
             15 => '评论点赞',
             16 => '爆款仿写',
             17 => '精准获客',
+            18 => '抖音获客',
+            19 => '抖音获客加微',
             25 => '微信加v',
         ];
         if ($flag) {

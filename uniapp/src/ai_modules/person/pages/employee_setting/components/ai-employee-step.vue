@@ -215,7 +215,7 @@ import {
     type PlatformPublishConfig,
 } from "@/ai_modules/person/enums";
 import ChooseAgentV2 from "@/ai_modules/person/components/choose-agent-v2/choose-agent-v2.vue";
-import { useCustomerServiceConfig } from "../hooks/useCustomerServiceConfig";
+import { useCustomerServiceConfig, type AgentTarget } from "../hooks/useCustomerServiceConfig";
 import {
     useLeadFeatures,
     LeadFeaturesKey,
@@ -396,8 +396,10 @@ const employeeDisplayRows = computed<EmployeeDisplayItem[]>(() => {
         }));
     }
 
-    const contentRows = employeeRows.slice(0, 3);
-    const growthRows = employeeRows.slice(3);
+    // 按 key 分组而不是按下标切片：分组口径跟着 EmployeeKey 走，增删员工不会串组
+    const contentKeys = [EmployeeKey.TRENDING, EmployeeKey.EDITOR, EmployeeKey.OPERATOR];
+    const contentRows = employeeRows.filter((row) => contentKeys.includes(row.key));
+    const growthRows = employeeRows.filter((row) => !contentKeys.includes(row.key));
     return [
         {
             type: "group",
@@ -537,7 +539,7 @@ const {
 } = useCustomerServiceConfig(toRef(props, "personId"));
 
 // 打开选择智能体：记录目标块并回显当前选中项
-const openCsAgent = (target: "social-dm" | "social-comment" | "wechat" | "moments") => {
+const openCsAgent = (target: AgentTarget) => {
     const presetId = csBeginPickAgent(target);
     showChooseAgent.value = true;
     nextTick(() => chooseAgentRef.value?.setChooseLists(presetId ? [{ id: presetId }] : []));

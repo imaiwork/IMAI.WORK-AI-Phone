@@ -62,9 +62,12 @@
 
         <!-- 气泡底部操作条:重新生成 / 下载(全部生成完再出) -->
         <div v-if="allDone" class="bubble-actions">
-            <div class="action-btn" @click="$emit('regenerate', task)">
+            <div
+                class="action-btn"
+                :class="{ disabled: task.regenerating }"
+                @click="$emit('regenerate', task)">
                 <Icon name="el-icon-RefreshRight" :size="16" />
-                <span>重新生成</span>
+                <span>{{ task.regenerating ? "生成中…" : "重新生成" }}</span>
             </div>
             <div
                 v-if="!hasError"
@@ -108,6 +111,7 @@ export interface ImageTask {
     height: number;
     count: number;
     optimized: boolean;
+    regenerating?: boolean;
     images: ImageItem[];
 }
 

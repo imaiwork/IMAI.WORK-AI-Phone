@@ -88,8 +88,14 @@
                                 </view>
                                 <text class="text-xs font-bold text-gray-700 mt-0.5">{{ item.device_num }} 设备</text>
                             </view>
-                            <view v-else class="flex items-center gap-1 bg-[#FFF0F0] px-2 py-1 rounded-md">
+                            <view
+                                v-else
+                                class="flex flex-col items-end gap-1 bg-[#FFF0F0] px-2 py-1 rounded-md active:opacity-80"
+                                @click.stop="handleConfigTipClick(item)">
                                 <text class="text-[22rpx] text-[#FF4D4F] font-bold">未完善</text>
+                                <text class="text-[20rpx] text-[#D9363E] font-semibold line-clamp-1">
+                                    {{ getConfigTip(item) }}
+                                </text>
                             </view>
 
                             <view
@@ -360,6 +366,17 @@ const handleCreate = async () => {
 const handleIpClick = (item: any) => {
     uni.navigateTo({ url: `/ai_modules/person/pages/detail/detail?id=${item.id}&mode=edit` });
 };
+
+const getConfigTip = (item: any) => item.config_tip || '去完善'
+
+const handleConfigTipClick = (item: any) => {
+    const shouldOpenMaterial = ['direct_material', 'material'].includes(item.config_action)
+    uni.navigateTo({
+        url: `/ai_modules/person/pages/detail/detail?id=${item.id}&mode=edit${
+            shouldOpenMaterial ? '&open=material' : ''
+        }`,
+    })
+}
 
 const navColor = ref("#ffffff");
 onPageScroll(({ scrollTop }) => {

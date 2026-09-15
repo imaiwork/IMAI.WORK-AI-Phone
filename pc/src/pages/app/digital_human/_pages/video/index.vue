@@ -31,6 +31,7 @@
                     <ElOption label="分镜" :value="CreateVideoTypeEnum.STORYBOARD" />
                     <ElOption label="爆款仿写" :value="CreateVideoTypeEnum.HOT_WRITE" />
                     <ElOption label="热点追踪" :value="CreateVideoTypeEnum.HOTSPOT" />
+                    <ElOption label="爆款玩法" :value="CreateVideoTypeEnum.PLAY_VIDEO" />
                 </ElSelect>
             </div>
         </div>

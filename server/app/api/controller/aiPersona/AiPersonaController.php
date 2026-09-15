@@ -150,6 +150,24 @@ class AiPersonaController extends BaseApiController
     }
 
     /**
+     * 开播准备进度（必须项完成情况）
+     * @return Json
+     */
+    public function setupProgress(): Json
+    {
+        $params = $this->request->get();
+        try {
+            $result = AiPersonaLogic::setupProgress(intval($params['id'] ?? 0), $this->userId);
+            if ($result === false) {
+                return $this->fail(AiPersonaLogic::getError() ?: '人设不存在');
+            }
+            return $this->data(AiPersonaLogic::getReturnData());
+        } catch (Exception $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    /**
      * 爆款复刻：校验人设形象/音色是否可用
      * @return Json
      */

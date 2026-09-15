@@ -1,4 +1,4 @@
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import { montageConfig } from "@/enums/montageEnums";
 
 const enum CopywriterTab {
     TEXT = 0,

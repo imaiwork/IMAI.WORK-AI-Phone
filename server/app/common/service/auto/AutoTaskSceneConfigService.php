@@ -18,6 +18,15 @@ class AutoTaskSceneConfigService
     const SCENE_MIN = 1;
     const SCENE_MAX = 15;
 
+    /** 视频发布场景：人设的发布时段就挂在这个场景下 */
+    const SCENE_VIDEO_PUBLISH = 5;
+
+    /** 测试注入：不改库覆盖 getConfigMap */
+    private static bool $hasConfigMapOverride = false;
+
+    /** @var array<int, array>|null */
+    private static ?array $configMapOverride = null;
+
     /**
      * 默认场景名称（与业务展示文案一致）
      *
@@ -30,7 +39,7 @@ class AutoTaskSceneConfigService
             2  => '截流私信获客',
             3  => '留痕获客/同城触达',
             4  => '视频号获客',
-            5  => '视频发布',
+            self::SCENE_VIDEO_PUBLISH => '视频发布',
             6  => '私信接管',
             7  => '朋友圈发布',
             8  => '朋友圈互动',
@@ -156,7 +165,26 @@ class AutoTaskSceneConfigService
      */
     public static function getConfigMap(): array
     {
+        if (self::$hasConfigMapOverride) {
+            return self::$configMapOverride ?? [];
+        }
         return array_column(self::getItems(), null, 'scene');
+    }
+
+    /**
+     * 测试用：覆盖场景配置。传 null 恢复读库。
+     *
+     * @param array<int, array>|null $map
+     */
+    public static function setConfigMapOverride(?array $map): void
+    {
+        if ($map === null) {
+            self::$hasConfigMapOverride = false;
+            self::$configMapOverride = null;
+            return;
+        }
+        self::$hasConfigMapOverride = true;
+        self::$configMapOverride = $map;
     }
 
     /**
@@ -351,6 +379,47 @@ class AutoTaskSceneConfigService
             // 日志通道异常不影响 24h 跳过
         }
         return true;
+    }
+
+    /**
+     * 下发/预览守卫：关闭则写中文日志并抛异常
+     *
+     * @param array|null $configMap
+     */
+    public static function assertCanDispatch(
+        int $scene,
+        int $platform,
+        string $deviceCode = '',
+        ?array $configMap = null
+    ): void {
+        if (self::canAdd($scene, $platform, $configMap)) {
+            return;
+        }
+        $message = self::describeClosedReason($scene, $platform, $configMap);
+        try {
+            Log::channel('auto')->write(
+                $deviceCode . $message . '，跳过下发',
+                'opt'
+            );
+        } catch (\Throwable $e) {
+            // 日志通道异常不影响下发拦截
+        }
+        throw new \Exception($message);
+    }
+
+    /**
+     * 场景/平台未开放的中文原因（与工作流添加文案对齐）
+     *
+     * @param array|null $configMap
+     */
+    public static function describeClosedReason(int $scene, int $platform, ?array $configMap = null): string
+    {
+        $name = self::getSceneName($scene, $configMap);
+        $platformName = DeviceEnum::getAccountTypeDesc($platform);
+        if ($platformName === '') {
+            $platformName = '平台' . $platform;
+        }
+        return '任务类型「' . $name . '」在' . $platformName . '暂未开放';
     }
 
     /**

@@ -50,6 +50,8 @@ export const useAppStore = defineStore({
         getWebsiteConfig: (state) => state.config.website || {},
         getLoginConfig: (state) => state.config.login || {},
         getRegisterConfig: (state) => state.config.register || {},
+        /** 完善资料弹窗的选填项开关: store_name_open / certificate_image_open */
+        getUserProfileFields: (state) => state.config.user_profile_fields || {},
         getVersion: (state) => state.config.version || {},
         getTabbarConfig: (state) => state.config.tabbar || {},
         getTabbarStyle: (state) => state.config.style || {},

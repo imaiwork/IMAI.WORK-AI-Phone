@@ -9,6 +9,7 @@ use think\exception\HttpResponseException;
 use think\facade\Cache;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 
 
 class VoiceController extends BaseApiController
@@ -70,7 +71,12 @@ class VoiceController extends BaseApiController
         try {
             $data = $this->request->all();
             // 回调原始数据完整落日志（voiceAsr 通道）
-            Log::channel('voiceAsr')->write('接收闪剪ASR回调原始数据' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('voiceAsr')->write('接收闪剪ASR回调原始数据' . json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('voiceAsr', '闪剪ASR', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
 
             $key = md5(json_encode($data));
             if (Cache::store('redis')->get($key)) {
@@ -83,7 +89,7 @@ class VoiceController extends BaseApiController
             if (!$result) {
                 Log::channel('voiceAsr')->write('闪剪ASR回调处理失败' . json_encode([
                     'error' => VoiceLogic::getError(),
-                    'raw'   => $data,
+                    'raw'   => CallbackTokenService::maskForLog($data),
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 return $this->fail(VoiceLogic::getError());
             }
@@ -91,7 +97,7 @@ class VoiceController extends BaseApiController
         } catch (\Exception $e) {
             Log::channel('voiceAsr')->write('闪剪ASR回调异常' . json_encode([
                 'message' => $e->getMessage(),
-                'raw'     => $this->request->all(),
+                'raw'     => CallbackTokenService::maskForLog($this->request->all()),
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             return $this->fail('fail');
         }

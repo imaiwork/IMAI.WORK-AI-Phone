@@ -33,6 +33,7 @@ class HotspotValidate extends BaseValidate
         'persona_id' => 'require|integer|gt:0',
         'page_no' => 'integer|egt:1',
         'page_size' => 'integer|between:1,50',
+        'ids' => 'checkIdList',
         'status' => 'in:running,done,fail,wait',
     ];
 
@@ -106,10 +107,10 @@ class HotspotValidate extends BaseValidate
 
     public function sceneTaskAdd()
     {
-        // persona 必填：视频合成必须解析人设的形象/音色/素材，无人设任务受理后必然异步失败
+        // persona 的必填与模式相关（不选人设时可空），跨字段判断放 HotspotLogic::add，
+        // 这里只保证 persona 传了就必须是对象（基础 array 规则）
         return $this->only(['topic', 'platform', 'title', 'script', 'hashtags', 'shots', 'persona', 'core_points', 'citations', 'analysis', 'options'])
             ->append('script', 'require')
-            ->append('persona', 'require|checkPersonaIdentity')
             ->append('options', 'require|checkCreateOptions');
     }
 
@@ -120,7 +121,7 @@ class HotspotValidate extends BaseValidate
 
     public function sceneClipMaterials()
     {
-        return $this->only(['persona_id', 'page_no', 'page_size']);
+        return $this->only(['persona_id', 'page_no', 'page_size', 'ids']);
     }
 
     public function sceneTasks()
@@ -139,6 +140,21 @@ class HotspotValidate extends BaseValidate
             return true;
         }
         return '任务不存在';
+    }
+
+    /** 素材 id 集合：逗号串或数组，长度设上限免得被拼超长查询 */
+    protected function checkIdList($value)
+    {
+        if (is_array($value)) {
+            return count($value) <= PersonaService::CLIP_MATERIAL_ID_LIMIT ? true : 'ids 数量过多';
+        }
+        if (!is_string($value)) {
+            return 'ids 格式不正确';
+        }
+        if ($value !== '' && !preg_match('/^\d+(,\d+)*$/', $value)) {
+            return 'ids 格式不正确';
+        }
+        return substr_count($value, ',') < PersonaService::CLIP_MATERIAL_ID_LIMIT ? true : 'ids 数量过多';
     }
 
     protected function checkPersonaIdentity($value)

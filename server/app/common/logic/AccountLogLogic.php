@@ -193,6 +193,64 @@ class AccountLogLogic extends BaseLogic
     }
 
     /**
+     * 按任务号幂等退一次——各链路「任务失败退费」的统一入口
+     *
+     * 语义与此前各处手写的「该 task_id 退费条数 < 扣费条数才退」完全一致，只多了一把 redis 锁：
+     * 回调与轮询、两条 cron 同时判定失败时，不会各自都通过幂等检查然后各退一次。
+     * 退费主体沿用 recordUserTokensLog(false) 按原始扣费流水归属退回（团队钱包 / 团队长 / 个人）。
+     * 返回 true 表示本次真的退了一笔。
+     */
+    public static function refundTaskOnce(int $userId, int $changeType, string $taskId, array $extra = []): bool
+    {
+        if ($userId <= 0 || $taskId === '') {
+            return false;
+        }
+
+        $redis = null;
+        $fullKey = '';
+        try {
+            $redis = \think\facade\Cache::store('concurrent_redis')->handler();
+            $fullKey = (string)config('cache.stores.concurrent_redis.prefix', '') . 'refund_once:' . $userId . ':' . $changeType . ':' . md5($taskId);
+            // SET NX EX 一条命令原子拿锁：setnx 与 expire 分两步，中间进程被杀会留下永不过期的锁，
+            // 这笔任务之后每次 refundTaskOnce 都静默失败、再也退不了
+            if (!$redis->set($fullKey, 1, ['nx', 'ex' => 30])) {
+                // 有人正在退同一笔：放弃本次，对方退完后幂等条件自然不再成立
+                \think\facade\Log::info('refundTaskOnce 锁被占用，跳过: user=' . $userId . ' type=' . $changeType . ' task=' . $taskId);
+                return false;
+            }
+        } catch (\Throwable $e) {
+            // redis 不可用时退化为无锁，与接入前行为一致，不能因为锁拿不到就不退费
+            \think\facade\Log::warning('refundTaskOnce 获取锁失败，退化为无锁退费: ' . $e->getMessage());
+            $redis = null;
+        }
+
+        try {
+            $base = UserTokensLog::where('user_id', $userId)
+                ->where('change_type', $changeType)
+                ->where('task_id', $taskId);
+            $decAmounts = (clone $base)->where('action', AccountLogEnum::DEC)->order('id', 'asc')->column('change_amount');
+            if (!$decAmounts) {
+                return false;
+            }
+            $incCount = (clone $base)->where('action', AccountLogEnum::INC)->count();
+            if ($incCount >= count($decAmounts)) {
+                return false;
+            }
+            // 第 n 次退对应第 n 笔扣费；各笔金额一样时与旧逻辑取首条完全等价
+            $points = (float)($decAmounts[$incCount] ?? end($decAmounts));
+            self::recordUserTokensLog(false, $userId, $changeType, $points, $taskId, $extra);
+            return true;
+        } finally {
+            if ($redis !== null) {
+                try {
+                    $redis->del($fullKey);
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+    }
+
+    /**
      * 统计用户累计业务消耗算力（净消耗）
      * 仅统计业务扣费类型，排除管理员扣减、充值退款、过期等非业务调整
      * @param int $userId

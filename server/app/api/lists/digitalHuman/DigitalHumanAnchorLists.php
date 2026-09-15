@@ -6,8 +6,7 @@ use app\api\lists\BaseApiDataLists;
 use app\api\logic\shanjian\ShanjianAnchorLogic;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\digitalHuman\DigitalHumanAnchor;
-use app\common\model\human\HumanAnchor;
-use app\common\model\shanjian\ShanjianAnchor;
+use app\common\service\digitalHuman\PublicAnchorBindService;
 use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
 
@@ -38,16 +37,13 @@ class DigitalHumanAnchorLists extends BaseApiDataLists implements ListsSearchInt
             $item['result_url']  = !empty($item['result_url']) ? FileService::getFileUrl($item['result_url']) : '';
             $item['create_time'] = !empty($item['create_time']) ? $item['create_time'] : '';
             $item['update_time'] = !empty($item['update_time']) ? $item['update_time'] : '';
-            $weiju              = HumanAnchor::where('model_version', '=', 1)->where('dh_id', '=', $item['id'])->find();
-            $chanjing           = HumanAnchor::where('model_version', '=', 7)->where('dh_id', '=', $item['id'])->find();
+            $ownerId            = (int)($item['user_id'] ?? 0);
+            $weiju              = PublicAnchorBindService::ownWeiju((int)$item['id'], $ownerId);
+            $chanjing           = PublicAnchorBindService::ownChanjing((int)$item['id'], $ownerId);
             $cloneMode          = (int)($item['clone_mode'] ?? 2);
-            $shanjianFast       = ShanjianAnchor::where('dh_id', '=', $item['id'])
-                ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_FAST)
-                ->find();
+            $shanjianFast       = PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_FAST);
             $shanjianPro        = $cloneMode === 3
-                ? ShanjianAnchor::where('dh_id', '=', $item['id'])
-                    ->where('clone_type', ShanjianAnchorLogic::CLONE_TYPE_PRO)
-                    ->find()
+                ? PublicAnchorBindService::ownShanjian((int)$item['id'], $ownerId, ShanjianAnchorLogic::CLONE_TYPE_PRO)
                 : null;
             $shanjianDisplay = ($cloneMode === 3 && !empty($shanjianPro) && !empty($shanjianPro->anchor_id))
                 ? $shanjianPro
@@ -62,6 +58,7 @@ class DigitalHumanAnchorLists extends BaseApiDataLists implements ListsSearchInt
                 'height' => $weiju->height ?? ($chanjing->height ?? ''),
                 'shanjian_voice_id' => !empty($shanjianFast) ? ($shanjianFast->voice_id ?? '') : '',
             ];
+            $item['status_text'] = PublicAnchorBindService::publicStatusText((int)$item['status']);
             $item = UserDisplaySanitizer::digitalHumanAnchorItem($item);
         }
         return $list;

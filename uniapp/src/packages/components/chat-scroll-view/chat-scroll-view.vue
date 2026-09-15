@@ -577,10 +577,9 @@ import config from "@/config";
 import { getUserChatConfig, saveUserChatConfig } from "@/api/chat";
 import { getAllAgentList as getAgentListApi, getAgentDetail } from "@/api/agent";
 import { getRect, setFormData } from "@/utils/util";
-import useKeyboardHeight from "@/hooks/useKeyboardHeight";
 import { useStableTextareaAutoHeight } from "@/packages/pages/chat/composables/useStableTextareaAutoHeight";
-import { useToolbarRevealGuard } from "@/packages/pages/chat/composables/useToolbarRevealGuard";
-import { useUploadMisfireGuard } from "@/packages/pages/chat/composables/useStudioKeyboardSpacer";
+import { useKeyboardSpacer } from "@/packages/pages/chat/composables/useKeyboardSpacer";
+import { useUploadMisfireGuard } from "@/packages/pages/chat/composables/useStudioGuards";
 import { useAppStore } from "@/stores/app";
 import { ModelIdEnum } from "@/enums/appEnums";
 import FileItem from "./components/file-item.vue";
@@ -1098,27 +1097,11 @@ const previousScrollTop = ref(0);
 const isProgrammaticScroll = ref(false);
 let scrollToLowerTimer: ReturnType<typeof setTimeout> | null = null;
 
-const { dynamicHeight, hideKeyboard } = useKeyboardHeight();
-const { safeAreaInsets, windowWidth, platform } = uni.getSystemInfoSync();
-
-const tabbarHeight = computed(() => {
-    const fixedHeight = platform === "android" ? 95 : 125;
-    return fixedHeight + (safeAreaInsets?.bottom ?? 0);
-});
-
-const bottomOffset = computed(() => {
-    const otherHeight = 70 + (props.isStaff ? 20 : 0);
-    return props.isHome ? tabbarHeight.value + otherHeight : otherHeight;
-});
-
-const keyboardOpen = computed(() => dynamicHeight.value > 0);
-
-const spacerHeight = computed(() => {
-    if (!keyboardOpen.value) return 0;
-    return Math.max(0, (dynamicHeight.value * 750) / windowWidth - bottomOffset.value);
-});
-
-const { showToolbar, guardToolbarAction } = useToolbarRevealGuard(keyboardOpen);
+const { keyboardOpen, spacerHeight, showToolbar, guardToolbarAction, hideKeyboard } =
+    useKeyboardSpacer({
+        tabbarVisible: () => !!props.isHome,
+        extraOffset: () => (props.isStaff ? 20 : 0),
+    });
 const { markSent, isUploadMisfire } = useUploadMisfireGuard();
 // 聚焦与键盘弹起/收起都会让底栏位移，这段时间内的点击视为误触
 watch(keyboardOpen, () => markSent(), { flush: "sync" });

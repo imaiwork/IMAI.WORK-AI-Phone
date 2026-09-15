@@ -2,6 +2,8 @@
 // types.ts  —  自动加好友任务 类型 / 常量 / 默认值
 // ============================================================
 
+import { ClueSourceEnum } from "@/ai_modules/device/enums";
+
 export const STEPS = [
     { step: 1, title: "选择线索" },
     { step: 2, title: "调设置" },
@@ -13,7 +15,7 @@ export const TIME_INTERVAL_LIST = [5, 10, 15, 20] as const;
 
 export interface AddFriendFormData {
     name: string;
-    source: 1 | 2;
+    source: ClueSourceEnum;
     fileurl: string;
     crawling_task_ids: string[];
     add_type: "0" | "1";
@@ -41,7 +43,7 @@ export const createDefaultFormData = (initialRemarks: string[] = []): AddFriendF
     remarks: initialRemarks,
     add_remark_enable: 1,
     add_friends_prompt: "",
-    source: 1,
+    source: ClueSourceEnum.FILE,
     fileurl: "",
     add_type: "1",
     wechat_id: [],

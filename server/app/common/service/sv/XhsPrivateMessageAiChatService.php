@@ -71,7 +71,7 @@ class XhsPrivateMessageAiChatService
         array $request,
         array $robot,
         int $userId,
-        $autoType,
+        mixed $autoType,
         string $taskId
     ): array {
         $reply = self::DEFAULT_REPLY;
@@ -120,7 +120,7 @@ class XhsPrivateMessageAiChatService
         array $request,
         int $userId,
         string $model,
-        $autoType,
+        mixed $autoType,
         string $taskId
     ): array {
         $reply = self::DEFAULT_REPLY;

@@ -28,15 +28,9 @@ class ShanjianClipTemplateSyncService
 
     public static function syncFromPlatform(): array
     {
-        $response = ToolsService::Shanjian()->clipTemplate([]);
-        if ((int)($response['code'] ?? 0) !== 10000) {
-            throw new Exception($response['message'] ?? '中台闪剪剪辑模板返回异常');
-        }
-
-        $templates = $response['data'] ?? [];
-        if (!is_array($templates)) {
-            throw new Exception('中台闪剪剪辑模板数据格式异常');
-        }
+        // 2026-09-02 起数据源为模板中心（imai-temp.imai.work）直连；
+        // 字段与旧契约同构，后续清洗管道不变。缓存/超时/降级见 TemplateCenterClient。
+        $templates = TemplateCenterClient::shanjianClipTemplates();
 
         return self::syncFromPayload($templates);
     }
@@ -170,7 +164,8 @@ class ShanjianClipTemplateSyncService
         ];
     }
 
-    private static function downloadTemplateAsset(string $url, string $type, array &$stats): string
+    /** 资源本地化（玩法模板同步复用，传自己的 $baseDir 落到独立目录） */
+    public static function downloadTemplateAsset(string $url, string $type, array &$stats, string $baseDir = 'uploads/clip_template'): string
     {
         if ($url === '' || !preg_match('/^https?:\/\//i', $url)) {
             return $url;
@@ -178,7 +173,7 @@ class ShanjianClipTemplateSyncService
 
         $extension = self::resolveExtension($url, $type);
         $typePath = $type === 'video' ? 'videos' : 'images';
-        $relativeDir = 'uploads/clip_template/' . $typePath;
+        $relativeDir = $baseDir . '/' . $typePath;
         $filename = sha1($url) . '.' . $extension;
         $relativePath = $relativeDir . '/' . $filename;
         $absoluteDir = rtrim(public_path($relativeDir), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;

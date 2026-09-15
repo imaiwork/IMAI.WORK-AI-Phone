@@ -2,7 +2,7 @@ import { addShanjianPerson, createShanjianTask } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import { MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 import WechatOA from "@/utils/wechat";
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import { montageConfig } from "@/enums/montageEnums";
 
 export function useGenerateSetting(formData: any) {
     const userStore = useUserStore();

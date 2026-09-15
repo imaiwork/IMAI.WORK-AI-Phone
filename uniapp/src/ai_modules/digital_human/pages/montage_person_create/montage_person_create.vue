@@ -353,6 +353,11 @@
                                 </view>
                             </navigator>
                         </view>
+
+                        <view
+                            class="bg-white rounded-[28rpx] px-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
+                            <advanced-setting v-model="formData.extra" />
+                        </view>
                     </view>
                 </scroll-view>
             </view>
@@ -477,6 +482,11 @@ import ChooseCharacter from "@/ai_modules/digital_human/components/choose-charac
 import TokensCost from "@/ai_modules/digital_human/components/tokens-cost/tokens-cost.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
 import VideoCoverUpload from "@/ai_modules/digital_human/components/video-cover-upload/video-cover-upload.vue";
+import AdvancedSetting from "@/ai_modules/digital_human/components/advanced-setting/advanced-setting.vue";
+import {
+    createPackSwitchSetting,
+    type PackSwitchSetting,
+} from "@/ai_modules/digital_human/config/advanced-setting";
 
 // ─── 复用 Hooks ──────────────────────────────────────────────────
 import { useSteps } from "./hooks/useSteps";
@@ -495,7 +505,7 @@ const formData = reactive<{
     person_introduction: string;
     shanjian_type: MontageTypeEnum;
     music: any[];
-    extra: {
+    extra: PackSwitchSetting & {
         ai_music: boolean;
         volume: number;
         music: number;
@@ -515,6 +525,7 @@ const formData = reactive<{
     shanjian_type: MontageTypeEnum.REAL_PERSON_AI,
     music: [],
     extra: {
+        ...createPackSwitchSetting(),
         ai_music: true,
         volume: 0.5,
         music: 0,

@@ -8,15 +8,15 @@
         :mask-close-able="true"
         :z-index="5001">
         <template #header>
-            <view class="px-[32rpx] pt-3 pb-[24rpx] border-[0] border-b border-solid border-[#F3F4F6]">
-                <view class="w-[80rpx] h-[8rpx] rounded-full bg-[#E5E7EB] mx-auto mb-3"></view>
+            <view class="px-[32rpx] pt-3 pb-[24rpx] border-[0] border-b border-solid border-[#F2F3F5]">
+                <view class="w-[80rpx] h-[8rpx] rounded-full bg-[#E2E2E2] mx-auto mb-3"></view>
                 <view class="flex items-center">
                     <view
-                        class="w-[64rpx] h-[64rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center shrink-0"
+                        class="detail-close w-[64rpx] h-[64rpx] rounded-full bg-[#F2F3F5] flex items-center justify-center shrink-0"
                         @click="emit('update:modelValue', false)">
-                        <u-icon name="arrow-down" color="#6B7280" size="28"></u-icon>
+                        <u-icon name="arrow-down" color="#999999" size="24"></u-icon>
                     </view>
-                    <text class="flex-1 text-center text-sm font-semibold text-[#1F2937]">视频详情</text>
+                    <text class="flex-1 text-center text-sm font-semibold text-[#1D2129]">视频详情</text>
                     <view class="w-[64rpx] h-[64rpx] shrink-0"></view>
                 </view>
             </view>
@@ -31,8 +31,8 @@
                                 style="aspect-ratio: 16 / 9"
                                 @click="handlePlay">
                                 <image v-if="coverUrl" :src="coverUrl" class="w-full h-full" mode="aspectFill"></image>
-                                <view v-else class="w-full h-full flex items-center justify-center bg-[#EEF3FF]">
-                                    <u-icon name="video-camera" color="#0065FB" size="48"></u-icon>
+                                <view v-else class="w-full h-full flex items-center justify-center bg-[#E6EFFF]">
+                                    <u-icon name="play-circle" color="#0065FB" size="48"></u-icon>
                                 </view>
                                 <view
                                     v-if="canPlay"
@@ -67,14 +67,14 @@
                                         :style="`background:${tag.bg};color:${tag.color}`">
                                         {{ tag.label }}
                                     </text>
-                                    <text v-if="timeText" class="text-[22rpx] text-[#9CA3AF]"> · {{ timeText }} </text>
+                                    <text v-if="timeText" class="text-[22rpx] text-[#999999]"> · {{ timeText }} </text>
                                 </view>
 
-                                <view v-if="copyText" class="mt-[32rpx] bg-[#F9FAFB] rounded-[28rpx] p-[28rpx]">
-                                    <text class="block text-[20rpx] font-semibold text-[#9CA3AF] mb-[12rpx]">
+                                <view v-if="copyText" class="mt-[32rpx] bg-[#F2F3F5] rounded-[28rpx] p-[28rpx]">
+                                    <text class="block text-[20rpx] font-semibold text-[#999999] mb-[12rpx]">
                                         文案
                                     </text>
-                                    <text class="text-sm text-[#374151] leading-relaxed whitespace-pre-wrap">
+                                    <text class="text-sm text-[#666666] leading-relaxed whitespace-pre-wrap">
                                         {{ copyText }}
                                     </text>
                                 </view>
@@ -131,3 +131,14 @@ const handlePlay = () => {
     emit("play");
 };
 </script>
+
+<style lang="scss" scoped>
+.detail-close {
+    @apply relative;
+
+    &::after {
+        content: "";
+        @apply absolute inset-[-12rpx];
+    }
+}
+</style>

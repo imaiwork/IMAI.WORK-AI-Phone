@@ -57,8 +57,9 @@ class HotspotVideoDispatchJob
             HotspotLog::write('热点下发队列最终失败，已复用闪剪订单，不标记失败：任务号=' . $taskNo);
             return;
         }
-        TaskService::markFailed($taskNo, '视频下发失败，请稍后重试');
-        TaskService::patchOptions($taskNo, ['dispatch_status' => 'fail']);
+        $retrySeq = (int)($options['retry_seq'] ?? 0);
+        TaskService::markFailed($taskNo, '视频下发失败，请稍后重试', $retrySeq);
+        TaskService::patchOptions($taskNo, ['dispatch_status' => 'fail'], $retrySeq);
         HotspotLog::write('热点下发队列最终失败，已标记失败：任务号=' . $taskNo);
     }
 }

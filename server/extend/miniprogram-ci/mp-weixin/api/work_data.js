@@ -1,0 +1,1 @@
+"use strict";const t=require("../utils/request/index.js");exports.getWorkDataAnalytics=a=>t.request.get({url:"/workData.WorkData/analytics",data:a}),exports.getWorkDataPersonas=()=>t.request.get({url:"/workData.WorkData/personas"}),exports.setWorkDataSyncSettings=a=>t.request.post({url:"/workData.WorkData/syncSettings",data:a});

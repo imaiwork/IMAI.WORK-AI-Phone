@@ -6,6 +6,7 @@
 return [
     'qwen-plus'                  => ['model_name' => '通义千问', 'cost_name' => 'qwen-plus', 'channel' => 'qwen'],
     'gpt-4o'                     => ['model_name' => 'Ai-4o', 'cost_name' => 'Ai-4o', 'channel' => 'IMAI'],
+    'glm-5.3'                    => ['model_name' => 'GLM-5.3', 'cost_name' => 'GLM-5.3', 'channel' => 'zhipu'],
     'deepseek'                   => ['model_name' => 'DeepSeek', 'cost_name' => 'deepseek', 'channel' => 'IMAI'],
     'gemini-2.5-pro'             => ['model_name' => '谷歌智元2.5 PRO', 'cost_name' => '谷歌智元2.5 PRO', 'channel' => 'google'],
     'gemma-3-4b-it'              => ['model_name' => '谷歌智元3.0', 'cost_name' => '谷歌智元3.0', 'channel' => 'google'],

@@ -8,10 +8,14 @@ use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
 use think\console\Output;
+use think\facade\Cache;
 use think\facade\Log;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceTask;
 use app\common\enum\DeviceEnum;
+use app\common\model\sv\SvPublishSettingDetail;
+use app\common\service\sv\PublishRemarkGuard;
+use app\common\service\sv\PublishTaskReconcile;
 use app\common\traits\DeviceTaskTrait;
 use app\common\traits\TaskExceptionTrait;
 use app\api\logic\ApiLogic;
@@ -22,6 +26,11 @@ class DeviceTaskScheduler extends Command
     use TaskExceptionTrait;
 
     private $isDev = false;
+
+    private const CHUNK_SIZE = 200;
+    private const MAX_RUN_SECONDS = 50;
+    private const RUNNING_LOCK_KEY = 'task_scheduler:running';
+    private const RUNNING_LOCK_TTL = 120;
     /**
      * 配置指令
      */
@@ -43,7 +52,7 @@ class DeviceTaskScheduler extends Command
         $interval = (int)$input->getOption('interval');
         $this->isDev = (bool)$input->getOption('isdev');
 
-        print_r("\n设备任务调度器启动...'\n");
+        print_r("\n设备任务调度器启动...\n");
         if ($this->isDev) {
             $output->writeln("检查间隔: {$interval}秒");
             $output->writeln('按 Ctrl+C 退出');
@@ -61,7 +70,7 @@ class DeviceTaskScheduler extends Command
     /**
      * 以守护进程方式运行
      */
-    protected function runAsDaemon(Output $output, $interval)
+    protected function runAsDaemon(Output $output, int $interval)
     {
         while (true) {
             $this->checkAndExecuteTasks($output);
@@ -83,21 +92,30 @@ class DeviceTaskScheduler extends Command
     protected function checkAndExecuteTasks(Output $output)
     {
         $currentTime = time();
+        $lockValue = (getmypid() ?: 0) . ':' . microtime(true);
+        $lockAcquired = false;
 
         try {
-            //获取手动模式的设备
+            if (!$this->acquireRunningLock($lockValue)) {
+                return;
+            }
+            $lockAcquired = true;
+
+            $startedAt = time();
             // 3. 检查超时未开始的任务 (status=0 且当前时间超过end_time)
-            $this->checkTimeoutTasks($currentTime, $output);
-
+            $this->checkTimeoutTasks($currentTime, $output, $startedAt);
             // 1. 检查需要开始执行的任务 (status=0 且当前时间在区间内)
-            $this->checkPendingTasks($currentTime, $output);
-
+            $this->checkPendingTasks($currentTime, $output, $startedAt);
             // 2. 检查需要结束的任务 (status=1 且当前时间超过end_time)
-            $this->checkRunningTasks($currentTime, $output);
-        } catch (\Exception $e) {
-            $this->setTaskLog("设备任务调度器执行异常: " . $e->getTraceAsString(), 'error');
+            $this->checkRunningTasks($currentTime, $output, $startedAt);
+        } catch (\Throwable $e) {
+            $this->setTaskLog("设备任务调度器执行异常: " . $e->getMessage(), 'error');
             if ($this->isDev) {
                 $output->writeln("<error>执行异常: " . $e->getMessage() . "</error>");
+            }
+        } finally {
+            if ($lockAcquired) {
+                $this->releaseRunningLock($lockValue);
             }
         }
     }
@@ -105,111 +123,198 @@ class DeviceTaskScheduler extends Command
     /**
      * 检查待执行任务
      */
-    protected function checkPendingTasks($currentTime, Output $output)
+    protected function checkPendingTasks(int $currentTime, Output $output, int $startedAt): void
     {
-        $pendingTasks = SvDeviceTask::alias('t')
-            ->field('t.*, FROM_UNIXTIME(t.start_time) as start_time_str, FROM_UNIXTIME(t.end_time) as end_time_str')
-            ->where('t.status', '=', 0) // 只处理已标记为执行中的任务
-            ->where('t.device_code', 'in', function ($query) {
-                $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
-            })
-            ->where('t.auto_type', '=', 0) // 只处理手动任务
-            ->where('t.start_time', '<=', $currentTime)
-            ->where('t.end_time', '>', $currentTime)
-            ->order('t.start_time', 'asc')
-            //->limit(10)
-            ->select();
-        $output->writeln(\think\facade\Db::getLastSql());
-        foreach ($pendingTasks as $task) {
-            try {
-                // 更新任务状态为执行中
-                //$task->status = 1;
-                $task->update_time = $currentTime;
-                $task->save();
-                // 执行具体任务
-                $this->executeDeviceTask($task, $output);
+        $lastId = 0;
+        $processed = 0;
 
-                // $output->writeln("[" . date('Y-m-d H:i:s') . "] 开始执行任务 ID: {$task['id']} - {$task['task_name']}");
-                // $this->setTaskLog("设备任务开始执行: ID={$task['id']}, 任务名称={$task['task_name']}, 设备={$task['device_code']}");
-            } catch (\Exception $e) {
-                $this->setTaskLog("开始执行任务失败 ID: {$task['id']} - " . $e->getTraceAsString(), 'error');
+        do {
+            if (time() - $startedAt >= self::MAX_RUN_SECONDS) {
+                $this->setTaskLog('设备任务调度器达到每轮时间上限, pending 提前退出', 'info');
+                break;
+            }
 
-                if ($this->isDev) {
-                    $output->writeln("<error>开始执行任务失败 ID: {$task['id']}</error>");
+            $tasks = SvDeviceTask::alias('t')
+                ->field('t.*, FROM_UNIXTIME(t.start_time) as start_time_str, FROM_UNIXTIME(t.end_time) as end_time_str')
+                ->where('t.status', '=', 0)
+                ->where('t.device_code', 'in', function ($query) {
+                    $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
+                })
+                ->where('t.auto_type', '=', 0)
+                ->where('t.start_time', '<=', $currentTime)
+                ->where('t.end_time', '>', $currentTime)
+                ->where('t.id', '>', $lastId)
+                ->order('t.id', 'asc')
+                ->limit(self::CHUNK_SIZE)
+                ->select();
+
+            if ($tasks->isEmpty()) {
+                break;
+            }
+
+            foreach ($tasks as $task) {
+                try {
+                    $task->status = 1;
+                    $task->update_time = $currentTime;
+                    $task->save();
+                    $this->executeDeviceTask($task, $output);
+                } catch (\Throwable $e) {
+                    $this->setTaskLog("开始执行任务失败 ID: {$task['id']} - " . $e->getMessage(), 'error');
+                    if ($this->isDev) {
+                        $output->writeln("<error>开始执行任务失败 ID: {$task['id']}</error>");
+                    }
+                }
+
+                $lastId = (int)$task['id'];
+                $processed++;
+
+                if (time() - $startedAt >= self::MAX_RUN_SECONDS) {
+                    $this->setTaskLog('设备任务调度器达到每轮时间上限, pending 提前退出', 'info');
+                    break 2;
                 }
             }
+        } while (count($tasks) === self::CHUNK_SIZE);
+
+        if ($this->isDev && $processed > 0) {
+            $output->writeln("[pending] 本轮处理 {$processed} 条, 最后 id={$lastId}");
         }
     }
 
     /**
      * 检查执行中的任务
      */
-    protected function checkRunningTasks($currentTime, Output $output)
+    protected function checkRunningTasks($currentTime, Output $output, int $startedAt): void
     {
-        $runningTasks = SvDeviceTask::field('*, FROM_UNIXTIME(start_time) as start_time_str, FROM_UNIXTIME(end_time) as end_time_str')
-            ->where('status', 1)
-            ->where('device_code', 'in', function ($query) {
-                $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
-            })
-            ->where('auto_type', '=', 0) // 只处理手动任务
-            ->select();
+        $lastId = 0;
+        $processed = 0;
 
-        foreach ($runningTasks as $task) {
-            try {
-                // 执行具体任务
-                $this->executeDeviceCompletedTask($task, $output);
+        do {
+            if (time() - $startedAt >= self::MAX_RUN_SECONDS) {
+                $this->setTaskLog('设备任务调度器达到每轮时间上限, running 提前退出', 'info');
+                break;
+            }
 
-                // $output->writeln("[" . date('Y-m-d H:i:s') . "] 任务执行完成 ID: {$task['id']} - {$task['task_name']}");
-                // $this->setTaskLog("设备任务执行完成: ID={$task['id']}, 任务名称={$task['task_name']}");
-            } catch (\Exception $e) {
-                $this->setTaskLog("更新任务完成状态失败 ID: {$task['id']} - " . $e->getTraceAsString(), 'error');
+            $tasks = SvDeviceTask::field('*, FROM_UNIXTIME(start_time) as start_time_str, FROM_UNIXTIME(end_time) as end_time_str')
+                ->where('status', 1)
+                ->where('device_code', 'in', function ($query) {
+                    $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
+                })
+                ->where('auto_type', '=', 0)
+                ->where('id', '>', $lastId)
+                ->order('id', 'asc')
+                ->limit(self::CHUNK_SIZE)
+                ->select();
 
-                if ($this->isDev) {
-                    $output->writeln("<error>更新任务完成状态失败 ID: {$task['id']}</error>");
+            if ($tasks->isEmpty()) {
+                break;
+            }
+
+            foreach ($tasks as $task) {
+                try {
+                    $this->executeDeviceCompletedTask($task, $output);
+                } catch (\Throwable $e) {
+                    $this->setTaskLog("更新任务完成状态失败 ID: {$task['id']} - " . $e->getMessage(), 'error');
+                    if ($this->isDev) {
+                        $output->writeln("<error>更新任务完成状态失败 ID: {$task['id']}</error>");
+                    }
+                }
+
+                $lastId = (int)$task['id'];
+                $processed++;
+
+                if (time() - $startedAt >= self::MAX_RUN_SECONDS) {
+                    $this->setTaskLog('设备任务调度器达到每轮时间上限, running 提前退出', 'info');
+                    break 2;
                 }
             }
+        } while (count($tasks) === self::CHUNK_SIZE);
+
+        if ($this->isDev && $processed > 0) {
+            $output->writeln("[running] 本轮处理 {$processed} 条, 最后 id={$lastId}");
         }
     }
 
     /**
      * 检查超时任务
      */
-    protected function checkTimeoutTasks($currentTime, Output $output)
+    protected function checkTimeoutTasks(int $currentTime, Output $output, int $startedAt): void
     {
-        $timeoutTasks = SvDeviceTask::field('*')
-            ->where('device_code', 'in', function ($query) {
-                $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
-            })
-            ->where('status', 0)
-            ->where('auto_type', '=', 0)
-            ->where('end_time', '<', $currentTime)
-            ->select();
+        $lastId = 0;
+        $processed = 0;
 
-        foreach ($timeoutTasks as $task) {
-            try {
-                // 更新任务状态为执行失败（超时未执行）
-                if ($task->task_type == DeviceEnum::TASK_TYPE_WECHAT_RPA) {
-                    $task->status = 2;
-                    $task->remark = '任务执行完成';
-                } else {
-                    $task->status = 3;
-                    $task->remark = '执行任务的设备没有提前开启';
+        do {
+            if (time() - $startedAt >= self::MAX_RUN_SECONDS) {
+                $this->setTaskLog('设备任务调度器达到每轮时间上限, timeout 提前退出', 'info');
+                break;
+            }
+
+            $tasks = SvDeviceTask::field('*')
+                ->where('device_code', 'in', function ($query) {
+                    $query->name('sv_device')->field('device_code')->where('auto_type', '=', 0);
+                })
+                ->where('status', 0)
+                ->where('auto_type', '=', 0)
+                ->where('end_time', '<', $currentTime)
+                ->where('id', '>', $lastId)
+                ->order('id', 'asc')
+                ->limit(self::CHUNK_SIZE)
+                ->select();
+
+            if ($tasks->isEmpty()) {
+                break;
+            }
+
+            foreach ($tasks as $task) {
+                try {
+                    $this->processTimeoutTask($task, $currentTime, $output);
+                } catch (\Throwable $e) {
+                    $this->setTaskLog("更新任务超时状态失败 ID: {$task['id']} - " . $e->getMessage(), 'error');
+                    if ($this->isDev) {
+                        $output->writeln("<error>更新任务超时状态失败 ID: {$task['id']}</error>");
+                    }
                 }
 
-                $task->update_time = $currentTime;
-                $task->save();
-                if ($this->isDev) {
-                    $output->writeln("[" . date('Y-m-d H:i:s') . "] 任务超时未执行 ID: {$task['id']} - {$task['task_name']}");
-                }
+                $lastId = (int)$task['id'];
+                $processed++;
 
-                $this->setTaskLog("设备任务超时未执行: ID={$task['id']}, 任务名称={$task['task_name']}", 'warning');
-            } catch (\Exception $e) {
-                $this->setTaskLog("更新任务超时状态失败 ID: {$task['id']} - " . $e->getTraceAsString(), 'error');
-                if ($this->isDev) {
-                    $output->writeln("<error>更新任务超时状态失败 ID: {$task['id']}</error>");
+                if (time() - $startedAt >= self::MAX_RUN_SECONDS) {
+                    $this->setTaskLog('设备任务调度器达到每轮时间上限, timeout 提前退出', 'info');
+                    break 2;
                 }
             }
+        } while (count($tasks) === self::CHUNK_SIZE);
+
+        if ($this->isDev && $processed > 0) {
+            $output->writeln("[timeout] 本轮处理 {$processed} 条, 最后 id={$lastId}");
         }
+    }
+
+    /**
+     * 处理单条超时任务
+     */
+    private function processTimeoutTask(SvDeviceTask $task, int $currentTime, Output $output): void
+    {
+        if ($task->task_type == DeviceEnum::TASK_TYPE_WECHAT_RPA) {
+            $task->status = 2;
+            $task->remark = '任务执行完成';
+        } else {
+            $task->status = 3;
+            $task->remark = PublishTaskReconcile::decideTimeoutRemark(
+                (string)$task->remark,
+                (int)$task->task_type === DeviceEnum::TASK_TYPE_PUBLISH
+            );
+        }
+
+        $task->update_time = $currentTime;
+        $task->save();
+        if ((int)$task->task_type === DeviceEnum::TASK_TYPE_DY_SEARCH) {
+            self::dySearchCloseTimeoutUnstarted($task);
+        }
+        if ($this->isDev) {
+            $output->writeln("[" . date('Y-m-d H:i:s') . "] 任务超时未执行 ID: {$task['id']} - {$task['task_name']}");
+        }
+
+        $this->setTaskLog("设备任务超时未执行: ID={$task['id']}, 任务名称={$task['task_name']}", 'warning');
     }
 
     /**
@@ -261,6 +366,12 @@ class DeviceTaskScheduler extends Command
                     break;
                 case DeviceEnum::TASK_TYPE_GROUP_BUY: // 团购任务
                     $this->executeGroupBuyTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_DY_SEARCH: // 18
+                    $this->executeDySearchTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_DY_SEARCH_WECHAT: // 19
+                    $this->executeDySearchWechatTask($task, $output);
                     break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
@@ -330,6 +441,12 @@ class DeviceTaskScheduler extends Command
                     break;
                 case DeviceEnum::TASK_TYPE_GROUP_BUY: // 团购任务
                     $this->executeGroupBuyCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_DY_SEARCH: // 18
+                    $this->executeDySearchCompletedTask($task, $output);
+                    break;
+                case DeviceEnum::TASK_TYPE_DY_SEARCH_WECHAT: // 19
+                    $this->executeDySearchWechatCompletedTask($task, $output);
                     break;
                 default:
                     throw new \Exception("未知的任务类型: {$task->task_type}");
@@ -692,23 +809,8 @@ class DeviceTaskScheduler extends Command
         // TODO: 实现具体的发布逻辑
         // 例如：调用设备服务发布内容
         self::rpaPublishTask($task, $output, function ($result) use ($task) {
-            if ($result['status'] !== -1) {
-                $task->status = $result['status'];
-                $task->remark = $result['remark'];
-                $task->update_time = time();
-                $task->save();
-                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-                ApiLogic::sendNotice([
-                    'userId' => $task->user_id,
-                    'startTime' => $task->start_time_str,
-                    'endTime' => $task->end_time_str,
-                    'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
-                    'status' => $task->status,
-                    'autoType' => $task->auto_type,
-                ]);
-            }
+            $this->applyPublishDispatchResult($task, $result);
         });
-        // 模拟任务执行
         $this->setTaskLog("发布任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
@@ -721,91 +823,213 @@ class DeviceTaskScheduler extends Command
             if ($this->isDev) {
                 $output->writeln("执行发布任务完成 - 设备: {$task->device_code}");
             }
-
-            // 已因算力不足等系统原因失败时, 只同步明细, 不再用设备进度日志覆盖失败原因
-            $alreadyFailed = (int)$task->status === DeviceEnum::TASK_STATUS_FAILED;
-            $preserveRemark = trim((string)$task->remark);
-            $preserveSystemFail = $preserveRemark !== ''
-                && (str_contains($preserveRemark, '算力不足') || str_starts_with($preserveRemark, '任务执行失败'));
-
-            if (!$alreadyFailed) {
-                $task->status = DeviceEnum::TASK_STATUS_FINISHED;
-                $task->remark = '发布任务完成';
-                $task->update_time = time();
-                $task->save();
-            }
-
-            $publish =  \app\common\model\sv\SvPublishSettingDetail::where('id', $task->sub_data_id)->where('status', 3)->findOrEmpty();
-            if (!$publish->isEmpty()) {
-                $remark = $preserveSystemFail ? $preserveRemark : $this->getPublishRemark($task);
-                $publish->status = 2;
-                $publish->remark = $remark;
-                $publish->update_time = time();
-                $publish->save();
-
-                $task->status = DeviceEnum::TASK_STATUS_FAILED;
-                $task->remark = $remark;
-                $task->update_time = time();
-                $task->save();
-            }
-
-            $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
-                ->where('id', '<>', $task->id)
-                ->where('task_type', DeviceEnum::TASK_TYPE_PUBLISH)
-                ->where('status', DeviceEnum::TASK_STATUS_WAIT)
-                ->where('source', DeviceEnum::TASK_SOURCE_PUBLISH)
-                ->findOrEmpty();
-            if ($find->isEmpty()) {
-                \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->update(['status' => 2, 'update_time' => time()]);
-                // 检查是否还有其他账号在等待
-                $account = \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty();
-                if (!$account->isEmpty()) {
-                    // 检查是否还有其他账号在等待
-                    $nextAccount = \app\common\model\sv\SvPublishSettingAccount::where('publish_id', $account->publish_id)->where('status', 1)->findOrEmpty();
-                    if ($nextAccount->isEmpty()) {
-                        // 没有其他账号在等待，更新发布设置为完成
-                        \app\common\model\sv\SvPublishSetting::where('id', $account->publish_id)->update(['status' => 3, 'update_time' => time()]);
-                    }
-                }
-            }
+            $this->closePublishTask($task);
+            $this->finalizePublishAccount($task);
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
             $this->setTaskLog("执行发布任务完成: ID={$task->id}, 设备={$task->device_code}");
-            ApiLogic::sendNotice([
-                'userId' => $task->user_id,
-                'startTime' => $task->start_time_str,
-                'endTime' => $task->end_time_str,
-                'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
-                'status' => $task->status,
-                'autoType' => $task->auto_type,
-            ]);
-        } else {
+            $this->sendPublishNotice($task);
+            return;
+        }
 
-            if ($this->isDev) {
-                $output->writeln("执行发布任务 - 设备: {$task->device_code}");
-            }
+        if ($this->isDev) {
+            $output->writeln("执行发布任务 - 设备: {$task->device_code}");
+        }
+        $this->reconcileRunningPublishTask($task, $output);
+        $this->setTaskLog("发布任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
 
-            // TODO: 实现具体的发布逻辑
-            // 例如：调用设备服务发布内容
-            self::rpaPublishTask($task, $output, function ($result) use ($task) {
-                if ($result['status'] !== -1) {
-                    $task->status = $result['status'];
-                    $task->remark = $result['remark'];
+    /**
+     * 窗口内离线不写成终态失败。
+     */
+    private function applyPublishDispatchResult(SvDeviceTask $task, array $result): void
+    {
+        $decision = PublishTaskReconcile::decideDispatchResult(
+            (int)$task->status,
+            (int)$task->end_time,
+            time(),
+            (int)($result['status'] ?? 0),
+            (string)($result['remark'] ?? '')
+        );
+        if (($decision['action'] ?? '') === PublishTaskReconcile::ACTION_NOOP) {
+            return;
+        }
+
+        $task->status = (int)$decision['status'];
+        $task->remark = (string)$decision['remark'];
+        $task->update_time = time();
+        $task->save();
+
+        if (!empty($decision['working'])) {
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        }
+        if (!empty($decision['notify'])) {
+            $this->sendPublishNotice($task);
+        } elseif (($decision['action'] ?? '') === PublishTaskReconcile::ACTION_WAIT_OFFLINE) {
+            $this->setTaskLog("发布任务设备离线，窗口内等待重试: ID={$task->id}, 设备={$task->device_code}", 'warning');
+        }
+    }
+
+    /**
+     * 窗口未结束：先认明细终态，已下发不再重发。
+     */
+    private function reconcileRunningPublishTask(SvDeviceTask $task, Output $output): void
+    {
+        $publish = SvPublishSettingDetail::where('id', $task->sub_data_id)->findOrEmpty();
+        $detailStatus = $publish->isEmpty() ? null : (int)$publish->status;
+        $decision = PublishTaskReconcile::decideRunningWindow($detailStatus);
+
+        switch ($decision['action']) {
+            case PublishTaskReconcile::WINDOW_FINISH:
+                $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+                $remark = trim((string)$publish->remark);
+                $task->remark = $remark !== '' ? $remark : PublishRemarkGuard::SUCCESS_REMARK;
+                $task->update_time = time();
+                $task->save();
+                break;
+            case PublishTaskReconcile::WINDOW_FAIL:
+                if (!PublishRemarkGuard::isBillingLocked((string)$task->remark)) {
+                    $task->status = DeviceEnum::TASK_STATUS_FAILED;
+                    $task->remark = (string)$publish->remark;
                     $task->update_time = time();
                     $task->save();
-                    $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-                    ApiLogic::sendNotice([
-                        'userId' => $task->user_id,
-                        'startTime' => $task->start_time_str,
-                        'endTime' => $task->end_time_str,
-                        'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
-                        'status' => $task->status,
-                        'autoType' => $task->auto_type,
-                    ]);
                 }
-            });
-            // 模拟任务执行
-            $this->setTaskLog("发布任务执行中: ID={$task->id}, 设备={$task->device_code}");
+                break;
+            case PublishTaskReconcile::WINDOW_WAIT:
+                $task->update_time = time();
+                $task->save();
+                break;
+            case PublishTaskReconcile::WINDOW_DISPATCH:
+                self::rpaPublishTask($task, $output, function ($result) use ($task) {
+                    $this->applyPublishDispatchResult($task, $result);
+                });
+                break;
+            default:
+                $this->setTaskLog("发布任务明细不存在，窗口内不重发: ID={$task->id}, sub_data_id={$task->sub_data_id}", 'error');
+                break;
         }
+    }
+
+    /**
+     * 到期收口：先认明细成功，再处理仍在发布中的行。
+     */
+    private function closePublishTask(SvDeviceTask $task): void
+    {
+        $publish = SvPublishSettingDetail::where('id', $task->sub_data_id)->findOrEmpty();
+        $detailStatus = $publish->isEmpty() ? null : (int)$publish->status;
+        $decision = PublishTaskReconcile::decideClose(
+            (string)$task->remark,
+            $detailStatus,
+            $this->getLastPublishLogMessage($task)
+        );
+
+        $now = time();
+        switch ($decision['action']) {
+            case PublishTaskReconcile::CLOSE_BILLING:
+                $task->status = DeviceEnum::TASK_STATUS_FAILED;
+                $task->update_time = $now;
+                $task->save();
+                if (!empty($decision['fail_inflight_detail']) && !$publish->isEmpty()) {
+                    $publish->status = 2;
+                    $publish->remark = (string)$task->remark;
+                    $publish->update_time = $now;
+                    $publish->save();
+                }
+                break;
+            case PublishTaskReconcile::CLOSE_FINISH:
+                $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+                $remark = trim((string)$publish->remark);
+                $task->remark = $remark !== '' ? $remark : PublishRemarkGuard::SUCCESS_REMARK;
+                $task->update_time = $now;
+                $task->save();
+                break;
+            case PublishTaskReconcile::CLOSE_FAIL_DETAIL:
+                $task->status = DeviceEnum::TASK_STATUS_FAILED;
+                $task->remark = (string)$publish->remark;
+                $task->update_time = $now;
+                $task->save();
+                break;
+            case PublishTaskReconcile::CLOSE_SUCCESS_FROM_LOG:
+                if (!$publish->isEmpty()) {
+                    $publish->status = 1;
+                    $publish->remark = PublishRemarkGuard::SUCCESS_REMARK;
+                    $publish->update_time = $now;
+                    $publish->exec_time = $now;
+                    $publish->save();
+                }
+                $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+                $task->remark = PublishRemarkGuard::SUCCESS_REMARK;
+                $task->update_time = $now;
+                $task->save();
+                break;
+            case PublishTaskReconcile::CLOSE_FAIL_INFLIGHT:
+                $remark = $this->getPublishRemark($task);
+                if (!$publish->isEmpty()) {
+                    $publish->status = 2;
+                    $publish->remark = $remark;
+                    $publish->update_time = $now;
+                    $publish->save();
+                }
+                $task->status = DeviceEnum::TASK_STATUS_FAILED;
+                $task->remark = $remark;
+                $task->update_time = $now;
+                $task->save();
+                break;
+            default:
+                $task->status = DeviceEnum::TASK_STATUS_FAILED;
+                $task->remark = $this->getTimeoutRemark($task);
+                $task->update_time = $now;
+                $task->save();
+                break;
+        }
+    }
+
+    private function finalizePublishAccount(SvDeviceTask $task): void
+    {
+        $find = SvDeviceTask::where('sub_task_id', $task->sub_task_id)
+            ->where('id', '<>', $task->id)
+            ->where('task_type', DeviceEnum::TASK_TYPE_PUBLISH)
+            ->where('status', DeviceEnum::TASK_STATUS_WAIT)
+            ->where('source', DeviceEnum::TASK_SOURCE_PUBLISH)
+            ->findOrEmpty();
+        if (!$find->isEmpty()) {
+            return;
+        }
+
+        \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->update(['status' => 2, 'update_time' => time()]);
+        $account = \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty();
+        if ($account->isEmpty()) {
+            return;
+        }
+        $nextAccount = \app\common\model\sv\SvPublishSettingAccount::where('publish_id', $account->publish_id)->where('status', 1)->findOrEmpty();
+        if ($nextAccount->isEmpty()) {
+            \app\common\model\sv\SvPublishSetting::where('id', $account->publish_id)->update(['status' => 3, 'update_time' => time()]);
+        }
+    }
+
+    private function sendPublishNotice(SvDeviceTask $task): void
+    {
+        ApiLogic::sendNotice([
+            'userId' => $task->user_id,
+            'startTime' => $task->start_time_str,
+            'endTime' => $task->end_time_str,
+            'content' => \app\common\model\sv\SvPublishSettingAccount::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+            'status' => $task->status,
+            'autoType' => $task->auto_type,
+        ]);
+    }
+
+    private function getLastPublishLogMessage(SvDeviceTask $task): string
+    {
+        $lastMsg = \app\common\model\sv\SvDeviceTaskLog::where('task_id', $task->id)
+            ->where('task_source', $task->source)
+            ->where('device_code', $task->device_code)
+            ->order('id', 'desc')
+            ->limit(1)
+            ->findOrEmpty();
+        if ($lastMsg->isEmpty()) {
+            return '';
+        }
+        return trim((string)$lastMsg->message);
     }
 
 
@@ -1025,6 +1249,102 @@ class DeviceTaskScheduler extends Command
             $this->setTaskLog("获客任务完成: ID={$task->id}, 设备={$task->device_code}");
         } else {
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        }
+    }
+
+    protected function executeDySearchTask(SvDeviceTask $task, Output $output)
+    {
+        if ($this->isDev) {
+            $output->writeln("执行抖音获客任务 - 设备: {$task->device_code}");
+        }
+        self::dySearchStartTask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDySearchTask::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        });
+        $this->setTaskLog("抖音获客任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeDySearchCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行抖音获客任务完成 - 设备: {$task->device_code}");
+            }
+            self::dySearchEndTask($task, $output, function ($result) use ($task) {
+                $task->status = $result['status'];
+                $task->remark = $result['remark'];
+                $task->update_time = time();
+                $task->save();
+                $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+                ApiLogic::sendNotice([
+                    'userId' => $task->user_id,
+                    'startTime' => $task->start_time_str,
+                    'endTime' => $task->end_time_str,
+                    'content' => \app\common\model\sv\SvDySearchTask::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                    'status' => $task->status,
+                    'autoType' => $task->auto_type,
+                ]);
+            });
+            $this->setTaskLog("抖音获客任务完成: ID={$task->id}, 设备={$task->device_code}");
+        } else {
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+        }
+    }
+
+    protected function executeDySearchWechatTask(SvDeviceTask $task, Output $output)
+    {
+        if ($this->isDev) {
+            $output->writeln("执行抖音获客加微任务 - 设备: {$task->device_code}");
+        }
+        self::dySearchWechatTask($task, $output, function ($result) use ($task) {
+            $task->status = $result['status'];
+            $task->remark = $result['remark'];
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDySearchTask::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
+        });
+        $this->setTaskLog("抖音获客加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
+    }
+
+    protected function executeDySearchWechatCompletedTask(SvDeviceTask $task, Output $output)
+    {
+        if ($task->end_time < time()) {
+            if ($this->isDev) {
+                $output->writeln("执行抖音获客加微任务完成 - 设备: {$task->device_code}");
+            }
+            $task->status = DeviceEnum::TASK_STATUS_FINISHED;
+            $task->remark = '加微任务完成';
+            $task->update_time = time();
+            $task->save();
+            $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);
+            $this->setTaskLog("抖音获客加微任务完成: ID={$task->id}, 设备={$task->device_code}");
+            ApiLogic::sendNotice([
+                'userId' => $task->user_id,
+                'startTime' => $task->start_time_str,
+                'endTime' => $task->end_time_str,
+                'content' => \app\common\model\sv\SvDySearchTask::where('id', $task->sub_task_id)->findOrEmpty()->name ?? $task->task_name,
+                'status' => $task->status,
+                'autoType' => $task->auto_type,
+            ]);
         }
     }
 
@@ -1529,6 +1849,40 @@ class DeviceTaskScheduler extends Command
     {
         SvDevice::where('device_code', $deviceCode)->update(['status' => $status, 'update_time' => time()]);
     }
+
+    private function acquireRunningLock(string $lockValue): bool
+    {
+        try {
+            $redis = Cache::store('redis')->handler();
+            $ok = $redis->set(self::RUNNING_LOCK_KEY, $lockValue, ['nx', 'ex' => self::RUNNING_LOCK_TTL]);
+            if (!$ok) {
+                $this->setTaskLog('设备任务调度器正在执行, 跳过本轮并发触发', 'info');
+                return false;
+            }
+            return true;
+        } catch (\Throwable $e) {
+            $this->setTaskLog('设备任务调度器获取运行锁失败, 跳过执行: ' . $e->getMessage(), 'error');
+            return false;
+        }
+    }
+
+    private function releaseRunningLock(string $lockValue): void
+    {
+        try {
+            $redis = Cache::store('redis')->handler();
+            $script = <<<'LUA'
+if redis.call('get', KEYS[1]) == ARGV[1] then
+    return redis.call('del', KEYS[1])
+else
+    return 0
+end
+LUA;
+            $redis->eval($script, [self::RUNNING_LOCK_KEY, $lockValue], 1);
+        } catch (\Throwable $e) {
+            $this->setTaskLog('设备任务调度器释放运行锁失败: ' . $e->getMessage(), 'error');
+        }
+    }
+
     private function setTaskLog(string|array $content, string $level = 'info')
     {
         if (is_array($content)) {

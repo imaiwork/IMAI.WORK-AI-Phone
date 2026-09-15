@@ -7,6 +7,7 @@ use app\api\logic\aiPersona\BasePersonaLogic;
 use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\api\logic\sv\DeviceLogic as SvDeviceLogic;
+use app\api\logic\videoSynthesis\CopywritingImitationLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\AiPersonaDigitalVoice;
@@ -153,7 +154,7 @@ class DeviceLogic extends BasePersonaLogic
             }
             $find['persona_info'] = AiPersona::where('id', $find->persona_id)->findOrEmpty();
             $find['auth_start_time'] = !empty($find['auth_start_time']) && $find['auth_start_time'] > 0 ? date('Y-m-d H:i:s', $find['auth_start_time']) : '';
-            $find['auth_expire_time'] = !empty($find['auth_expire_time']) && $find['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $find['auth_expire_time']) : '永久';
+            $find['auth_expire_time'] = !empty($find['auth_expire_time']) && $find['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $find['auth_expire_time']) : (!empty($find['auth_start_time']) && $find['auth_start_time'] > 0 ? '永久' : $find['create_time']);
             $find['is_used'] = SvDeviceUsed::where('user_id', $find->user_id)->where('device_code', $find['device_code'])->value('is_used');
             self::$returnData = $find->toArray();
             return true;
@@ -734,16 +735,22 @@ class DeviceLogic extends BasePersonaLogic
                 $msg = '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的执行时间';
                 throw new \Exception($msg);
             }
+            // 两种素材模式各取各的库：原图只取未转码原片，自动适配只取转码/切片素材。
+            // 口径与 CopywritingImitationLogic::getMaterialsForImitation 和小程序素材列表一致；
+            // 缺这一条会把两个库的素材混进同一条成片。
+            $keepOriginal = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$device->persona_id)
+                === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+                ? MaterialModel::KEEP_ORIGINAL_YES
+                : MaterialModel::KEEP_ORIGINAL_NO;
             $allMaterials = MaterialModel::where('persona_id', $device->persona_id)
                 ->where('use_status', 1)
                 ->where('is_wechat', 0)
                 ->where('publish_mode', $persona->publish_mode)
+                ->where('keep_original', $keepOriginal)
                 ->select()->toArray();
 
-            if (empty($allMaterials)) {
-                $msg = '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的素材';
-                throw new \Exception($msg);
-            }
+            // 素材库为空不在入口一律拦截：数字人口播混剪(1)+纯AI/AI+素材库靠 AI 抓素材，
+            // 判定挪到类型确定之后，口径与 CopywritingAiGenerationLogic::createDeviceVideoTasks 一致。
             $groupedData = [
                 'videos' => [], // 视频组 (material_type = 1)
                 'images' => []  // 图片组 (material_type = 2)
@@ -802,7 +809,14 @@ class DeviceLogic extends BasePersonaLogic
                 $index = ($startIndex + $i) % $totalTypes;
                 $selectedTypesForToday[] = $allVideoTypes[$index];
             }
-            return self::createVideoSynthesisTasks($device, $persona, $groupedData, $selectedTypesForToday);
+
+            $visualMaterialSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($config);
+            if (empty($groupedData['videos']) && empty($groupedData['images'])
+                && !ShanjianVideoSettingLogic::hasAiMaterialType($selectedTypesForToday, $visualMaterialSource)) {
+                $msg = '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的素材';
+                throw new \Exception($msg);
+            }
+            return self::createVideoSynthesisTasks($device, $persona, $config, $groupedData, $selectedTypesForToday);
         
         } catch (\Exception $e) {
             $errorMsg = $e->getMessage();
@@ -817,7 +831,7 @@ class DeviceLogic extends BasePersonaLogic
         }
     }
 
-    private static function createVideoSynthesisTasks(SvDevice $device, AiPersona $persona, array $groupedData, array $videoTypes)
+    private static function createVideoSynthesisTasks(SvDevice $device, AiPersona $persona, AiPersonaSynthesisConfig $config, array $groupedData, array $videoTypes)
     {
         $videos = $groupedData['videos'];
         $images = $groupedData['images'];
@@ -1113,7 +1127,22 @@ class DeviceLogic extends BasePersonaLogic
                     continue;
                 }
 
-                $selectedMaterials = self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode);
+                // 数字人口播混剪 + 纯AI/AI+素材库：复用统一的 AI 抓素材逻辑，素材库为空也能合成
+                $selectedMaterials = ShanjianVideoSettingLogic::canUseAiMaterials(
+                    (int)$shanjianType,
+                    ShanjianVideoSettingLogic::resolveVisualMaterialSource($config)
+                )
+                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                        CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
+                            $videos,
+                            $images,
+                            (int)$shanjianType,
+                            $deviceCode,
+                            $config,
+                            (string)($copywritingResult['content']['0'] ?? '')
+                        )
+                    )
+                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode);
 
                 if (empty($selectedMaterials)) {
                     $msg = '设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType . '，素材为空';
@@ -1203,11 +1232,17 @@ class DeviceLogic extends BasePersonaLogic
                 }
 
                 $taskId = generate_unique_task_id();
+                // 人设合成配置里的手动封面：只写 pic 不够，下发闪剪时只有 thumb_status=2
+                // 才会带 processRules.firstFrameCover（见 ShanjianVideoTaskLogic::compositeVideoCron）
+                $coverConfig = $config->isEmpty() ? null : $config;
+                $cover = CopywritingImitationLogic::resolveManualCoverByConfig($coverConfig, (string)($pic ?? ''));
                 $pendingTask = [
                     'shanjian_type' => $shanjianType,
                     'device_code' => $deviceCode,
                     'name' => $shanjianVideoSettingData['name'],
-                    'pic' =>  $pic,
+                    'pic' =>  $cover['pic'],
+                    'thumb_status' => $cover['thumb_status'],
+                    'video_cover_source' => $coverConfig ? (int)($coverConfig->video_cover_source ?? 0) : 0,
                     'task_id' => $taskId,
                     'persona_id' => $persona->id,
                     'status' => 0,
@@ -1427,29 +1462,7 @@ class DeviceLogic extends BasePersonaLogic
             if (empty($mergedMaterials)) {
                 return [];
             }
-            foreach ($mergedMaterials as $key => &$value) {
-                if ($value['material_type'] == 1) {
-                    $value['type'] = 'video';
-                } else {
-                    $value['type'] = 'image';
-                    $value['duration'] = 2;
-                }
-                $value['fileUrl'] = $value['file_url'];
-                unset($value['user_id']);
-                unset($value['persona_id']);
-                unset($value['material_name']);
-                unset($value['material_type']);
-                unset($value['height']);
-                unset($value['width']);
-                unset($value['publish_mode']);
-                unset($value['create_time']);
-                unset($value['update_time']);
-                unset($value['file_url']);
-                unset($value['use_status']);
-            }
-            unset($value);
-
-            return \app\api\logic\shanjian\ShanjianVideoSettingLogic::trimMaterialsByDuration(array_values($mergedMaterials));
+            return ShanjianVideoSettingLogic::trimMaterialsByDuration(ShanjianVideoSettingLogic::formatMaterialsForSetting($mergedMaterials));
         } catch (\Exception $e) {
             $msg = '设备号: ' . $deviceCode . '，素材选择异常: ' . $e->getMessage();
             Log::channel('ipVideoSynthesis')->write($msg);

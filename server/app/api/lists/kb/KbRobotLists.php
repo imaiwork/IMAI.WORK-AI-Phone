@@ -26,6 +26,10 @@ class KbRobotLists extends BaseApiDataLists
         if (!empty($this->params['keyword']) && $this->params['keyword']) {
             $where[] = ['kr.name', 'like', '%' . $this->params['keyword'] . '%'];
         }
+        // origin: 1=仅手工创建 2=仅人设自动开通;不传=全部,保持既有调用方(选择器/对话页)行为不变
+        if (isset($this->params['origin']) && in_array((int)$this->params['origin'], [1, 2], true)) {
+            $where[] = ['kr.origin', '=', (int)$this->params['origin']];
+        }
         return $where;
     }
 
@@ -72,6 +76,16 @@ class KbRobotLists extends BaseApiDataLists
     }
 
     /**
+     * 展开人设智能体时按人设聚拢:同一人设的记录跨分页也连续,
+     * 前端才能靠「与上一条比较」稳定插分节头,新加载的永远追加在末尾。
+     */
+    private function listOrder(): string
+    {
+        $origin = isset($this->params['origin']) ? (int)$this->params['origin'] : 0;
+        return $origin === 2 ? 'kr.persona_id desc, kr.id desc' : 'kr.id desc';
+    }
+
+    /**
      * @notes 列表
      * @return array
      * @throws @\think\db\exception\DataNotFoundException
@@ -86,15 +100,17 @@ class KbRobotLists extends BaseApiDataLists
             ->alias('kr')
             ->field([
                         'kr.id,kr.kb_ids,kr.cate_id,kr.intro,kr.image,kr.bg_image,kr.name,kr.sort,kr.is_enable,kr.is_public',
-                        'kr.permissions,kr.member_level_ids,kr.create_time,kr.user_id,u.nickname,u.avatar'
+                        'kr.permissions,kr.member_level_ids,kr.create_time,kr.user_id,u.nickname,u.avatar',
+                        'kr.origin,kr.persona_id,p.persona_name'
 
                     ])
             ->leftJoin('user u', 'u.id = kr.user_id')
+            ->leftJoin('ai_persona p', 'p.id = kr.persona_id')
             ->where($this->where())
             ->where($this->scope())
             ->where($this->searchWhere)
             ->limit($this->limitOffset, $this->limitLength)
-            ->order('kr.id desc')
+            ->order($this->listOrder())
             ->select()
             ->toArray();
 
@@ -108,6 +124,9 @@ class KbRobotLists extends BaseApiDataLists
             $item['cate_id']     = $item['cate_id'] ?? '';
             $item['cate_name']   = $item['cate_id'] ? AgentCate::where('id', $item['cate_id'])->value('name') : '';
             $item['source']      = $item['user_id'] ? 1 : 0;
+            $item['origin']      = (int)($item['origin'] ?? 1);
+            $item['persona_id']  = (int)($item['persona_id'] ?? 0);
+            $item['persona_name'] = (string)($item['persona_name'] ?? '');
             $item['source_text'] = $item['source'] ? '用户' : '后台';
             // 团队共享可见,但仅创建者可编辑/删除
             $item['is_owner']    = (int)$item['user_id'] === (int)$this->userId ? 1 : 0;

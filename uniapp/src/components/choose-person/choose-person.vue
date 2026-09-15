@@ -36,11 +36,11 @@
                             </view>
 
                             <view
-                                v-for="(item, index) in dataLists"
-                                :key="index"
+                                v-for="item in dataLists"
+                                :key="item.id"
                                 class="relative inline-flex flex-col items-center justify-center w-full h-[260rpx] rounded-[32rpx] border-[3rpx] transition-all duration-300 overflow-hidden bg-white border-[transparent] shadow-[0_4rpx_16rpx_rgba(0,0,0,0.04)]"
                                 :class="[
-                                    !item.is_configured ? 'opacity-70' : '',
+                                    isFrozen(item) || !item.is_configured ? 'opacity-70' : '',
                                     isDisabled(item) ? 'cursor-not-allowed' : '',
                                 ]"
                                 @click.stop="handleSelect(item)">
@@ -65,7 +65,12 @@
 
                                 <view class="absolute top-[16rpx] left-[16rpx] z-20">
                                     <view
-                                        v-if="item.is_configured"
+                                        v-if="isFrozen(item)"
+                                        class="px-[10rpx] py-[4rpx] rounded-full bg-[#FFF7ED]">
+                                        <text class="text-[18rpx] text-[#9A3412] font-medium">已冻结</text>
+                                    </view>
+                                    <view
+                                        v-else-if="item.is_configured"
                                         class="flex items-center gap-[4rpx] bg-[#ECFDF5] border border-[#A7F3D0] px-[10rpx] py-[4rpx] rounded-full">
                                         <view class="w-[10rpx] h-[10rpx] rounded-full bg-[#10B981]"></view>
                                         <text class="text-[18rpx] text-[#059669] font-medium">已配置</text>
@@ -102,7 +107,12 @@
                                 </view>
 
                                 <view
-                                    v-if="!item.is_configured"
+                                    v-if="isFrozen(item)"
+                                    class="absolute bottom-0 left-0 right-0 h-[72rpx] flex items-center justify-center bg-[#FFF7ED]">
+                                    <text class="text-[20rpx] text-[#9A3412]">恢复会员后可用</text>
+                                </view>
+                                <view
+                                    v-else-if="!item.is_configured"
                                     class="absolute bottom-0 left-0 right-0 h-[72rpx] flex items-center justify-center bg-[#F9FAFB] border-t border-[#F0F0F0] rounded-b-[32rpx]"
                                     @click.stop="toDetail(item)">
                                     <u-icon name="edit-pen" color="#9CA3AF" size="22"></u-icon>
@@ -124,12 +134,12 @@
                         <view
                             class="w-[40rpx] h-[40rpx] rounded-full flex items-center justify-center transition-colors"
                             :class="
-                                chooseLists.length > 0 && chooseLists.length === dataLists.length
+                                isAllSelected
                                     ? 'bg-primary'
                                     : 'border-[3rpx] border-[#D1D5DB] bg-[#F9FAFB]'
                             ">
                             <image
-                                v-if="chooseLists.length > 0 && chooseLists.length === dataLists.length"
+                                v-if="isAllSelected"
                                 src="/static/images/icons/success.svg"
                                 class="w-[24rpx] h-[24rpx]">
                             </image>
@@ -159,8 +169,11 @@
 </template>
 
 <script setup lang="ts">
-import { checkViralAssets, getPersonList } from "@/api/person";
+import { checkViralAssets as checkPersonaViralAssets, getPersonList } from "@/api/person";
 import { PersonTypeMap } from "@/enums/appEnums";
+
+const PERSONA_FROZEN_STATUS = 0;
+const PERSONA_FROZEN_MESSAGE = "该人设已冻结，恢复会员权益后可继续使用";
 
 const props = withDefaults(
     defineProps<{
@@ -204,6 +217,9 @@ const queryList = async (page_no: number, page_size: number) => {
             page_size,
             is_configured: props.isConfig ? 1 : "",
         });
+        chooseLists.value = chooseLists.value
+            .map((selected) => lists.find((item: any) => item.id === selected.id) ?? selected)
+            .filter((item) => !isDisabled(item));
         pagingRef.value?.complete(lists);
     } catch (error) {
         pagingRef.value?.complete([]);
@@ -233,21 +249,28 @@ const isChoose = (item: any) => {
     return chooseLists.value.some((c) => c.id === item.id);
 };
 
-// 是否禁用该项
+const isFrozen = (item: any) => Number(item.status) === PERSONA_FROZEN_STATUS;
+
+// 冻结人设在所有业务选择入口均不可用
 const isDisabled = (item: any) => {
-    return props.skipUnConfig && !item.is_configured;
+    return isFrozen(item) || (props.skipUnConfig && !item.is_configured);
 };
+
+const selectableLists = computed(() => dataLists.value.filter((item) => !isDisabled(item)));
+const isAllSelected = computed(
+    () => selectableLists.value.length > 0 && selectableLists.value.every((item) => isChoose(item)),
+);
 
 /** 形象、音色均无时不可选（爆款复刻） */
 const hasViralAssets = async (id: string | number) => {
-    const res = await checkViralAssets({ id });
+    const res = await checkPersonaViralAssets({ id });
     return Number(res?.has_avatar) === 1 || Number(res?.has_voice) === 1;
 };
 
 const handleSelect = async (item: any) => {
-    // 禁用未配置项
+    // 冻结状态优先于配置状态
     if (isDisabled(item)) {
-        uni.showToast({ title: "该人设未配置，无法选择", icon: "none" });
+        uni.showToast({ title: isFrozen(item) ? PERSONA_FROZEN_MESSAGE : "该人设未配置，无法选择", icon: "none" });
         return;
     }
 
@@ -287,9 +310,9 @@ const handleSelect = async (item: any) => {
 
 const toggleSelect = () => {
     // 过滤可选列表
-    const selectable = props.skipUnConfig ? dataLists.value.filter((item) => item.is_configured) : dataLists.value;
+    const selectable = selectableLists.value;
 
-    if (chooseLists.value.length === selectable.length && selectable.length > 0) {
+    if (isAllSelected.value) {
         chooseLists.value = [];
     } else {
         if (selectable.length > props.limit) {
@@ -302,6 +325,11 @@ const toggleSelect = () => {
 };
 
 const confirm = () => {
+    if (chooseLists.value.some((item) => isFrozen(item))) {
+        chooseLists.value = chooseLists.value.filter((item) => !isFrozen(item));
+        uni.showToast({ title: PERSONA_FROZEN_MESSAGE, icon: "none" });
+        return;
+    }
     if (chooseLists.value.length === 0) {
         uni.showToast({ title: "请至少选择一个人设", icon: "none" });
         return;
@@ -317,7 +345,7 @@ const close = () => {
 
 defineExpose({
     setChooseLists: (lists: any[]) => {
-        chooseLists.value = JSON.parse(JSON.stringify(lists));
+        chooseLists.value = JSON.parse(JSON.stringify(lists)).filter((item: any) => !isDisabled(item));
     },
 });
 </script>

@@ -9,6 +9,7 @@ use app\common\service\hotspot\HotListService;
 use app\common\service\hotspot\HotspotLog;
 use app\common\service\hotspot\HotspotUpstreamException;
 use app\common\service\hotspot\InsightService;
+use app\common\service\hotspot\ManualAssetService;
 use app\common\service\hotspot\PersonaService;
 use app\common\service\hotspot\RecordService;
 use app\common\service\hotspot\ResearchService;
@@ -205,13 +206,15 @@ class HotspotLogic extends BaseLogic
     {
         $topic = (string)($params['topic'] ?? '');
         $platform = (string)($params['platform'] ?? 'douyin');
-        $persona = PersonaService::fromRequest($params);
+        $manualMode = self::isManualPersonaMode($params);
+        $persona = $manualMode ? [] : PersonaService::fromRequest($params);
         $options = is_array($params['options'] ?? null) ? $params['options'] : [];
         HotspotLog::write(sprintf(
-            '口播文案请求：用户=%d 话题=%s 平台=%s 人设id=%s 选项=%s',
+            '口播文案请求：用户=%d 话题=%s 平台=%s 人设模式=%s 人设id=%s 选项=%s',
             $userId,
             $topic,
             $platform,
+            $manualMode ? '不选人设' : '人设',
             (string)($persona['id'] ?? ''),
             HotspotLog::clip($options, 300)
         ));
@@ -264,6 +267,23 @@ class HotspotLogic extends BaseLogic
         return $list;
     }
 
+    /**
+     * 不选人设模式的自选形象与音色（与爆款复刻洗稿模式同源：用户自有数字人 + 自有克隆音色）
+     */
+    public static function generationOptions(int $userId): array|false
+    {
+        HotspotLog::write('自选形象音色列表请求：用户=' . $userId);
+        try {
+            return ManualAssetService::options($userId);
+        } catch (HotspotUpstreamException $e) {
+            HotspotLog::write('自选形象音色列表失败：' . $e->getMessage());
+            return self::fail($e->getMessage());
+        } catch (\Throwable $e) {
+            HotspotLog::exception('热点自选形象音色列表异常', $e);
+            return self::fail('服务异常，请稍后再试');
+        }
+    }
+
     public static function avatars(array $params, int $userId): array|false
     {
         $personaId = (int)($params['persona_id'] ?? 0);
@@ -286,15 +306,17 @@ class HotspotLogic extends BaseLogic
         $personaId = (int)($params['persona_id'] ?? 0);
         $pageNo = (int)($params['page_no'] ?? 1);
         $pageSize = (int)($params['page_size'] ?? 10);
+        $ids = self::parseIdParam($params['ids'] ?? null);
         HotspotLog::write(sprintf(
-            '混剪素材列表请求：用户=%d 人设id=%d 页=%d 每页=%d',
+            '混剪素材列表请求：用户=%d 人设id=%d 页=%d 每页=%d 回捞id=%s',
             $userId,
             $personaId,
             $pageNo,
-            $pageSize
+            $pageSize,
+            implode(',', $ids)
         ));
         try {
-            $list = PersonaService::clipMaterials($userId, $personaId, $pageNo, $pageSize);
+            $list = PersonaService::clipMaterials($userId, $personaId, $pageNo, $pageSize, $ids);
             HotspotLog::write(sprintf(
                 '混剪素材列表成功：用户=%d 人设id=%d 数量=%d',
                 $userId,
@@ -309,6 +331,19 @@ class HotspotLogic extends BaseLogic
             HotspotLog::exception('热点混剪素材列表异常', $e);
             return self::fail('服务异常，请稍后再试');
         }
+    }
+
+    /**
+     * GET 参数里的 id 集合：小程序端逗号串更稳，数组也一并认。
+     *
+     * @return list<int>
+     */
+    private static function parseIdParam(mixed $raw): array
+    {
+        if (is_string($raw)) {
+            $raw = $raw === '' ? [] : explode(',', $raw);
+        }
+        return is_array($raw) ? ScriptService::normalizePositiveIdList($raw) : [];
     }
 
     public static function tasks(int $userId, array $params = []): array
@@ -339,12 +374,14 @@ class HotspotLogic extends BaseLogic
 
     public static function add(array $params, int $userId): array|false
     {
+        $manualMode = self::isManualPersonaMode($params);
         HotspotLog::write(sprintf(
-            '任务创建请求：用户=%d 话题=%s 平台=%s 标题=%s',
+            '任务创建请求：用户=%d 话题=%s 平台=%s 标题=%s 人设模式=%s',
             $userId,
             (string)($params['topic'] ?? ''),
             (string)($params['platform'] ?? ''),
-            (string)($params['title'] ?? '')
+            (string)($params['title'] ?? ''),
+            $manualMode ? '不选人设' : '人设'
         ));
         if ($userId <= 0) {
             HotspotLog::write('任务创建失败：未登录');
@@ -352,8 +389,19 @@ class HotspotLogic extends BaseLogic
         }
         $taskNo = '';
         try {
-            if (PersonaService::hasIdentity(PersonaService::fromRequest($params))) {
+            if ($manualMode) {
+                // 不选人设：丢掉客户端可能带上来的人设，避免落库出现「有人设但按自选形象合成」的错位快照
+                $params['persona'] = [];
+                unset($params['persona_id'], $params['personaId']);
+            } elseif (PersonaService::hasIdentity(PersonaService::fromRequest($params))) {
                 $params['persona'] = PersonaService::resolve($userId, PersonaService::fromRequest($params));
+                if ((int)($params['persona']['id'] ?? 0) <= 0) {
+                    HotspotLog::write('任务创建失败：人设不能为空');
+                    return self::fail('人设不能为空');
+                }
+            } else {
+                HotspotLog::write('任务创建失败：人设不能为空');
+                return self::fail('人设不能为空');
             }
             $result = TaskService::create($params, $userId);
             $taskNo = (string)($result['id'] ?? '');
@@ -408,8 +456,41 @@ class HotspotLogic extends BaseLogic
         if ($task === null) {
             return ['found' => false];
         }
+        $task['options'] = self::pruneRestoredMaterials(
+            is_array($task['options'] ?? null) ? $task['options'] : [],
+            is_array($task['persona'] ?? null) ? $task['persona'] : [],
+            $userId
+        );
         HotspotLog::write(sprintf('上次现场命中：话题=%s 任务号=%s', $topic, $task['id'] ?? ''));
         return ['found' => true] + $task;
+    }
+
+    /**
+     * 还原现场时剔除已不可选的混剪素材：上次任务之后素材可能被删/禁用，
+     * 人设也可能换了素材模式，原样带回去会让用户提交时被整单打回。
+     */
+    private static function pruneRestoredMaterials(array $options, array $persona, int $userId): array
+    {
+        $selected = ScriptService::normalizePositiveIdList(
+            is_array($options['materials'] ?? null) ? $options['materials'] : []
+        );
+        if ($selected === []) {
+            return $options;
+        }
+        $personaId = (int)($persona['id'] ?? $persona['persona_id'] ?? 0);
+        // 人设已不在（换了人设/被删）时不留旧选择，素材本来就跟着人设走
+        $usable = $personaId > 0 ? PersonaService::selectableMaterialIds($userId, $personaId, $selected) : [];
+        if (count($usable) !== count($selected)) {
+            HotspotLog::write(sprintf(
+                '上次现场剔除失效混剪素材：用户=%d 人设id=%d 原=%s 保留=%s',
+                $userId,
+                $personaId,
+                implode(',', $selected),
+                implode(',', $usable)
+            ));
+        }
+        $options['materials'] = $usable;
+        return $options;
     }
 
     public static function detail(array $params, int $userId = 0): array|false
@@ -473,6 +554,16 @@ class HotspotLogic extends BaseLogic
             HotspotLog::exception('热点任务重试异常', $e);
             return self::fail('服务异常，请稍后再试');
         }
+    }
+
+    /** 请求是否走「不选人设」模式（标记落在 options.persona_mode，与落库口径一致） */
+    private static function isManualPersonaMode(array $params): bool
+    {
+        $options = $params['options'] ?? [];
+        if (!is_array($options)) {
+            return false;
+        }
+        return (int)($options['persona_mode'] ?? 0) === ScriptService::PERSONA_MODE_MANUAL;
     }
 
     private static function failChargeOrGeneric(string $logPrefix, \Throwable $e): bool

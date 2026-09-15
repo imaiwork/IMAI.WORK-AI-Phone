@@ -11,6 +11,7 @@ use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\auto\AutoNeedsAnalysis;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDeviceTask;
+use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
 
@@ -386,10 +387,14 @@ class DeviceLogic extends ApiLogic
             throw new \Exception('账号不存在');
         }
 
-        \think\facade\Cache::store('redis')->handler()->select(env('redis.WS_SELECT', 8));
-        $status = \think\facade\Cache::store('redis')->handler()->get("xhs:device:{$params['device_code']}:status");
-        if (self::decodeDeviceStatus($status) !== 'online') {
-            //throw new \Exception('设备未上线');
+        AutoTaskSceneConfigService::assertCanDispatch(
+            (int)$params['source'],
+            (int)$params['account_type'],
+            (string)$params['device_code']
+        );
+
+        if (!self::isDeviceOnline((string)$params['device_code'])) {
+            throw new \Exception('设备未上线');
         }
 
         return [$params, $account];
@@ -411,6 +416,16 @@ class DeviceLogic extends ApiLogic
         }
 
         return $status;
+    }
+
+    /**
+     * 场景/平台关闭则应拦截预览与下发。判定只认 canAdd。
+     *
+     * @param array|null $configMap
+     */
+    public static function shouldBlockOptByScene(int $scene, int $platform, ?array $configMap = null): bool
+    {
+        return !AutoTaskSceneConfigService::canAdd($scene, $platform, $configMap);
     }
 
     /**
@@ -662,6 +677,8 @@ class DeviceLogic extends ApiLogic
                         'comment_publish_day' => $find['comment_publish_day'] ?? 0,
                         'ip_address' => $find['ip_address'] ?? [],
                         'is_note_like' => $find['is_like'] ?? 0,
+                        'touchType' => (int)($find['touch_type'] ?? 1),
+                        'agentId' => (int)($find['agent_id'] ?? 0),
                         'msg' => '评论区评论任务运行',
                         'is_send' => 0,
                         'isDemoData' => $find['is_demo_data'],
@@ -704,6 +721,8 @@ class DeviceLogic extends ApiLogic
                         'comment_publish_day' => $find['comment_publish_day'] ?? 0,
                         'ip_address' => $find['ip_address'] ?? [],
                         'is_note_like' => $find['is_like'] ?? 0,
+                        'touchType' => (int)($find['touch_type'] ?? 1),
+                        'agentId' => (int)($find['agent_id'] ?? 0),
                         'msg' => '评论区私信任务运行',
                         'is_send' => 0,
                         'isDemoData' => $find['is_demo_data'],
@@ -1229,7 +1248,6 @@ class DeviceLogic extends ApiLogic
             ->where('s.account_type', $task->account_type)
             ->limit(1)
             ->findOrEmpty();
-            //print_r(\think\facade\Db::getLastSql());die;
         if ($find->isEmpty()) {
             return $payload;
         }
@@ -1260,7 +1278,6 @@ class DeviceLogic extends ApiLogic
             ->where('s.device_code', '=', $task->device_code)
             ->where('s.account', $task->account)
             ->where('s.account_type', $task->account_type)
-            //->where('ps.material_type', 2)
             ->order('s.create_time desc')
             ->limit(1)
             ->findOrEmpty();
@@ -1317,7 +1334,6 @@ class DeviceLogic extends ApiLogic
             ->where('s.device_code', '=', $task->device_code)
             ->where('s.account', $task->account)
             ->where('s.account_type', $task->account_type)
-            //->where('ps.material_type', 2)
             ->order('s.create_time desc')
             ->limit(1)
             ->findOrEmpty();
@@ -1382,7 +1398,6 @@ class DeviceLogic extends ApiLogic
             ->where('s.device_code', '=', $task->device_code)
             ->where('s.account', $task->account)
             ->where('s.account_type', $task->account_type)
-            //->where('ps.material_type', 2)
             ->order('s.create_time desc')
             ->limit(1)
             ->findOrEmpty();
@@ -1432,7 +1447,6 @@ class DeviceLogic extends ApiLogic
             ->where('ps.device_code', '=', $task->device_code)
             ->where('ps.account', $task->account)
             ->where('s.account_type', $task->account_type)
-            //->where('ps.material_type', 1)
             ->where('ps.data_type', 0)
             ->order('ps.publish_time desc')
             ->limit(1)
@@ -1479,9 +1493,7 @@ class DeviceLogic extends ApiLogic
             ->where('ps.device_code', '=', $task->device_code)
             ->where('ps.account', $task->account)
             ->where('s.account_type', $task->account_type)
-            //->where('ps.material_type', 2)
             ->where('ps.data_type', 0)
-            //->where('ps.status', '<>', 2)
             ->order('ps.publish_time desc')
             ->limit(1)
             ->findOrEmpty();
@@ -1534,7 +1546,6 @@ class DeviceLogic extends ApiLogic
             ->where('id', $task->sub_data_id)
             ->where('device_code', '=', $task->device_code)
             ->where('wechat_id', $task->account)
-            //->where('send_status', 'in', [0, 1, 2])
             ->order('send_time desc')
             ->limit(1)
             ->findOrEmpty();
@@ -1617,6 +1628,8 @@ class DeviceLogic extends ApiLogic
             'comment_publish_day' => 0, //评论发布时间间隔/天
             'ip_address' => [], //IP地址
             'is_demo_data' => 1,
+            'touch_type' => 1,
+            'agent_id' => 0,
         ];
 
 
@@ -1685,7 +1698,6 @@ class DeviceLogic extends ApiLogic
                 ->join('sv_crawling_task_device_bind b', 'ct.id = b.task_id')
                 ->where('ct.id', $task->sub_task_id)
                 ->where('b.device_code', $task->device_code)
-                //->where('ct.status', 'in', [0, 1])
                 ->order('ct.id', 'desc')
                 ->findOrEmpty();
         if ($find->isEmpty()) {
@@ -1694,7 +1706,6 @@ class DeviceLogic extends ApiLogic
         $find->task_id = $task->id;
         $find->keywords = json_decode($find->keywords, true);
         $find->is_demo_data = 0;
-        //print_r($find->toArray());die;
         return $find->toArray();
     }
 
@@ -1749,7 +1760,6 @@ class DeviceLogic extends ApiLogic
         $find->commentType = $option->comment_type;  //AI识别并评论   1、不评论   2、固定评论
         $find->commentContent =  $option->comment ?? ''; //固定评论内容
         $find->is_demo_data = 0;
-        //print_r($find->toArray());die;
         return $find->toArray();
     }
 
@@ -1785,7 +1795,6 @@ class DeviceLogic extends ApiLogic
 
         $find->task_id = $task->id;
         $find->is_demo_data = 0;
-        //print_r($find->toArray());die;
         return $find->toArray();
     }
 
@@ -1821,7 +1830,6 @@ class DeviceLogic extends ApiLogic
 
         $find->task_id = $task->id;
         $find->is_demo_data = 0;
-        //print_r($find->toArray());die;
         return $find->toArray();
     }
 }

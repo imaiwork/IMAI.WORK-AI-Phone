@@ -32,6 +32,11 @@ class Material extends BaseModel
     const SLICE_STATUS_SUCCESS = 3;
     const SLICE_STATUS_FAILED = 4;
 
+    const SOURCE_TYPE_ORIGINAL = 'original';
+    const SOURCE_TYPE_SLICE = 'slice';
+    const KEEP_ORIGINAL_NO = 0;
+    const KEEP_ORIGINAL_YES = 1;
+
     protected $json = [];
     protected $jsonAssoc = true;
 
@@ -72,5 +77,39 @@ class Material extends BaseModel
     public function getSliceStatusTextAttr($value, array $data): string
     {
         return self::getSliceStatusText((int)($data['slice_status'] ?? self::SLICE_STATUS_NONE));
+    }
+
+    public static function getSourceTypeText(string $sourceType, int $keepOriginal = 0): string
+    {
+        if ($sourceType === self::SOURCE_TYPE_SLICE) {
+            return '切片素材';
+        }
+        return $keepOriginal === self::KEEP_ORIGINAL_YES ? '原始素材' : '完整素材';
+    }
+
+    /**
+     * 素材库列表（api\lists\aiPersona\MaterialLists）在没传 use_status / slice_status 时的默认可见范围：
+     * 可用素材（非切片，或切片已成功）+ 切割失败待清理的原片。
+     *
+     * 任何要跟列表对数的计数都必须套这一层。少了它，切片中、被停用的素材都会被数进去，
+     * 出现「清单说 424 段、列表只有 116 段」「成品库说 1 条、点进去是空的」这种对不上的数。
+     *
+     * @param \think\db\Query|\think\Model $query
+     */
+    public static function applyDefaultVisible($query)
+    {
+        return $query->where(function ($q) {
+            $q->where(function ($ok) {
+                $ok->where('use_status', self::USE_STATUS_ENABLED)
+                    ->where(function ($src) {
+                        $src->where('source_type', '<>', self::SOURCE_TYPE_SLICE)
+                            ->whereOr('slice_status', self::SLICE_STATUS_SUCCESS);
+                    });
+            })->whereOr(function ($fail) {
+                $fail->where('use_status', self::USE_STATUS_DISABLED)
+                    ->where('slice_status', self::SLICE_STATUS_FAILED)
+                    ->where('source_type', self::SOURCE_TYPE_ORIGINAL);
+            });
+        });
     }
 }

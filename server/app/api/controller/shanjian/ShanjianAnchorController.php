@@ -10,6 +10,7 @@ use app\common\service\MemberService;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 use think\facade\Cache;
 
 class ShanjianAnchorController extends BaseApiController
@@ -74,7 +75,12 @@ class ShanjianAnchorController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('shanjiannotice')->write('接收闪剪形象合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('shanjiannotice')->write('接收闪剪形象合成参数'.json_encode(CallbackTokenService::maskForLog($data),JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('shanjiannotice', '闪剪形象', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $key = md5(json_encode($data));
             $val = Cache::store('redis')->get($key);
             if ($val) {
@@ -99,7 +105,12 @@ class ShanjianAnchorController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('shanjiannotice')->write('接收闪剪音色合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('shanjiannotice')->write('接收闪剪音色合成参数'.json_encode(CallbackTokenService::maskForLog($data),JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('shanjiannotice', '闪剪形象音色', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
 
             $key = md5(json_encode($data));
             $val = Cache::store('redis')->get($key);

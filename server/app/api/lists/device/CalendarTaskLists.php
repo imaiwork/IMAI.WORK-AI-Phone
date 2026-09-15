@@ -25,6 +25,7 @@ use app\common\model\sv\SvWechatStrategy;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\sv\SvDeviceViral;
 use app\common\model\sv\SvDevicePreciseClues;
+use app\common\model\sv\SvDySearchTask;
 
 /**
  * 设备任务列表
@@ -69,7 +70,7 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                 // }
                 $item['start_time'] = date('H:i', $item['start_time']);
                 $item['end_time'] = date('H:i', $item['end_time']);
-                $item['account_type'] = $item['source'] === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $item['account_type'];
+                $item['account_type'] = DeviceEnum::isWechatAccountDisplay($item['source']) ? 2 : $item['account_type'];
                 //$item['task_category'] = !in_array($item['source'], [5, 7, 8]) ? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
                 $item['task_category'] = DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskSceneDesc($item['task_scene']);
                 if (
@@ -84,6 +85,12 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                 }
                 if($item['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH){
                     $item['task_category'] = strpos($item['task_name'], '图文') !== false ? str_replace('视频', '图文', $item['task_category']) : $item['task_category'];
+                }
+                if($item['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH){
+                    $item['task_category'] = '抖音获客';
+                }
+                if($item['task_scene'] == DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH_WECHAT){
+                    $item['task_category'] = '抖音获客加微';
                 }
 
                 $item['name'] = '';
@@ -186,6 +193,14 @@ class CalendarTaskLists extends BaseApiDataLists implements ListsSearchInterface
                         //sv_precise_clues_task_account
                         $taskinfo = SvDevicePreciseClues::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['task_name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_DY_SEARCH:
+                        $taskinfo = SvDySearchTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_DY_SEARCH_WECHAT:
+                        $taskinfo = SvDySearchTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? $item['task_name'];
                         break;
                     default:
                         break;

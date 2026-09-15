@@ -199,10 +199,124 @@ class FileService
     }
 
     /**
+     * 远端地址是否允许服务端去拉取（SSRF 防线）
+     *
+     * 只放 http/https，主机名解析出的每一个 IP 都不能落在私网 / 回环 / 链路本地 / 保留段。
+     * 拉取源覆盖中台、火山 TOS、各家 OSS 和用户贴进来的外链，做不了域名白名单，
+     * 所以只封"打到内网"这一类，这是 SSRF 真正的危害面。
+     */
+    public static function isSafeRemoteUrl(string $url): bool
+    {
+        $parts = parse_url(trim($url));
+        if (!is_array($parts) || empty($parts['host'])) {
+            return false;
+        }
+        if (!in_array(strtolower((string)($parts['scheme'] ?? '')), ['http', 'https'], true)) {
+            return false;
+        }
+        $host = strtolower(trim($parts['host'], '[]'));
+
+        if (self::isSelfHostUrl($url)) {
+            return true;
+        }
+
+        if ($host === 'localhost' || str_ends_with($host, '.localhost') || str_ends_with($host, '.local')) {
+            return false;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            $ips = [$host];
+        } else {
+            $ips = [];
+            foreach (@dns_get_record($host, DNS_A | DNS_AAAA) ?: [] as $record) {
+                $ip = $record['ip'] ?? $record['ipv6'] ?? '';
+                if ($ip !== '') {
+                    $ips[] = $ip;
+                }
+            }
+            if ($ips === []) {
+                $v4 = gethostbyname($host);
+                if ($v4 === $host) {
+                    return false; // 解析不了的域名不拉
+                }
+                $ips = [$v4];
+            }
+        }
+
+        foreach ($ips as $ip) {
+            if (!self::isPublicIp($ip)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 是否本站自己的地址。内网 / 开发环境 app_host 常是私网 IP 或 localhost，
+     * 很多链路会回拉本站上传的文件（图片改写、画图素材、转码等），不放行会整段失效。
+     * app_host 是站长配置的，攻击者控制不了，不构成 SSRF 面。
+     */
+    public static function isSelfHostUrl(string $url): bool
+    {
+        $selfHost = strtolower((string)parse_url((string)config('app.app_host'), PHP_URL_HOST));
+        if ($selfHost === '') {
+            return false;
+        }
+        $host = strtolower(trim((string)parse_url(trim($url), PHP_URL_HOST), '[]'));
+        return $host !== '' && $host === $selfHost;
+    }
+
+    /**
+     * 公网 IP 判定：私网（10/8、172.16/12、192.168/16、fc00::/7）、回环、链路本地
+     * （169.254/16 云厂商元数据地址就在这一段、fe80::/10）、保留段一律 false
+     */
+    public static function isPublicIp(string $ip): bool
+    {
+        $ip = strtolower(trim($ip));
+        // IPv4 映射 IPv6（::ffff:10.0.0.1）：filter_var 按 IPv6 判会放过，剥成 IPv4 再判
+        if (str_starts_with($ip, '::ffff:')) {
+            $ip = substr($ip, 7);
+            if (strpos($ip, ':') !== false) {
+                // ::ffff:a00:1 这种十六进制写法，转成点分
+                $hex = str_replace(':', '', $ip);
+                if (!ctype_xdigit($hex) || strlen($hex) > 8) {
+                    return false;
+                }
+                $ip = long2ip((int)hexdec(str_pad($hex, 8, '0', STR_PAD_LEFT)));
+            }
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return false;
+        }
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false) {
+            $long = ip2long($ip);
+            // PHP 的保留段判定不含这几段：100.64/10 运营商 NAT（阿里云元数据 100.100.100.200 在此）、
+            // 0/8、224/4 组播、240/4 保留
+            $blocked = [
+                ['100.64.0.0', 10],
+                ['0.0.0.0', 8],
+                ['224.0.0.0', 4],
+                ['240.0.0.0', 4],
+            ];
+            foreach ($blocked as [$net, $bits]) {
+                $mask = -1 << (32 - $bits);
+                if (($long & $mask) === (ip2long($net) & $mask)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
      * 流式下载远程文件到本地路径
      */
     public static function streamDownloadToFile(string $url, string $savePath, int $timeout = 180): bool
     {
+        if (!self::isSafeRemoteUrl($url)) {
+            return false;
+        }
+
         $dir = dirname($savePath);
         if (!is_dir($dir) && !mkdir($dir, 0777, true) && !is_dir($dir)) {
             return false;
@@ -227,6 +341,9 @@ class FileService
             CURLOPT_FILE => $fp,
             CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_MAXREDIRS => 5,
+            // 跳转也只许 http/https，防止 302 到 file:// gopher:// 之类
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_CONNECTTIMEOUT => 30,
             CURLOPT_TIMEOUT => max(0, $timeout),
             CURLOPT_SSL_VERIFYPEER => false,
@@ -238,14 +355,60 @@ class FileService
         $ok = curl_exec($ch);
         $errno = curl_errno($ch);
         $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // 入口校验挡不住"公网地址 302 到内网"，这里补看最终真正连上的 IP
+        $finalIp = (string)curl_getinfo($ch, CURLINFO_PRIMARY_IP);
         curl_close($ch);
         fclose($fp);
 
+        if ($finalIp !== '' && !self::isSelfHostUrl($url) && !self::isPublicIp($finalIp)) {
+            @unlink($savePath);
+            return false;
+        }
         if ($ok === false || $errno !== 0 || ($httpCode > 0 && $httpCode >= 400) || !is_file($savePath) || filesize($savePath) <= 0) {
             @unlink($savePath);
             return false;
         }
         return true;
+    }
+
+    /**
+     * 读远程内容到内存（替代裸 file_get_contents），SSRF 防线与 streamDownloadToFile 一致：
+     * 入口校验 + 跳转只许 http/https + 最终连上的 IP 复检。失败返回 null。
+     */
+    public static function fetchRemoteContent(string $url, int $timeout = 60, int $maxBytes = 20 * 1024 * 1024): ?string
+    {
+        if (!self::isSafeRemoteUrl($url)) {
+            return null;
+        }
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return null;
+        }
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_CONNECTTIMEOUT => 30,
+            CURLOPT_TIMEOUT => max(0, $timeout),
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_FAILONERROR => true,
+            CURLOPT_USERAGENT => 'IMAICC-FileService/1.0',
+        ]);
+        $body = curl_exec($ch);
+        $errno = curl_errno($ch);
+        $finalIp = (string)curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+        curl_close($ch);
+
+        if ($finalIp !== '' && !self::isSelfHostUrl($url) && !self::isPublicIp($finalIp)) {
+            return null;
+        }
+        if ($body === false || $errno !== 0 || $body === '' || strlen($body) > $maxBytes) {
+            return null;
+        }
+        return $body;
     }
 
     /**

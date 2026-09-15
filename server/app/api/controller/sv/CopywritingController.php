@@ -11,6 +11,7 @@ use app\api\logic\sv\SvCopywritingContentLogic;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 
 /**
  * CopywritingController
@@ -90,7 +91,12 @@ class CopywritingController extends BaseApiController
         try {
             $data = $this->request->all();
 
-            Log::channel('sv')->write('接收批量生产参数'.json_encode($data));
+            Log::channel('sv')->write('接收批量生产参数'.json_encode(CallbackTokenService::maskForLog($data)));
+            if (!CallbackTokenService::guard('sv', '批量生产文案', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
 
             $status = $data['MessageBody']['Status'] ?? '';
             
@@ -98,7 +104,7 @@ class CopywritingController extends BaseApiController
 
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('sv')->write('接收批量生产参数'.json_encode($data).'数字人批量生产失败'.$e->getMessage());
+            Log::channel('sv')->write('接收批量生产参数'.json_encode(CallbackTokenService::maskForLog($data)).'数字人批量生产失败'.$e->getMessage());
             return $this->success('fail');
         }
     }

@@ -1,4 +1,5 @@
 import type { Ref } from "vue";
+import { cancelKeyboardClosing } from "@/hooks/useKeyboardHeight";
 
 /**
  * 稳定小程序 textarea 首屏高度：
@@ -18,6 +19,8 @@ export function useStableTextareaAutoHeight(model: Ref<string>, lineHeightRpx = 
     );
 
     const onTextareaFocus = () => {
+        // 收起键盘后 400ms 内再点输入框：先解除保护窗口，否则这次弹起的高度回调会被丢掉
+        cancelKeyboardClosing();
         focused.value = true;
     };
 

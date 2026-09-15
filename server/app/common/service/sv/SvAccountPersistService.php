@@ -7,7 +7,6 @@ namespace app\common\service\sv;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvSetting;
 use think\facade\Db;
-use think\facade\Log;
 
 /**
  * RPA 回传账号落库（不依赖请求态 uid）
@@ -40,24 +39,16 @@ class SvAccountPersistService
 
     public static function isDuplicateEntry(\Throwable $e): bool
     {
-        $message = $e->getMessage();
-        return str_contains($message, 'uk_type_account')
-            || str_contains($message, 'SQLSTATE[23000]')
-            || str_contains($message, 'Duplicate entry');
+        return SvAccountBindService::isDuplicateEntry($e);
     }
 
     public static function formatOccupiedMessage(string $account, string $occupiedDeviceCode): string
     {
-        $account = trim($account);
-        $occupiedDeviceCode = trim($occupiedDeviceCode);
-        if ($occupiedDeviceCode === '') {
-            return "账号{$account}已被其他设备绑定";
-        }
-        return "账号{$account}已被设备{$occupiedDeviceCode}绑定";
+        return SvAccountBindService::formatOccupiedMessage($account, $occupiedDeviceCode);
     }
 
     /**
-     * 按 userId upsert 平台账号（同设备同类型先删后插，对齐 addSvAccount）
+     * 按 (type, account) upsert，占用他设备则失败，不先删后插。
      */
     public static function upsertFromRpa(int $userId, array $postData): bool
     {
@@ -65,7 +56,6 @@ class SvAccountPersistService
 
         if ($userId <= 0) {
             self::setLastError('账号落库跳过:userId无效');
-            Log::channel('device')->write(self::$lastError, 'account');
             return false;
         }
 
@@ -75,43 +65,78 @@ class SvAccountPersistService
 
         if ($account === '' || $deviceCode === '' || $type <= 0) {
             self::setLastError('账号落库跳过:账号数据不完整');
-            Log::channel('device')->write(self::$lastError, 'account');
             return false;
         }
 
-        $occupiedDevice = self::findOccupiedDeviceCode($type, $account, $deviceCode);
-        if ($occupiedDevice !== '') {
+        $occupied = SvAccountBindService::findOccupiedRow($type, $account, $deviceCode);
+        if ($occupied !== null) {
+            $occupiedDevice = trim((string)($occupied['device_code'] ?? ''));
             self::setLastError(self::formatOccupiedMessage($account, $occupiedDevice));
-            Log::channel('device')->write(self::$lastError, 'account');
+            SvAccountChangeLog::record(SvAccountChangeLog::SOURCE_RPA, SvAccountChangeLog::ACTION_CONFLICT, [
+                'user_id' => $userId,
+                'device_code' => $deviceCode,
+                'type' => $type,
+                'account' => $account,
+                'account_id' => (int)($occupied['id'] ?? 0),
+                'before_json' => SvAccountChangeLog::snapshot($occupied),
+                'msg' => self::$lastError,
+            ]);
             return false;
         }
+
+        $extra = $postData['extra'] ?? [];
+        if (is_string($extra)) {
+            $extra = json_decode($extra, true) ?: [];
+        }
+        if (!is_array($extra)) {
+            $extra = [];
+        }
+
+        $payload = [
+            'user_id'     => $userId,
+            'device_code' => $deviceCode,
+            'account'     => $account,
+            'account_no'  => (string)($postData['account_no'] ?? $account),
+            'nickname'    => (string)($postData['nickname'] ?? ''),
+            'avatar'      => (string)($postData['avatar'] ?? ''),
+            'status'      => (int)($postData['status'] ?? 1),
+            'type'        => $type,
+            'is_verified' => (int)($extra['is_verified'] ?? $postData['is_verified'] ?? 0),
+            'extra'       => json_encode($extra, JSON_UNESCAPED_UNICODE),
+        ];
 
         Db::startTrans();
         try {
-            SvAccount::where('device_code', $deviceCode)->where('type', $type)->select()->delete();
-
-            $extra = $postData['extra'] ?? [];
-            if (is_string($extra)) {
-                $extra = json_decode($extra, true) ?: [];
+            $existing = SvAccount::where('type', $type)->where('account', $account)->findOrEmpty();
+            if ($existing->isEmpty()) {
+                $created = SvAccount::create($payload);
+                SvAccountChangeLog::record(SvAccountChangeLog::SOURCE_RPA, SvAccountChangeLog::ACTION_INSERT, [
+                    'user_id' => $userId,
+                    'device_code' => $deviceCode,
+                    'type' => $type,
+                    'account' => $account,
+                    'account_id' => (int)($created->id ?? 0),
+                    'after_json' => SvAccountChangeLog::snapshot(array_merge($payload, ['id' => (int)($created->id ?? 0)])),
+                    'msg' => '新增账号',
+                ]);
+            } else {
+                $before = $existing->toArray();
+                $changed = self::diffPersistFields($before, $payload);
+                if ($changed !== []) {
+                    SvAccount::where('id', (int)$existing->id)->update($payload);
+                    SvAccountChangeLog::record(SvAccountChangeLog::SOURCE_RPA, SvAccountChangeLog::ACTION_UPDATE, [
+                        'user_id' => $userId,
+                        'device_code' => $deviceCode,
+                        'type' => $type,
+                        'account' => $account,
+                        'account_id' => (int)$existing->id,
+                        'changed_fields' => $changed,
+                        'before_json' => SvAccountChangeLog::snapshot($before),
+                        'after_json' => SvAccountChangeLog::snapshot(array_merge($before, $payload)),
+                        'msg' => '更新账号资料',
+                    ]);
+                }
             }
-            if (!is_array($extra)) {
-                $extra = [];
-            }
-
-            $row = [
-                'user_id'     => $userId,
-                'device_code' => $deviceCode,
-                'account'     => $account,
-                'account_no'  => (string)($postData['account_no'] ?? $account),
-                'nickname'    => (string)($postData['nickname'] ?? ''),
-                'avatar'      => (string)($postData['avatar'] ?? ''),
-                'status'      => (int)($postData['status'] ?? 1),
-                'type'        => $type,
-                'is_verified' => (int)($extra['is_verified'] ?? $postData['is_verified'] ?? 0),
-                'extra'       => json_encode($extra, JSON_UNESCAPED_UNICODE),
-            ];
-
-            $created = SvAccount::create($row);
 
             $setting = SvSetting::where('account', $account)->findOrEmpty();
             if ($setting->isEmpty()) {
@@ -123,34 +148,53 @@ class SvAccountPersistService
             }
 
             Db::commit();
-            Log::channel('device')->write(
-                "账号落库成功:device={$deviceCode},type={$type},account={$account},id={$created->id}",
-                'account'
-            );
             return true;
         } catch (\Throwable $e) {
             Db::rollback();
             if (self::isDuplicateEntry($e)) {
-                $occupiedDevice = self::findOccupiedDeviceCode($type, $account, $deviceCode);
+                $occupiedDevice = SvAccountBindService::findOccupiedDeviceCode($type, $account, $deviceCode);
                 self::setLastError(self::formatOccupiedMessage($account, $occupiedDevice));
+                SvAccountChangeLog::record(SvAccountChangeLog::SOURCE_RPA, SvAccountChangeLog::ACTION_CONFLICT, [
+                    'user_id' => $userId,
+                    'device_code' => $deviceCode,
+                    'type' => $type,
+                    'account' => $account,
+                    'msg' => self::$lastError,
+                ]);
             } else {
                 self::setLastError('账号落库失败:' . $e->getMessage());
             }
-            Log::channel('device')->write(self::$lastError, 'account');
             return false;
         }
     }
 
-    private static function findOccupiedDeviceCode(int $type, string $account, string $currentDevice): string
+    /**
+     * @param array<string, mixed> $existing
+     * @param array<string, mixed> $payload
+     * @return list<string>
+     */
+    private static function diffPersistFields(array $existing, array $payload): array
     {
-        $row = SvAccount::where('type', $type)->where('account', $account)->findOrEmpty();
-        if ($row->isEmpty()) {
-            return '';
+        $changed = [];
+        foreach (['user_id', 'status', 'type', 'is_verified'] as $intField) {
+            if ((int)($existing[$intField] ?? 0) !== (int)$payload[$intField]) {
+                $changed[] = $intField;
+            }
         }
-        $code = trim((string)($row->device_code ?? ''));
-        if ($code === '' || $code === $currentDevice) {
-            return '';
+        foreach (['device_code', 'account', 'account_no', 'nickname', 'avatar'] as $strField) {
+            if ((string)($existing[$strField] ?? '') !== (string)$payload[$strField]) {
+                $changed[] = $strField;
+            }
         }
-        return $code;
+
+        $existingExtra = $existing['extra'] ?? '';
+        if (is_array($existingExtra)) {
+            $existingExtra = json_encode($existingExtra, JSON_UNESCAPED_UNICODE);
+        }
+        if ((string)$existingExtra !== (string)$payload['extra']) {
+            $changed[] = 'extra';
+        }
+
+        return $changed;
     }
 }

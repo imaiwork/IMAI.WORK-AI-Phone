@@ -3,6 +3,7 @@
 namespace app\api\logic\wechat;
 
 use app\api\logic\ApiLogic;
+use app\common\enum\ChatEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\model\chat\ModelsCost;
 use app\common\model\ChatPrompt;
@@ -132,7 +133,7 @@ class WechatBaseLogic extends ApiLogic
     protected static function parseAiPrompt(AiWechatRobot $robot, array $request, array $logs): void
     {
 
-        $modelAlias = ModelsCost::where('id', $robot->model_sub_id ?? 0)->value('alias') ?: 'gpt-4o';
+        $modelAlias = ModelsCost::where('id', $robot->model_sub_id ?? 0)->value('alias') ?: ChatEnum::DEFAULT_CHAT_MODEL_ALIAS;
         ChatBillingService::checkBalance(self::$uid, $modelAlias);
 
         //获取提示词

@@ -3,7 +3,7 @@
 namespace app\api\logic\aiPersona;
 
 use app\api\logic\ApiLogic;
-use app\api\logic\kb\KbRobotLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
@@ -15,17 +15,26 @@ use app\common\model\aiPersona\AiPersonaEnterprise;
 use app\common\model\aiPersona\AiPersonaIndividual;
 use app\common\model\aiPersona\AiPersonaLocal;
 use app\common\model\aiPersona\AiPersonaReport;
+use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\aiPersona\AiPersonaTrafficConfig;
+use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
+use app\common\model\aiPersona\AiPersonaWorkflowScheduleUser;
+use app\common\model\marketing\MarketingTemplateSchedule;
+use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\aiPersona\Material;
+use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvDevice;
 use app\common\model\user\User;
 use app\common\service\aiPersona\AiPersonaOptionService;
 use app\common\service\aiPersona\AiPersonaTextService;
-use app\common\service\ConfigService;
+use app\common\service\aiPersona\PersonaAgentProvisionService;
+use app\common\service\aiPersona\PersonaRunModeSwitchService;
+use app\common\service\auto\AutoTaskSceneConfigService;
+use app\common\service\auto\AutoTaskSceneScheduleSyncService;
 use app\common\service\digitalHuman\DefaultPublicAnchorProvisionService;
 use app\common\service\digitalHuman\DefaultPublicVoiceProvisionService;
 use app\common\service\FileService;
-use app\common\service\MemberService;
 use Exception;
 use GuzzleHttp\Client;
 use think\facade\Db;
@@ -33,6 +42,10 @@ use think\facade\Log;
 
 class AiPersonaLogic extends ApiLogic
 {
+    /** 内容记录列表的固定过滤：只看自动产出的最终成片，与列表接口保持一致 */
+    private const VIDEO_TASK_AUTO_TYPE = 1;
+    private const VIDEO_TASK_IS_FINAL = 1;
+
     public static function clue(array $params)
     {
         Db::startTrans();
@@ -377,6 +390,12 @@ class AiPersonaLogic extends ApiLogic
                 'goods_name'         => $params['goods_name'] ?? '',
                 'is_store_position'  => $params['is_store_position'] ?? 0,
                 'store_position'     => $params['store_position'] ?? '',
+                'material_use_mode' => array_key_exists('material_use_mode', $params)
+                    ? ShanjianVideoSettingLogic::requireValidMaterialUseMode($params['material_use_mode'])
+                    : ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE,
+                'run_mode' => array_key_exists('run_mode', $params)
+                    ? AiPersona::requireValidRunMode($params['run_mode'])
+                    : AiPersona::RUN_MODE_PHONE,
                 'create_time'   => time(),
                 'update_time'   => time()
             ];
@@ -390,6 +409,7 @@ class AiPersonaLogic extends ApiLogic
             $synthesisData = [
                 'user_id'    => $userId,
                 'persona_id' => $personaId,
+                'material_use_mode' => (int)$personaData['material_use_mode'],
                 'work_mode' => \app\common\model\aiPersona\AiPersonaSynthesisConfig::WORK_MODE_AI_SYNTHESIS,
                 'product_use_mode' => \app\common\model\aiPersona\AiPersonaSynthesisConfig::PRODUCT_USE_MODE_RANDOM,
                 'product_reuse_mode' => \app\common\model\aiPersona\AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_ONCE,
@@ -470,6 +490,12 @@ class AiPersonaLogic extends ApiLogic
                     throw new Exception('无效的人设类型');
             }
             \app\common\model\aiPersona\AiPersonaSynthesisConfig::create($synthesisData);
+            Log::channel('synthesis_config')->write(sprintf(
+                '[create] persona_id=%d user_id=%d source=AiPersonaLogic.add data=%s',
+                $personaId,
+                $userId,
+                json_encode($synthesisData, JSON_UNESCAPED_UNICODE)
+            ));
             // 3. 添加人设智能体设置
             self::initCustomerServiceConfig($userId, $personaId);
             // 4. 添加人设默认形象、音色
@@ -606,6 +632,13 @@ class AiPersonaLogic extends ApiLogic
             }
 
             // 2. 更新主表
+            if ((int)($params['status'] ?? $persona['status']) === 1 && (int)$persona['status'] !== 1) {
+                $existing = AiPersona::where('user_id', $userId)->where('status', 1)->count();
+                $reason = '';
+                if (!\app\common\service\MemberService::canCreate($userId, 'persona', $existing, $reason)) {
+                    throw new Exception($reason . ',请升级会员');
+                }
+            }
             $personaData = [
                 'persona_name' => $params['persona_name'],
                 'avatar_url'   => !empty($params['avatar_url']) ? FileService::getFileUrl($params['avatar_url']) : $persona['avatar_url'],
@@ -634,6 +667,21 @@ class AiPersonaLogic extends ApiLogic
                 }
                 self::syncSynthesisWorkModeByPublishMode($personaId, (int)$params['publish_mode']);
             }
+            if (array_key_exists('material_use_mode', $params)) {
+                $personaData['material_use_mode'] = ShanjianVideoSettingLogic::requireValidMaterialUseMode(
+                    $params['material_use_mode']
+                );
+            }
+            if (array_key_exists('run_mode', $params)) {
+                $personaData['run_mode'] = AiPersona::requireValidRunMode($params['run_mode']);
+            }
+            // 成品直发没有运行模式：合成规则弹窗里那一节只在「视频剪辑」下渲染，用户根本选不到。
+            // 但发布 cron 会当真（AutoDeviceDailyCreateRunner::shouldCreateContentPublish 排除无手机模式），
+            // 残留的 run_mode=2 会让这台设备被静默跳过，界面上又没有任何地方能改回来，所以在写库前归一。
+            $nextPublishMode = (int)($personaData['publish_mode'] ?? $persona['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO);
+            if ($nextPublishMode === Material::PUBLISH_MODE_DIRECT_SEND) {
+                $personaData['run_mode'] = AiPersona::RUN_MODE_PHONE;
+            }
             // 切换人设类型、内容变动时需重新生成报告
             if (isset($params['is_create_report']) && $params['is_create_report'] == 1) {
                 $personaData['is_configured']   = 0;
@@ -648,6 +696,17 @@ class AiPersonaLogic extends ApiLogic
                 $personaData['persona_type'] = $persona['persona_type'];
             }
             AiPersona::update($personaData, ['id' => $personaId]);
+            if (isset($personaData['material_use_mode'])) {
+                ShanjianVideoSettingLogic::syncMaterialUseMode($personaId, (int)$personaData['material_use_mode']);
+            }
+            if (isset($personaData['run_mode'])) {
+                // 24h 任务的两条生成 cron 都只认手机模式，模式一变当天的任务就得跟着重置
+                PersonaRunModeSwitchService::apply(
+                    $personaId,
+                    (int)($persona['run_mode'] ?? AiPersona::RUN_MODE_PHONE),
+                    (int)$personaData['run_mode']
+                );
+            }
 
             // 3. 更新对应子表
             $personaType = $persona['persona_type'];
@@ -836,9 +895,50 @@ class AiPersonaLogic extends ApiLogic
             if (isset($params['persona_desc']) && $params['persona_desc'] !== '') {
                 $personaData['persona_desc'] = $params['persona_desc'];
             }
+            if (array_key_exists('material_use_mode', $params)) {
+                $mode = ShanjianVideoSettingLogic::requireValidMaterialUseMode($params['material_use_mode']);
+                $oldMode = ShanjianVideoSettingLogic::normalizeMaterialUseMode(
+                    $persona['material_use_mode'] ?? ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE
+                );
+                $personaData['material_use_mode'] = $mode;
+                ShanjianVideoSettingLogic::syncMaterialUseMode($personaId, $mode);
+                ShanjianVideoSettingLogic::logPersonaMaterialUseModeChange(
+                    $personaId,
+                    $userId,
+                    $oldMode,
+                    $mode,
+                    'aiPersona.update',
+                    (string)($persona['persona_name'] ?? '')
+                );
+            }
+            if (array_key_exists('run_mode', $params)) {
+                $personaData['run_mode'] = AiPersona::requireValidRunMode($params['run_mode']);
+            }
+            // 成品直发没有运行模式：合成规则弹窗里那一节只在「视频剪辑」下渲染，用户根本选不到。
+            // 但发布 cron 会当真（AutoDeviceDailyCreateRunner::shouldCreateContentPublish 排除无手机模式），
+            // 残留的 run_mode=2 会让这台设备被静默跳过，界面上又没有任何地方能改回来，所以在写库前归一。
+            $nextPublishMode = (int)($personaData['publish_mode'] ?? $persona['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO);
+            if ($nextPublishMode === Material::PUBLISH_MODE_DIRECT_SEND) {
+                $personaData['run_mode'] = AiPersona::RUN_MODE_PHONE;
+            }
+            // 文案来源落在合成配置而非人设表，放在最后写，避免被上面的 publish_mode 同步覆盖
+            if (array_key_exists('copywriting_source', $params)) {
+                self::syncCopywritingSource(
+                    $persona,
+                    AiPersonaSynthesisConfig::requireValidCopywritingSource($params['copywriting_source'])
+                );
+            }
             if (!empty($personaData)) {
                 $personaData['update_time'] = time();
                 AiPersona::update($personaData, ['id' => $personaId]);
+            }
+            if (isset($personaData['run_mode'])) {
+                // 24h 任务的两条生成 cron 都只认手机模式，模式一变当天的任务就得跟着重置
+                PersonaRunModeSwitchService::apply(
+                    $personaId,
+                    (int)($persona['run_mode'] ?? AiPersona::RUN_MODE_PHONE),
+                    (int)$personaData['run_mode']
+                );
             }
 
             Db::commit();
@@ -852,6 +952,38 @@ class AiPersonaLogic extends ApiLogic
     }
 
     /**
+     * 把文案来源写进人设的合成配置
+     *
+     * 与 run_mode 同批提交时，客户端一次请求就能把「换文案来源 + 切运行模式」两件事做完，
+     * 不必把用户支去合成规则页再点一遍保存。配置尚未惰性创建时按默认配置补建。
+     */
+    private static function syncCopywritingSource(AiPersona $persona, int $source): void
+    {
+        $personaId = (int)$persona['id'];
+        $userId = (int)$persona['user_id'];
+        $config = AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->findOrEmpty();
+
+        if ($config->isEmpty()) {
+            $default = SynthesisConfigLogic::buildDefaultConfig(
+                $personaId,
+                $userId,
+                (int)$persona['persona_type'],
+                (int)($persona['publish_mode'] ?? 1)
+            );
+            $default['copywriting_source'] = $source;
+            AiPersonaSynthesisConfig::create($default);
+            return;
+        }
+
+        $config->save([
+            'copywriting_source' => $source,
+            'update_time' => time(),
+        ]);
+    }
+
+    /**
      * 人设发布模式同步视频剪辑工作方式
      */
     public static function syncSynthesisWorkModeByPublishMode(int $personaId, int $publishMode): void
@@ -859,10 +991,20 @@ class AiPersonaLogic extends ApiLogic
         $workMode = $publishMode === 2
             ? \app\common\model\aiPersona\AiPersonaSynthesisConfig::WORK_MODE_PRODUCT_DIRECT
             : \app\common\model\aiPersona\AiPersonaSynthesisConfig::WORK_MODE_AI_SYNTHESIS;
+        $beforeConfig = \app\common\model\aiPersona\AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->field('id,work_mode')->findOrEmpty();
+        $beforeWorkMode = $beforeConfig->isEmpty() ? null : (int)$beforeConfig->work_mode;
         \app\common\model\aiPersona\AiPersonaSynthesisConfig::where('persona_id', $personaId)->update([
             'work_mode' => $workMode,
             'update_time' => time(),
         ]);
+        Log::channel('synthesis_config')->write(sprintf(
+            '[update] persona_id=%d source=syncSynthesisWorkModeByPublishMode publish_mode=%d before_work_mode=%s after_work_mode=%d',
+            $personaId,
+            $publishMode,
+            $beforeWorkMode === null ? 'null' : $beforeWorkMode,
+            $workMode
+        ));
     }
 
     /**
@@ -1007,6 +1149,324 @@ class AiPersonaLogic extends ApiLogic
     }
 
     /**
+     * 开播准备进度：必须项各自的计数
+     *
+     * 只回计数不回结论。达标门槛（追踪词 >= 3、素材 >= 5）是产品口径，
+     * 后端合成链路本身没有硬约束，所以门槛集中放在小程序 SETUP_THRESHOLD 一处判定，
+     * 避免两边各写一套后悄悄漂移。
+     */
+    public static function setupProgress(int $personaId, int $userId): bool
+    {
+        try {
+            if ($personaId <= 0) {
+                throw new Exception('人设ID不能为空');
+            }
+
+            $persona = AiPersona::where(['id' => $personaId, 'user_id' => $userId])->findOrEmpty();
+            if ($persona->isEmpty()) {
+                throw new Exception('人设不存在或无操作权限');
+            }
+
+            $hotWords = [];
+            try {
+                $personaRule = self::getPersonaRuleModel($persona);
+                if (!$personaRule->isEmpty()) {
+                    $hotWords = self::normalizeHotWords($personaRule->hot_words);
+                }
+            } catch (Exception) {
+                // 人设类型脏数据时按「没配追踪词」处理，不因为一步取不到就整个进度接口失败
+            }
+
+            // 计数一律跟素材库列表（MaterialLists）对齐，不跟 configStatus——后者只做「有没有」的存在性判断。
+            // 素材只算视频和图片，音乐单独统计——音乐不参与「够不够剪」的判定
+            $keepOriginal = (int)($persona['material_use_mode'] ?? AiPersona::MATERIAL_USE_MODE_SLICE)
+                === AiPersona::MATERIAL_USE_MODE_ORIGINAL
+                ? Material::KEEP_ORIGINAL_YES
+                : Material::KEEP_ORIGINAL_NO;
+
+            // 剪辑原片库与成品直发库是两个并列的库，小程序上是本地视图切换，
+            // 跟人设的 publish_mode 没有绑定关系，所以两个都要回，让前端按当前在看哪个取用。
+            // 之前只按人设 publish_mode 数一个，人设切成成品直发后，
+            // 用户在剪辑原片库里看着几十段素材，计数却是 0。
+            $materialTypes = [Material::MATERIAL_TYPE_VIDEO, Material::MATERIAL_TYPE_IMAGE];
+            // 素材库列表默认只显示「可用」素材（见 Material::applyDefaultVisible），
+            // 切片中、被停用的素材用户根本看不到。计数不套同一层就会数出列表里没有的素材：
+            $composeQuery = Material::where([
+                ['persona_id', '=', $personaId],
+                ['user_id', '=', $userId],
+                ['publish_mode', '=', Material::PUBLISH_MODE_MAKE_VIDEO],
+                // 剪辑原片库还按 keep_original 分原图/自动适配（getMaterialKindQuery），成品直发库不分
+                ['keep_original', '=', $keepOriginal],
+            ])->whereIn('material_type', $materialTypes);
+            if ($keepOriginal === Material::KEEP_ORIGINAL_YES) {
+                // 原图模式的列表额外带 source_type=original，切片不在这个库里露面
+                $composeQuery->where('source_type', Material::SOURCE_TYPE_ORIGINAL);
+            }
+            $materialCount = Material::applyDefaultVisible($composeQuery)->count();
+            $directMaterialCount = Material::applyDefaultVisible(
+                Material::where([
+                    ['persona_id', '=', $personaId],
+                    ['user_id', '=', $userId],
+                    ['publish_mode', '=', Material::PUBLISH_MODE_DIRECT_SEND],
+                ])->whereIn('material_type', $materialTypes)
+            )->count();
+            // 音乐列表（queryMusicList）只按 use_status=1 取，不看 publish_mode、也不按素材模式分库，
+            // 计数用同一套条件，否则会出现「统计 2 条、列表空」
+            $musicCount = Material::where([
+                ['persona_id', '=', $personaId],
+                ['user_id', '=', $userId],
+                ['material_type', '=', Material::MATERIAL_TYPE_MUSIC],
+                ['use_status', '=', Material::USE_STATUS_ENABLED],
+            ])->count();
+
+            // 文案库列表按 library_type 分类查，默认打开的是驱动文案；
+            // 加分项讲的也是「AI 写新内容时的风格样本」，所以只算驱动文案那一类
+            $copywritingCount = AiPersonaCopywritingLibrary::where('persona_id', $personaId)
+                ->where('user_id', $userId)
+                ->where('library_type', AiPersonaCopywritingLibrary::LIBRARY_TYPE_VIDEO_DRIVER)
+                ->count();
+
+            $avatars = AiPersonaDigitalAvatar::availableQuery()
+                ->where('ad.persona_id', $personaId)
+                ->where('ad.user_id', $userId)
+                ->column('ad.avatar_name');
+
+            $voices = AiPersonaDigitalVoice::availableQuery()
+                ->where('ad.persona_id', $personaId)
+                ->where('ad.user_id', $userId)
+                ->column('ad.voice_name');
+
+            // 绑进人设、用户没删过的条数。会员到期冻结时 availableQuery 会滤成 0，
+            // 而素材库那两个 tab 列出来的是绑定记录，两边口径不同就会出现
+            // 「chip 写 0 个，下面却列着 3 个」。chip 用 total，清单判定仍用可用数。
+            $avatarTotal = AiPersonaDigitalAvatar::listQuery()
+                ->where('ad.persona_id', $personaId)
+                ->where('ad.user_id', $userId)
+                ->count('ad.id');
+            $voiceTotal = AiPersonaDigitalVoice::listQuery()
+                ->where('ad.persona_id', $personaId)
+                ->where('ad.user_id', $userId)
+                ->count('ad.id');
+
+            $devices = SvDevice::where('persona_id', $personaId)
+                ->where('user_id', $userId)
+                ->field('device_code,status')
+                ->select()
+                ->toArray();
+            $deviceCodes = array_column($devices, 'device_code');
+            // sv_device.status: 0 下线 1 在线，离线会让当天的发布静默停摆
+            $offlineCount = count(array_filter($devices, fn($item) => (int)$item['status'] === 0));
+
+            // 设备列表展示账号时按 group('w.type') 折叠，同一设备同平台只显示一个，
+            // 这里按「设备 + 平台」去重，免得计数比界面上看到的多
+            $accountCount = $deviceCodes
+                ? count(
+                    SvAccount::whereIn('device_code', $deviceCodes)
+                        ->group('device_code,type')
+                        ->column('id')
+                )
+                : 0;
+
+            // 两种模式的「出片计划」是两回事：
+            // 手机模式按 scene=5 的发布时段建单；无手机模式不看时段，按每日出片条数
+            // （AutoVideoSynthesis::resolveCloudDailyCount，未配置兜底 1 条）。
+            // 所以云端模式下发布时段一律不参与判定，也不下发时段与倒计时。
+            $isCloudRun = (int)$persona['run_mode'] === AiPersona::RUN_MODE_CLOUD;
+            $publishSlots = $isCloudRun ? [] : self::publishSlots($persona);
+            $slotCount = count($publishSlots);
+            $dailyVideoCount = $isCloudRun ? self::cloudDailyVideoCount($personaId, $userId) : 0;
+
+            // 内容产出情况。「待发布」没有可靠来源（发布明细挂在发布设置上、不直接挂人设），
+            // 所以中间那个数用「生成中」，全部落在 shanjian_video_task 一张表上算得准
+            // 与内容记录列表（api\lists\shanjian\ShanjianVideoTaskLists）逐条对齐：
+            // user_id 限定、auto_type=1 只算自动产出、is_final=1 隐藏中间过渡任务。
+            // 少任何一条都会出现「卡片说今日 9 条，列表只有 3 条」。
+            // 运行状态卡问的本来就是「自动产了多少」，手动创建的不该计入。
+            $taskBase = fn() => ShanjianVideoTask::where('persona_id', $personaId)
+                ->where('user_id', $userId)
+                ->where('auto_type', self::VIDEO_TASK_AUTO_TYPE)
+                ->where('is_final', self::VIDEO_TASK_IS_FINAL);
+            $todayStart = strtotime('today');
+            $firstRunDone = $taskBase()->count() > 0;
+            $todaySuccess = $taskBase()
+                ->where('status', ShanjianVideoTask::STATUS_SUCCESS)
+                ->where('create_time', '>=', $todayStart)
+                ->count();
+            $todayFailed = $taskBase()
+                ->where('status', ShanjianVideoTask::STATUS_FAILED)
+                ->where('create_time', '>=', $todayStart)
+                ->count();
+            $generating = $taskBase()
+                ->whereIn('status', [ShanjianVideoTask::STATUS_PENDING, ShanjianVideoTask::STATUS_PROCESSING])
+                ->count();
+
+            $productLibraryModes = self::productLibraryModes($personaId, $userId);
+            self::$returnData = [
+                'keyword_count'       => count($hotWords),
+                'material_count'      => (int)$materialCount,
+                'direct_material_count' => (int)$directMaterialCount,
+                // 人设当前的发布方式：决定第 2 步该看哪个库
+                'publish_mode'        => (int)$persona['publish_mode'],
+                'avatar_count'        => count($avatars),
+                'voice_count'         => count($voices),
+                'avatar_total'        => (int)$avatarTotal,
+                'voice_total'         => (int)$voiceTotal,
+                // 顺序使用会循环取用，素材用量说明需要同时判断使用方式和随机规则
+                'product_use_mode'    => $productLibraryModes['product_use_mode'],
+                'product_reuse_mode'  => $productLibraryModes['product_reuse_mode'],
+                // 人设被会员到期冻结（status=0）时，两条 24h 合成 cron 都只捞 status=1，
+                // 界面上却只显示「等待下一轮 / 今日已生成 0」，用户完全看不出为什么停了
+                'persona_enabled'     => (int)($persona['status'] ?? 0) === 1,
+                'device_count'        => count($deviceCodes),
+                'account_count'       => (int)$accountCount,
+                'music_count'         => (int)$musicCount,
+                'copywriting_count'   => (int)$copywritingCount,
+                'run_mode'            => (int)$persona['run_mode'],
+                // 云端模式的条数永远能解析出一个有效值，这一步天然就是完成的
+                'publish_plan_done'   => $isCloudRun ? true : $slotCount > 0,
+                'daily_video_count'   => $dailyVideoCount,
+                'first_run_done'      => $firstRunDone,
+                'next_run_at'         => self::nextPublishRunAt($publishSlots),
+                'today_success'       => (int)$todaySuccess,
+                'today_failed'        => (int)$todayFailed,
+                'generating'          => (int)$generating,
+                'device_offline_count' => $offlineCount,
+                // 发布时段的 HH:MM 列表，小程序用它在 24h 节奏条上画真实的发布点
+                'publish_slots'       => array_values(array_unique(array_filter($publishSlots))),
+                // 以下仅用于清单折叠行的回显，前端取不到会自动降级成计数
+                'keyword_preview'     => array_slice(array_values($hotWords), 0, 2),
+                'default_avatar_name' => (string)($avatars[0] ?? ''),
+                'default_voice_name'  => (string)($voices[0] ?? ''),
+                'publish_plan_desc'   => $isCloudRun
+                    ? "每天 {$dailyVideoCount} 条"
+                    : ($slotCount > 0 ? "每天 {$slotCount} 个发布时段" : ''),
+            ];
+            return true;
+        } catch (Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 成品直发库的使用方式与随机规则，未配置按「随机使用 + 只用一次」。
+     */
+    private static function productLibraryModes(int $personaId, int $userId): array
+    {
+        $config = AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->order('id', 'desc')
+            ->field('product_use_mode,product_reuse_mode')
+            ->findOrEmpty();
+        return [
+            'product_use_mode' => (int)($config['product_use_mode'] ?? 0) === AiPersonaSynthesisConfig::PRODUCT_USE_MODE_SEQUENCE
+                ? AiPersonaSynthesisConfig::PRODUCT_USE_MODE_SEQUENCE
+                : AiPersonaSynthesisConfig::PRODUCT_USE_MODE_RANDOM,
+            'product_reuse_mode' => (int)($config['product_reuse_mode'] ?? 0) === AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_REPEAT
+                ? AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_REPEAT
+                : AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_ONCE,
+        ];
+    }
+
+    /**
+     * 无手机模式每天出几条。与 AutoVideoSynthesis::resolveCloudDailyCount 同口径：
+     * 未配置（0）时兜底 1 条，所以这一项永远有有效值。
+     */
+    private static function cloudDailyVideoCount(int $personaId, int $userId): int
+    {
+        $configured = AiPersonaSynthesisConfig::normalizeDailyVideoCount(
+            AiPersonaSynthesisConfig::where('persona_id', $personaId)
+                ->where('user_id', $userId)
+                ->value('daily_video_count')
+        );
+        return $configured > 0 ? $configured : AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+    }
+
+    /**
+     * 人设当前生效的视频发布时段（HH:MM 列表）
+     *
+     * 时段本体在工作流模板 marketing_template_schedule 里，默认全部开启；
+     * ai_persona_workflow_schedule_user 是「用户改动」的差异表，只有被动过的计划才有行。
+     * 所以生效时段 = 模板里 scene=5 的行，逐条用差异表最新一条的 status 覆盖。
+     * 判定口径与 WorkflowLogic 的展示逻辑保持一致，改这里要同步看那边。
+     */
+    private static function publishSlots(AiPersona $persona): array
+    {
+        $templateId = (int)($persona['workflow_template_id'] ?? 0);
+        if ($templateId <= 0) {
+            return [];
+        }
+
+        $schedules = MarketingTemplateSchedule::where('template_id', $templateId)
+            ->where('scene', AutoTaskSceneConfigService::SCENE_VIDEO_PUBLISH)
+            ->order('start_time', 'asc')
+            ->field('id,scene,start_time,platform')
+            ->select()
+            ->toArray();
+        if (!$schedules) {
+            return [];
+        }
+
+        // 没配平台的时段发不到任何地方，任务流页面也不显示它（sanitizeSchedulesForDisplay
+        // 会整条丢掉，并剔除当前被全局关闭的平台）。这里复用同一个函数，
+        // 否则会出现「任务流里没有视频发布，人设详情却说发布 2 次」
+        $schedules = AutoTaskSceneScheduleSyncService::sanitizeSchedulesForDisplay($schedules);
+        if (!$schedules) {
+            return [];
+        }
+
+        // 按 id 升序取，后写的覆盖先写的，等价于每个 schedule 取最新一条改动
+        $overrides = AiPersonaWorkflowScheduleUser::where('persona_id', $persona['id'])
+            ->where('template_id', $templateId)
+            ->where('scene', AutoTaskSceneConfigService::SCENE_VIDEO_PUBLISH)
+            ->order('id', 'asc')
+            ->column('status', 'schedule_id');
+
+        $slots = [];
+        foreach ($schedules as $schedule) {
+            $scheduleId = (int)$schedule['id'];
+            // 差异表没记过的默认开启
+            $enabled = array_key_exists($scheduleId, $overrides) ? (int)$overrides[$scheduleId] === 1 : true;
+            if ($enabled && $schedule['start_time']) {
+                $slots[] = (string)$schedule['start_time'];
+            }
+        }
+        return $slots;
+    }
+
+    /**
+     * 下一次视频发布时段的开始时刻
+     *
+     * 时段存的是 HH:MM 的日循环，今天还有没到点的就取最近一个，全过了取明天最早的一个。
+     * 没有可用时段返回 0，小程序据此不显示倒计时。
+     *
+     * @param array $slots start_time 列表
+     */
+    private static function nextPublishRunAt(array $slots): int
+    {
+        $minutes = [];
+        foreach ($slots as $slot) {
+            if (preg_match('/^(\d{1,2}):(\d{2})$/', (string)$slot, $matches)) {
+                $minutes[] = (int)$matches[1] * 60 + (int)$matches[2];
+            }
+        }
+        if (!$minutes) {
+            return 0;
+        }
+
+        sort($minutes);
+        $now = time();
+        $todayStart = strtotime('today', $now);
+        $passed = (int)floor(($now - $todayStart) / 60);
+        foreach ($minutes as $minute) {
+            if ($minute > $passed) {
+                return $todayStart + $minute * 60;
+            }
+        }
+        return $todayStart + 86400 + $minutes[0] * 60;
+    }
+
+    /**
      * 爆款复刻：校验人设是否具备可用形象/音色
      * 前端规则：has_avatar 或 has_voice 至少一个为 1 才可勾选
      */
@@ -1020,6 +1480,10 @@ class AiPersonaLogic extends ApiLogic
             $persona = AiPersona::where(['id' => $personaId, 'user_id' => $userId])->findOrEmpty();
             if ($persona->isEmpty()) {
                 throw new Exception('人设不存在或无操作权限');
+            }
+
+            if ((int)$persona['status'] === AiPersona::STATUS_FROZEN) {
+                throw new Exception(AiPersona::FROZEN_USAGE_MESSAGE);
             }
 
             $hasAvatar = !AiPersonaDigitalAvatar::availableQuery()
@@ -1419,127 +1883,16 @@ class AiPersonaLogic extends ApiLogic
         }
     }
 
+    /**
+     * 人设报告生成后自动开通四个场景智能体，实现见 PersonaAgentProvisionService
+     */
     public static function autoCreateAgent(array $params, int $personaId): bool
     {
-        $createdIds = [];
-        $userId = (int)self::$uid;
-        try {
-            $params['Content'] = json_encode($params['Content'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            $res = self::agentFlowRequest($params);
-            if (empty($res)) {
-                return true;
-            }
-
-            $modelPair = MemberService::pickRandomChatModelPair($userId);
-            if ($modelPair === null) {
-                self::setError('当前等级暂无可用对话模型，请联系站长开启');
-                return false;
-            }
-
-            $commentAgentRule = $res['Comment_agent']; //社媒评论区智能体
-            $dmAgentRule = $res['Reply_agent']; //社媒私信智能体
-            $momentsAgentRule = $res['Wechat_Moment_agent']; //微信朋友圈互动智能体
-            $wechatChatAgentRule = $res['Wechat_agent']; //微信1V1私聊智能体
-            $agentRuleArray = [$commentAgentRule, $dmAgentRule, $momentsAgentRule, $wechatChatAgentRule];
-            $ids = [];
-            foreach ($agentRuleArray as $key => $agent) {
-                $name = match ($key) {
-                    0       => '社媒评论区智能体',
-                    1       => '社媒私信智能体',
-                    2       => '微信朋友圈互动智能体',
-                    3       => '微信私聊智能体',
-                    default => ''
-                };
-                $robotAdd = [
-                    'context_num' => 3,
-                    'kb_type' => 2,
-                    'quota_exempt' => 1,
-                ];
-                $robot = KbRobotLogic::add($robotAdd, $userId);
-                if ($robot === false || empty($robot['id'])) {
-                    self::rollbackAutoCreatedRobots($createdIds, $userId);
-                    self::setError(KbRobotLogic::getError() ?: '创建智能体失败');
-                    return false;
-                }
-                $createdIds[] = (int)$robot['id'];
-                $ids[$key] = $robot['id'];
-
-                $robotEdit = [
-                    "id" => $robot['id'],
-                    "roles_prompt" => $agent,
-                    "kb_type" => 2,
-                    "kb_ids" => [],
-                    "icons" => "",
-                    "image" => FileService::getFileUrl(ConfigService::get('website', 'shop_logo')) ?? '',
-                    "bg_image" => "",
-                    "name" => $params['Model'] . ' - ' . $name,
-                    "intro" => "默认助理简介",
-                    "model_id" => $modelPair['model_id'],
-                    "model_sub_id" => $modelPair['model_sub_id'],
-                    "search_mode" => "similar",
-                    "search_tokens" => 3000,
-                    "search_similar" => 0.5,
-                    "ranking_status" => 0,
-                    "ranking_score" => 0.5,
-                    "context_num" => 3,
-                    "is_public" => 0,
-                    "is_enable" => 1,
-                    "optimize_ask" => 0,
-                    "optimize_m_id" => "",
-                    "optimize_s_id" => "",
-                    "search_empty_type" => 1,
-                    "search_empty_text" => "",
-                    "top_p" => 0.8,
-                    "temperature" => 0.3,
-                    "presence_penalty" => 0,
-                    "frequency_penalty" => 0,
-                    "logprobs" => 0,
-                    "top_logprobs" => 0,
-                    "welcome_introducer" => "",
-                    "copyright" => "",
-                    "menus" => [],
-                    "flow_status" => 0,
-                    "flow_config" => [
-                        "workflow_id" => "",
-                        "bot_id" => "",
-                        "app_id" => "",
-                        "api_token" => ""
-                    ],
-                    "threshold" => 0.7,
-                    "mode_type" => 3,
-                    "max_tokens" => 4096
-                ];
-                if (!KbRobotLogic::edit($robotEdit, $userId)) {
-                    self::rollbackAutoCreatedRobots($createdIds, $userId);
-                    self::setError(KbRobotLogic::getError() ?: '配置智能体失败');
-                    return false;
-                }
-            }
-            AiPersonaAgentConfig::syncAutoCreatedAgentConfig($userId, (int)$personaId, $ids);
+        if (PersonaAgentProvisionService::provision($params, $personaId, (int)self::$uid)) {
             return true;
-        } catch (\Exception $e) {
-            self::rollbackAutoCreatedRobots($createdIds, $userId);
-            self::setError($e->getMessage());
-            return false;
         }
-    }
-
-    /**
-     * 回滚本轮自动创建失败留下的智能体空壳，避免「默认助理」无提示词残留
-     */
-    private static function rollbackAutoCreatedRobots(array $robotIds, int $userId): void
-    {
-        foreach ($robotIds as $robotId) {
-            $robotId = (int)$robotId;
-            if ($robotId <= 0) {
-                continue;
-            }
-            try {
-                KbRobotLogic::del($robotId, $userId);
-            } catch (\Throwable $e) {
-                Log::channel('ipPersona')->write('回滚自动创建智能体失败 id=' . $robotId . ' err=' . $e->getMessage());
-            }
-        }
+        self::setError(PersonaAgentProvisionService::getError());
+        return false;
     }
 
     /**
@@ -1584,47 +1937,6 @@ class AiPersonaLogic extends ApiLogic
         return [];
     }
 
-    /**
-     * autoCreateAgent工作流请求
-     */
-    private static function agentFlowRequest(array $params): array
-    {
-        $automationService = \app\common\service\ToolsService::AiPersona();
-        $url               = $automationService::URL;
-        $workflow_id       = $automationService::AGENT_WORKFLOW_ID;
-        Log::channel('ipPersona')->write(
-            '自动创建智能体请求：' . json_encode([
-                'url' => $url,
-            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
-        );
-        $body     = [
-            'workflow_id' => $workflow_id,
-            'parameters'  => $params,
-        ];
-        $request  = [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $automationService::TOKEN,
-                'Content-Type'  => 'application/json',
-            ],
-            'json'    => $body
-        ];
-        $client   = new Client(['timeout' => 600, 'verify' => false]);
-        $rsp      = $client->post($url, $request);
-        $contents = $rsp->getBody()->getContents();
-        $data     = json_decode($contents, true);
-        Log::channel('ipPersona')->write('自动创建智能体请求结果' . $contents);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [];
-        }
-        if (($data['code'] ?? -1) !== 0) {
-            return [];
-        }
-        $data['data'] = json_decode($data['data'], true);
-        if (!empty($data['data'])) {
-            return $data['data'];
-        }
-        return [];
-    }
     /**
      * 更新微信发布模式
      */

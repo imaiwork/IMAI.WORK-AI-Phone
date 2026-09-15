@@ -1,6 +1,9 @@
-import { deleteShanjianTaskRecord } from "@/api/digital_human";
+import { deleteShanjianTaskRecord, downloadShanjianVideoTask } from "@/api/digital_human";
 import { deleteImageRecord, getGenerateRecordList, getImageRecordList, retryGenerateRecord } from "@/api/person";
+import { VideoDownloadStatusEnum, isCloudRunMode } from "@/ai_modules/person/enums";
 import { AppTypeEnum } from "@/enums/appEnums";
+import { useCopy } from "@/hooks/useCopy";
+import { saveVideoToPhotosAlbum } from "@/utils/file";
 import { reactive, ref, type Ref } from "vue";
 
 export enum VideoStatus {
@@ -30,27 +33,27 @@ interface PlatformBadge {
 }
 
 const COVER_SOURCE_MAP: Record<number, TagConfig> = {
-    2: { label: "AI封面", bg: "#EBF2FF", color: "#2B6EFF" },
-    3: { label: "手动封面", bg: "#F3F4F6", color: "#6B7280" },
+    2: { label: "AI封面", bg: "#E6EFFF", color: "#0065FB" },
+    3: { label: "手动封面", bg: "#F2F3F5", color: "#999999" },
 };
 
 const MATERIAL_SOURCE_MAP: Record<number, TagConfig> = {
     1: { label: "纯AI", bg: "#F3F0FF", color: "#6B3EFF" },
-    2: { label: "AI+素材库", bg: "#FFF7E6", color: "#D46B08" },
+    2: { label: "AI+素材库", bg: "#FFF5E6", color: "#D46B08" },
     3: { label: "素材库", bg: "#F0FBE8", color: "#389E0D" },
 };
 
 const COPYWRITING_SOURCE_MAP: Record<number, TagConfig> = {
-    1: { label: "爆款仿写", bg: "#FEF2F2", color: "#EF4444" },
+    1: { label: "爆款仿写", bg: "#FFEAEC", color: "#F56C6C" },
     2: { label: "AI生成", bg: "#EEF2FF", color: "#4F46E5" },
-    3: { label: "无文案", bg: "#F3F4F6", color: "#6B7280" },
+    3: { label: "无文案", bg: "#F2F3F5", color: "#999999" },
 };
 
 const SHANJIAN_TYPE_MAP: Record<number, TagConfig> = {
-    1: { label: "数字人口播", bg: "#EBF2FF", color: "#2B6EFF" },
-    2: { label: "真人口播", bg: "#EBF2FF", color: "#2B6EFF" },
-    3: { label: "素材混剪", bg: "#EBF2FF", color: "#2B6EFF" },
-    4: { label: "新闻体", bg: "#EBF2FF", color: "#2B6EFF" },
+    1: { label: "数字人口播", bg: "#E6EFFF", color: "#0065FB" },
+    2: { label: "真人口播", bg: "#E6EFFF", color: "#0065FB" },
+    3: { label: "素材混剪", bg: "#E6EFFF", color: "#0065FB" },
+    4: { label: "新闻体", bg: "#E6EFFF", color: "#0065FB" },
 };
 
 const AI_DOWNGRADE_TAG: TagConfig = {
@@ -97,6 +100,8 @@ export const useHistoryTab = (
     personId: Ref<string>,
     playItem: Ref<{ url: string; pic: string }>,
     showVideoPreview: Ref<boolean>,
+    /** 人设运行模式，用于区分重试后的后续说明；不传按手机模式 */
+    runMode?: Ref<number>,
 ) => {
     const historyTabs = [
         { key: HistoryTabEnum.VIDEOS, label: "自动生成的视频" },
@@ -170,7 +175,7 @@ export const useHistoryTab = (
         if (PLATFORM_BADGE_MAP[platform]) return PLATFORM_BADGE_MAP[platform];
         const name = String(item.platform_name || "").trim();
         if (!name) return null;
-        return { label: name, bg: "#6B7280" };
+        return { label: name, bg: "#999999" };
     };
 
     const getImageTitle = (item: any): string =>
@@ -192,10 +197,10 @@ export const useHistoryTab = (
     };
 
     const getRecordStatusClass = (status: VideoStatus) => {
-        if (status === VideoStatus.videoSuccess) return "text-[#16A34A] bg-[#ECFDF5]";
-        if (status === VideoStatus.videoFailed) return "text-[#EF4444] bg-[#FEF2F2]";
-        if (status === VideoStatus.videoQuery) return "text-primary bg-[#EBF2FF]";
-        return "text-[#9CA3AF] bg-[#F3F4F6]";
+        if (status === VideoStatus.videoSuccess) return "text-[#19BE6B] bg-[#E8F9F0]";
+        if (status === VideoStatus.videoFailed) return "text-[#F56C6C] bg-[#FFEAEC]";
+        if (status === VideoStatus.videoQuery) return "text-primary bg-[#E6EFFF]";
+        return "text-[#999999] bg-[#F2F3F5]";
     };
 
     const queryVideoList = async () => {
@@ -302,6 +307,51 @@ export const useHistoryTab = (
         showVideoPreview.value = true;
     };
 
+    /**
+     * 下载成片到相册。无手机模式下用户要自己去平台发，这是拿到视频的唯一途径。
+     * 成片没转存回本站前 video_result_url 还是上游的远端链接，小程序 downloadFile 会被
+     * 域名白名单拦掉，所以先调转存接口把它落到本站，再保存。
+     */
+    const downloadingId = ref<string | number | null>(null);
+    const handleDownloadVideo = async (item: any) => {
+        if (!item || Number(item.status) !== VideoStatus.videoSuccess) return;
+        if (downloadingId.value === item.id) return;
+        downloadingId.value = item.id;
+        try {
+            if (Number(item.download_status) !== VideoDownloadStatusEnum.SUCCESS) {
+                uni.showLoading({ title: "准备中...", mask: true });
+                try {
+                    const res: any = await downloadShanjianVideoTask({ id: item.id });
+                    item.download_status = Number(res?.download_status ?? VideoDownloadStatusEnum.SUCCESS);
+                    if (res?.video_result_url) item.video_result_url = res.video_result_url;
+                } finally {
+                    uni.hideLoading();
+                }
+            }
+            const url = String(item.video_result_url || "").trim();
+            if (!url || Number(item.download_status) !== VideoDownloadStatusEnum.SUCCESS) {
+                uni.showToast({ title: "视频还没准备好，稍后再试", icon: "none" });
+                return;
+            }
+            await saveVideoToPhotosAlbum(url);
+        } catch (error: any) {
+            uni.showToast({ title: String(error || "下载失败，请重试"), icon: "none", duration: 3000 });
+        } finally {
+            downloadingId.value = null;
+        }
+    };
+
+    /** 复制口播文案，口径与视频详情弹窗的文案块一致 */
+    const handleCopyVideoText = (item: any) => {
+        const text = String(item?.msg || item?.title || "").trim();
+        if (!text) {
+            uni.showToast({ title: "这条视频没有文案", icon: "none" });
+            return;
+        }
+        const { copy } = useCopy();
+        copy(text);
+    };
+
     const handleViewFailReason = (item: any) => {
         uni.showModal({
             title: "失败原因",
@@ -312,8 +362,11 @@ export const useHistoryTab = (
     };
 
     // 重试规则与后端一致：重试成功后按发布时间自动处理，已过时段需到发布记录手动重发
-    const RETRY_CONFIRM_CONTENT =
-        "生成成功且未到发布时间：到点自动发布，无需操作；生成成功但已过发布时间：需到「发布记录」手动重新发送";
+    // 手机模式重试后由绑定手机到点发布；无手机模式压根不发布，讲发布时间会误导
+    const retryConfirmContent = (): string =>
+        isCloudRunMode(runMode?.value)
+            ? "重试成功后成片会重新出现在内容记录里，可自行下载视频、复制文案去平台发布"
+            : "生成成功且未到发布时间：到点自动发布，无需操作；生成成功但已过发布时间：需到「发布记录」手动重新发送";
 
     const handleRetryRecord = (item: any) => {
         if (!item) return;
@@ -323,7 +376,7 @@ export const useHistoryTab = (
         }
         uni.showModal({
             title: "重试生成视频",
-            content: RETRY_CONFIRM_CONTENT,
+            content: retryConfirmContent(),
             confirmText: "开始重试",
             cancelText: "取消",
             success: async ({ confirm }) => {
@@ -358,7 +411,7 @@ export const useHistoryTab = (
         uni.showModal({
             title: "删除记录",
             content: "确定删除该生成记录吗？删除后无法恢复",
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             confirmText: "删除",
             success: async ({ confirm }) => {
                 if (!confirm) return;
@@ -405,7 +458,7 @@ export const useHistoryTab = (
         uni.showModal({
             title: "删除记录",
             content: "确定删除该图片记录吗？删除后无法恢复",
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             confirmText: "删除",
             success: async ({ confirm }) => {
                 if (!confirm) return;
@@ -440,8 +493,10 @@ export const useHistoryTab = (
         getRecordStatusLabel,
         getVideoTagList,
         getImageUrls,
+        handleCopyVideoText,
         handleDeleteImageRecord,
         handleDeleteVideoRecord,
+        handleDownloadVideo,
         handleImageClick,
         handlePlayVideoDetail,
         handleRetryRecord,

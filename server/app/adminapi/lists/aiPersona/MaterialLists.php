@@ -12,7 +12,7 @@ class MaterialLists extends BaseAdminDataLists implements ListsSearchInterface
     public function setSearch(): array
     {
         return [
-            '=' => ['m.user_id', 'm.persona_id', 'm.material_type', 'm.use_status', 'm.publish_mode'],
+            '=' => ['m.user_id', 'm.persona_id', 'm.material_type', 'm.use_status', 'm.publish_mode', 'm.source_type', 'm.keep_original'],
             '%like%' => ['m.material_name'],
         ];
     }
@@ -44,6 +44,10 @@ class MaterialLists extends BaseAdminDataLists implements ListsSearchInterface
             ->order('m.id desc')
             ->select()->each(function ($item) {
                 $item['use_num'] = MaterialUseLog::where('material_id', $item['id'])->count();
+                $item['source_type_text'] = Material::getSourceTypeText(
+                    (string)($item['source_type'] ?? ''),
+                    (int)($item['keep_original'] ?? 0)
+                );
             })
             ->toArray();
     }

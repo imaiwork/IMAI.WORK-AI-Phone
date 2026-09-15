@@ -1448,6 +1448,12 @@ class AutoDeviceSettingLogic extends ApiLogic
                     'hook' => $data['hook'] ?? '',
                     'model' => $data['model'] ?? 0,
                 ];
+                // 只透传调用方显式传的目标字数，不要用上面那个 60 的兜底——
+                // 走这个分支的还有多处没有长度概念的老调用，塞 60 会把它们的文案压到 20 秒。
+                // 不传时由中台按 endpoint 的 DefaultLength 补默认值。
+                if (isset($data['length']) && (int)$data['length'] > 0) {
+                    $request['length'] = (int)$data['length'];
+                }
             }
 
             $result = self::requestUrl($request, $scene, $userId, $taskId, $withBillingMeta);

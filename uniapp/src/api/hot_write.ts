@@ -21,6 +21,8 @@ export const createHotWrite = (data: {
     persona_id: number | string
     id?: number | string
     visual_material_source?: number | string
+    /** 仿写文案目标字数，见 HOT_WRITE_COPY_LENGTH_OPTIONS；不传按后端默认档 */
+    copywriting_length?: number
     rewrite_mode?: number
 }) => {
     return request.post({ url: '/videoImitation.copywriting/video2text', data })
@@ -46,8 +48,17 @@ export const confirmGenerationOptions = (data: {
     id: number | string
     generation_type: number
     avatar_id?: number
+    /** 音色库 human_voice.id；-1 表示用所选形象的原音（WASH_ORIGIN_VOICE_ID） */
     voice_id?: number
     rewritten_text?: string
+    /** 洗稿自选背景音乐音量 0~1，0 表示不加音乐；不传则沿用已有设置 */
+    music_volume?: number
+    /** 洗稿自选口播语速 0.5~2；仅闪剪音色的口播类视频可用，不传则沿用已有设置 */
+    speech_rate?: number
+    /** 洗稿自选剪辑模板ID；传空串=改回自动随机，不传则沿用已有设置 */
+    clip_template_id?: string
+    /** 洗稿自选背景音乐地址；传空串=改回系统音乐随机，不传则沿用已有设置 */
+    music_url?: string
 }) => {
     return request.post({ url: '/videoImitation.task/confirmGenerationOptions', data })
 }

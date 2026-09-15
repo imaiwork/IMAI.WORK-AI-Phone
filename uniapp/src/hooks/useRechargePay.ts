@@ -1,3 +1,4 @@
+import { mnpAuthBind } from '@/api/account'
 import {
     createRechargeOrder,
     mnpVirtualConfirm,
@@ -35,6 +36,22 @@ const getWxLoginCode = (): Promise<string> => {
 
 const getVirtualPlatform = () => {
     return isIOS() ? MnpVirtualPlatform.IOS : MnpVirtualPlatform.ANDROID
+}
+
+/**
+ * 下单前确保当前小程序 appid 名下有 openid。
+ * OEM 站注册的用户来主站买算力时，授权表里可能只有 OEM 小程序的 openid（两个 appid、
+ * 两个 openid），或用手机号登录压根没授权过，直接下单会被微信判「appid和openid不匹配」。
+ * 绑定失败不阻断支付：已绑他人等情况由后端下单时给明确提示。
+ */
+const ensureMnpOpenid = async () => {
+    // #ifdef MP-WEIXIN
+    try {
+        await mnpAuthBind({ code: await getWxLoginCode() })
+    } catch {
+        // 忽略：绑定不是支付的前置条件
+    }
+    // #endif
 }
 
 /** 微信 code 无效/已使用（40029 / 40163） */
@@ -76,6 +93,7 @@ export function useRechargePay() {
             }
 
             uni.showLoading({ title: '正在支付中' })
+            await ensureMnpOpenid()
             const prepay = await prePay({
                 order_id: orderId,
                 from: GIFT_PACKAGE_PAY_FROM,
@@ -126,6 +144,8 @@ export function useRechargePay() {
         isPaying.value = true
         uni.showLoading({ title: '正在支付中' })
         try {
+            // 同上：没有本小程序 appid 名下的 openid 时，预下单会卡在「小程序登录态异常」
+            await ensureMnpOpenid()
             const prepay = await requestVirtualPrepay(pkg)
             const orderId = prepay?.order_id
             if (!orderId) {

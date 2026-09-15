@@ -6,6 +6,7 @@ use app\api\lists\BaseApiDataLists;
 use app\api\logic\aiPersona\AiPersonaLogic;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersona;
+use app\common\model\aiPersona\Material;
 use app\common\model\sv\SvDevice;
 use app\common\service\FileService;
 use think\db\exception\DataNotFoundException;
@@ -88,6 +89,8 @@ class AiPersonaLists extends BaseApiDataLists implements ListsSearchInterface
                                    'ap.id', 'ap.user_id', 'ap.persona_name', 'ap.persona_type', 'ap.avatar_url',
                                    'ap.quick_desc', 'ap.industry', 'ap.is_configured', 'ap.status',
                                    'ap.create_time', 'ap.report_status', 'ap.report_gen_time', 'ap.publish_mode',
+                                   'ap.material_use_mode',
+                                   'ap.run_mode',
                                    'ap.main_business', 'ap.target_pain_points', 'ap.conversion_hook',
                                    'ap.is_shopping_cart', 'ap.goods_name', 'ap.is_store_position', 'ap.store_position'
                                ])
@@ -128,9 +131,48 @@ class AiPersonaLists extends BaseApiDataLists implements ListsSearchInterface
             // 检查AI人设配置状态
             $result = AiPersonaLogic::checkAiPersonaConfigStatus($item['id'], $item['user_id']);
             $item['is_configured'] = $result['is_configured'] ?? 0;
+            $this->appendConfigGuide($item, $result['msg'] ?? '');
         }
 
         return $lists;
+    }
+
+    /**
+     * 列表页只露一个「未完善」会让用户猜错缺口；这里给前端一个短提示和直达动作。
+     */
+    private function appendConfigGuide(array &$item, string $message): void
+    {
+        $item['config_tip'] = '';
+        $item['config_action'] = '';
+        if ((int)($item['is_configured'] ?? 0) === 1) {
+            return;
+        }
+
+        if ($message === '请先上传素材') {
+            if ((int)($item['publish_mode'] ?? 0) === Material::PUBLISH_MODE_DIRECT_SEND) {
+                $item['config_tip'] = '缺少成品';
+                $item['config_action'] = 'direct_material';
+                return;
+            }
+            $item['config_tip'] = '缺少素材';
+            $item['config_action'] = 'material';
+            return;
+        }
+
+        $guideMap = [
+            '请生成人设报告' => ['缺少报告', 'report'],
+            '请先配置智能体' => ['缺少智能体', 'agent'],
+            '请先配置获客截流设置' => ['缺少获客配置', 'traffic'],
+            '请先配置微信私域互动管家设置' => ['缺少私域配置', 'interaction'],
+            '请先配置人设音色' => ['缺少音色', 'voice'],
+        ];
+        if (!isset($guideMap[$message])) {
+            $item['config_tip'] = '待完善';
+            return;
+        }
+        $guide = $guideMap[$message];
+        $item['config_tip'] = $guide[0];
+        $item['config_action'] = $guide[1];
     }
 
     /**

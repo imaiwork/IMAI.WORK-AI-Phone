@@ -11,6 +11,7 @@ use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 use think\facade\Db;
 /**
  * HumanController
@@ -20,19 +21,9 @@ use think\facade\Db;
 class HumanController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['test', 'list', 'add', 'dyToText', 'notify','clipnotify'];
+    // 只有上游回调需要免登录；不要往这里加不存在或调试用的方法名，否则同名方法一旦出现就是裸奔接口
+    public array $notNeedLogin = ['notify', 'clipnotify'];
 
-    public function test() {
-
-    }
-    public function  cron(){
-        try {
-            $taskid = '558f1bef5304b7bbbf90c8a551b49a15';
-            HumanLogic::videoTaskCron($taskid);
-        } catch (\Throwable $th) {
-            print_r($th->__toString());die;
-        }
-    }
     /**
      * @desc 生成视频
      * @return \think\response\Json
@@ -294,10 +285,16 @@ class HumanController extends BaseApiController
     public function notify(): Json
     {
         try {
-            Log::channel('human')->write('数字人请求回调地址信息: ' . $this->request->url(true) . PHP_EOL . PHP_EOL .'参数: ' . json_encode($this->request->post(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            // 地址只记路径不记 query：query 里带回调令牌
+            Log::channel('human')->write('数字人请求回调地址信息: ' . $this->request->baseUrl(true) . ' query: ' . json_encode(CallbackTokenService::maskForLog($this->request->get()), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL .'参数: ' . json_encode($this->request->post(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('human', '数字人', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
             $type = $this->request->param('human_type');
             $modelVersion = $this->request->param('model_version');
             $data = $this->request->all();
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
 
             if (isset($data['data'])) {
 
@@ -322,7 +319,7 @@ class HumanController extends BaseApiController
 
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('human')->write('数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'数字人回调失败'.$e->getMessage());
+            Log::channel('human')->write('数字人参数'.json_encode(is_array($data ?? null) ? CallbackTokenService::maskForLog($data) : ($data ?? null), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES).'数字人回调失败'.$e->getMessage());
             return $this->success('fail');
         }
     }
@@ -347,7 +344,12 @@ class HumanController extends BaseApiController
 
         try {
             $data = $this->request->all();
-            Log::channel('clip')->write('剪辑视频接收数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('clip')->write('剪辑视频接收数字人参数'.json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('clip', '数字人剪辑', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $result = HumanLogic::updateClipVideo($data);
             if (!$result){
                 return   $this->fail(HumanLogic::getError());
@@ -355,7 +357,7 @@ class HumanController extends BaseApiController
 
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('clip')->write('剪辑视频接收数字人参数'.json_encode($data).'数字人回调失败'.$e->getMessage());
+            Log::channel('clip')->write('剪辑视频接收数字人参数'.json_encode(CallbackTokenService::maskForLog($data)).'数字人回调失败'.$e->getMessage());
             return $this->fail('fail');
         }
     }

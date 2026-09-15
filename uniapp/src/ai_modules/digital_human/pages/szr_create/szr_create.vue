@@ -265,6 +265,10 @@
                                     <u-icon name="volume" color="#0065fb" size="20" />
                                 </view>
                             </view>
+
+                            <view v-if="showAdvancedSetting" class="border-[0] border-t border-solid border-[#F1F5F9]">
+                                <advanced-setting v-model="formData.packaging" show-music />
+                            </view>
                         </view>
                     </view>
 
@@ -530,6 +534,7 @@ import {
     CloneModeEnum,
     ClipStyleEnum,
     SpeechEngineTypeEnum,
+    MusicSourceEnum,
     cloneModeToIsPro,
     SPEECH_TEXT_LIMIT,
 } from "@/ai_modules/digital_human/enums";
@@ -547,6 +552,11 @@ import Agreement from "@/ai_modules/digital_human/components/agreement/agreement
 import RecorderControl from "@/ai_modules/digital_human/components/recorder-control/recorder-control.vue";
 import ChooseAudioType from "@/ai_modules/digital_human/components/choose-audio-type/choose-audio-type.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human/components/create-success-pop/create-success-pop.vue";
+import AdvancedSetting from "@/ai_modules/digital_human/components/advanced-setting/advanced-setting.vue";
+import {
+    createAdvancedSetting,
+    toPackagingParams,
+} from "@/ai_modules/digital_human/config/advanced-setting";
 
 const DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE = 5;
 
@@ -611,6 +621,8 @@ const formData = reactive<any>({
         video_count: 1,
         volume: 0.3,
     },
+    // 视频包装的高级设置，只有开启包装时才随 packaging 提交
+    packaging: createAdvancedSetting(),
 });
 
 // 状态变量：标准版→is_pro=1，优质版→is_pro=2（创建仍用 clone_mode 2/3）
@@ -671,6 +683,9 @@ const modelVersionMap = computed(() => {
 const clipConfig = reactive({
     is_open: false,
 });
+
+// 关掉视频包装就没有包装可调，高级设置整块收起
+const showAdvancedSetting = computed(() => clipConfig.is_open && formData.ai_clip_enabled == 1);
 
 // 文案字数：蝉镜无包装 4000，蝉镜有包装 / 标准版 / 优质版 1500
 const textLimit = computed(() => {
@@ -1128,6 +1143,15 @@ const confirmCreate = async () => {
         uni.$u.toast("文案超出限制，请重新编辑文案");
         return;
     }
+    // 后端在 music_source=自定义 且没有音乐时会直接报错，这里先拦一次
+    if (
+        showAdvancedSetting.value &&
+        formData.packaging.music_source === MusicSourceEnum.CUSTOM &&
+        !formData.packaging.music_url
+    ) {
+        uni.$u.toast("请上传背景音乐");
+        return;
+    }
 
     showAgreement.value = false;
     try {
@@ -1203,6 +1227,8 @@ const createShanjianSpeechTask = async (engineType: SpeechEngineTypeEnum = Speec
         shanjian_type: DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE,
         engine_type: engineType,
         ai_clip_enabled: clipConfig.is_open ? formData.ai_clip_enabled : 0,
+        // 关掉包装时 packaging 无意义，不提交
+        ...(showAdvancedSetting.value ? { packaging: toPackagingParams(formData.packaging) } : {}),
         pic: pic || formData.pic,
         ...contentParams,
         anchor: [

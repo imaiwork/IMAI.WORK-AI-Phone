@@ -132,7 +132,7 @@
                         :disable-mention="activeMode !== 'chat'"
                         :placeholder="currentPlaceholder"
                         :send-enabled="canSend"
-                        :send-disabled="false"
+                        :send-disabled="isSending"
                         :is-network="false"
                         :is-upload-file="false"
                         :is-disabled-humanize="activeMode !== 'chat' || !!selectedAgent"
@@ -297,17 +297,15 @@ import { useChatStore } from '../_modules/stores/chat'
 import Chatting from '@/components/chatting/chatting.vue'
 import FileLists from '@/components/chatting/file-lists.vue'
 import type { MentionItem } from "@/components/chatting/at-mention-pop.vue";
-import {
-    genDigitalFollowupForm,
-    genDigitalFollowupParams,
-    genDigitalFinalCopy,
-    genVideoTitle,
-    type CozeField,
-} from "@/utils/coze";
+import type { FollowupField } from "@/api/drawing";
 import { createHotWrite } from "@/api/hot_write";
 import {
     createShanjianVideo,
     createPlainDigitalHumanVideo,
+    genDigitalFollowupForm,
+    genDigitalFollowupParams,
+    genDigitalFinalCopy,
+    genVideoTitle,
     type ShanjianType,
     type ShanjianVideoPayload,
     type MaterialItem,
@@ -631,6 +629,7 @@ async function startDigitalDirectFlow(sourceText: string) {
         live.copies = list;
         live.regenerating = list.map(() => false);
         live.state = "ready";
+        syncUserTokens();
         // 自动用全部文案提交视频任务,然后折叠这个 copies 气泡
         live.state = "collapsed";
         startVideoTask(list);
@@ -653,6 +652,7 @@ async function regenerateOneCopy(copiesId: number, idx: number) {
         feedback.msgError(`重新生成失败:${e?.message ?? e}`);
     } finally {
         msg.regenerating[idx] = false;
+        syncUserTokens();
     }
 }
 
@@ -791,6 +791,7 @@ async function startVideoTask(copies: string[]) {
                 throw new Error((failed[0] as PromiseRejectedResult).reason?.message ?? "全部失败");
             }
             live.state = "ready";
+            syncUserTokens();
             return;
         }
 
@@ -844,6 +845,7 @@ async function startVideoTask(copies: string[]) {
         const settingId = (res as any)?.id ?? (res as any)?.setting_id ?? "?";
         feedback.msgSuccess(`视频任务已提交 #${settingId},渲染需要几分钟`);
         live.state = "ready";
+        syncUserTokens();
     } catch (e: any) {
         live.state = "failed";
         // ⚠️ $request 失败时直接 Promise.reject(msg) — e 经常就是字符串
@@ -913,7 +915,7 @@ function clearSelectedAgent() {
 
 function handleChattingSend(text: string) {
     inputText.value = text;
-    handleSend();
+    lockSend();
 }
 
 function getChatConfig() {
@@ -925,12 +927,17 @@ const drawConvId = reactive<{ image: number; video: number; ppt: number }>({ ima
 
 const { pollTask: pollDrawTask } = useDrawTaskPoll();
 
-const { ensureHasTokens, ensureEnoughTokens, bindDrawConversation, clearDrawConversationUrl } =
-    useWelcomeDrawShared({
-        drawConvId,
-        userTokens,
-        userStore,
-    });
+const {
+    ensureHasTokens,
+    ensureEnoughTokens,
+    syncUserTokens,
+    bindDrawConversation,
+    clearDrawConversationUrl,
+} = useWelcomeDrawShared({
+    drawConvId,
+    userTokens,
+    userStore,
+});
 
 const historyList = ref<DrawHistorySessionItem[]>([]);
 const historyLoading = ref(false);
@@ -977,8 +984,9 @@ const {
     drawConvId,
     appStore,
     pollDrawTask,
-    uploadFilesToUrls,
     refreshHistoryIfOpen,
+    scrollChatToLatest,
+    syncUserTokens,
     bindDrawConversation,
     ensureEnoughTokens,
     ensureHasTokens,
@@ -1006,6 +1014,7 @@ const {
     appStore,
     pollDrawTask,
     refreshHistoryIfOpen,
+    syncUserTokens,
     bindDrawConversation,
     ensureEnoughTokens,
     ensureHasTokens,
@@ -1044,6 +1053,7 @@ const {
     userTokens,
     pollDrawTask,
     refreshHistoryIfOpen,
+    syncUserTokens,
     bindDrawConversation,
     ensureHasTokens,
     displayedMode,
@@ -1147,7 +1157,7 @@ interface DigitalFollowupMsg {
     state: "thinking-form" | "form-ready" | "collapsed" | "failed";
     description?: string;
     pptType?: string;
-    fields?: CozeField[];
+    fields?: FollowupField[];
     /** 折叠态展示用:用户填好的概要(label: value) */
     summary?: Record<string, string>;
     /** 用户原始答案(给后续步骤复用) */
@@ -1267,6 +1277,15 @@ function triggerWorkflowContentPushUp() {
                 container.scrollTop;
             container.scrollTo({ top: Math.max(0, targetTop), behavior: "smooth" });
         });
+    });
+}
+
+/** 追加气泡后滚到最新一条(重新生成时用,不受 workflowBottomSpacer 影响) */
+function scrollChatToLatest() {
+    nextTick(() => {
+        const container = outputStreamRef.value;
+        if (!container) return;
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
     });
 }
 
@@ -1437,6 +1456,16 @@ async function handleSend() {
         });
         resetMention();
     } else if (activeMode.value === "image") {
+        // 参考图先传完再开气泡:一张都没传上去就别空跑一次生成(对齐视频模式)
+        let refUrls: string[] = [];
+        if (refImages.value.length) {
+            refUrls = await uploadFilesToUrls(refImages.value.map((f) => f.raw));
+            if (!refUrls.length) {
+                feedback.msgError("参考图上传失败，请重试");
+                inputText.value = text;
+                return;
+            }
+        }
         // 一轮新对话:用户消息 + 助手任务消息(图+文同气泡)
         const attachments = buildBubbleAttachments(refImages.value);
         imageChat.value.push({
@@ -1454,6 +1483,8 @@ async function handleSend() {
             height: imageState.height,
             count: Math.min(imageState.count, imageMaxCount.value),
             optimized: false,
+            refUrls,
+            syncPanel: true,
         });
         const assistantId = nextImageChatId();
         imageChat.value.push({
@@ -1464,11 +1495,7 @@ async function handleSend() {
         // ⚠️ 同 PPT 修复:必须拿数组里的 reactive 版本再启动 setTimeout
         const assistantMsg = imageChat.value.find((m) => m.id === assistantId);
         if (assistantMsg && assistantMsg.role === "assistant") {
-            callGptImage(
-                assistantMsg.task,
-                text,
-                refImages.value.map((f) => f.raw),
-            );
+            callGptImage(assistantMsg.task, text);
         }
         imageHasOutput.value = true;
     } else if (activeMode.value === "ppt") {
@@ -1619,6 +1646,9 @@ async function handleSend() {
     clearRefs();
 }
 
+/** 发送防重入:图片/视频模式发送前要等参考图上传,期间连点会真的跑两轮并各扣一次费 */
+const { lockFn: lockSend, isLock: isSending } = useLockFn(handleSend);
+
 function openMapHistory() {
     if (activeMode.value !== "map") activeMode.value = "map";
     nextTick(() => mapOutRef.value?.openHistory());
@@ -1748,7 +1778,7 @@ function onNewDrawSession() {
 }
 function onPickCat(name: string) {
     inputText.value = `帮我找${name}的商家`;
-    handleSend();
+    lockSend();
 }
 function onFetchMore() {
     // 续页走组件内 continueFetchAll:会带 query + page(=next_page)

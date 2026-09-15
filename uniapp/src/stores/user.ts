@@ -38,6 +38,21 @@ export const useUserStore = defineStore({
             // 等待会员可选用模型就绪，避免页面先渲染完整大模型列表
             await useAppStore().ensureMemberQuota(true);
         },
+        /** 轻量刷新算力(不含配置/会员配额),供工作台出结果后同步消耗 */
+        async refreshTokens() {
+            if (!this.token) return;
+            try {
+                const data = await getUserCenter({ token: this.token });
+                if (!data) return;
+                this.userInfo = {
+                    ...this.userInfo,
+                    tokens: data.tokens,
+                    personal_tokens: data.personal_tokens ?? data.tokens,
+                };
+            } catch {
+                // 静默:同步失败不影响主流程
+            }
+        },
         // 获取算力消耗配置
         async getTokensConfig() {
             const data = await getTokensConfig();

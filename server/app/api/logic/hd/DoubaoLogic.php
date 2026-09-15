@@ -8,7 +8,6 @@ use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\draw\DrawVideo;
 use app\common\model\user\User;
-use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use think\facade\Log;
 use think\facade\Cache;
@@ -213,11 +212,7 @@ class DoubaoLogic extends ApiLogic
             AccountLogEnum::TOKENS_DEC_DOUBAO_TEXT_TO_VIDEO,
             AccountLogEnum::TOKENS_DEC_DOUBAO_IMAGE_TO_VIDEO
         ];
-        $refund_num = UserTokensLog::where('user_id', $user_id)->where('change_type', $change_type[$type])->where('action', 1)->where('task_id', $task->task_id)->count();
-        if ($refund_num == 0) {
-            $points = UserTokensLog::where('user_id', $user_id)->where('change_type', $change_type[$type])->where('task_id', $task->task_id)->value('change_amount') ?? 0;
-            AccountLogLogic::recordUserTokensLog(false, $user_id, $change_type[$type], $points, $task->task_id);
-        }
+        AccountLogLogic::refundTaskOnce($user_id, (int)$change_type[$type], (string)$task->task_id);
     }
 
     /**
@@ -355,7 +350,11 @@ class DoubaoLogic extends ApiLogic
      */
     private static function imageToStream($url)
     {
-        $img = file_get_contents($url);
+        // 走 curl 并复检跳转终点 IP：裸 file_get_contents 会跟随 302，入口校验能被公网地址跳内网绕过
+        $img = FileService::fetchRemoteContent($url);
+        if ($img === null) {
+            throw new \Exception('图片地址不合法或拉取失败');
+        }
 
         return base64_encode($img);
     }

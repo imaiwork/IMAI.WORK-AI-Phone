@@ -185,7 +185,7 @@
                                 </view>
 
                                 <text class="text-xs text-[#666666] truncate">
-                                    {{ record.device_name }} ({{ record.device_code }})
+                                    {{ formatDeviceLabel(record) }}
                                 </text>
                                 <text class="text-[22rpx] text-[#B4B4B4]">{{ record.create_time }}</text>
                             </view>
@@ -271,6 +271,10 @@ const devices = ref<DeviceItem[]>([]);
 const records = ref<GenerateRecord[]>([]);
 
 const isRunning = (status: number) => status === 0 || status === 1;
+
+// 无手机模式没有设备，后端只回“云端合成”不回设备号，此时不拼括号
+const formatDeviceLabel = (record: GenerateRecord): string =>
+    record.device_code ? `${record.device_name} (${record.device_code})` : record.device_name;
 
 // ─── 设备操作 ─────────────────────────────────────────────────────
 

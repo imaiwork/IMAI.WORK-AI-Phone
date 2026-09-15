@@ -21,6 +21,22 @@ function scaleByResolution(base: [number, number], resKey: string): [number, num
     return [snap(bw), snap(bh)];
 }
 
+/** 一轮生图固化下来的参数：重新生成、历史会话据此复现原来那一轮，不跟随当前面板 */
+export interface ImageGenSnapshot {
+    /** 提交中台用的模型标识（alias 优先） */
+    model: string;
+    modelName: string;
+    ratio: string;
+    /** 提交中台的分辨率文案，如「高清 2K」 */
+    resolution: string;
+    width: number;
+    height: number;
+    n: number;
+    /** 结果卡展示用 */
+    sizeLabel: string;
+    aspectRatio: number;
+}
+
 /** 中台对这些模型只出 1 张，多要也只回 1 张，张数入口直接锁死 */
 const SINGLE_IMAGE_MODELS = ["seedream4.0", "image-2"];
 
@@ -144,35 +160,50 @@ export function useWorkbenchImage() {
         return pickOptimizeText(opt, raw);
     };
 
+    /** 固化当前面板参数，发送时调一次，之后重新生成复用同一份 */
+    const buildGenSnapshot = (): ImageGenSnapshot => {
+        const [width, height] = sizeWH.value;
+        const model = currentModel.value;
+        return {
+            model: String(model?.alias || model?.name || model?.id || ""),
+            modelName: String(model?.name || model?.alias || ""),
+            ratio: ratio.value,
+            resolution:
+                IMAGE_RESOLUTION_OPTIONS.find((o) => o.key === resolution.value)?.label ||
+                "高清 2K",
+            width,
+            height,
+            n: clampCount(count.value),
+            sizeLabel: sizeLabel.value,
+            aspectRatio: width > 0 && height > 0 ? width / height : 9 / 16,
+        };
+    };
+
     /** 直接生图（不再静默优化；优化流程由聊天卡片确认后再调用） */
-    const submit = async (prompt: string, refs?: string[]) => {
+    const submit = async (prompt: string, refs?: string[], snapshot?: ImageGenSnapshot) => {
         const epoch = submitEpoch;
         const finalPrompt = prompt.trim();
         if (!finalPrompt) throw new Error("请输入图片提示词");
-        if (!currentModel.value) throw new Error("暂无可用图片模型");
+        const snap = snapshot ?? buildGenSnapshot();
+        if (!snap.model) throw new Error("暂无可用图片模型");
 
-        const [width, height] = sizeWH.value;
-        const resLabel =
-            IMAGE_RESOLUTION_OPTIONS.find((o) => o.key === resolution.value)?.label || "高清 2K";
-
-        const n = clampCount(count.value);
         // 对齐 PC：参考图走 attachments（会话展示）+ params.image（中台图生图）。
         // 之前用顶层 reference_images，服务端中台透传不认该字段，导致生成结果与参考图无关。
         const refList = (refs ?? refImages.value)
             .map((u) => String(u || "").trim())
             .filter(Boolean);
         const res: any = await drawGenerateImage({
-            model: currentModel.value.alias || currentModel.value.name || currentModel.value.id,
+            model: snap.model,
             prompt: finalPrompt,
             conversation_id: conversationId.value || undefined,
             attachments: refList,
             params: {
                 prompt: finalPrompt,
-                ratio: ratio.value,
-                resolution: resLabel,
-                width,
-                height,
-                n,
+                ratio: snap.ratio,
+                resolution: snap.resolution,
+                width: snap.width,
+                height: snap.height,
+                n: snap.n,
                 ...(refList.length ? { image: refList } : {}),
             },
         });
@@ -225,6 +256,7 @@ export function useWorkbenchImage() {
         removeRefImage,
         applyCaseRef,
         optimizeKeywords,
+        buildGenSnapshot,
         submit,
         cancelPending,
         resetConversation,

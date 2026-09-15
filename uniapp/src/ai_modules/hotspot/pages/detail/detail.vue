@@ -135,7 +135,7 @@
                         <text
                             class="block text-[28rpx] font-bold pt-[8rpx]"
                             :class="stepStatus(step.key) === 'pending' ? 'text-[#D1D5DB]' : 'text-[#111827]'">
-                            {{ step.label }}
+                            {{ stepLabel(step.key) }}
                         </text>
 
                         <!-- 失败原因 -->
@@ -221,78 +221,106 @@
                                 </template>
                             </view>
 
-                            <!-- 结合分析 -->
+                            <!-- 结合分析（不选人设的任务没有人设与契合分析，只说明本次的合成方式） -->
                             <view v-else-if="step.key === 'analyze'" class="detail-card mt-[14rpx]">
-                                <view
-                                    v-if="task.persona?.name"
-                                    class="flex items-center gap-[16rpx] pb-[18rpx] mb-[18rpx] border-[0] border-b-[2rpx] border-solid border-[#F9FAFB]">
-                                    <image
-                                        :src="task.persona.avatar || ''"
-                                        mode="aspectFill"
-                                        class="w-[64rpx] h-[64rpx] rounded-[14rpx] bg-[#F3F4F6] flex-shrink-0" />
-                                    <view class="flex-1 min-w-0">
-                                        <text class="block text-[25rpx] font-bold text-[#111827]">
-                                            {{ task.persona.name }}
-                                        </text>
-                                        <text class="block text-[20rpx] text-[#9CA3AF] mt-[2rpx]">
-                                            {{ task.persona.tag || "" }}
-                                        </text>
-                                    </view>
-                                </view>
-                                <template v-if="hasAnalysis">
-                                    <view class="flex items-center justify-between">
-                                        <text class="text-[24rpx] font-bold text-[#374151]">契合度</text>
-                                        <text class="text-[23rpx] font-bold" :class="fitTextClass">
-                                            {{ fitLevelText }} {{ fitScore }}
-                                        </text>
-                                    </view>
-                                    <view class="h-[10rpx] bg-[#F3F4F6] rounded-full mt-[12rpx] overflow-hidden">
-                                        <view
-                                            class="h-full rounded-full"
-                                            :class="fitBarClass"
-                                            :style="`width:${fitScore}%`"></view>
-                                    </view>
-                                    <text
-                                        v-if="task.analysis.fit_reason"
-                                        class="block text-[23rpx] text-[#6B7280] leading-relaxed mt-[16rpx] break-all">
-                                        {{ task.analysis.fit_reason }}
+                                <template v-if="isManualMode">
+                                    <text class="block text-[25rpx] font-bold text-[#111827]">未选人设</text>
+                                    <text class="block text-[23rpx] text-[#6B7280] leading-relaxed mt-[8rpx]">
+                                        本次未绑定人设，跳过契合分析；口播按热点用中立口吻撰写，形象与音色为本次自选。
                                     </text>
-                                    <template v-if="task.analysis.hooks?.length">
-                                        <text class="block text-[20rpx] font-bold text-[#9CA3AF] mt-[18rpx] mb-[10rpx]">
-                                            切入方式
+                                    <view class="flex items-center gap-[10rpx] flex-wrap mt-[16rpx]">
+                                        <text
+                                            v-if="task.options?.avatar"
+                                            class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#F5F3FF] text-[#7C3AED] text-[20rpx] font-semibold">
+                                            形象 · {{ task.options.avatar }}
                                         </text>
-                                        <view
-                                            v-for="(hook, hi) in task.analysis.hooks"
-                                            :key="hi"
-                                            class="bg-[#F9FAFB] rounded-[14rpx] p-[16rpx] mb-[10rpx]">
-                                            <text class="block text-[24rpx] font-semibold text-primary">
-                                                {{ hook.label }}
-                                            </text>
-                                            <text
-                                                class="block text-[23rpx] text-[#6B7280] leading-relaxed mt-[4rpx] break-all">
-                                                {{ hook.detail }}
-                                            </text>
-                                        </view>
-                                    </template>
-                                    <view
-                                        v-if="task.analysis.risks?.length"
-                                        class="flex items-start gap-[10rpx] px-[18rpx] py-[14rpx] rounded-[14rpx] mt-[10rpx] bg-[#FFFBEB] border-[2rpx] border-solid border-[#FDE68A]">
-                                        <u-icon
-                                            name="warning"
-                                            color="#F59E0B"
-                                            :size="24"
-                                            class="flex-shrink-0"></u-icon>
-                                        <view class="flex-1 min-w-0">
-                                            <text
-                                                v-for="(risk, ri) in task.analysis.risks"
-                                                :key="ri"
-                                                class="block text-xs text-[#D97706] leading-relaxed break-all">
-                                                {{ risk }}
-                                            </text>
-                                        </view>
+                                        <text
+                                            v-if="task.options?.voice"
+                                            class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#ECFDF5] text-[#059669] text-[20rpx] font-semibold">
+                                            音色 · {{ task.options.voice }}
+                                        </text>
+                                        <text
+                                            class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#F3F4F6] text-[#6B7280] text-[20rpx]">
+                                            音量 {{ musicVolumeText }}
+                                        </text>
+                                        <text
+                                            class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#F3F4F6] text-[#6B7280] text-[20rpx]">
+                                            语速 {{ speechRateText }}
+                                        </text>
                                     </view>
                                 </template>
-                                <text v-else class="text-[24rpx] text-[#D1D5DB]">没有分析结果</text>
+                                <template v-else>
+                                    <view
+                                        v-if="task.persona?.name"
+                                        class="flex items-center gap-[16rpx] pb-[18rpx] mb-[18rpx] border-[0] border-b-[2rpx] border-solid border-[#F9FAFB]">
+                                        <image
+                                            :src="task.persona.avatar || ''"
+                                            mode="aspectFill"
+                                            class="w-[64rpx] h-[64rpx] rounded-[14rpx] bg-[#F3F4F6] flex-shrink-0" />
+                                        <view class="flex-1 min-w-0">
+                                            <text class="block text-[25rpx] font-bold text-[#111827]">
+                                                {{ task.persona.name }}
+                                            </text>
+                                            <text class="block text-[20rpx] text-[#9CA3AF] mt-[2rpx]">
+                                                {{ task.persona.tag || "" }}
+                                            </text>
+                                        </view>
+                                    </view>
+                                    <template v-if="hasAnalysis">
+                                        <view class="flex items-center justify-between">
+                                            <text class="text-[24rpx] font-bold text-[#374151]">契合度</text>
+                                            <text class="text-[23rpx] font-bold" :class="fitTextClass">
+                                                {{ fitLevelText }} {{ fitScore }}
+                                            </text>
+                                        </view>
+                                        <view class="h-[10rpx] bg-[#F3F4F6] rounded-full mt-[12rpx] overflow-hidden">
+                                            <view
+                                                class="h-full rounded-full"
+                                                :class="fitBarClass"
+                                                :style="`width:${fitScore}%`"></view>
+                                        </view>
+                                        <text
+                                            v-if="task.analysis.fit_reason"
+                                            class="block text-[23rpx] text-[#6B7280] leading-relaxed mt-[16rpx] break-all">
+                                            {{ task.analysis.fit_reason }}
+                                        </text>
+                                        <template v-if="task.analysis.hooks?.length">
+                                            <text class="block text-[20rpx] font-bold text-[#9CA3AF] mt-[18rpx] mb-[10rpx]">
+                                                切入方式
+                                            </text>
+                                            <view
+                                                v-for="(hook, hi) in task.analysis.hooks"
+                                                :key="hi"
+                                                class="bg-[#F9FAFB] rounded-[14rpx] p-[16rpx] mb-[10rpx]">
+                                                <text class="block text-[24rpx] font-semibold text-primary">
+                                                    {{ hook.label }}
+                                                </text>
+                                                <text
+                                                    class="block text-[23rpx] text-[#6B7280] leading-relaxed mt-[4rpx] break-all">
+                                                    {{ hook.detail }}
+                                                </text>
+                                            </view>
+                                        </template>
+                                        <view
+                                            v-if="task.analysis.risks?.length"
+                                            class="flex items-start gap-[10rpx] px-[18rpx] py-[14rpx] rounded-[14rpx] mt-[10rpx] bg-[#FFFBEB] border-[2rpx] border-solid border-[#FDE68A]">
+                                            <u-icon
+                                                name="warning"
+                                                color="#F59E0B"
+                                                :size="24"
+                                                class="flex-shrink-0"></u-icon>
+                                            <view class="flex-1 min-w-0">
+                                                <text
+                                                    v-for="(risk, ri) in task.analysis.risks"
+                                                    :key="ri"
+                                                    class="block text-xs text-[#D97706] leading-relaxed break-all">
+                                                    {{ risk }}
+                                                </text>
+                                            </view>
+                                        </view>
+                                    </template>
+                                    <text v-else class="text-[24rpx] text-[#D1D5DB]">没有分析结果</text>
+                                </template>
                             </view>
 
                             <!-- 口播文案 -->
@@ -381,7 +409,11 @@ import {
     HOTSPOT_STATUS_TEXT,
     HOTSPOT_TASK_STEPS,
     HOTSPOT_DEFAULT_OPTIONS,
+    HOTSPOT_MUSIC_VOLUME_DEFAULT,
+    HOTSPOT_SPEECH_RATE_DEFAULT,
     HotspotTaskStatus,
+    hotspotStepLabel,
+    isManualPersonaMode,
     platformActiveBg,
     platformLabel,
     platformWhiteIcon,
@@ -409,6 +441,21 @@ const pauseInlineVideo = () => {
 };
 
 const stepStatus = (key: string): string => task.value?.step_status?.[key] || "pending";
+
+/** 不选人设的任务没有人设快照，也没有契合分析，第 3 步按「热点解读」呈现 */
+const isManualMode = computed(() => isManualPersonaMode(task.value?.options?.persona_mode));
+const stepLabel = (key: string): string => hotspotStepLabel(key, task.value?.options?.persona_mode);
+
+/** 不选人设的音量/语速是用户当次自选的，缺省回落与后端一致的默认值 */
+const musicVolumeText = computed(() => {
+    const value = Number(task.value?.options?.music_volume);
+    const volume = Number.isFinite(value) ? value : HOTSPOT_MUSIC_VOLUME_DEFAULT;
+    return volume <= 0 ? "静音" : `${Math.round(volume * 100)}%`;
+});
+const speechRateText = computed(() => {
+    const value = Number(task.value?.options?.speech_rate);
+    return `${(Number.isFinite(value) ? value : HOTSPOT_SPEECH_RATE_DEFAULT).toFixed(1)}x`;
+});
 
 /** 后端空 analysis 序列化为 []（truthy），需按内容判断，否则会渲染出「关联较弱 0」 */
 const hasAnalysis = computed(() => {

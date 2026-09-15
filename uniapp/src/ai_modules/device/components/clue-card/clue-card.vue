@@ -15,7 +15,7 @@
             <view class="text-xs text-[#0000004d] flex items-center gap-x-1 mt-1">
                 <view>{{ type === 1 ? formatFileSize(data.size || 0) : data.time }}</view>
                 <view class="w-[2rpx] h-[22rpx] bg-[#CCCCCC] mx-[10rpx]"></view>
-                <view>{{ type === 1 ? "文件表格" : "获客线索" }}</view>
+                <view>{{ sourceLabel }}</view>
             </view>
             <view class="mt-[28rpx] grid grid-cols-3 gap-x-2" v-if="type == 2">
                 <view class="text-xs flex flex-col items-center justify-center">
@@ -37,6 +37,7 @@
 
 <script setup lang="ts">
 import { formatFileSize } from "@/utils/util";
+import { CLUE_SOURCE_TEXT, ClueSourceEnum } from "@/ai_modules/device/enums";
 const props = withDefaults(
     defineProps<{
         data: {
@@ -47,6 +48,8 @@ const props = withDefaults(
             added: number;
         };
         type: 1 | 2;
+        // 线索来源，用于区分视频号获客线索与抖音获客线索；不传按 type 兜底
+        source?: ClueSourceEnum;
     }>(),
     {
         data: () => ({
@@ -59,6 +62,12 @@ const props = withDefaults(
         type: 1,
     },
 );
+
+// 来源没传时按 type 兜底，保持老调用方（只传 type）的显示不变
+const sourceLabel = computed(() => {
+    const source = props.source ?? (props.type === 1 ? ClueSourceEnum.FILE : ClueSourceEnum.AUTO_CLUE);
+    return CLUE_SOURCE_TEXT[source] ?? CLUE_SOURCE_TEXT[ClueSourceEnum.AUTO_CLUE];
+});
 </script>
 
 <style scoped lang="scss">

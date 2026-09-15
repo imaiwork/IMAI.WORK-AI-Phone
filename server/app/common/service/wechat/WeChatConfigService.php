@@ -78,6 +78,32 @@ class WeChatConfigService
 
 
     /**
+     * @notes 根据终端获取本次微信下单使用的 appid
+     * @param $terminal
+     * @return string
+     * @remark 下单 appid 与取 openid 必须同源,否则微信报「appid和openid不匹配」。
+     *         小程序固定用主站 appid:商户号只绑了主站小程序,且 OEM 站不支持在线购买
+     *         (前端 oem-recharge-panel 走卡密兑换),不按 OEM 租户取 appid。
+     */
+    public static function getPayAppIdByTerminal($terminal): string
+    {
+        switch ($terminal) {
+            case UserTerminalEnum::WECHAT_MMP:
+                return (string)(self::getMnpConfig()['app_id'] ?? '');
+            case UserTerminalEnum::IOS:
+            case UserTerminalEnum::ANDROID:
+                return (string)(self::getOpConfig()['app_id'] ?? '');
+            case UserTerminalEnum::WECHAT_OA:
+            case UserTerminalEnum::H5:
+            case UserTerminalEnum::PC:
+                return (string)(self::getOaConfig()['app_id'] ?? '');
+            default:
+                return '';
+        }
+    }
+
+
+    /**
      * @notes 根据终端获取支付配置
      * @param $terminal
      * @return array

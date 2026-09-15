@@ -33,8 +33,9 @@ class LeadScrapingLists extends BaseApiDataLists implements ListsSearchInterface
         $this->searchWhere[] = ['ps.media_type', '=', $this->request->get('media_type', 1)];
         $this->searchWhere[] = ['ps.task_type', '=', $this->request->get('task_type', 1)];
         return SvLeadScrapingSettingAccount::alias('ps')
-            ->field('ps.*, a.nickname, a.avatar')
+            ->field('ps.*, a.nickname, a.avatar, s.touch_type, s.agent_id')
             ->join('sv_account a', 'a.account = ps.account and a.device_code = ps.device_code and a.type = ps.account_type', 'left')
+            ->join('sv_lead_scraping_setting s', 's.id = ps.scraping_id', 'left')
             ->where($this->searchWhere)
             ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
                 $query->whereBetween('ps.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);

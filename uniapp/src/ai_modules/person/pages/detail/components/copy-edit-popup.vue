@@ -1,19 +1,34 @@
 <template>
     <popup-bottom
         v-model="show"
-        :title="popupTitle"
         height="72%"
-        border-radius="44"
+        border-radius="48"
         custom-class="bg-white"
         :z-index="5002"
-        :mask-close-able="true">
+        :clearable="false"
+        :mask-close-able="true"
+        @input="emit('update:modelValue', $event)">
+        <template #header>
+            <view class="copy-handle"></view>
+            <view class="copy-header">
+                <view class="flex-1 min-w-0">
+                    <text class="text-[34rpx] font-semibold text-[#202937]">{{ popupTitle }}</text>
+                    <text class="block mt-[8rpx] text-[24rpx] text-[#647184] leading-[36rpx]">
+                        {{ copyTypeLabel }} · {{ isNews ? "标题内容必填" : "至少填写一项内容" }}
+                    </text>
+                </view>
+                <view class="copy-close active:opacity-70" @click="emit('update:modelValue', false)">
+                    <u-icon name="close" color="#5B6B80" size="24"></u-icon>
+                </view>
+            </view>
+        </template>
         <template #content>
             <view class="copy-pop">
-                <view class="grow min-h-0">
+                <view class="copy-scroll-wrap">
                     <scroll-view scroll-y class="h-full">
                         <view class="copy-field">
                             <view class="copy-label-row">
-                                <text class="copy-label">标题</text>
+                                <text class="copy-label">{{ isNews ? "标题内容" : "标题" }}</text>
                                 <text class="copy-count">{{ localForm.title.length }}/{{ limits.title }}</text>
                             </view>
                             <view v-if="isNews" class="copy-textarea-wrap">
@@ -21,7 +36,8 @@
                                     v-model="localForm.title"
                                     :maxlength="limits.title"
                                     class="copy-textarea"
-                                    placeholder="请输入标题" />
+                                    placeholder="请输入标题"
+                                    placeholder-style="color: #647184" />
                             </view>
                             <view v-else class="copy-input-wrap">
                                 <input
@@ -29,13 +45,14 @@
                                     :maxlength="limits.title"
                                     class="copy-input"
                                     placeholder="请输入标题"
+                                    placeholder-style="color: #647184"
                                     confirm-type="done" />
                             </view>
                         </view>
 
                         <view v-if="!isNews" class="copy-field">
                             <view class="copy-label-row">
-                                <text class="copy-label">内容</text>
+                                <text class="copy-label">正文</text>
                                 <text class="copy-count">{{ localForm.content.length }}/{{ limits.content }}</text>
                             </view>
                             <view class="copy-textarea-wrap">
@@ -43,7 +60,8 @@
                                     v-model="localForm.content"
                                     :maxlength="limits.content"
                                     class="copy-textarea"
-                                    placeholder="请输入内容" />
+                                    placeholder="请输入内容"
+                                    placeholder-style="color: #647184" />
                             </view>
                         </view>
 
@@ -57,13 +75,16 @@
                                     v-model="localForm.topic"
                                     :maxlength="limits.topic"
                                     class="copy-input"
-                                    placeholder="如：#敏感肌护肤 #换季修护"
+                                    placeholder="输入话题，多个话题用空格分隔"
+                                    placeholder-style="color: #647184"
                                     confirm-type="done" />
                             </view>
                         </view>
                     </scroll-view>
                 </view>
-                <button class="plain-btn copy-save" @click="handleConfirm">保存</button>
+                <view class="copy-footer">
+                    <button class="plain-btn copy-save" @click="handleConfirm">保存文案</button>
+                </view>
             </view>
         </template>
     </popup-bottom>
@@ -71,7 +92,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from "vue";
-import { getCopyLimits, isNewsCopy, isPublishCopy, type CopyFormData } from "../hooks/useCopyLibrary";
+import { copyDriveTypes, getCopyLimits, isNewsCopy, isPublishCopy, type CopyFormData } from "../hooks/useCopyLibrary";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -95,6 +116,11 @@ const show = computed({
 const isNews = computed(() => isNewsCopy(props.libraryType, props.driverType));
 const isPublish = computed(() => isPublishCopy(props.libraryType));
 const limits = computed(() => getCopyLimits(props.libraryType, props.driverType));
+const copyTypeLabel = computed(() =>
+    isPublish.value
+        ? "发布文案"
+        : copyDriveTypes.find((item) => item.key === props.driverType)?.label || "视频驱动文案",
+);
 
 const popupTitle = computed(() => (localForm.id ? "编辑文案" : "新增文案"));
 
@@ -130,16 +156,39 @@ const handleConfirm = (): void => {
 </script>
 
 <style lang="scss" scoped>
-.copy-pop {
-    @apply h-full flex flex-col px-[36rpx] pt-[16rpx] pb-[calc(28rpx+env(safe-area-inset-bottom))];
+.copy-handle {
+    @apply w-[64rpx] h-[8rpx] rounded-[8rpx] bg-[#DCE3EC] mx-auto mt-[20rpx] mb-[4rpx];
 }
 
-.copy-pop-scroll {
-    @apply grow min-h-0;
+.copy-header {
+    @apply flex items-center gap-[24rpx] px-[36rpx] pt-[18rpx] pb-[26rpx]
+        border-[0] border-b-[2rpx] border-solid border-[#EEF1F5];
+}
+
+.copy-close {
+    @apply relative w-[56rpx] h-[56rpx] rounded-full bg-[#F1F4F8] flex items-center justify-center shrink-0;
+
+    &::after {
+        content: "";
+        @apply absolute inset-[-16rpx];
+    }
+}
+
+.copy-pop {
+    @apply h-full flex flex-col;
+}
+
+.copy-scroll-wrap {
+    @apply grow min-h-0 px-[36rpx] pt-[36rpx];
+}
+
+.copy-footer {
+    @apply px-[36rpx] pt-[24rpx] pb-[calc(40rpx+env(safe-area-inset-bottom))]
+        border-[0] border-t-[2rpx] border-solid border-[#E7ECF2];
 }
 
 .copy-field {
-    @apply mb-[24rpx];
+    @apply mb-[36rpx];
 }
 
 .copy-label-row {
@@ -147,27 +196,27 @@ const handleConfirm = (): void => {
 }
 
 .copy-label {
-    @apply text-[24rpx] text-[#9ca3af] font-semibold;
+    @apply text-[26rpx] text-[#475971] font-semibold;
 }
 
 .copy-count {
-    @apply text-[22rpx] text-[#C4C9D4] tabular-nums;
+    @apply text-[24rpx] text-[#647184] tabular-nums;
 }
 
 .copy-input-wrap {
-    @apply min-h-[96rpx] rounded-[24rpx] bg-[#F4F7FA] border-[3rpx] border-solid border-[#E5ECF7] px-[26rpx] flex items-center;
+    @apply min-h-[92rpx] rounded-[22rpx] bg-[#F9FBFD] border-[2rpx] border-solid border-[#DBE3EE] px-[24rpx] flex items-center;
 }
 
 .copy-input {
-    @apply flex-1 min-w-0 h-[88rpx] bg-[transparent] text-[#1d2129] text-[28rpx];
+    @apply flex-1 min-w-0 h-[88rpx] bg-[transparent] text-[#26364E] text-[30rpx];
 }
 
 .copy-textarea-wrap {
-    @apply rounded-[24rpx] bg-[#F4F7FA] border-[3rpx] border-solid border-[#E5ECF7] px-[26rpx] py-[20rpx];
+    @apply rounded-[22rpx] bg-[#F9FBFD] border-[2rpx] border-solid border-[#DBE3EE] px-[24rpx] py-[22rpx];
 }
 
 .copy-textarea {
-    @apply w-full h-[280rpx] bg-[transparent] text-[#1d2129] text-[28rpx] leading-[1.7];
+    @apply w-full h-[240rpx] bg-[transparent] text-[#26364E] text-[30rpx] leading-[1.6];
 }
 
 .plain-btn {
@@ -179,7 +228,6 @@ const handleConfirm = (): void => {
 }
 
 .copy-save {
-    @apply mt-[16rpx] h-[92rpx] rounded-[28rpx] bg-primary text-white text-[30rpx] font-bold flex items-center justify-center;
-    box-shadow: 0 8rpx 28rpx rgba(47, 115, 246, 0.22);
+    @apply h-[94rpx] rounded-[24rpx] bg-primary text-white text-[28rpx] font-semibold flex items-center justify-center active:opacity-80;
 }
 </style>

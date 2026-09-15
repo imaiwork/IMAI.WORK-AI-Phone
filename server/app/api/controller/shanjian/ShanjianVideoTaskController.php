@@ -7,6 +7,7 @@ use app\api\controller\BaseApiController;
 use app\api\logic\shanjian\ShanjianVideoTaskLogic;
 use app\api\validate\shanjian\ShanjianVideoTaskValidate;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\service\CallbackTokenService;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
@@ -73,7 +74,8 @@ class ShanjianVideoTaskController extends BaseApiController
 
 
     /**
-     * 异步接收闪剪回调
+     * 异步接收闪剪回调（免登录，令牌鉴权 + Redis 锁 + 终态幂等在 Logic 内）。
+     * 存量接口按迁移期规则放行，见 CallbackTokenService::judge。
      */
     public function notify(): Json
     {
@@ -81,7 +83,11 @@ class ShanjianVideoTaskController extends BaseApiController
         $gotLock = false;
         try {
             $data = $this->request->all();
-            Log::channel('shanjiannotice')->write('接收闪剪参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('shanjiannotice')->write('接收闪剪参数'.json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+            if (!CallbackTokenService::guard('shanjiannotice', '闪剪视频', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
 
             $taskId = $data['task_id'] ?? '';
             if (empty($taskId)) {
@@ -137,7 +143,7 @@ class ShanjianVideoTaskController extends BaseApiController
 
 
     /**
-     * 异步接收闪剪封面回调
+     * 异步接收闪剪封面回调（免登录，令牌鉴权同 notify）。
      */
     public function covernotify(): Json
     {
@@ -145,7 +151,11 @@ class ShanjianVideoTaskController extends BaseApiController
         $gotLock = false;
         try {
             $data = $this->request->all();
-            Log::channel('shanjiannotice')->write('接收闪剪封面参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('shanjiannotice')->write('接收闪剪封面参数'.json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+            if (!CallbackTokenService::guard('shanjiannotice', '闪剪封面', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
 
             $taskId = $data['task_id'] ?? '';
             if (empty($taskId)) {

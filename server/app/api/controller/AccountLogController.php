@@ -4,6 +4,7 @@
 namespace app\api\controller;
 
 use app\api\lists\AccountLogLists;
+use app\api\logic\AccountLogMnpLogic;
 use app\api\logic\AccountTokenLogic;
 
 /**
@@ -22,6 +23,15 @@ class AccountLogController extends BaseApiController
     public function lists()
     {
         return $this->dataLists(new AccountLogLists());
+    }
+
+
+    /**
+     * 小程序算力消耗分类账单：按计费标准大类 + 日期汇总
+     */
+    public function mnpLists()
+    {
+        return $this->data(AccountLogMnpLogic::lists($this->userId, $this->request->get()));
     }
 
 

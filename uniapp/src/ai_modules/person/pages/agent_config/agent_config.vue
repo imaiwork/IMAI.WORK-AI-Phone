@@ -148,7 +148,7 @@
                                 </view>
 
                                 <view
-                                    v-if="!isShutoffItem(activeSettingKey) && !isLikeOnlyMode"
+                                    v-if="!isLikeOnlyMode"
                                     class="bg-white rounded-[24rpx] p-[24rpx] mb-[24rpx] shadow-sm">
                                     <text class="block text-[26rpx] font-medium text-[#333333] mb-[20rpx]"
                                         >回复方式</text
@@ -304,6 +304,11 @@ const momentsTabs = [
     { label: "仅评论", value: MomentsActionEnum.COMMENT_ONLY },
     { label: "评论+点赞", value: MomentsActionEnum.BOTH },
 ];
+// 截流默认走固定话术，所以把固定话术放在前面
+const shutoffTabs = [
+    { label: "固定话术", value: CommentReplyModeEnum.FIXED },
+    { label: "AI 接管", value: CommentReplyModeEnum.AI },
+];
 
 const SHUTOFF_IDS = new Set(["shutoff_comment", "shutoff_msg"]);
 const isShutoffItem = (id: string): boolean => SHUTOFF_IDS.has(id);
@@ -433,6 +438,7 @@ const activeItem = ref<ConfigItem>({} as ConfigItem);
 const activeSettingTitle = computed(() => activeItem.value?.title || "");
 
 const currentTabs = computed(() => {
+    if (isShutoffItem(activeSettingKey.value)) return shutoffTabs;
     if (activeSettingKey.value === "comment") return commentTabs;
     return dmTabs;
 });
@@ -549,7 +555,7 @@ const validateAll = (): boolean => {
         const isLikeOnly = item.id == "moments_interact" && item.momentsAction == MomentsActionEnum.LIKE_ONLY;
         if (isLikeOnly || item.replyMode == CommentReplyModeEnum.LIKE_REPLY) continue;
 
-        if (!isShutoffItem(item.id) && item.replyMode == CommentReplyModeEnum.AI && Number(item.agentId) <= 0) {
+        if (item.replyMode == CommentReplyModeEnum.AI && Number(item.agentId) <= 0) {
             uni.showToast({
                 title: `【${item.title}】请选择关联智能体`,
                 icon: "none",
@@ -618,7 +624,11 @@ const getDetail = async () => {
             item.fixedScripts = normalizeScripts(agentRes[item.fixedScriptsField]);
 
             if (isShutoffItem(item.id)) {
-                item.replyMode = CommentReplyModeEnum.FIXED;
+                // 后端把缺省的截流 type 兜底成 1(AI)，只有真的绑了智能体才认作 AI 接管
+                item.replyMode =
+                    Number(agentRes[item.replyModeField]) === CommentReplyModeEnum.AI && Number(item.agentId) > 0
+                        ? CommentReplyModeEnum.AI
+                        : CommentReplyModeEnum.FIXED;
             } else {
                 item.replyMode = agentRes[item.replyModeField] ?? CommentReplyModeEnum.AI;
             }

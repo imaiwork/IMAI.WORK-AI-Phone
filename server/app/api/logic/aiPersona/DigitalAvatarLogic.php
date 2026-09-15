@@ -3,6 +3,7 @@
 namespace app\api\logic\aiPersona;
 
 use app\api\logic\ApiLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\AiPersonaDigitalVoice;
@@ -34,19 +35,26 @@ class DigitalAvatarLogic extends ApiLogic
             }
             $dhIds = is_array($params['dh_ids']) ? $params['dh_ids'] : [$params['dh_ids']];
             $ids   = [];
+            // 选择弹窗按 digital_human_anchor.status 列形象，而入库要过 shanjian_anchor.status=6。
+            // 两个口径不一致时（最常见是会员到期把闪剪形象冻结成 9），原来是静默 continue，
+            // 接口照样回「创建成功」，用户看到的就是「加了没反应」。记下原因，一条都没加成时报出去。
+            $skipped = [];
             foreach ($dhIds as $dhId) {
                 $personaDigital = AiPersonaDigitalAvatar::where(['user_id' => $userId, 'dh_id' => $dhId, 'persona_id' => $params['persona_id'], 'delete_time' => null])
                                                         ->findOrEmpty();
                 if (!$personaDigital->isEmpty()) {
+                    $skipped[] = '「' . ($personaDigital['avatar_name'] ?: $dhId) . '」已经在该人设里了';
                     continue;
                 }
                 $avatar = DigitalHumanAnchor::where(['id' => $dhId, 'user_id' => $userId])->where('status',2)->findOrEmpty();
                 if ($avatar->isEmpty()) {
+                    $skipped[] = self::unavailableAnchorReason((int)$dhId, $userId);
                     continue;
                 }
 
                 $shanjian = ShanjianAnchor::where('dh_id', $avatar['id'])->where('status',6)->findOrEmpty();
                 if ($shanjian->isEmpty()) {
+                    $skipped[] = self::unavailableAnchorReason((int)$dhId, $userId, (string)$avatar['name']);
                     continue;
                 }
 
@@ -69,15 +77,40 @@ class DigitalAvatarLogic extends ApiLogic
                 ];
                 $ids[]                    = AiPersonaDigitalAvatar::create($personaDigitalAvatarData)->id;
             }
+            if (empty($ids)) {
+                throw new Exception($skipped ? implode('；', array_unique($skipped)) : '所选形象当前不可用，请更换');
+            }
             Db::commit();
             // 新增成功，返回新增的ID
-            self::$returnData = ['id' => $ids];
+            self::$returnData = ['id' => $ids, 'skipped' => array_values(array_unique($skipped))];
             return true;
         } catch (Exception $e) {
             Db::rollback();
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 闪剪形象为什么用不了（加入人设、绑定原音共用）：会员冻结与「还没克隆好/已删除」
+     * 要分开说，前者恢复会员就能用，后者只能换一个，提示混在一起用户没法处理。
+     */
+    private static function unavailableAnchorReason(int $dhId, int $userId, string $name = ''): string
+    {
+        if ($name === '') {
+            $name = (string)DigitalHumanAnchor::where(['id' => $dhId, 'user_id' => $userId])->value('name');
+        }
+        $label = $name !== '' ? '「' . $name . '」' : '所选形象';
+
+        // 会员到期冻结的是 shanjian_anchor（MemberService 的 digital_human_shanjian 实体），
+        // digital_human_anchor.status 不参与冻结，所以只看闪剪那张表
+        $isFrozen = ShanjianAnchor::where('dh_id', $dhId)
+            ->where('status', ShanjianVideoSettingLogic::memberFrozenStatus())
+            ->count() > 0;
+        if ($isFrozen) {
+            return $label . ShanjianVideoSettingLogic::frozenAnchorTip();
+        }
+        return $label . '当前不可用，请确认形象已克隆完成后再添加';
     }
 
     /**
@@ -141,7 +174,13 @@ class DigitalAvatarLogic extends ApiLogic
             }else{
                 $shanjian = ShanjianAnchor::where('dh_id', $personaAvatar->dh_id)->where('status',6)->findOrEmpty();
                 if ($shanjian->isEmpty()){
-                    throw new Exception('壹传媒形象状态异常');
+                    // 形象被会员到期冻结时也会落到这里。一句「壹传媒形象状态异常」既没说是哪个形象，
+                    // 也没说该去做什么，用户只能反复点；换成按真实原因给的文案
+                    throw new Exception(self::unavailableAnchorReason(
+                        (int)$personaAvatar->dh_id,
+                        $userId,
+                        (string)$personaAvatar->avatar_name
+                    ));
                 }
                 $personaAvatar->third_voice_id = $shanjian['voice_id'];
                 $personaAvatar->is_original_voice = 1;

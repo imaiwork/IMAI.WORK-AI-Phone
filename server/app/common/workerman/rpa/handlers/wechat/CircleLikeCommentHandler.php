@@ -4,6 +4,7 @@ namespace app\common\workerman\rpa\handlers\wechat;
 
 use app\api\logic\ChatLogic;
 use app\api\logic\service\TokenLogService;
+use app\common\enum\ChatEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
@@ -375,7 +376,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
                 $request = [
                     'messages' => $messages,
                     'message' => $autoConfig->comment_robot_prompt,
-                    'model' => $option['model'] ?? 'gpt-4o',
+                    'model' => $option['model'] ?? ChatEnum::DEFAULT_CHAT_MODEL_ALIAS,
                     'top_p' => $option['top_p'] ?? 0.8,
                     'stream' => $option['stream'] ?? false,
                     'max_tokens' => $option['max_tokens'] ?? 4096,
@@ -540,7 +541,7 @@ class CircleLikeCommentHandler extends BaseMessageHandler
     private function handleResponse(array $response, array $request, int $autoType)
     {
         try {
-            $modelAlias = $request['model'] ?? 'gpt-4o';
+            $modelAlias = $request['model'] ?? ChatEnum::DEFAULT_CHAT_MODEL_ALIAS;
             ChatBillingService::checkBalance((int)$request['user_id'], $modelAlias);
 
             $reply = $response['data']['message'] ?? '';

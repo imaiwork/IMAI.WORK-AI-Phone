@@ -13,6 +13,15 @@ use think\facade\Log;
  */
 class DrawGenerateService
 {
+    /**
+     * 「提交中途被掐断」任务的回收阈值（秒）
+     *
+     * 必须大于站长端单个请求的存活上限：nginx fastcgi_read_timeout 与 php-fpm
+     * request_terminate_timeout 现网均为 600s，超过这条线的 PENDING 任务不可能还活着。
+     * 留 300s 余量取 900s，既不误杀在途请求，也不让算力挂太久。
+     */
+    public const STALE_PENDING_TIMEOUT_SECONDS = 900;
+
     private DrawBillingService $billing;
     private MidPlatformDrawClient $midClient;
     private DrawAssetService $assetService;
@@ -322,6 +331,106 @@ class DrawGenerateService
         foreach ($list as $task) {
             $this->poll($task);
             $n++;
+        }
+        return $n;
+    }
+
+    /**
+     * 回收「提交中途被掐断」的任务并退还预扣算力
+     *
+     * submit() 里任务先建成 PENDING + 预扣算力，再同步等中台返回；拿到结果才写
+     * mid_task_id 并转 SUBMITTED，抛异常才转 FAILED 并退费。所以「PENDING 且
+     * mid_task_id 为空」只有一种成因：PHP 进程在等中台的过程中被杀，两个分支都没走到。
+     * 这类任务 pollPending() 也捞不到（它要求 mid_task_id 非空），不回收就永远停在
+     * PENDING、算力永远挂在 BILL_HELD。
+     *
+     * 2026-09-09 上游停摆 14 分钟，一次就留下 92 条这样的僵尸、2700 算力退不回来。
+     *
+     * 阈值必须大于站长端单请求的存活上限（nginx fastcgi_read_timeout 与 php-fpm
+     * request_terminate_timeout，现网均为 600s），否则会误杀还在途的请求。
+     */
+    public function recoverStalePending(int $limit = 50, int $timeout = self::STALE_PENDING_TIMEOUT_SECONDS): int
+    {
+        $timeout = max(self::STALE_PENDING_TIMEOUT_SECONDS, $timeout);
+        $deadline = time() - $timeout;
+
+        $list = DrawTask::where('status', DrawEnum::STATUS_PENDING)
+            ->where(function ($query) {
+                $query->where('mid_task_id', '')->whereNull('mid_task_id', 'OR');
+            })
+            ->where('create_time', '>', 0)
+            ->where('create_time', '<', $deadline)
+            ->order('id', 'asc')
+            ->limit($limit)
+            ->select();
+
+        $n = 0;
+        foreach ($list as $task) {
+            // 条件更新兼作乐观锁：两个 cron 撞车时只有一个能认领，避免重复退费
+            $claimed = DrawTask::where('id', $task->id)
+                ->where('status', DrawEnum::STATUS_PENDING)
+                ->update([
+                    'status'      => DrawEnum::STATUS_FAILED,
+                    'error_msg'   => '生成超时未返回，已自动回收并退还算力',
+                    'finished_at' => time(),
+                    'update_time' => time(),
+                ]);
+            if ($claimed <= 0) {
+                continue;
+            }
+
+            $task = DrawTask::findOrEmpty((int)$task->id);
+            if ($task->isEmpty()) {
+                continue;
+            }
+
+            try {
+                $this->billing->refundIfHeld($task);
+            } catch (\Throwable $e) {
+                // 退费失败不阻断本轮其余任务，下一轮 refundIfHeld 幂等重试
+                Log::error('draw recover refund failed: ' . $e->getMessage(), ['task_no' => $task->task_no]);
+            }
+
+            try {
+                LegacyDrawMirrorService::mirror($task);
+            } catch (\Throwable $e) {
+                Log::warning('draw recover mirror failed: ' . $e->getMessage(), ['task_no' => $task->task_no]);
+            }
+
+            $n++;
+        }
+        return $n;
+    }
+
+    /**
+     * 补退「已判失败/取消，但算力仍挂在预扣态」的任务
+     *
+     * refundIfHeld() 在退款流水写失败时会把 bill_status 闸门回滚成 BILL_HELD 让人重试，
+     * 但任务状态此时已经是终态了——recoverStalePending() 只捞 PENDING，捞不回来；
+     * submit() 与 handleMidResult() 的失败分支也都是「标终态 → 退费」的顺序，退费那步
+     * 抛异常同样会留下这种搁浅。没有这一层，算力就永久卡在预扣态没人管。
+     *
+     * 幂等由 refundIfHeld() 自己的双闸保证，重复跑不会多退。
+     */
+    public function refundStrandedHolds(int $limit = 50): int
+    {
+        $list = DrawTask::whereIn('status', [
+            DrawEnum::STATUS_FAILED,
+            DrawEnum::STATUS_CANCELLED,
+        ])
+            ->where('bill_status', DrawEnum::BILL_HELD)
+            ->order('id', 'asc')
+            ->limit($limit)
+            ->select();
+
+        $n = 0;
+        foreach ($list as $task) {
+            try {
+                $this->billing->refundIfHeld($task);
+                $n++;
+            } catch (\Throwable $e) {
+                Log::error('draw stranded refund failed: ' . $e->getMessage(), ['task_no' => $task->task_no]);
+            }
         }
         return $n;
     }

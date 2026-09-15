@@ -227,26 +227,36 @@ class DeviceViralRecordLists extends BaseApiDataLists implements ListsSearchInte
         $dayStart = strtotime($day . ' 00:00:00');
         $dayEnd = strtotime($day . ' 23:59:59');
 
-        // 当天：与视频合成实际消耗的爆款一致
+        // 当天：与视频合成实际消耗的爆款一致，并展示提取失败记录
         if ($day === $today) {
-            $query->whereIn('ps.status', [
-                    SvDeviceViralRecord::STATUS_QUALIFIED,
-                    //SvDeviceViralRecord::STATUS_DEADLINE_FALLBACK,
-                    SvDeviceViralRecord::STATUS_FALLBACK_ERROR,
-                ])
-                ->whereBetween('ps.use_time', [$dayStart, $dayEnd]);
+            $query->where(function ($q) use ($day, $dayStart, $dayEnd) {
+                $q->where(function ($ok) use ($dayStart, $dayEnd) {
+                    $ok->whereIn('ps.status', [
+                            SvDeviceViralRecord::STATUS_QUALIFIED,
+                            SvDeviceViralRecord::STATUS_FALLBACK_ERROR,
+                        ])
+                        ->whereBetween('ps.use_time', [$dayStart, $dayEnd]);
+                })->whereOr(function ($fail) use ($day) {
+                    $fail->where('ps.status', '=', SvDeviceViralRecord::STATUS_ERROR)
+                        ->where('ps.day', '=', $day);
+                });
+            });
             return;
         }
 
-        // 历史日：保持旧逻辑
+        // 历史日：成功记录按使用时间，失败记录按所属日
         $query->whereIn('ps.status', [
             SvDeviceViralRecord::STATUS_QUALIFIED,
+            SvDeviceViralRecord::STATUS_ERROR,
             SvDeviceViralRecord::STATUS_FALLBACK_ERROR,
         ]);
         $query->where(function ($q) use ($day, $dayStart, $dayEnd) {
             $q->where(function ($q4) use ($dayStart, $dayEnd) {
                 $q4->where('ps.status', '=', SvDeviceViralRecord::STATUS_QUALIFIED)
                     ->whereBetween('ps.use_time', [$dayStart, $dayEnd]);
+            })->whereOr(function ($q5) use ($day) {
+                $q5->where('ps.status', '=', SvDeviceViralRecord::STATUS_ERROR)
+                    ->where('ps.day', '=', $day);
             })->whereOr(function ($q7) use ($day) {
                 $q7->where('ps.status', '=', SvDeviceViralRecord::STATUS_FALLBACK_ERROR)
                     ->where('ps.day', '=', $day);

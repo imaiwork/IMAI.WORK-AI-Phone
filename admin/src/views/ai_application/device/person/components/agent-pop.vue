@@ -158,7 +158,6 @@
                             :script-error="item.scriptError"
                             :agent-options="agentOptions"
                             :show-like-only="false"
-                            :show-ai="!isShutoffItem(item.id)"
                             :source-key="item.id"
                             :is-collapsed="getCollapsed(item.id)"
                             @update:reply-mode="item.replyMode = $event"
@@ -378,7 +377,7 @@ const ScriptList = defineComponent({
 });
 
 // ─── ReplyModeSelector（render 函数）─────────────────────────────
-// ✅ 新增 showAi prop，控制是否显示 AI 智能回复选项
+// showAi 控制是否显示 AI 智能回复卡片（朋友圈仅点赞等场景可关闭）
 const ReplyModeSelector = defineComponent({
     name: "ReplyModeSelector",
     props: {
@@ -405,7 +404,7 @@ const ReplyModeSelector = defineComponent({
         commentIsCollapsed: { type: Boolean, default: true },
         agentOptions: { type: Array as () => AgentOption[], required: true },
         showLikeOnly: { type: Boolean, default: false },
-        showAi: { type: Boolean, default: true }, // ✅ 新增：是否显示 AI 选项
+        showAi: { type: Boolean, default: true },
         sourceKey: { type: String, required: true },
         isCollapsed: { type: Boolean, required: true },
     },
@@ -677,7 +676,7 @@ const ReplyModeSelector = defineComponent({
         };
 
         return () => {
-            // ✅ showAi=false 时不渲染 AI 卡片
+            // showAi=false 时不渲染 AI 卡片
             const aiCard = props.showAi
                 ? renderModeCard(CommentReplyModeEnum.AI, {
                       icon: Cpu,
@@ -873,7 +872,7 @@ const configList = ref<ConfigItem[]>([
         momentsActionField: "",
         agentId: "",
         agentName: "",
-        replyMode: CommentReplyModeEnum.FIXED, // ✅ 默认固定话术
+        replyMode: CommentReplyModeEnum.FIXED, // 截流默认固定话术
         fixedScripts: [],
         scriptInput: "",
         scriptError: false,
@@ -893,7 +892,7 @@ const configList = ref<ConfigItem[]>([
         momentsActionField: "",
         agentId: "",
         agentName: "",
-        replyMode: CommentReplyModeEnum.FIXED, // ✅ 默认固定话术
+        replyMode: CommentReplyModeEnum.FIXED, // 截流默认固定话术
         fixedScripts: [],
         scriptInput: "",
         scriptError: false,
@@ -987,7 +986,7 @@ const validateConfig = (): boolean => {
     for (const item of configList.value) {
         const isLikeOnly = item.id === "moments_interact" && item.momentsAction === MomentsActionEnum.LIKE_ONLY;
         if (isLikeOnly) continue;
-        if (item.replyMode === CommentReplyModeEnum.AI && !isShutoffItem(item.id)) {
+        if (item.replyMode === CommentReplyModeEnum.AI) {
             if (!item.agentId) {
                 feedback.msgWarning(`【${item.title}】请选择关联智能体`);
                 return false;
@@ -1175,7 +1174,11 @@ const getDetail = async () => {
             item.agentId = agentRes[item.agentIdField] ? String(agentRes[item.agentIdField]) : "";
             item.agentName = agentRes[item.agentNameField] ?? "";
             if (isShutoffItem(item.id)) {
-                item.replyMode = CommentReplyModeEnum.FIXED;
+                // 后端把缺省的截流 type 兜底成 1(AI)，只有真的绑了智能体才认作 AI 接管
+                item.replyMode =
+                    Number(agentRes[item.replyModeField]) === CommentReplyModeEnum.AI && Number(item.agentId) > 0
+                        ? CommentReplyModeEnum.AI
+                        : CommentReplyModeEnum.FIXED;
             } else {
                 item.replyMode = agentRes[item.replyModeField] ?? CommentReplyModeEnum.AI;
             }

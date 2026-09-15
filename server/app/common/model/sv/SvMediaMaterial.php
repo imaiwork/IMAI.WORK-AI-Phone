@@ -144,6 +144,137 @@ class SvMediaMaterial extends BaseModel
         return array_keys($values);
     }
 
+    /**
+     * 手动爆款复刻素材去重键：Pexels按素材ID归一，其它来源按去参数后的主机+路径归一。
+     * 仅供手动爆款复刻查重使用，不改变热点追踪等共享查询行为。
+     */
+    public static function videoImitationRemoteDedupKey(string $remoteUrl, string $kind = ''): string
+    {
+        $remoteUrl = trim($remoteUrl);
+        if ($remoteUrl === '') {
+            return '';
+        }
+        $parts = parse_url($remoteUrl);
+        if (!is_array($parts) || empty($parts['host'])) {
+            return ($kind !== '' ? $kind . ':' : '') . self::stripRemoteUrlQuery($remoteUrl);
+        }
+
+        $host = strtolower((string)$parts['host']);
+        $path = rawurldecode((string)($parts['path'] ?? ''));
+        if ($host === 'pexels.com' || str_ends_with($host, '.pexels.com')) {
+            if (preg_match('~/video-files/(\d+)(?:/|$)~', $path, $matches)) {
+                return 'pexels:video:' . $matches[1];
+            }
+            if (preg_match('~/photos/(\d+)(?:/|$)~', $path, $matches)) {
+                return 'pexels:image:' . $matches[1];
+            }
+        }
+
+        $port = isset($parts['port']) ? ':' . (int)$parts['port'] : '';
+        $path = preg_replace('~/+~', '/', $path) ?: $path;
+        return ($kind !== '' ? $kind . ':' : '') . $host . $port . $path;
+    }
+
+    /**
+     * 手动爆款复刻按素材原链查重，并可按需跨来源识别Pexels同素材的不同清晰度链接。
+     */
+    public static function findExistingVideoImitationMaterialId(
+        int $userId,
+        string $remoteUrl,
+        bool $acrossSources = false
+    ): int
+    {
+        $remoteUrl = trim($remoteUrl);
+        if ($userId <= 0 || $remoteUrl === '') {
+            return 0;
+        }
+        if (array_key_exists('findExistingVideoImitationMaterialId', self::$testHooks)) {
+            $hook = self::$testHooks['findExistingVideoImitationMaterialId'];
+            return is_callable($hook) ? (int)$hook($userId, $remoteUrl, $acrossSources) : (int)$hook;
+        }
+        // 兼容已有查重测试钩子。
+        if (array_key_exists('findExistingIdByRemoteUrl', self::$testHooks)) {
+            return self::findExistingIdByRemoteUrl($userId, self::SOURCE_VIDEO_IMITATION, $remoteUrl);
+        }
+        $candidates = self::remoteUrlLookupValues($remoteUrl);
+        if ($candidates === []) {
+            return 0;
+        }
+        $stripped = self::stripRemoteUrlQuery($remoteUrl);
+        $dedupKey = self::videoImitationRemoteDedupKey($remoteUrl);
+        $pexelsLike = '';
+        if (preg_match('/^pexels:(video|image):(\d+)$/', $dedupKey, $matches)) {
+            $pexelsLike = $matches[1] === 'video'
+                ? '%/video-files/' . $matches[2] . '/%'
+                : '%/photos/' . $matches[2] . '/%';
+        }
+
+        try {
+            $query = self::where('user_id', $userId);
+            if (!$acrossSources) {
+                $query->where('source', self::SOURCE_VIDEO_IMITATION);
+            }
+            $id = $query->where(function ($query) use ($candidates, $stripped, $pexelsLike) {
+                    $query->whereIn('remote_url', $candidates);
+                    if ($stripped !== '') {
+                        $likePrefix = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $stripped);
+                        $query->whereOr('remote_url', 'like', $likePrefix . '?%');
+                    }
+                    if ($pexelsLike !== '') {
+                        $query->whereOr('remote_url', 'like', $pexelsLike);
+                    }
+                })
+                ->order('id', 'asc')
+                ->value('id');
+            return (int)$id;
+        } catch (\Throwable $e) {
+            try {
+                Log::channel('shanjian')->write('手动爆款复刻素材按规范原链查重失败：' . $e->getMessage());
+            } catch (\Throwable $ignored) {
+            }
+            return 0;
+        }
+    }
+
+    /** 手动爆款复刻按本地内容地址查重，可由纯AI分支按需跨来源。 */
+    public static function findExistingVideoImitationContentId(
+        int $userId,
+        string $content,
+        bool $acrossSources = false
+    ): int
+    {
+        if ($userId <= 0 || trim($content) === '') {
+            return 0;
+        }
+        if (array_key_exists('findExistingVideoImitationContentId', self::$testHooks)) {
+            $hook = self::$testHooks['findExistingVideoImitationContentId'];
+            return is_callable($hook) ? (int)$hook($userId, $content, $acrossSources) : (int)$hook;
+        }
+        // 兼容已有查重测试钩子。
+        if (array_key_exists('findExistingId', self::$testHooks)) {
+            return self::findExistingId($userId, self::SOURCE_VIDEO_IMITATION, $content);
+        }
+        $values = self::contentLookupValues($content);
+        if ($values === []) {
+            return 0;
+        }
+        try {
+            $query = self::where('user_id', $userId);
+            if (!$acrossSources) {
+                $query->where('source', self::SOURCE_VIDEO_IMITATION);
+            }
+            return (int)$query->whereIn('content', $values)
+                ->order('id', 'asc')
+                ->value('id');
+        } catch (\Throwable $e) {
+            try {
+                Log::channel('shanjian')->write('手动爆款复刻素材按content跨来源查重失败：' . $e->getMessage());
+            } catch (\Throwable $ignored) {
+            }
+            return 0;
+        }
+    }
+
     public static function clipMaterialContent(string $content): string
     {
         if (strlen($content) <= self::CONTENT_MAX_LEN) {
@@ -560,15 +691,16 @@ class SvMediaMaterial extends BaseModel
         }
         $pendingRows = [];
         $pendingPositions = [];
+        $pendingRowByDedupKey = [];
         foreach ($built['rows'] as $j => $row) {
             $pos = $insertPositions[$j] ?? null;
             $existingId = 0;
             $remoteUrl = trim((string)($row['remote_url'] ?? ''));
             if ($remoteUrl !== '') {
-                $existingId = self::findExistingIdByRemoteUrl($userId, self::SOURCE_VIDEO_IMITATION, $remoteUrl);
+                $existingId = self::findExistingVideoImitationMaterialId($userId, $remoteUrl);
             }
             if ($existingId <= 0) {
-                $existingId = self::findExistingId($userId, self::SOURCE_VIDEO_IMITATION, (string)($row['content'] ?? ''));
+                $existingId = self::findExistingVideoImitationContentId($userId, (string)($row['content'] ?? ''));
             }
             if ($existingId > 0) {
                 if ($pos !== null) {
@@ -577,9 +709,44 @@ class SvMediaMaterial extends BaseModel
                 }
                 continue;
             }
+
+            $kind = (int)($row['m_type'] ?? 0) === self::TYPE_VIDEO ? 'video' : 'image';
+            $dedupKeys = [];
+            if ($remoteUrl !== '') {
+                $remoteKey = self::videoImitationRemoteDedupKey($remoteUrl, $kind);
+                if ($remoteKey !== '') {
+                    $dedupKeys[] = 'remote:' . $remoteKey;
+                }
+            }
+            $content = trim((string)($row['content'] ?? ''));
+            if ($content !== '') {
+                $dedupKeys[] = 'content:' . $kind . ':' . $content;
+            }
+
+            $duplicatePendingIndex = null;
+            foreach ($dedupKeys as $dedupKey) {
+                if (isset($pendingRowByDedupKey[$dedupKey])) {
+                    $duplicatePendingIndex = $pendingRowByDedupKey[$dedupKey];
+                    break;
+                }
+            }
+            if ($duplicatePendingIndex !== null) {
+                if ($pos !== null) {
+                    if (!isset($pendingPositions[$duplicatePendingIndex])) {
+                        $pendingPositions[$duplicatePendingIndex] = [];
+                    }
+                    $pendingPositions[$duplicatePendingIndex][] = $pos;
+                }
+                continue;
+            }
+
+            $pendingIndex = count($pendingRows);
             $pendingRows[] = $row;
+            foreach ($dedupKeys as $dedupKey) {
+                $pendingRowByDedupKey[$dedupKey] = $pendingIndex;
+            }
             if ($pos !== null) {
-                $pendingPositions[] = $pos;
+                $pendingPositions[$pendingIndex] = [$pos];
             }
         }
         if ($pendingRows === []) {
@@ -588,12 +755,15 @@ class SvMediaMaterial extends BaseModel
         $pendingRows = self::fillMissingVideoImitationCovers($pendingRows);
         $result = self::saveVideoImitationRows($pendingRows);
         foreach ($result as $j => $model) {
-            $pos = $pendingPositions[$j] ?? null;
-            if ($pos === null) {
+            $positions = $pendingPositions[$j] ?? [];
+            if ($positions === []) {
                 continue;
             }
-            $items[$pos]['id'] = is_object($model) ? (int)($model->id ?? 0) : (int)($model['id'] ?? 0);
-            $items[$pos]['material_store'] = 'sv_media';
+            $savedId = is_object($model) ? (int)($model->id ?? 0) : (int)($model['id'] ?? 0);
+            foreach ($positions as $pos) {
+                $items[$pos]['id'] = $savedId;
+                $items[$pos]['material_store'] = 'sv_media';
+            }
         }
         return array_values($items);
     }

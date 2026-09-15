@@ -20,6 +20,8 @@ use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
+use app\common\model\sv\SvDySearchTask;
+use app\common\model\sv\SvDySearchTaskDevice;
 use app\common\model\sv\SvLeadScrapingSetting;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSetting;
@@ -33,6 +35,10 @@ use app\common\model\sv\SvWechatStrategy;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
 use app\common\service\FileService;
+use app\common\service\display\DySearchIntentionMapper;
+use app\common\service\sv\DySearchAccountNormalizer;
+use app\common\service\sv\DySearchWechatDispatchService;
+use app\common\service\sv\DySearchWechatVerifyService;
 use app\common\service\sv\CircleInteractionActionService;
 use Channel\Client as ChannelClient;
 use think\cache\driver\Redis;
@@ -42,6 +48,8 @@ use think\facade\Log;
 
 trait DeviceTaskTrait
 {
+    use DySearchTaskTrait;
+
     private static  Redis|null $redisInstance = null;
     private static  $logtitle = '';
     private static  $redisSelect = 8;
@@ -1293,6 +1301,8 @@ trait DeviceTaskTrait
                     'comment_publish_day' => $setting->comment_publish_day ?? 0,
                     'ip_address' => $setting->ip_address ?? [],
                     'is_note_like' => $setting->is_like ?? 0,
+                    'touchType' => (int)($setting->touch_type ?? 1),
+                    'agentId' => (int)($setting->agent_id ?? 0),
                     'msg' => '评论区评论任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -1386,6 +1396,8 @@ trait DeviceTaskTrait
                     'comment_publish_day' => $setting->comment_publish_day ?? 0,
                     'ip_address' => $setting->ip_address ?? [],
                     'is_note_like' => $setting->is_like ?? 0,
+                    'touchType' => (int)($setting->touch_type ?? 1),
+                    'agentId' => (int)($setting->agent_id ?? 0),
                     'msg' => '评论区私信任务运行'
                 ), JSON_UNESCAPED_UNICODE),
                 'deviceId' => $dtask->device_code,
@@ -2060,6 +2072,440 @@ trait DeviceTaskTrait
             self::setLog('_setPublishStatus' . $e, 'error');
             throw new \Exception($e->getMessage(), $e->getCode());
         }
+    }
+
+    public static function dySearchStartTask(SvDeviceTask $dtask, Output $output, callable $callback)
+    {
+        try {
+            self::$logtitle = "抖音获客任务[{$dtask->device_code}]";
+            $task = SvDySearchTask::where('id', $dtask->sub_task_id)->findOrEmpty();
+            if ($task->isEmpty()) {
+                $output->writeln('获客任务不存在或已删除');
+                self::setLog('获客任务不存在或已删除', 'dy_search');
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 2,
+                        'remark' => '获客任务不存在或已删除',
+                    ]);
+                }
+                return;
+            }
+            if ((int)$task->status === 2) {
+                $output->writeln('获客任务已暂停');
+                self::setLog('获客任务已暂停', 'dy_search');
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 0,
+                        'remark' => '任务已暂停',
+                    ]);
+                }
+                return;
+            }
+            if (in_array((int)$task->status, [3, 4], true)) {
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 2,
+                        'remark' => '任务已结束',
+                    ]);
+                }
+                return;
+            }
+
+            $bind = SvDySearchTaskDevice::where('task_id', $task->id)
+                ->where('device_code', $dtask->device_code)
+                ->where('status', 'in', [0, 1])
+                ->findOrEmpty();
+            if ($bind->isEmpty()) {
+                $output->writeln("暂时没有需要执行的设备：\n" . Db::getLastSql());
+                self::setLog("暂时没有需要执行的设备：\n" . Db::getLastSql(), 'dy_search');
+                throw new \Exception('暂时没有需要执行的设备');
+            }
+
+            self::checkOnline($dtask->device_code, 'ws');
+            self::pushTaskContent($task, $bind, $dtask);
+
+            SvDySearchTask::where('id', $task->id)->update(['status' => 1, 'update_time' => time()]);
+            $bind->status = 1;
+            $bind->update_time = time();
+            $bind->save();
+
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 1,
+                    'remark' => '任务执行中',
+                ]);
+            }
+        } catch (\Throwable $th) {
+            self::setLog('抖音获客任务执行失败：' . $th->getMessage() . ' device=' . $dtask->device_code . ' sub_task_id=' . $dtask->sub_task_id, 'dy_search');
+            $output->writeln('任务执行失败：' . $th->getMessage());
+            $retryable = !str_contains($th->getMessage(), '暂时没有需要执行的设备');
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => $retryable ? 0 : 3,
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
+                ]);
+            }
+            throw new \Exception($th->getMessage(), $th->getCode());
+        }
+    }
+
+    /**
+     * 搜寻任务从未启动就过了时段：收口本设备绑定，必要时把主任务标完成。
+     * 加微任务（类型 19）不要走这里，避免误收口搜寻主任务。
+     */
+    public static function dySearchCloseTimeoutUnstarted(SvDeviceTask $task): void
+    {
+        if ((int)$task->task_type !== DeviceEnum::TASK_TYPE_DY_SEARCH) {
+            return;
+        }
+        $taskId = (int)$task->sub_task_id;
+        $deviceCode = trim((string)$task->device_code);
+        if ($taskId < 1 || $deviceCode === '') {
+            return;
+        }
+        SvDySearchTaskDevice::where('task_id', $taskId)
+            ->where('device_code', $deviceCode)
+            ->where('status', '<>', 3)
+            ->update(['status' => 3, 'update_time' => time()]);
+        self::dySearchMaybeFinishMainTask($taskId);
+    }
+
+    public static function dySearchEndTask(SvDeviceTask $task, Output $output, callable $callback)
+    {
+        try {
+            self::$logtitle = "抖音获客任务[{$task->device_code}]";
+            $bind = SvDySearchTaskDevice::where('task_id', $task->sub_task_id)
+                ->where('device_code', $task->device_code)
+                ->findOrEmpty();
+
+            try {
+                //self::dySearchCancel((int)$task->sub_task_id, '时段结束', (string)$task->device_code);
+            } catch (\Throwable $e) {
+                self::setLog('抖音获客时段结束取消指令失败：' . $e->getMessage(), 'dy_search');
+            }
+            if (!$bind->isEmpty() && (int)$bind->status !== 3) {
+                $bind->status = 3;
+                $bind->update_time = time();
+                $bind->save();
+            }
+            self::dySearchMaybeFinishMainTask((int)$task->sub_task_id);
+            self::setWsSelect();
+            self::redis()->set("xhs:device:{$task->device_code}:taskStatus", json_encode([
+                'taskStatus' => 'standby',
+                'taskType' => 'setDySearch',
+                'msg' => '执行抖音获客',
+                'duration' => 0,
+                'time' => date('Y-m-d H:i:s', time()),
+                'scene' => 'dy_search',
+            ], JSON_UNESCAPED_UNICODE));
+
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 2,
+                    'remark' => '任务执行结束',
+                ]);
+            }
+        } catch (\Throwable $th) {
+            self::setLog('抖音获客时段结束失败：' . $th->getMessage() . ' device=' . $task->device_code . ' sub_task_id=' . $task->sub_task_id, 'dy_search');
+            $output->writeln('任务执行失败：' . $th->getMessage());
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 3,
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
+                ]);
+            }
+            throw new \Exception($th->getMessage(), $th->getCode());
+        }
+    }
+
+    public static function dySearchWechatTask(SvDeviceTask $dtask, Output $output, callable $callback)
+    {
+        try {
+            self::$logtitle = "抖音获客加微任务[{$dtask->device_code}]";
+            $task = SvDySearchTask::where('id', $dtask->sub_task_id)->findOrEmpty();
+            if ($task->isEmpty()) {
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 2,
+                        'remark' => '获客任务不存在或已删除',
+                    ]);
+                }
+                return;
+            }
+            $decision = DySearchWechatDispatchService::decide((int)$task->status, (int)$task->add_type);
+            if ($decision['action'] !== DySearchWechatDispatchService::ACTION_RUN) {
+                self::setLog(
+                    $decision['remark'] . ' task_id=' . $task->id . ' device=' . $dtask->device_code,
+                    'dy_search'
+                );
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => $decision['status'],
+                        'remark' => $decision['remark'],
+                    ]);
+                }
+                return;
+            }
+            if ((int)$task->status === 3) {
+                self::setLog('搜寻已完成，继续加微 task_id=' . $task->id . ' device=' . $dtask->device_code, 'dy_search');
+            }
+
+            DySearchWechatVerifyService::recycleStuckDispatch((int)$task->id);
+            $used = (int)SvAddWechatRecord::where('dy_search_task_id', $task->id)
+                ->where('channel', DySearchIntentionMapper::ADD_CHANNEL)
+                ->where('device_code', $dtask->device_code)
+                ->where('status', 'in', [1, 2])
+                ->count();
+            $quota = DySearchWechatDispatchService::dispatchQuota((int)$task->add_number, $used, 10);
+            if ($quota < 1) {
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 2,
+                        'remark' => '已达加微次数上限',
+                    ]);
+                }
+                return;
+            }
+
+            $records = self::loadDySearchAddWechatRecords($task, (string)$dtask->device_code);
+            if (DySearchWechatDispatchService::shouldVerifyPending(
+                $records === [],
+                DySearchWechatVerifyService::hasPendingVerify((int)$task->id)
+            )) {
+                self::setLog('加微队列为空，先校验本任务未处理微信号 task_id=' . $task->id, 'dy_search');
+                DySearchWechatVerifyService::verifyPendingForTask((int)$task->id, time() + 20);
+                $records = self::loadDySearchAddWechatRecords($task, (string)$dtask->device_code);
+            }
+
+            if ($records === []) {
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 1,
+                        'remark' => '暂无待加微客资，等待获客入库',
+                    ]);
+                }
+                return;
+            }
+
+            $wechat = self::resolveDySearchWechatAccount(
+                (string)$dtask->device_code,
+                (string)($task->wechat_id ?? ''),
+                (int)$task->user_id
+            );
+            if ($wechat === null) {
+                self::setLog(
+                    '指定的加微微信不属于该设备，等待 task_id=' . $task->id
+                    . ' device=' . $dtask->device_code
+                    . ' wechat_id=' . (string)($task->wechat_id ?? ''),
+                    'dy_search'
+                );
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 1,
+                        'remark' => '指定的加微微信不属于该设备，等待',
+                    ]);
+                }
+                return;
+            }
+
+            try {
+                self::checkOnline($dtask->device_code, 'ws');
+            } catch (\Throwable $e) {
+                self::setLog('设备不在线，等待加微：' . $e->getMessage(), 'dy_search');
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 1,
+                        'remark' => '设备不在线，等待',
+                    ]);
+                }
+                return;
+            }
+
+            $sendWechatIds = [];
+            $addIntervalTime = (int)$task->add_interval_time > 0 ? (int)$task->add_interval_time : 10;
+            $greeting = self::dySearchGreetingMessage($task);
+            foreach ($records as $record) {
+                if (count($sendWechatIds) >= $quota) {
+                    break;
+                }
+                $recordId = (int)($record['id'] ?? 0);
+                if ($recordId < 1) {
+                    continue;
+                }
+                $claimed = SvAddWechatRecord::where('id', $recordId)
+                    ->where('status', 'in', DySearchWechatVerifyService::DISPATCH_STATUSES)
+                    ->update([
+                        'wechat_no' => $wechat['account'] ?? '',
+                        'wechat_name' => $wechat['nickname'] ?? '',
+                        'wechat_avatar' => $wechat['avatar'] ?? '',
+                        'remark' => $greeting,
+                        'status' => 2,
+                        'result' => '执行中',
+                        'update_time' => time(),
+                    ]);
+                if ((int)$claimed < 1) {
+                    continue;
+                }
+                $sendWechatIds[] = [
+                    'friendWechatId' => $record['reg_wechat'],
+                    'message' => $greeting,
+                    'recordId' => $recordId,
+                    'isManual' => 0,
+                ];
+                $addIntervalTime = (int)($record['add_interval_time'] ?? 0) > 0
+                    ? (int)$record['add_interval_time']
+                    : $addIntervalTime;
+            }
+
+            if ($sendWechatIds === []) {
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 1,
+                        'remark' => '暂无待加微客资，等待获客入库',
+                    ]);
+                }
+                return;
+            }
+
+            $data = array(
+                'type' => DeviceEnum::RPA_ADD_WECHAT,
+                'appType' => 0,
+                'content' => json_encode(array(
+                    'task_id' => $dtask->id,
+                    'deviceId' => $dtask->device_code,
+                    'account' => $wechat['account'],
+                    'account_type' => 1,
+                    'start_time' => $dtask->start_time,
+                    'end_time' => $dtask->end_time,
+                    'time_interval' => ceil(($dtask->end_time - $dtask->start_time) / 60),
+                    'send_wechat_ids' => $sendWechatIds,
+                    'add_interval_time' => $addIntervalTime,
+                    'msg' => '抖音获客加微任务运行'
+                ), JSON_UNESCAPED_UNICODE),
+                'deviceId' => $dtask->device_code,
+                'appVersion' => \app\common\enum\DeviceEnum::APP_VERSION,
+                'messageId' => 0,
+            );
+            self::setLog('抖音获客加微下发 task_id=' . $task->id . ' device=' . $dtask->device_code . ' 条数=' . count($sendWechatIds), 'dy_search');
+            self::setLog($data, 'add_wechat');
+            $output->writeln(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+            $channel = "device.{$dtask->device_code}.message";
+            ChannelClient::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
+            ChannelClient::publish($channel, [
+                'data' => json_encode($data)
+            ]);
+
+            foreach ($sendWechatIds as $item) {
+                AiWechatLog::create([
+                    'user_id' => $wechat->user_id,
+                    'wechat_id' => $wechat->account,
+                    'log_type' => AiWechatLog::TYPE_ACCEPT_FRIEND,
+                    'friend_id' => $item['friendWechatId'],
+                    'create_time' => time(),
+                ]);
+            }
+            $wechat->is_cooling = 0;
+            $wechat->cooling_time = 0;
+            $wechat->update_time = time();
+            $wechat->save();
+
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 1,
+                    'remark' => '任务执行中',
+                ]);
+            }
+        } catch (\Throwable $th) {
+            self::setLog('抖音获客加微下发失败：' . $th->getMessage() . ' device=' . $dtask->device_code . ' sub_task_id=' . $dtask->sub_task_id, 'dy_search');
+            $output->writeln('加微任务检查失败：' . $th->getMessage());
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 1,
+                    'remark' => '加微下发失败，等待',
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function loadDySearchAddWechatRecords(SvDySearchTask $task, string $deviceCode): array
+    {
+        return SvAddWechatRecord::alias('r')
+            ->field('r.*, t.add_number, t.add_interval_time, t.add_remark_enable, t.remarks, t.wechat_id')
+            ->join('sv_dy_search_task t', 'r.dy_search_task_id = t.id and t.delete_time is null')
+            ->where('r.dy_search_task_id', $task->id)
+            ->where('r.channel', DySearchIntentionMapper::ADD_CHANNEL)
+            ->where('r.device_code', $deviceCode)
+            ->where('r.status', 'in', DySearchWechatVerifyService::DISPATCH_STATUSES)
+            ->order('r.id', 'desc')
+            ->limit(50)
+            ->select()
+            ->toArray();
+    }
+
+    /**
+     * 按任务指定的 wechat_id 在该设备上取微信，不回落到第一条。
+     */
+    private static function resolveDySearchWechatAccount(string $deviceCode, string $wechatId, int $userId): ?SvAccount
+    {
+        $tokens = DySearchAccountNormalizer::splitWechatIds($wechatId);
+        if ($tokens === [] || $deviceCode === '') {
+            return null;
+        }
+
+        $query = SvAccount::where('device_code', $deviceCode)->where('type', 1);
+        if ($userId > 0) {
+            $query->where('user_id', $userId);
+        }
+        $found = $query->where('account', 'in', $tokens)->findOrEmpty();
+        if (!$found->isEmpty()) {
+            return $found;
+        }
+
+        $ids = [];
+        foreach ($tokens as $token) {
+            if (ctype_digit($token)) {
+                $ids[] = (int)$token;
+            }
+        }
+        if ($ids === []) {
+            return null;
+        }
+
+        $query = SvAccount::where('device_code', $deviceCode)->where('type', 1);
+        if ($userId > 0) {
+            $query->where('user_id', $userId);
+        }
+        $found = $query->where('id', 'in', $ids)->findOrEmpty();
+        return $found->isEmpty() ? null : $found;
+    }
+
+    /**
+     * @param array|\ArrayAccess $task
+     */
+    private static function dySearchGreetingMessage($task): string
+    {
+        if ((int)($task['add_remark_enable'] ?? 0) !== 1) {
+            return '';
+        }
+        $remarks = $task['remarks'] ?? [];
+        if (is_string($remarks)) {
+            $decoded = json_decode($remarks, true);
+            $remarks = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($remarks) || $remarks === []) {
+            return '';
+        }
+        $remarks = array_values(array_filter(array_map('trim', $remarks), function ($item) {
+            return $item !== '';
+        }));
+        if ($remarks === []) {
+            return '';
+        }
+        return (string)$remarks[array_rand($remarks)];
     }
 
     private static function checkOnline(string $deviceCode, string $type = 'wx')

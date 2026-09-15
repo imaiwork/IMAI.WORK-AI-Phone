@@ -170,7 +170,7 @@ class DeviceLists extends BaseApiDataLists implements ListsSearchInterface, List
                 $item['auth_type_name'] = ($lastCdk && !$lastCdk->isEmpty()) ? self::authTypeFormat($lastCdk->type) : '';
                 $item['cdk_type_name'] = $item['auth_type_name'];
                 $item['auth_start_time'] = !empty($item['auth_start_time']) && $item['auth_start_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_start_time']) : '';
-                $item['auth_expire_time'] = !empty($item['auth_expire_time']) && $item['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_expire_time']) : '永久';
+                $item['auth_expire_time'] = !empty($item['auth_expire_time']) && $item['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $item['auth_expire_time']) : (!empty($item['auth_start_time']) && $item['auth_start_time'] > 0 ? '永久' : $item['create_time']);
                 $item['auth_code'] = ($lastCdk && !$lastCdk->isEmpty()) ? (string)$lastCdk->code : '';
                 $item['is_used'] = SvDeviceUsed::where('user_id', $item->user_id)->where('device_code', $item['device_code'])->value('is_used');
                 unset($item['last_auth_code_id'], $item['last_cdk_code_id']);

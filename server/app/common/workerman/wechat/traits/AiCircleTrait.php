@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace app\common\workerman\wechat\traits;
 
 use app\api\logic\ChatLogic;
+use app\common\enum\ChatEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\model\wechat\AiWechatCircleReplyLikeStrategy;
 use app\common\model\wechat\AiWechatDevice;
@@ -322,7 +323,7 @@ trait AiCircleTrait
 
     private function handleResponse(array $response, array $request)
     {
-        $modelAlias = $request['model'] ?? 'gpt-4o';
+        $modelAlias = $request['model'] ?? ChatEnum::DEFAULT_CHAT_MODEL_ALIAS;
         ChatBillingService::checkBalance((int)$request['user_id'], $modelAlias);
 
         $reply = $response['data']['message'] ?? '';

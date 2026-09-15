@@ -725,12 +725,7 @@ class HdLogic extends ApiLogic
         if ($response['code'] == 15011){
             self::setError($response['message'] ?? '生成失败');
             $taskId = $request['task_id'];
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', AccountLogEnum::TOKENS_DEC_MODEL_IMAGE)->where('action', 2)->where('task_id', $taskId)->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', AccountLogEnum::TOKENS_DEC_MODEL_IMAGE)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', AccountLogEnum::TOKENS_DEC_MODEL_IMAGE)->where('task_id', $taskId)->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $userId, AccountLogEnum::TOKENS_DEC_MODEL_IMAGE, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)AccountLogEnum::TOKENS_DEC_MODEL_IMAGE, (string)$taskId);
             return [];
         }
 
@@ -746,7 +741,11 @@ class HdLogic extends ApiLogic
      */
     private static function imageToStream($url)
     {
-        $img = file_get_contents($url);
+        // 走 curl 并复检跳转终点 IP：裸 file_get_contents 会跟随 302，入口校验能被公网地址跳内网绕过
+        $img = FileService::fetchRemoteContent($url);
+        if ($img === null) {
+            throw new \Exception('图片地址不合法或拉取失败');
+        }
 
         return base64_encode($img);
     }

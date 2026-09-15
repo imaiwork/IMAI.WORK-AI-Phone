@@ -358,3 +358,16 @@ export const PersonTypeMap = {
     [PersonTypeEnum.BUSINESS_SERVICE]: "企业服务",
     [PersonTypeEnum.LOCAL_BUSINESS]: "本地商家",
 };
+
+// 用户性别，取值与后端保持一致
+export enum UserSexEnum {
+    UNKNOWN = 0,
+    MAN = 1,
+    WOMAN = 2,
+}
+
+export const USER_SEX_OPTIONS = [
+    { label: "女", value: UserSexEnum.WOMAN },
+    { label: "男", value: UserSexEnum.MAN },
+    { label: "未知", value: UserSexEnum.UNKNOWN },
+];

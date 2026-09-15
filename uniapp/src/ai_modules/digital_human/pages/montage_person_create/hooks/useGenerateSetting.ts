@@ -2,7 +2,7 @@ import WechatOA from "@/utils/wechat";
 import { createShanjianTask, addShanjianPerson } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
 import type { ShallowRef, Ref } from "vue";
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import { montageConfig } from "@/enums/montageEnums";
 
 export const VIDEO_COUNT_MIN = 1;
 export const VIDEO_COUNT_MAX = 99;

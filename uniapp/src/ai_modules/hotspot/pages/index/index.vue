@@ -472,7 +472,7 @@ const openFlow = (topic: Record<string, any>) => {
     showFlow.value = true;
 };
 
-/** 面板内完成结合分析后，点亮热榜对应条目的「已分析」标记（无需整榜刷新） */
+/** 面板内完成结合分析、或创建了视频任务后，点亮热榜对应条目的「已分析」标记（无需整榜刷新） */
 const onTopicAnalyzed = (topic: Record<string, any>) => {
     const hit = topics.value.find(
         (t) => t.title === topic?.title && (t.platform || currentPlatform.value) === topic?.platform,

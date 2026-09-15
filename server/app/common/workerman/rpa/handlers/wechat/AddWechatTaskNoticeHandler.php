@@ -64,7 +64,7 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
             $record->image = $this->toolUtil->saveBase64ToImage($content['image'] ?? '', generate_unique_task_id(), 'wechat');
             $record->status = (int)$content['status'] === 0 ? 1 : 0;
             $record->result = $maps[$content['status']] ?? '未知状态：' . $content['status'];
-            $record->update = time();
+            $record->update_time = time();
             $record->add_time = time();
             $record->save();
 

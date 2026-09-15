@@ -14,8 +14,7 @@ class ShanjianVideoSettingLists extends BaseAdminDataLists implements ListsSearc
     {
         return [
             '%like%' => ['sj.name','u.nickname'],
-            'in' => ['sj.status'],
-            'in' => ['sj.shanjian_type'],
+            'in' => ['sj.status', 'sj.shanjian_type'],
         ];
     }
 

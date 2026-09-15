@@ -22,6 +22,9 @@ class WechatLoginValidate extends BaseValidate
         'terminal' => 'require',
         'avatar' => 'require',
         'phoneNumber' => 'require',
+        'sex' => 'in:0,1,2',
+        'store_name' => 'max:100',
+        'certificate_image' => 'max:255',
     ];
 
     protected $message = [
@@ -32,6 +35,9 @@ class WechatLoginValidate extends BaseValidate
         'access_token.require' => 'access_token缺少',
         'terminal.require' => '终端参数缺少',
         'avatar.require' => '头像缺少',
+        'sex.in' => '性别参数错误',
+        'store_name.max' => '所在门店最多100个字符',
+        'certificate_image.max' => '资质证书参数错误',
     ];
 
 
@@ -86,6 +92,6 @@ class WechatLoginValidate extends BaseValidate
      */
     public function sceneUpdateUser()
     {
-        return $this->only(['nickname', 'avatar']);
+        return $this->only(['nickname', 'avatar', 'sex', 'store_name', 'certificate_image']);
     }
 }

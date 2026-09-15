@@ -180,6 +180,7 @@
                             show-progress
                             :data="{ ffmpeg: 1, generate_thumbnail: 1, fetch_video_info: 1 }"
                             :max-size="200"
+                            :limit="99"
                             :show-file-list="false"
                             @change="handleUploadSuccess">
                             <ElButton type="primary" class="!rounded-full !h-10 !px-4">

@@ -3,6 +3,7 @@
 namespace app\common\service\hotspot;
 
 use app\api\logic\aiPersona\AiPersonaLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\Material;
@@ -11,6 +12,9 @@ use app\common\service\FileService;
 
 class PersonaService
 {
+    /** 按 ID 回捞混剪素材的条数上限：够覆盖时长上限内能选到的最多张数即可 */
+    public const CLIP_MATERIAL_ID_LIMIT = 200;
+
     public static function lists(int $userId): array
     {
         $rows = AiPersona::with([
@@ -28,11 +32,12 @@ class PersonaService
             ->field([
                 'ap.id', 'ap.user_id', 'ap.persona_name', 'ap.persona_type',
                 'ap.avatar_url', 'ap.industry', 'ap.main_business', 'ap.status',
+                'ap.material_use_mode',
             ])
             ->where([
                 ['ap.user_id', '=', $userId],
                 ['ap.delete_time', '=', null],
-                ['ap.status', '=', 1],
+                //['ap.status', '=', 1],
             ])
             ->order('ap.create_time desc')
             ->select()
@@ -88,8 +93,19 @@ class PersonaService
         return $out;
     }
 
-    public static function clipMaterials(int $userId, int $personaId, int $pageNo = 1, int $pageSize = 10): array
-    {
+    /**
+     * 人设混剪素材列表。
+     * $ids 非空时按 ID 回捞（不分页），供还原历史现场后核对已选素材是否仍可选。
+     *
+     * @param list<int|string> $ids
+     */
+    public static function clipMaterials(
+        int $userId,
+        int $personaId,
+        int $pageNo = 1,
+        int $pageSize = 10,
+        array $ids = []
+    ): array {
         if ($userId <= 0) {
             throw new HotspotUpstreamException('请先登录后再选择混剪素材');
         }
@@ -102,21 +118,18 @@ class PersonaService
 
         $pageNo = max(1, $pageNo);
         $pageSize = max(1, min(50, $pageSize > 0 ? $pageSize : 10));
+        $useMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId);
+        $ids = ScriptService::normalizePositiveIdList($ids);
 
-        $rows = Material::where('user_id', $userId)
-            ->where('persona_id', $personaId)
-            ->where('publish_mode', Material::PUBLISH_MODE_MAKE_VIDEO)
-            ->whereIn('material_type', [Material::MATERIAL_TYPE_VIDEO, Material::MATERIAL_TYPE_IMAGE])
-            ->where('use_status', Material::USE_STATUS_ENABLED)
-            ->where(function ($query) {
-                $query->where('source_type', '<>', 'slice')
-                    ->whereOr('slice_status', Material::SLICE_STATUS_SUCCESS);
-            })
+        $query = self::clipMaterialQuery($userId, $personaId)
             ->field(['id', 'material_name', 'thumbnail_url', 'file_url', 'material_type', 'duration'])
-            ->order('id', 'desc')
-            ->page($pageNo, $pageSize)
-            ->select()
-            ->toArray();
+            ->order('id', 'desc');
+        if ($ids !== []) {
+            $query->whereIn('id', array_slice($ids, 0, self::CLIP_MATERIAL_ID_LIMIT));
+        } else {
+            $query->page($pageNo, $pageSize);
+        }
+        $rows = $query->select()->toArray();
 
         $out = [];
         foreach ($rows as $row) {
@@ -139,14 +152,67 @@ class PersonaService
             ];
         }
         HotspotLog::write(sprintf(
-            '人设混剪素材查询完成：用户=%d 人设id=%d 页=%d 每页=%d 数量=%d',
+            '人设混剪素材查询完成：用户=%d 人设id=%d 素材模式=%d 页=%d 每页=%d 回捞id数=%d 数量=%d',
             $userId,
             $personaId,
+            $useMode,
             $pageNo,
             $pageSize,
+            count($ids),
             count($out)
         ));
         return $out;
+    }
+
+    /**
+     * 已选素材里当前仍可选的那部分（与混剪素材列表同口径，保持传入顺序）。
+     * $useMode 给了按快照滤，为 null 现读人设模式。
+     *
+     * @param list<int|string> $ids
+     * @return list<int>
+     */
+    public static function selectableMaterialIds(int $userId, int $personaId, array $ids, ?int $useMode = null): array
+    {
+        $ids = ScriptService::normalizePositiveIdList($ids);
+        if ($userId <= 0 || $personaId <= 0 || $ids === []) {
+            return [];
+        }
+        $found = self::clipMaterialQuery($userId, $personaId, $useMode)
+            ->whereIn('id', $ids)
+            ->column('id');
+        $found = ScriptService::normalizePositiveIdList(is_array($found) ? $found : []);
+        return array_values(array_intersect($ids, $found));
+    }
+
+    /**
+     * 热点混剪素材查询：与人设素材库/主合成链路同口径。
+     * $applyKeepOriginal=false 时不按模式滤，供按已选 ID 回表（避免人设事后改模式把原单滤空）。
+     * $useMode 有值按快照滤；为 null 且要滤时现读人设（选素材列表）。
+     */
+    public static function clipMaterialQuery(int $userId, int $personaId, ?int $useMode = null, bool $applyKeepOriginal = true)
+    {
+        $query = Material::where('user_id', $userId)
+            ->where('persona_id', $personaId)
+            ->where('publish_mode', Material::PUBLISH_MODE_MAKE_VIDEO)
+            ->whereIn('material_type', [Material::MATERIAL_TYPE_VIDEO, Material::MATERIAL_TYPE_IMAGE])
+            ->where('use_status', Material::USE_STATUS_ENABLED)
+            ->where(function ($query) {
+                $query->where('source_type', '<>', 'slice')
+                    ->whereOr('slice_status', Material::SLICE_STATUS_SUCCESS);
+            });
+        if ($applyKeepOriginal) {
+            $mode = $useMode ?? ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId);
+            $query->where('keep_original', self::keepOriginalByUseMode($mode));
+        }
+        return $query;
+    }
+
+    public static function keepOriginalByUseMode(int $useMode): int
+    {
+        return ShanjianVideoSettingLogic::normalizeMaterialUseMode($useMode)
+            === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+            ? Material::KEEP_ORIGINAL_YES
+            : Material::KEEP_ORIGINAL_NO;
     }
 
     public static function fromRequest(array $params): array
@@ -250,13 +316,27 @@ class PersonaService
             };
         }
 
+        $personaId = (int)($row['id'] ?? 0);
+        if (array_key_exists('material_use_mode', $row)) {
+            $materialUseMode = ShanjianVideoSettingLogic::normalizeMaterialUseMode($row['material_use_mode']);
+        } elseif ($personaId > 0) {
+            $materialUseMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId);
+        } else {
+            $materialUseMode = ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE;
+        }
+
         return [
-            'id' => (int)($row['id'] ?? 0),
+            'id' => $personaId,
             'name' => (string)($row['persona_name'] ?? ''),
             'tag' => $tag,
             'avatar' => FileService::getFileUrl((string)($row['avatar_url'] ?? '')),
             'tone' => AiPersonaTextService::join($toneRaw),
             'business' => (string)($row['main_business'] ?? ''),
+            'material_use_mode' => $materialUseMode,
+            // 冻结的人设（会员到期，status=0）照样列在选择页里，但口播文案链路取不到它的画像。
+            // 不透出状态的话，用户只能选中、走到最后一步才被拦，所以让选择页先禁掉
+            'enabled' => !array_key_exists('status', $row)
+                || (int)$row['status'] === AiPersona::STATUS_ENABLED,
         ];
     }
 
@@ -278,12 +358,17 @@ class PersonaService
     private static function normalizePayload(array $persona): array
     {
         return [
+            // 请求体传进来的人设没有库里的启用状态，按可用处理，与改动前行为一致
+            'enabled' => true,
             'id' => (int)($persona['id'] ?? 0),
             'name' => (string)($persona['name'] ?? ''),
             'tag' => (string)($persona['tag'] ?? ''),
             'avatar' => (string)($persona['avatar'] ?? ''),
             'tone' => AiPersonaTextService::join($persona['tone'] ?? ''),
             'business' => (string)($persona['business'] ?? ''),
+            'material_use_mode' => array_key_exists('material_use_mode', $persona)
+                ? ShanjianVideoSettingLogic::normalizeMaterialUseMode($persona['material_use_mode'])
+                : ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE,
         ];
     }
 }

@@ -1,117 +1,117 @@
 <template>
     <view>
-        <view
-            class="rounded-[28rpx] px-[28rpx] py-[26rpx] mb-[22rpx]"
-            style="background: #ebf2ff; border: 2rpx solid #bad4ff">
-            <view class="flex items-center justify-between gap-[20rpx] mb-[18rpx]">
-                <view class="flex items-center gap-[12rpx] min-w-0">
-                    <u-icon name="star-fill" color="#2B6EFF" size="30" class="shrink-0"></u-icon>
-                    <text class="text-sm font-bold text-[#1A56CC] line-clamp-1"> 每天 00:00-03:00 自动生成内容 </text>
+        <view v-if="isCloudMode" class="viral-cloud-tip">
+            <u-icon name="info-circle" color="#536A87" size="34" class="shrink-0 mt-[4rpx]"></u-icon>
+            <view class="flex-1 min-w-0 flex flex-col">
+                <text class="text-xs font-bold">无手机模式 · 手动准备参考作品</text>
+                <text class="text-xs leading-[1.65]">
+                    当前不会自动采集爆款。复制想参考的作品链接，手动加入这个人设。
+                </text>
+            </view>
+        </view>
+
+        <view class="viral-keywords">
+            <view class="viral-heading mb-[24rpx]">
+                <view class="viral-heading-copy">
+                    <text class="viral-heading-title">爆款追踪词</text>
+                    <text class="viral-meta">{{ state.viralKeywords.length }} 个追踪词</text>
                 </view>
-                <view
-                    class="px-[22rpx] py-[10rpx] rounded-full bg-primary flex items-center gap-[8rpx] shrink-0"
-                    @click="actions.refreshKeywords()">
-                    <u-icon name="reload" color="#FFFFFF" size="22"></u-icon>
-                    <text class="text-[22rpx] font-semibold text-white">换一批</text>
+                <view class="flex flex-wrap items-center gap-[8rpx]">
+                    <view class="viral-text-btn active:opacity-70" @click="actions.refreshKeywords()">
+                        <u-icon name="reload" color="#0761D9" size="24"></u-icon>
+                        <text>换一批</text>
+                    </view>
+                    <view class="viral-text-btn active:opacity-70" @click="actions.editKeywords()">
+                        <text>＋ 新增</text>
+                    </view>
                 </view>
             </view>
-            <text class="text-xs leading-relaxed text-primary block mb-[20rpx]">
-                AI 从词库中抽词 → 搜索各平台爆款 → 自动下载提取文案 → AI 分析结构 → 自动生成新内容。
+            <text class="viral-meta block">
+                {{
+                    isCloudMode
+                        ? "保留当前内容方向，自动采集需切换手机模式并关联设备。"
+                        : "关联 AI 手机后，按这些关键词自动采集参考作品。"
+                }}
             </text>
-            <view class="flex flex-wrap gap-[10rpx]">
+
+            <view class="flex flex-wrap gap-x-[12rpx] mt-[12rpx]">
                 <view
                     v-for="(keyword, index) in visibleKeywords"
                     :key="keyword"
-                    class="flex items-center gap-[8rpx] bg-white pl-[18rpx] pr-[12rpx] py-[7rpx] rounded-full active:opacity-70"
-                    style="border: 2rpx solid #bad4ff"
+                    class="viral-word active:opacity-70"
                     @click="actions.editKeywords(keyword, index)">
-                    <text class="text-[22rpx] font-semibold text-primary">{{ keyword }}</text>
-                    <view
-                        class="w-[28rpx] h-[28rpx] rounded-full flex items-center justify-center active:opacity-60"
-                        @click.stop="actions.removeKeyword(keyword, index)">
-                        <u-icon name="close" color="#2B6EFF" size="14"></u-icon>
+                    <text class="viral-word-label">{{ keyword }}</text>
+                    <view class="viral-word-x" @click.stop="actions.removeKeyword(keyword, index)">
+                        <u-icon name="close" color="#075ECF" size="16"></u-icon>
                     </view>
                 </view>
                 <view
                     v-if="hiddenKeywordCount > 0 && !keywordsExpanded"
-                    class="px-[18rpx] py-[7rpx] rounded-full bg-white flex items-center gap-[4rpx] active:opacity-70"
-                    style="border: 2rpx solid #bad4ff"
+                    class="viral-word viral-word--ghost active:opacity-70"
                     @click="keywordsExpanded = true">
-                    <text class="text-[22rpx] font-semibold text-primary">+{{ hiddenKeywordCount }}</text>
-                    <u-icon name="arrow-down" color="#2B6EFF" size="20"></u-icon>
+                    <text class="viral-word-label">+{{ hiddenKeywordCount }}</text>
                 </view>
                 <view
                     v-if="keywordsExpanded && state.viralKeywords.length > KEYWORD_VISIBLE_LIMIT"
-                    class="px-[18rpx] py-[7rpx] rounded-full bg-white flex items-center gap-[4rpx] active:opacity-70"
-                    style="border: 2rpx solid #bad4ff"
+                    class="viral-word viral-word--ghost active:opacity-70"
                     @click="keywordsExpanded = false">
-                    <text class="text-[22rpx] font-semibold text-primary">收起</text>
-                    <u-icon name="arrow-up" color="#2B6EFF" size="20"></u-icon>
-                </view>
-                <view
-                    class="px-[18rpx] py-[7rpx] rounded-full"
-                    style="border: 2rpx dashed #bad4ff"
-                    @click="actions.editKeywords()">
-                    <text class="text-[22rpx] font-semibold text-primary">+ 添加</text>
+                    <text class="viral-word-label">收起</text>
                 </view>
             </view>
         </view>
 
-        <scroll-view scroll-x class="mb-[20rpx]" :show-scrollbar="false">
-            <view class="flex gap-[14rpx]" style="white-space: nowrap">
-                <view
-                    v-for="tab in state.viralPlatformTabs"
-                    :key="tab.key"
-                    class="h-[60rpx] px-[26rpx] rounded-full shrink-0 border border-solid flex items-center gap-[10rpx]"
-                    :class="
-                        state.activeViralPlatform === tab.key
-                            ? 'bg-primary border-primary'
-                            : 'bg-[#F4F6FA] border-[#E8ECF0]'
-                    "
-                    @click="actions.platform(tab.key)">
+        <view class="mb-[24rpx]">
+            <scroll-view scroll-x class="w-full" :show-scrollbar="false">
+                <view class="flex gap-[8rpx] whitespace-nowrap">
                     <view
-                        v-if="tab.short"
-                        class="w-[30rpx] h-[30rpx] rounded-full flex items-center justify-center"
-                        :style="`background:${tab.color}`">
-                        <text class="text-[16rpx] font-bold text-white">{{ tab.short }}</text>
+                        v-for="tab in state.viralPlatformTabs"
+                        :key="tab.key"
+                        class="viral-plat"
+                        :class="state.activeViralPlatform === tab.key ? 'viral-plat--on' : ''"
+                        @click="actions.platform(tab.key)">
+                        <text class="viral-plat-label">
+                            {{ tab.label }} {{ state.viralPlatformCounts[tab.key] || 0 }}
+                        </text>
                     </view>
-                    <text
-                        class="text-xs font-bold"
-                        :class="state.activeViralPlatform === tab.key ? 'text-white' : 'text-[#888888]'">
-                        {{ tab.label }} · {{ state.viralPlatformCounts[tab.key] || 0 }}
-                    </text>
+                </view>
+            </scroll-view>
+        </view>
+
+        <view class="flex flex-col gap-[14rpx] mb-[24rpx]">
+            <view class="viral-heading">
+                <view class="viral-heading-copy">
+                    <text class="viral-heading-title">参考作品</text>
+                    <text class="viral-meta">{{ state.filteredViralList.length }} 条</text>
+                </view>
+                <view class="viral-import-btn active:opacity-70" @click="actions.openManualImport()">
+                    <text class="viral-control-content">手动入库</text>
                 </view>
             </view>
-        </scroll-view>
 
-        <view class="flex items-center flex-wrap gap-[12rpx] mb-[12rpx]">
-            <text class="text-sm font-bold text-[#374151] flex-1 min-w-[100rpx]">爆款库</text>
-            <view class="viral-action-pill" @click="actions.viewDismissed()">
-                <u-icon name="eye-off" color="#6B7280" size="22"></u-icon>
-                <text class="text-[22rpx] font-semibold text-[#6B7280]">不感兴趣</text>
-            </view>
-            <view class="viral-action-pill" @click="actions.history()">
-                <u-icon name="clock" color="#6B7280" size="22"></u-icon>
-                <text class="text-[22rpx] font-semibold text-[#6B7280]">历史仿写</text>
-            </view>
-            <view class="viral-manual-btn" @click="actions.openManualImport()">
-                <u-icon name="plus" color="#2F73F6" size="22"></u-icon>
-                <text class="text-[22rpx] font-semibold text-primary">手动入库</text>
+            <text class="viral-meta">
+                {{
+                    isCloudMode
+                        ? "手动加入的作品与解析进度会显示在这里。"
+                        : "设备每晚 00:00 开始采集，可提前移除不需要的参考作品。"
+                }}
+            </text>
+            <view class="flex items-center gap-[24rpx]">
+                <view class="viral-text-btn active:opacity-70" @click="actions.viewDismissed()">
+                    <u-icon name="eye-off" color="#0761D9" size="24"></u-icon>
+                    <text>已忽略作品</text>
+                </view>
+                <view class="viral-text-btn active:opacity-70" @click="actions.history()">
+                    <u-icon name="clock" color="#0761D9" size="24"></u-icon>
+                    <text>内容记录</text>
+                </view>
             </view>
         </view>
-        <text class="text-xs text-[#9CA3AF] block mb-[20rpx]"> 已预先找好素材，可提前移除不需要的视频。 </text>
 
-        <view v-if="state.filteredViralList.length" class="flex flex-col gap-[22rpx]">
-            <view
-                v-for="item in state.filteredViralList"
-                :key="item.listKey || item.id"
-                class="bg-white rounded-[28rpx] overflow-hidden detail-card-shadow"
-                :class="{ 'viral-card--pending': isPendingManual(item) }">
+        <view v-if="state.filteredViralList.length" class="flex flex-col gap-[24rpx]">
+            <view v-for="item in state.filteredViralList" :key="item.listKey || item.id" class="viral-card">
                 <!-- 排队中的手动入库：等待态卡片，不套「就绪素材」双栏操作 -->
                 <template v-if="isPendingManual(item)">
-                    <view class="viral-pending relative">
-                        <text class="viral-dismiss" @click="actions.dismiss(item)">不感兴趣</text>
-
+                    <view class="viral-pending">
                         <view class="viral-pending-meta">
                             <text
                                 v-for="platform in item.platforms"
@@ -131,20 +131,30 @@
 
                         <view class="viral-pending-status">
                             <view class="viral-pending-status-icon">
-                                <u-icon name="clock" color="#2B6EFF" size="28"></u-icon>
+                                <u-icon name="clock" color="#0065FB" size="28"></u-icon>
                             </view>
                             <view class="viral-pending-status-body">
-                                <text class="viral-pending-status-label">今晚 00:00–03:00 自动解析</text>
+                                <text class="viral-pending-status-label">{{
+                                    isCloudMode ? "等待解析原内容" : "今晚 00:00–03:00 自动解析"
+                                }}</text>
                                 <text class="viral-pending-status-desc">
-                                    {{ item.remark || "将按人设下全部设备解析入库，完成后可查看仿写文案" }}
+                                    {{
+                                        item.remark ||
+                                        (isCloudMode
+                                            ? "链接已登记，解析完成后可查看仿写文案。"
+                                            : "将按人设下全部设备解析入库，完成后可查看仿写文案")
+                                    }}
                                 </text>
                             </view>
                         </view>
 
                         <view class="viral-pending-actions">
                             <view class="viral-pending-copy-btn" @click="actions.copyText(item.link, '链接已复制')">
-                                <u-icon name="attach" color="#2F73F6" size="24"></u-icon>
-                                <text class="text-xs font-bold text-primary">复制原链接</text>
+                                <u-icon name="attach" color="#0065FB" size="24"></u-icon>
+                                <text>复制原链接</text>
+                            </view>
+                            <view class="viral-foot-ghost active:opacity-60" @click="actions.dismiss(item)">
+                                <text>不感兴趣</text>
                             </view>
                         </view>
                     </view>
@@ -153,35 +163,27 @@
                 <!-- 已就绪：封面 + 仿写文案 + 双操作 -->
                 <template v-else>
                     <view class="relative">
-                        <view class="absolute top-[22rpx] right-[24rpx] z-10" @click="actions.dismiss(item)">
-                            <text class="text-[22rpx] text-[#9CA3AF]">不感兴趣</text>
-                        </view>
-
-                        <view class="flex gap-[20rpx] p-[24rpx]">
+                        <view class="flex gap-[22rpx] p-[32rpx]">
                             <image
                                 v-if="item.cover"
                                 :src="item.cover"
                                 mode="aspectFill"
                                 lazy-load
-                                class="w-[144rpx] h-[144rpx] rounded-[20rpx] shrink-0 bg-[#F3F4F6]"></image>
-                            <view
-                                v-else
-                                class="viral-cover-ph"
-                                :style="{
-                                    background: `linear-gradient(145deg, ${getCoverTone(item).from}, ${
-                                        getCoverTone(item).to
-                                    })`,
-                                }">
+                                class="w-[144rpx] h-[144rpx] rounded-[20rpx] shrink-0 bg-[#F2F3F5]"></image>
+                            <view v-else class="viral-cover-ph">
                                 <view class="viral-cover-ph-badge" :style="{ background: getCoverTone(item).badge }">
                                     <text class="text-[20rpx] font-bold text-white">
                                         {{ getCoverTone(item).short }}
                                     </text>
                                 </view>
-                                <u-icon name="attach" color="#FFFFFF" size="36"></u-icon>
+                                <u-icon name="attach" color="#0065FB" size="36"></u-icon>
                                 <text class="viral-cover-ph-text">{{ item.statusText || "无封面" }}</text>
                             </view>
                             <view class="flex-1 min-w-0">
-                                <view class="flex flex-wrap items-center gap-[8rpx] mb-[10rpx] pr-[120rpx]">
+                                <text class="viral-item-title line-clamp-2 mb-[10rpx]">
+                                    {{ item.title || "已入库，等待解析原视频信息…" }}
+                                </text>
+                                <view class="flex flex-wrap items-center gap-[8rpx]">
                                     <text
                                         v-for="platform in item.platforms"
                                         :key="platform"
@@ -191,12 +193,12 @@
                                     </text>
                                     <text
                                         v-if="item.isManualImport"
-                                        class="text-[18rpx] font-semibold text-primary bg-[#EBF2FF] px-[12rpx] py-[5rpx] rounded-[8rpx]">
+                                        class="text-[18rpx] font-semibold text-primary bg-[#E6EFFF] px-[12rpx] py-[5rpx] rounded-[8rpx]">
                                         手动入库
                                     </text>
                                     <text
                                         v-else
-                                        class="text-[20rpx] font-semibold text-[#6B7280] bg-[#F4F6FA] px-[12rpx] py-[5rpx] rounded-[8rpx]">
+                                        class="text-[20rpx] font-semibold text-[#999999] bg-[#F4F6FA] px-[12rpx] py-[5rpx] rounded-[8rpx]">
                                         词条：{{ item.keyword }}
                                     </text>
                                     <text
@@ -204,71 +206,62 @@
                                         class="text-[18rpx] font-semibold text-[#F86E21] bg-[#FFF7E8] px-[12rpx] py-[5rpx] rounded-[8rpx]">
                                         {{ item.statusText }}
                                     </text>
-                                    <text class="text-[20rpx] text-[#9CA3AF]">{{ item.date }}</text>
+                                    <text class="viral-meta">{{ item.date }}</text>
                                 </view>
-                                <text class="text-sm font-bold text-[#1F2937] leading-relaxed line-clamp-2">
-                                    {{ item.title || "已入库，等待解析原视频信息…" }}
-                                </text>
                                 <view v-if="item.remark" class="viral-remark">
                                     <text>
-                                        <u-icon name="info-circle" color="#5C7ECC" size="22" class="shrink-0"></u-icon>
+                                        <u-icon name="info-circle" color="#666666" size="22" class="shrink-0"></u-icon>
                                     </text>
                                     <text class="viral-remark-text">{{ item.remark }}</text>
                                 </view>
                             </view>
                         </view>
 
-                        <view
-                            v-if="isExpanded(item)"
-                            class="mx-[24rpx] mb-[18rpx] rounded-[22rpx] bg-[#F8FAFC] p-[22rpx]"
-                            style="border: 2rpx solid #eef2f7">
+                        <view v-if="isExpanded(item)" class="viral-copy-editor">
                             <view class="flex items-center gap-[8rpx] mb-[14rpx]">
-                                <u-icon name="edit-pen" color="#2B6EFF" size="22"></u-icon>
-                                <text class="text-xs font-bold text-[#374151] flex-1">AI 仿写文案</text>
+                                <u-icon name="edit-pen" color="#0065FB" size="22"></u-icon>
+                                <text class="text-xs font-bold text-[#666666] flex-1">AI 仿写文案</text>
                                 <text
-                                    class="text-[20rpx] font-semibold text-primary bg-[#EBF2FF] px-[12rpx] py-[4rpx] rounded-full">
+                                    class="text-[20rpx] font-semibold text-primary bg-[#E6EFFF] px-[12rpx] py-[4rpx] rounded-full">
                                     可编辑
                                 </text>
                             </view>
                             <textarea
                                 :value="item.copywriting"
-                                class="w-full text-xs text-[#374151] leading-relaxed bg-white rounded-[18rpx] p-[18rpx] break-all"
-                                style="min-height: 220rpx"
+                                class="w-full min-h-[220rpx] box-border text-sm text-content leading-relaxed bg-white rounded-[18rpx] p-[18rpx] break-all"
                                 :maxlength="-1"
                                 @input="handleCopywritingInput(item, $event)"></textarea>
                             <view class="flex gap-[14rpx] mt-[16rpx]">
-                                <view
-                                    class="flex-1 h-[70rpx] rounded-[18rpx] bg-primary flex items-center justify-center gap-[8rpx]"
-                                    @click="actions.saveCopy(item)">
-                                    <u-icon name="checkmark" color="#FFFFFF" size="22"></u-icon>
-                                    <text class="text-xs font-semibold text-white">保存</text>
+                                <view class="viral-save-btn" @click="actions.saveCopy(item)">
+                                    <u-icon class="viral-control-content" name="checkmark" color="#FFFFFF" size="22"></u-icon>
+                                    <text class="viral-control-content">保存</text>
                                 </view>
-                                <view
-                                    class="px-[28rpx] h-[70rpx] rounded-[18rpx] bg-[#F1F5F9] flex items-center justify-center gap-[8rpx]"
-                                    @click="actions.copyText(item.copywriting, '文案已复制')">
-                                    <u-icon name="file-text" color="#6B7280" size="22"></u-icon>
-                                    <text class="text-xs font-semibold text-[#6B7280]">复制</text>
+                                <view class="viral-copy-btn" @click="actions.copyText(item.copywriting, '文案已复制')">
+                                    <u-icon class="viral-control-content" name="file-text" color="#075ECF" size="22"></u-icon>
+                                    <text class="viral-control-content">复制</text>
                                 </view>
                             </view>
                         </view>
 
-                        <view class="h-[78rpx] border-0 border-t border-solid border-[#F3F4F6] flex">
+                        <view class="viral-foot">
+                            <view class="viral-foot-ghost active:opacity-60" @click="actions.dismiss(item)">
+                                <text>不感兴趣</text>
+                            </view>
+                            <view class="flex-1"></view>
                             <view
-                                class="flex-1 flex items-center justify-center gap-[8rpx] border-0 border-r border-solid border-[#F3F4F6]"
-                                @click="actions.toggleCopy(item)">
+                                class="viral-foot-btn active:opacity-70"
+                                @click="actions.copyText(item.link, '链接已复制')">
+                                <u-icon name="attach" color="#0761D9" size="24"></u-icon>
+                                <text>复制链接</text>
+                            </view>
+                            <view class="viral-foot-btn active:opacity-70" @click="actions.toggleCopy(item)">
                                 <u-icon
                                     :name="isExpanded(item) ? 'arrow-up' : 'file-text'"
-                                    color="#2B6EFF"
+                                    color="#0065FB"
                                     size="24"></u-icon>
-                                <text class="text-xs font-bold text-primary">
+                                <text>
                                     {{ isExpanded(item) ? "收起文案" : "查看仿写文案" }}
                                 </text>
-                            </view>
-                            <view
-                                class="flex-1 flex items-center justify-center gap-[8rpx]"
-                                @click="actions.copyText(item.link, '链接已复制')">
-                                <u-icon name="attach" color="#6B7280" size="24"></u-icon>
-                                <text class="text-xs font-bold text-[#6B7280]">复制链接</text>
                             </view>
                         </view>
                     </view>
@@ -276,11 +269,27 @@
             </view>
         </view>
 
-        <empty v-else text="暂无爆款内容" />
+        <view v-else class="viral-empty">
+            <view class="viral-empty-icon">
+                <u-icon name="attach" color="#1764CD" size="46"></u-icon>
+            </view>
+            <text class="viral-empty-title">{{ isCloudMode ? "先放入一条参考作品" : "还没有参考作品" }}</text>
+            <text class="viral-empty-description">
+                {{
+                    isCloudMode
+                        ? "复制抖音、小红书等平台的作品分享链接，手动加入此人设。"
+                        : "配置追踪词并关联设备后，可自动采集。也可以先手动加入想参考的作品。"
+                }}
+            </text>
+            <view class="viral-empty-btn active:opacity-70" @click="actions.openManualImport()">
+                <text>粘贴作品链接</text>
+            </view>
+        </view>
     </view>
 </template>
 
 <script setup lang="ts">
+import { isCloudRunMode } from "@/ai_modules/person/enums";
 type ViralPlatformKey = "all" | "douyin" | "xiaohongshu" | "kuaishou" | "shipinhao";
 type ViralRealPlatformKey = Exclude<ViralPlatformKey, "all">;
 
@@ -312,6 +321,7 @@ interface ViralItem {
 
 const props = defineProps<{
     state: {
+        runMode: number;
         viralKeywords: string[];
         viralPlatformTabs: ViralPlatformTab[];
         viralPlatformCounts: Record<ViralPlatformKey, number>;
@@ -340,14 +350,13 @@ const props = defineProps<{
 const getPlatformMeta = (key: ViralPlatformKey) =>
     props.state.viralPlatformTabs.find((item) => item.key === key) ?? props.state.viralPlatformTabs[0];
 
-const COVER_TONE: Record<ViralRealPlatformKey | "default", { from: string; to: string; badge: string; short: string }> =
-    {
-        douyin: { from: "#3A3A3C", to: "#111827", badge: "#111827", short: "抖" },
-        xiaohongshu: { from: "#F87171", to: "#EF4444", badge: "#DC2626", short: "红" },
-        kuaishou: { from: "#FF9A4D", to: "#FF6800", badge: "#FF6800", short: "快" },
-        shipinhao: { from: "#4ADE80", to: "#22C55E", badge: "#16A34A", short: "视" },
-        default: { from: "#7AA7F5", to: "#2F73F6", badge: "#2F73F6", short: "链" },
-    };
+const COVER_TONE: Record<ViralRealPlatformKey | "default", { badge: string; short: string }> = {
+    douyin: { badge: "#111827", short: "抖" },
+    xiaohongshu: { badge: "#CC2330", short: "红" },
+    kuaishou: { badge: "#FF6800", short: "快" },
+    shipinhao: { badge: "#19BE6B", short: "视" },
+    default: { badge: "#0065FB", short: "链" },
+};
 
 const getCoverTone = (item: ViralItem) => COVER_TONE[item.platforms[0] || "default"] || COVER_TONE.default;
 
@@ -360,8 +369,10 @@ const handleCopywritingInput = (item: ViralItem, event: any) => {
     props.actions.updateCopy(item, event.detail?.value ?? "");
 };
 
-// 追踪关键词折叠展示：默认显示前 N 项，超过即折叠为 "+M" 入口；UI 紧凑、不挤压"添加"按钮
-const KEYWORD_VISIBLE_LIMIT = 8;
+// 追踪词折叠展示：默认只显示前 3 个，超出折叠成 "+M" 入口，展开后可收起，
+const isCloudMode = computed(() => isCloudRunMode(props.state.runMode));
+
+const KEYWORD_VISIBLE_LIMIT = 3;
 const keywordsExpanded = ref(false);
 
 const visibleKeywords = computed(() =>
@@ -371,35 +382,178 @@ const visibleKeywords = computed(() =>
 const hiddenKeywordCount = computed(() => Math.max(0, props.state.viralKeywords.length - KEYWORD_VISIBLE_LIMIT));
 
 // 关键词数据变化（切换人设 / 增删）后，自动收回展开态，避免视觉残留
+// 只在「已经没有可展开的了」时收起。原来一变长度就收，
+// 导致展开后删掉任意一个词，整个列表就被折回去
 watch(
     () => props.state.viralKeywords.length,
-    () => {
-        keywordsExpanded.value = false;
+    (count) => {
+        if (count <= KEYWORD_VISIBLE_LIMIT) keywordsExpanded.value = false;
     },
 );
 </script>
 
 <style scoped lang="scss">
-.detail-card-shadow {
-    box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
+.viral-empty {
+    @apply px-[40rpx] py-[60rpx] bg-white rounded-[36rpx] text-center;
 }
 
-// 爆款库板块标题右侧的紧凑管理入口（不感兴趣 / 历史仿写）
-.viral-action-pill {
-    @apply px-[18rpx] py-[10rpx] rounded-[16rpx] flex items-center gap-[8rpx] active:opacity-70;
-    background: #f4f6fa;
-    border: 2rpx solid #e8ecf0;
+.viral-empty-icon {
+    @apply w-[96rpx] h-[96rpx] mx-auto rounded-[28rpx] bg-[#EDF3FF] flex items-center justify-center;
 }
 
-.viral-manual-btn {
-    @apply px-[18rpx] py-[10rpx] rounded-[16rpx] shrink-0 flex items-center gap-[8rpx] active:opacity-70;
-    background: #ffffff;
-    border: 2rpx dashed #2f73f6;
+.viral-empty-title {
+    @apply block text-[34rpx] font-bold leading-[1.55] text-[#233047] mt-[32rpx] mb-[18rpx];
 }
 
-// 手动入库无封面：平台色渐变占位，状态可读
+.viral-empty-description {
+    @apply block max-w-[600rpx] mx-auto mb-[32rpx] text-sm leading-[1.8] text-[#647184];
+}
+
+.viral-card {
+    @apply bg-white rounded-[36rpx] overflow-hidden;
+}
+
+.viral-keywords {
+    @apply mb-[24rpx] p-[32rpx] bg-white rounded-[36rpx];
+}
+
+.viral-heading {
+    @apply flex flex-wrap items-center justify-between gap-[16rpx];
+}
+
+.viral-heading-copy {
+    @apply flex-1 min-w-[220rpx] flex flex-col gap-[8rpx];
+}
+
+.viral-heading-title {
+    @apply text-base font-[650] leading-[1.55] text-[#202937];
+}
+
+.viral-meta {
+    @apply text-xs leading-[1.65] text-[#647184];
+}
+
+.viral-item-title {
+    @apply text-base font-[620] leading-[1.55] text-[#26364E];
+}
+
+.viral-foot {
+    @apply flex flex-wrap items-center gap-[8rpx] mx-[32rpx] pb-[32rpx]
+        border-[0] border-t-[2rpx] border-solid border-[#E7ECF2];
+}
+
+.viral-cloud-tip {
+    @apply box-border flex items-start gap-[16rpx] mb-[24rpx] p-[24rpx] rounded-[24rpx]
+        bg-[#EDF3FC] text-[#536A87] text-xs leading-[1.7] border-[2rpx] border-solid border-[#E0E9F7];
+}
+
+.viral-word {
+    @apply relative box-border max-w-full min-h-[88rpx] inline-flex items-center justify-center pl-[20rpx];
+}
+
+// 标签底色收紧，编辑和删除仍保留完整的触控高度。
+.viral-word::before {
+    content: "";
+    @apply absolute inset-x-[0] top-[12rpx] bottom-[12rpx] rounded-[16rpx] bg-[#EDF4FF] pointer-events-none;
+}
+
+.viral-word-label {
+    @apply relative min-w-0 py-[20rpx] text-[26rpx] font-medium leading-[1.4] text-[#075ECF] break-all;
+}
+
+.viral-word-x {
+    @apply relative w-[88rpx] h-[88rpx] shrink-0 rounded-full flex items-center justify-center;
+}
+
+.viral-word--ghost {
+    @apply min-w-[88rpx] px-[16rpx];
+}
+
+.viral-word--ghost::before {
+    @apply hidden;
+}
+
+.viral-word--ghost .viral-word-label {
+    @apply text-[#0761D9] font-medium;
+}
+
+.viral-plat {
+    @apply relative box-border shrink-0 min-h-[88rpx] min-w-[88rpx] px-[20rpx]
+        flex items-center justify-center active:opacity-70;
+}
+
+.viral-plat-label {
+    @apply relative text-xs font-medium leading-[1.4] text-[#627085];
+}
+
+.viral-plat--on::before {
+    content: "";
+    @apply absolute inset-x-0 top-[14rpx] bottom-[14rpx] rounded-[12rpx] bg-[#E8F1FF] pointer-events-none;
+}
+
+.viral-plat--on .viral-plat-label {
+    @apply text-[#075ECF];
+}
+
+.viral-empty-btn {
+    @apply box-border inline-flex items-center justify-center gap-[14rpx] min-h-[88rpx]
+        px-[32rpx] py-[20rpx] rounded-[24rpx] border-[2rpx] border-solid border-[transparent]
+        text-base font-semibold leading-[1.4] bg-[#EDF4FF] text-[#075ECF] active:opacity-70;
+}
+
+.viral-import-btn,
+.viral-save-btn,
+.viral-copy-btn {
+    @apply relative box-border inline-flex items-center justify-center gap-[8rpx] min-h-[88rpx] min-w-[88rpx]
+        px-[16rpx] text-xs font-medium leading-[1.4] text-[#075ECF] active:opacity-70;
+}
+
+.viral-import-btn::before,
+.viral-save-btn::before,
+.viral-copy-btn::before {
+    content: "";
+    @apply absolute inset-x-0 top-[14rpx] bottom-[14rpx] rounded-[12rpx] border-[2rpx] border-solid border-[transparent] pointer-events-none;
+}
+
+.viral-copy-btn::before {
+    @apply bg-[#EDF4FF];
+}
+
+.viral-import-btn {
+    @apply text-[#36516F];
+}
+
+.viral-import-btn::before {
+    @apply bg-white border-[#D8E2ED];
+}
+
+.viral-save-btn {
+    @apply text-white;
+}
+
+.viral-save-btn::before {
+    @apply bg-primary;
+}
+
+.viral-control-content {
+    @apply relative;
+}
+
+.viral-text-btn,
+.viral-foot-btn,
+.viral-foot-ghost,
+.viral-pending-copy-btn {
+    @apply box-border shrink-0 min-h-[88rpx] min-w-[88rpx] inline-flex items-center justify-center gap-[8rpx]
+        px-[10rpx] text-xs font-medium leading-[1.4] text-[#0761D9] active:opacity-70;
+}
+
+.viral-copy-editor {
+    @apply mx-[32rpx] mb-[24rpx] rounded-[28rpx] p-[28rpx] bg-[#F7F9FC]
+        border-[2rpx] border-solid border-[#E5EBF3];
+}
+
 .viral-cover-ph {
-    @apply w-[144rpx] h-[144rpx] rounded-[20rpx] shrink-0 flex flex-col items-center justify-center gap-[8rpx] relative overflow-hidden;
+    @apply w-[144rpx] h-[144rpx] rounded-[20rpx] shrink-0 flex flex-col items-center justify-center gap-[8rpx] relative overflow-hidden bg-primary-light-9;
 }
 
 .viral-cover-ph-badge {
@@ -407,32 +561,23 @@ watch(
 }
 
 .viral-cover-ph-text {
-    @apply text-[18rpx] font-semibold text-white opacity-90;
+    @apply text-[20rpx] font-medium text-primary-dark-3;
 }
 
 .viral-remark {
-    @apply w-fit flex items-start gap-[8rpx] mt-[12rpx] px-[14rpx] py-[12rpx] rounded-[14rpx];
-    background: #f3f7ff;
+    @apply flex items-start gap-[8rpx] mt-[12rpx] rounded-[14rpx];
 }
 
 .viral-remark-text {
-    @apply flex-1 text-[20rpx] text-[#5C7ECC] leading-relaxed;
-}
-
-// ===== 手动入库排队：等待态卡片 =====
-.viral-card--pending {
-    background: linear-gradient(180deg, #f7f9ff 0%, #ffffff 40%);
-    border: 2rpx solid #e4ecff;
-    box-shadow: 0 8rpx 28rpx rgba(47, 115, 246, 0.06);
+    @apply flex-1 min-w-0 text-xs text-[#647184] leading-[1.65] break-all;
 }
 
 .viral-pending {
-    @apply px-[24rpx] pt-[22rpx] pb-[20rpx];
+    @apply p-[32rpx];
 }
 
 .viral-pending-meta {
-    // 给右上角绝对定位「不感兴趣」留位，避免标签/日期被挡住
-    @apply flex flex-wrap items-center gap-[8rpx] min-w-0 mb-[14rpx] pr-[120rpx];
+    @apply flex flex-wrap items-center gap-[8rpx] min-w-0 mb-[14rpx];
 }
 
 .viral-tag-platform {
@@ -440,7 +585,7 @@ watch(
 }
 
 .viral-tag-manual {
-    @apply text-[18rpx] font-semibold text-primary bg-[#EBF2FF] px-[12rpx] py-[5rpx] rounded-[8rpx];
+    @apply text-[18rpx] font-semibold text-primary bg-[#E6EFFF] px-[12rpx] py-[5rpx] rounded-[8rpx];
 }
 
 .viral-tag-queue {
@@ -450,26 +595,19 @@ watch(
 }
 
 .viral-date {
-    @apply text-[20rpx] text-[#9CA3AF];
-}
-
-.viral-dismiss {
-    @apply absolute top-[22rpx] right-[24rpx] z-10 text-[22rpx] text-[#9CA3AF] active:opacity-60;
+    @apply text-xs leading-[1.65] text-[#647184];
 }
 
 .viral-pending-title {
-    @apply text-sm font-bold text-[#1F2937] leading-relaxed line-clamp-2 block mb-[16rpx];
+    @apply text-base font-[620] text-[#26364E] leading-[1.55] line-clamp-2 block mb-[16rpx];
 }
 
 .viral-pending-status {
-    @apply flex items-start gap-[14rpx] px-[18rpx] py-[16rpx] rounded-[18rpx] mb-[16rpx];
-    background: #eef4ff;
-    border: 2rpx solid #d7e5ff;
+    @apply flex items-start gap-[14rpx] py-[16rpx] mb-[16rpx];
 }
 
 .viral-pending-status-icon {
-    @apply w-[48rpx] h-[48rpx] rounded-full flex items-center justify-center shrink-0;
-    background: #ffffff;
+    @apply w-[48rpx] h-[48rpx] rounded-[14rpx] flex items-center justify-center shrink-0 bg-primary-light-9;
 }
 
 .viral-pending-status-body {
@@ -477,20 +615,14 @@ watch(
 }
 
 .viral-pending-status-label {
-    @apply text-[24rpx] font-bold text-[#1A56CC] block;
+    @apply text-xs font-medium text-[#647184] leading-[1.65] block;
 }
 
 .viral-pending-status-desc {
-    @apply text-[20rpx] text-[#5C7ECC] leading-relaxed block;
+    @apply text-xs text-[#647184] leading-[1.65] block;
 }
 
 .viral-pending-actions {
-    @apply pt-[2rpx];
-}
-
-.viral-pending-copy-btn {
-    @apply h-[72rpx] rounded-[18rpx] flex items-center justify-center gap-[8rpx] active:opacity-70;
-    background: #ffffff;
-    border: 2rpx solid #c9dbff;
+    @apply flex flex-wrap items-center justify-between gap-[24rpx];
 }
 </style>

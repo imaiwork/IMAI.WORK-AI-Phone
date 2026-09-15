@@ -9,7 +9,7 @@
         footer-class="!p-0"
         style="padding: 0"
         :show-close="false"
-        @close="close">
+        @close="handleClosed">
         <div class="bg-white rounded-2xl overflow-hidden flex flex-col">
             <div class="px-6 py-4 flex items-center justify-between border-b border-slate-100 shrink-0">
                 <div class="flex items-center gap-3">
@@ -180,6 +180,21 @@ const getScene = computed(() => {
                 desc: "分镜混剪",
                 key: TokensSceneEnum.STORYBOARD_MIX,
             },
+            [MontageTypeEnum.PLAY_FACE]: {
+                title: "影视换脸改词",
+                desc: "经典片段换你的脸、说你的词",
+                key: "play_face",
+            },
+            [MontageTypeEnum.PLAY_DANCE]: {
+                title: "跳舞换脸",
+                desc: "热门舞蹈换你出镜",
+                key: "play_dance",
+            },
+            [MontageTypeEnum.PLAY_SPLICE]: {
+                title: "影视引流拼接",
+                desc: "吸睛切片开场拼接你的视频",
+                key: "play_splice",
+            },
         };
     return descriptions[props.type];
 });
@@ -189,7 +204,10 @@ const getTokenByScene = (key: string) => userStore.getTokenByScene(key);
 
 const open = () => popupRef.value?.open();
 
-const close = () => {
+// 关闭要真的把 popup 收起来；对外的 modelValue/close 由 popup 的 close 事件统一回抛（ESC 关闭也走这条）
+const close = () => popupRef.value?.close();
+
+const handleClosed = () => {
     emit("update:modelValue", false);
     emit("close");
 };

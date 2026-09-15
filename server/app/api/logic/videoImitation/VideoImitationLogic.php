@@ -2,23 +2,23 @@
 
 namespace app\api\logic\videoImitation;
 
-use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\aiPersona\PublishLogic;
+use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\logic\BaseLogic;
+use app\common\model\aiPersona\AiPersona;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\model\videoImitation\VideoImitationTask;
-use app\common\model\aiPersona\AiPersona;
 use app\common\service\aiPersona\XhsImageNoteExtractService;
 use app\common\service\TeamBillingService;
 use app\common\service\ToolsService;
+use app\common\service\videoImitation\OriginalCopywritingResolver;
 use app\common\service\videoImitation\VideoImitationImageBilling;
 use app\common\service\videoImitation\VideoImitationImageLifecycle;
-use app\common\service\videoImitation\VideoImitationImageRewriteService;
 use think\exception\HttpResponseException;
 use think\facade\Cache;
 use think\facade\Db;
@@ -40,6 +40,9 @@ class VideoImitationLogic extends BaseLogic
     /** 图文提取超过该秒数无进展 → 标 FAIL，供手动重试 */
     public const PARSE_STALE_SECONDS = VideoImitationImageLifecycle::PARSE_STALE_SECONDS;
 
+    /** 手动爆款仿写：链接提取失败时的用户文案（前端弹窗） */
+    public const REMARK_LINK_EXTRACT_FAIL = '该链接内容无法提取';
+
     /**
      * 视频仿写解析与生成（支持按失败步骤续跑；文案已齐时转发 generate）
      * @param string $url 视频分享链接
@@ -55,7 +58,8 @@ class VideoImitationLogic extends BaseLogic
         int $personaId,
         int $id = 0,
         int $visualMaterialSource = 0,
-        int $rewriteMode = 0
+        int $rewriteMode = 0,
+        int $copywritingLength = 0
     )
     {
         if ($id > 0) {
@@ -74,6 +78,9 @@ class VideoImitationLogic extends BaseLogic
                 self::setError('重试时不能变更改写模式');
                 return false;
             }
+            if (!self::validateRewriteMode($userId, $personaId, $rewriteMode)) {
+                return false;
+            }
             if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
                 $personaId = 0;
                 if ($visualMaterialSource > 0 && $visualMaterialSource !== 1) {
@@ -85,6 +92,13 @@ class VideoImitationLogic extends BaseLogic
                 $visualMaterialSource = $visualMaterialSource > 0
                     ? $visualMaterialSource
                     : (int)($task->visual_material_source ?: 3);
+            }
+            // 重试允许改文案长度：传了按新档，没传沿用任务上已存的
+            $copywritingLength = $copywritingLength > 0
+                ? VideoImitationTask::normalizeCopywritingLength($copywritingLength)
+                : VideoImitationTask::normalizeCopywritingLength($task->copywriting_length);
+            if ((int)$task->copywriting_length !== $copywritingLength) {
+                $task->save(['copywriting_length' => $copywritingLength]);
             }
             if (!self::assertVideoRetryAllowed($task, $url, $personaId)) {
                 return false;
@@ -128,7 +142,7 @@ class VideoImitationLogic extends BaseLogic
         }
 
         $rewriteMode = $rewriteMode > 0 ? $rewriteMode : VideoImitationTask::REWRITE_MODE_PERSONA;
-        if (!self::validateRewriteModeForCreate($userId, $personaId, $rewriteMode)) {
+        if (!self::validateRewriteMode($userId, $personaId, $rewriteMode)) {
             return false;
         }
         if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
@@ -148,6 +162,7 @@ class VideoImitationLogic extends BaseLogic
             'persona_id' => $personaId,
             'rewrite_mode' => $rewriteMode,
             'visual_material_source' => $visualMaterialSource,
+            'copywriting_length' => VideoImitationTask::normalizeCopywritingLength($copywritingLength),
             'platform_type' => DeviceEnum::ACCOUNT_TYPE_DY,
             'media_type' => VideoImitationTask::MEDIA_TYPE_VIDEO,
             'status' => VideoImitationTask::STATUS_PARSING,
@@ -272,9 +287,12 @@ class VideoImitationLogic extends BaseLogic
                 'generation_type' => VideoImitationTask::GENERATION_TYPE_NONE,
                 'wash_avatar_id' => 0,
                 'wash_voice_id' => 0,
+                'wash_voice_is_original' => 0,
                 'wash_voice_provider' => '',
                 'wash_third_avatar_id' => '',
                 'wash_third_voice_id' => '',
+                'wash_clip_template_id' => '',
+                'wash_music_url' => '',
                 'generation_config_confirmed' => 0,
                 'rewritten_text_confirmed' => 0,
             ]);
@@ -333,6 +351,9 @@ class VideoImitationLogic extends BaseLogic
                 self::setError('重试时不能变更改写模式');
                 return false;
             }
+            if (!self::validateRewriteMode($userId, $personaId, $rewriteMode)) {
+                return false;
+            }
             if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
                 $personaId = 0;
             }
@@ -367,7 +388,7 @@ class VideoImitationLogic extends BaseLogic
         }
 
         $rewriteMode = $rewriteMode > 0 ? $rewriteMode : VideoImitationTask::REWRITE_MODE_PERSONA;
-        if (!self::validateRewriteModeForCreate($userId, $personaId, $rewriteMode)) {
+        if (!self::validateRewriteMode($userId, $personaId, $rewriteMode)) {
             return false;
         }
         if ($rewriteMode === VideoImitationTask::REWRITE_MODE_WASH) {
@@ -392,7 +413,8 @@ class VideoImitationLogic extends BaseLogic
         return $result;
     }
 
-    private static function validateRewriteModeForCreate(int $userId, int $personaId, int $rewriteMode): bool
+    /** 人设模式在创建、重试及执行前都校验当前状态，洗稿模式无需人设。 */
+    public static function validateRewriteMode(int $userId, int $personaId, int $rewriteMode): bool
     {
         if (!in_array($rewriteMode, [
             VideoImitationTask::REWRITE_MODE_PERSONA,
@@ -408,9 +430,13 @@ class VideoImitationLogic extends BaseLogic
             self::setError('必须选择IP人设');
             return false;
         }
-        $exists = AiPersona::where('id', $personaId)->where('user_id', $userId)->count() > 0;
-        if (!$exists) {
+        $persona = AiPersona::where('id', $personaId)->where('user_id', $userId)->findOrEmpty();
+        if ($persona->isEmpty()) {
             self::setError('IP人设不存在或不属于当前用户');
+            return false;
+        }
+        if ((int)$persona['status'] === AiPersona::STATUS_FROZEN) {
+            self::setError(AiPersona::FROZEN_USAGE_MESSAGE);
             return false;
         }
         return true;
@@ -898,7 +924,7 @@ class VideoImitationLogic extends BaseLogic
                 $affected = $baseQuery->update([
                     'status' => VideoImitationTask::STATUS_FAIL,
                     'image_rewrite_status' => VideoImitationTask::IMAGE_REWRITE_STATUS_NONE,
-                    'remarks' => '图文提取超时，请重试',
+                    'remarks' => self::REMARK_LINK_EXTRACT_FAIL,
                     'update_time' => $now,
                 ]);
                 $action = $affected > 0 ? 'fail_extract' : 'skip';
@@ -958,6 +984,18 @@ class VideoImitationLogic extends BaseLogic
         }
         if ((int)$task->status !== VideoImitationTask::STATUS_PARSING) {
             Log::channel('shanjian')->write('VideoImitation asyncParse 非解析中状态跳过 task_id=' . $taskId . ' status=' . $task->status);
+            return;
+        }
+
+        if (!self::validateRewriteMode(
+            (int)$task->user_id,
+            (int)$task->persona_id,
+            (int)($task->rewrite_mode ?: VideoImitationTask::REWRITE_MODE_PERSONA)
+        )) {
+            $task->save([
+                'status' => VideoImitationTask::STATUS_FAIL,
+                'remarks' => self::getError(),
+            ]);
             return;
         }
 
@@ -1116,14 +1154,18 @@ class VideoImitationLogic extends BaseLogic
 
             $isTokenError = (int)$th->getCode() === 4059
                 || str_contains($errorMsg, '算力不足');
-            $remarks = mb_substr(
-                $isTokenError
-                    ? ('图文信息抓取扣费失败：' . ($errorMsg !== '' ? $errorMsg : '用户算力不足'))
-                    : ($errorMsg !== '' ? $errorMsg : '图文解析失败，请重试'),
-                0,
-                490,
-                'UTF-8'
-            );
+            $keepBusinessRemark = str_contains($errorMsg, '暂不支持小红书视频')
+                || str_contains($errorMsg, 'IP人设不存在');
+            $hasExtractedContent = trim((string)($task->original_text ?? '')) !== ''
+                && self::hasNonEmptyImageList($task->original_images ?? []);
+            if ($isTokenError) {
+                $remarks = '图文信息抓取扣费失败：' . ($errorMsg !== '' ? $errorMsg : '用户算力不足');
+            } elseif ($keepBusinessRemark || $hasExtractedContent) {
+                $remarks = $errorMsg !== '' ? $errorMsg : '图文解析失败，请重试';
+            } else {
+                $remarks = self::REMARK_LINK_EXTRACT_FAIL;
+            }
+            $remarks = mb_substr($remarks, 0, 490, 'UTF-8');
             // CAS：仅 PARSING 可标失败，避免覆盖已进入选图/成功态
             VideoImitationTask::where('id', $taskId)
                 ->where('status', VideoImitationTask::STATUS_PARSING)
@@ -1463,10 +1505,7 @@ class VideoImitationLogic extends BaseLogic
                     $task->refresh();
                     if ((int)$task->status === VideoImitationTask::STATUS_PARSING) {
                         $task->status = VideoImitationTask::STATUS_FAIL;
-                        $innerCode = $response['data']['code'] ?? null;
-                        $task->remarks = ($innerCode !== null && (int)$innerCode !== 200)
-                            ? '无法提取该视频文案'
-                            : (string)($response['message'] ?? '文案解析失败或第三方格式解析错误');
+                        $task->remarks = self::REMARK_LINK_EXTRACT_FAIL;
                         $task->save();
                     }
                     return;
@@ -1474,35 +1513,22 @@ class VideoImitationLogic extends BaseLogic
 
                 $resData = is_array($response['data'] ?? null) ? $response['data'] : [];
                 $task->origin_video_duration = $resData['duration'] ?? 0;
-                $audioText = trim((string)($resData['audio_text'] ?? ''));
                 $task->platform_task_id = (string)($resData['request_id'] ?? '');
 
-                if ($audioText === '') {
-                    $requestParams = [
-                        'input' => ['prompt' => $url],
-                        'version' => 'v2',
-                    ];
-                    $res = ToolsService::Copywriting()->videoImitation($requestParams);
-                    Log::channel('shanjian')->write(
-                        'VideoImitationParseTask MCP视频解析: ' . json_encode($res, JSON_UNESCAPED_UNICODE)
-                    );
-                    if (isset($res['code']) && (int)$res['code'] === 10000) {
-                        $mcpData = is_array($res['data'] ?? null) ? $res['data'] : [];
-                        $messageJson = !empty($mcpData['message'])
-                            ? str_replace(["\r", '\\n', "\n", '\\'], '', $mcpData['message'])
-                            : '';
-                        $parsedMsg = json_decode($messageJson, true);
-                        if (is_array($parsedMsg)) {
-                            $audioText = trim((string)($parsedMsg['original_text'] ?? ''));
-                        }
-                    }
-                }
+                // 原文案只认视频口播，识别不到即提取失败：既不让大模型按标题现编，
+                // 也不拿作品标题文案（中台 desc）顶替——那是发布时填的标题，不是视频内容
+                $resolved = OriginalCopywritingResolver::resolve($resData);
+                $audioText = $resolved['text'];
+                Log::channel('shanjian')->write(
+                    'VideoImitationParseTask 原文案取值 task_id=' . $taskId
+                    . ' ' . OriginalCopywritingResolver::describe($resolved)
+                );
 
                 $task->original_text = $audioText;
 
                 if ((int)($resData['code'] ?? 0) === 200 && $audioText === '') {
                     $task->status = VideoImitationTask::STATUS_FAIL;
-                    $task->remarks = '未识别到视频中含有文案';
+                    $task->remarks = self::REMARK_LINK_EXTRACT_FAIL;
                     $task->save();
 
                     if ($unit > 0) {
@@ -1548,7 +1574,7 @@ class VideoImitationLogic extends BaseLogic
 
             if ($audioText === '') {
                 $task->status = VideoImitationTask::STATUS_FAIL;
-                $task->remarks = '视频文案为空，无法仿写';
+                $task->remarks = self::REMARK_LINK_EXTRACT_FAIL;
                 $task->save();
                 return;
             }
@@ -1572,7 +1598,7 @@ class VideoImitationLogic extends BaseLogic
                 $hasOriginal = trim((string)$task->original_text) !== '';
                 $task->remarks = ($extractedCheckpoint || $hasOriginal)
                     ? '视频文案仿写失败，请重试'
-                    : '视频文案提取失败，请重试';
+                    : self::REMARK_LINK_EXTRACT_FAIL;
                 $task->save();
             }
         }
@@ -1643,19 +1669,20 @@ class VideoImitationLogic extends BaseLogic
      */
     public static function buildRewriteCopywriting(VideoImitationTask $task, int $userId, string $originalText, int $personaId): VideoImitationTask
     {
-        $promptContent = "视频文案：\n{$originalText}";
+        $targetLength = VideoImitationTask::normalizeCopywritingLength($task->copywriting_length);
 
-        if ((int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
-            // 洗稿：只基于原文案做同义改写与结构重组，不注入人设、业务或产品信息
-            $promptContent = "请将以下短视频口播文案进行洗稿改写。保留核心事实与原意，避免复用原句，重组表达和结构；"
-                . "不要新增人设、业务、产品或转化信息，字数与原文相近，输出适合口播的文案。\n\n视频文案：\n{$originalText}";
-        } elseif ($personaId) {
-            // 获取人设信息
+        // 2026-09-08 test 实测（探针法）：Coze 工作流(channelVersion=24)只认具名入参，
+        // 站长端的 keywords 映射到工作流的 input，而工作流没有引用 input——
+        // 塞进 keywords 的人设内容、洗稿指令、字数要求全部石沉大海（探针指令零响应），
+        // 而 persona 入参实测生效（放进去的身份信息会写进正文并回填 persona_role）。
+        // 所以：人设内容走 persona，字数走 length，keywords 只留原文（copywriting() 要求非空）。
+        // 洗稿模式 persona 传空串，语义即「只改写原文、不注入任何人设业务信息」。
+        $personaContent = '';
+        if ((int)$task->rewrite_mode !== VideoImitationTask::REWRITE_MODE_WASH && $personaId) {
             $persona = AiPersona::where('id', $personaId)->find();
             if ($persona) {
                 $type = $persona['persona_type'];
                 $personaStr = '';
-                $productContent = "我的IP人设产品内容：\n主营业务/产品：{$persona['main_business']}\n目标客户与痛点：{$persona['target_pain_points']}\n差异化优势与行为引导：{$persona['conversion_hook']}";
 
                 if ($type == 1) {
                     $ext = \app\common\model\aiPersona\AiPersonaIndividual::where('persona_id', $personaId)->find();
@@ -1673,16 +1700,23 @@ class VideoImitationLogic extends BaseLogic
                         $personaStr = $ext->getClueContent($persona);
                     }
                 }
-                $promptContent = "我的IP人设内容是：\n" . $personaStr . "\n\n" . $productContent . "\n\n视频文案：\n{$originalText}";
+                $personaContent = AiPersona::withViralRewriteLocationRule(
+                    "我的IP人设内容是：\n" . $personaStr
+                    . "\n\n我的IP人设产品内容：\n主营业务/产品：{$persona['main_business']}"
+                    . "\n目标客户与痛点：{$persona['target_pain_points']}"
+                    . "\n差异化优势与行为引导：{$persona['conversion_hook']}",
+                    $persona
+                );
             }
         }
 
-        $titlecoze['keywords'] = $promptContent;
-        $titlecoze['persona'] = '';
+        $titlecoze['keywords'] = $originalText;
+        $titlecoze['persona'] = $personaContent;
         $titlecoze['original'] = $originalText;
         $titlecoze['voice'] = $opt['voice'] ?? '';
         $titlecoze['hook'] = $opt['hook'] ?? '';
         $titlecoze['model'] = 0;
+        $titlecoze['length'] = $targetLength;
 
         Log::channel('shanjian')->write("VideoImitationParseTask 请求参数: " . json_encode($titlecoze, JSON_UNESCAPED_UNICODE));
         $imitationResult = AutoDeviceSettingLogic::copywriting($titlecoze, $userId, 7);
@@ -1693,10 +1727,25 @@ class VideoImitationLogic extends BaseLogic
             $contentData = json_decode($contentData, true) ?: [];
         }
 
+        // Coze 偶发只回标签不回正文（analysis_tags 有值，rewritten_text/title/compliance 全是空串）。
+        // 老逻辑照单全收：任务照常进「待确认」，详情页仿写框空白、用户什么也做不了，
+        // 最后被自动下发判「缺少必要的AI人设ID或复刻文案」判失败（实例：test 任务 753）。
+        // 这里直接抛给调用方按失败处理——parseTask 会置失败并提示重试，
+        // 重试命中 RESUME_FROM_REWRITE 只重跑仿写，不会重复扣文案提取费。
+        $rewrittenText = trim((string)($contentData['rewritten_text'] ?? ''));
+        if ($rewrittenText === '') {
+            Log::channel('shanjian')->write(sprintf(
+                'VideoImitationParseTask 仿写正文为空 task_id=%d 返回字段=%s',
+                (int)$task->id,
+                json_encode(is_array($contentData) ? array_keys($contentData) : [], JSON_UNESCAPED_UNICODE)
+            ));
+            throw new \RuntimeException('文案仿写未返回可用正文');
+        }
+
         $taskTitle = $contentData['title'] ?? '';
         $task->title = $taskTitle ?: mb_substr($originalText, 0, 10, 'utf-8');
 
-        $task->rewritten_text = $contentData['rewritten_text'] ?? '';
+        $task->rewritten_text = $rewrittenText;
         $task->word_count = $contentData['word_count'] ?? 0;
         $task->analysis_tags = json_encode($contentData['analysis_tags'] ?? [], JSON_UNESCAPED_UNICODE);
         $task->compliance_status = $contentData['compliance_status'] ?? '';
@@ -1719,6 +1768,14 @@ class VideoImitationLogic extends BaseLogic
         $task = VideoImitationTask::where('id', $taskId)->where('user_id', $userId)->find();
         if (!$task) {
             self::setError("未找到对应的任务数据");
+            return false;
+        }
+
+        if (!self::validateRewriteMode(
+            $userId,
+            (int)$task->persona_id,
+            (int)($task->rewrite_mode ?: VideoImitationTask::REWRITE_MODE_PERSONA)
+        )) {
             return false;
         }
 

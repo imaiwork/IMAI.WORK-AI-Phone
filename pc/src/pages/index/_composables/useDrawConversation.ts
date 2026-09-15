@@ -24,6 +24,8 @@ export interface RestoredImageAssistant {
     width: number;
     height: number;
     count: number;
+    modelAlias: string;
+    modelName: string;
     taskStatus: number;
     taskNo: string;
     errorMsg: string;
@@ -160,6 +162,8 @@ export function buildImageTurnsFromDetail(detail: DrawConversationDetail): Resto
                 width: numParam(params, "width", 1024),
                 height: numParam(params, "height", 1024),
                 count,
+                modelAlias: String(task?.model || ""),
+                modelName: String(task?.model_name || ""),
                 taskStatus: status,
                 taskNo: taskNoOf(task),
                 errorMsg: String(task?.error_msg || (FAIL_STATUSES.has(status) ? "生成失败" : "")),

@@ -341,15 +341,7 @@ class SvVideoTaskLogic extends SvBaseLogic
             if(isset($response['data']['task_status']) && $response['data']['task_status'] == 1) {
                 return true;
             }
-            $count = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 2)->where('task_id', $taskId)->count();
-
-            //查询是否已返还
-            if (UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('action', 1)->where('task_id', $taskId)->count() < $count) {
-
-                $points = UserTokensLog::where('user_id', $userId)->where('change_type', $typeID)->where('task_id', $taskId)->value('change_amount') ?? 0;
-
-                AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId);
-            }
+            AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
 
             return true;
         } catch (\Throwable $e) {
@@ -448,12 +440,7 @@ class SvVideoTaskLogic extends SvBaseLogic
             return false;
         }
         if ($data['status'] == 4){
-            $count = UserTokensLog::where('user_id', $model['user_id'])->where('change_type', '5101')->where('action', 2)->where('task_id', $data['task_id'])->count();
-            //查询是否已返还
-            if (UserTokensLog::where('user_id',  $model['user_id'])->where('change_type', '5101')->where('action', 1)->where('task_id', $data['task_id'])->count() < $count) {
-                $points = UserTokensLog::where('user_id', $model['user_id'])->where('change_type', '5101')->where('task_id', $data['task_id'])->value('change_amount') ?? 0;
-                AccountLogLogic::recordUserTokensLog(false, $model['user_id'], '5101', $points, $data['task_id']);
-            }
+            AccountLogLogic::refundTaskOnce((int)$model['user_id'], (int)5101, (string)$data['task_id']);
             $update['clip_token'] = 0;
         }
 

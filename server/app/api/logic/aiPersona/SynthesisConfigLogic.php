@@ -13,6 +13,7 @@ use app\common\model\aiPersona\MaterialUseLog;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\service\aiPersona\PersonaRunModeSwitchService;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
 use app\common\model\sv\SvDevice;
 use think\facade\Cache;
@@ -118,7 +119,14 @@ class SynthesisConfigLogic extends ApiLogic
                 ], 402);
             }
 
+            $configId = $params['id'];
             unset($params['id']);
+            // 运行模式存人设表，不进配置表；无手机模式不允许找爆款仿写（仿写素材靠绑定手机抓取）
+            $runMode = null;
+            if (array_key_exists('run_mode', $params)) {
+                $runMode = AiPersona::requireValidRunMode($params['run_mode']);
+                unset($params['run_mode']);
+            }
             if (array_key_exists('news_mixcut_duration', $params)) {
                 $params['news_mixcut_duration'] = AiPersonaSynthesisConfig::normalizeNewsMixcutDuration($params['news_mixcut_duration']);
             }
@@ -135,6 +143,17 @@ class SynthesisConfigLogic extends ApiLogic
             if (array_key_exists('work_mode', $params)) {
                 $params['work_mode'] = self::normalizeWorkMode($params['work_mode']);
             }
+            // 成品直发没有运行模式可选：规则弹窗里那一节只在「视频剪辑」下渲染，用户根本选不到。
+            // 但发布 cron 会当真（AutoDeviceDailyCreateRunner::queryDevices 直接排除无手机模式），
+            // 残留的 run_mode=2 会让绑定设备被静默跳过、工作日历里一条成品直发任务都建不出来。
+            // 客户端漏传或带着旧值提交都不能信，按最终 work_mode 在写库前归一。
+            $nextWorkMode = array_key_exists('work_mode', $params)
+                ? (int)$params['work_mode']
+                : (int)($config['work_mode'] ?? AiPersonaSynthesisConfig::WORK_MODE_AI_SYNTHESIS);
+            if ($nextWorkMode === AiPersonaSynthesisConfig::WORK_MODE_PRODUCT_DIRECT) {
+                $runMode = AiPersona::RUN_MODE_PHONE;
+            }
+            $finalRunMode = $runMode ?? AiPersona::resolveRunMode((int)$personaId);
             if (array_key_exists('product_use_mode', $params)) {
                 $params['product_use_mode'] = self::normalizeProductUseMode($params['product_use_mode']);
             }
@@ -149,6 +168,14 @@ class SynthesisConfigLogic extends ApiLogic
                     $params['template_config'],
                     $enabledGenerationTypes
                 );
+            }
+            if (array_key_exists('material_use_mode', $params)) {
+                $params['material_use_mode'] = \app\api\logic\shanjian\ShanjianVideoSettingLogic::normalizeMaterialUseMode(
+                    $params['material_use_mode']
+                );
+            }
+            if (array_key_exists('daily_video_count', $params)) {
+                $params['daily_video_count'] = AiPersonaSynthesisConfig::normalizeDailyVideoCount($params['daily_video_count']);
             }
             if (array_key_exists('music_source', $params)) {
                 $params['music_source'] = AiPersonaSynthesisConfig::normalizeMusicSource($params['music_source']);
@@ -165,11 +192,22 @@ class SynthesisConfigLogic extends ApiLogic
             $shouldResetVideoLibraryUse = CopywritingLibraryLogic::hasVideoLibraryRuleChanged($config, array_merge($config->toArray(), $params));
             $shouldResetProductUse = self::hasProductLibraryRuleChanged($config, $params);
 
+            $beforeData = $config->toArray();
+
             Db::startTrans();
             try {
                 $config->save($params);
                 if (array_key_exists('work_mode', $params)) {
                     self::syncPersonaPublishMode((int)$personaId, (int)$params['work_mode']);
+                }
+                if ($runMode !== null) {
+                    self::syncPersonaRunMode((int)$personaId, $runMode);
+                }
+                if (array_key_exists('material_use_mode', $params)) {
+                    \app\api\logic\shanjian\ShanjianVideoSettingLogic::syncMaterialUseMode(
+                        (int)$personaId,
+                        (int)$params['material_use_mode']
+                    );
                 }
                 if ($shouldResetVideoLibraryUse) {
                     CopywritingLibraryLogic::resetVideoDriverUseCounts((int)$personaId);
@@ -183,14 +221,26 @@ class SynthesisConfigLogic extends ApiLogic
                 throw $e;
             }
 
-            $data = $config->refresh()->toArray();
+            $afterData = $config->refresh()->toArray();
+            Log::channel('synthesis_config')->write(sprintf(
+                '[update] id=%d persona_id=%d user_id=%d before=%s after=%s',
+                $configId,
+                $personaId,
+                self::$uid,
+                json_encode($beforeData, JSON_UNESCAPED_UNICODE),
+                json_encode($afterData, JSON_UNESCAPED_UNICODE)
+            ));
+
+            $data = $afterData;
             $data['has_avatar'] = $hasAvatar;
             $data['has_voice'] = $hasVoice;
             $data['publish_mode'] = (int)AiPersona::where('id', $personaId)->value('publish_mode');
+            $data['run_mode'] = $finalRunMode;
             self::$returnData = self::appendTemplateConfig($data);
             return true;
         } catch (\Throwable $th) {
             self::setError($th->getMessage());
+            \think\facade\Log::channel('auto')->write($th->__toString());
             return false;
         }
     }
@@ -290,30 +340,46 @@ class SynthesisConfigLogic extends ApiLogic
             }
 
             if ($config->isEmpty()) {
-                $config = AiPersonaSynthesisConfig::create(
-                    self::buildDefaultConfig(
-                        (int) $persona['id'],
-                        (int) $persona['user_id'],
-                        (int) $persona['persona_type'],
-                        (int) ($persona['publish_mode'] ?? 1)
-                    )
+                $defaultConfig = self::buildDefaultConfig(
+                    (int) $persona['id'],
+                    (int) $persona['user_id'],
+                    (int) $persona['persona_type'],
+                    (int) ($persona['publish_mode'] ?? 1)
                 );
+                $config = AiPersonaSynthesisConfig::create($defaultConfig);
+                Log::channel('synthesis_config')->write(sprintf(
+                    '[create] persona_id=%d user_id=%d data=%s',
+                    $persona['id'],
+                    $persona['user_id'],
+                    json_encode($defaultConfig, JSON_UNESCAPED_UNICODE)
+                ));
             } else {
                 // 兼容旧数据：人设已是直发但配置仍为 AI 合成时，回填 work_mode
                 $publishMode = (int)($persona['publish_mode'] ?? 1);
                 $workMode = (int)($config['work_mode'] ?? AiPersonaSynthesisConfig::WORK_MODE_AI_SYNTHESIS);
                 if ($publishMode === 2 && $workMode !== AiPersonaSynthesisConfig::WORK_MODE_PRODUCT_DIRECT) {
+                    $beforeData = $config->toArray();
                     $config->save([
                         'work_mode' => AiPersonaSynthesisConfig::WORK_MODE_PRODUCT_DIRECT,
                         'update_time' => time(),
                     ]);
                     $config = $config->refresh();
+                    Log::channel('synthesis_config')->write(sprintf(
+                        '[update] persona_id=%d user_id=%d reason=直发模式回填 before_work_mode=%d after_work_mode=%d before=%s after=%s',
+                        $persona['id'],
+                        $persona['user_id'],
+                        $workMode,
+                        AiPersonaSynthesisConfig::WORK_MODE_PRODUCT_DIRECT,
+                        json_encode($beforeData, JSON_UNESCAPED_UNICODE),
+                        json_encode($config->toArray(), JSON_UNESCAPED_UNICODE)
+                    ));
                 }
             }
             $data = $config->toArray();
             $data['has_avatar'] = $hasAvatar;
             $data['has_voice'] = $hasVoice;
             $data['publish_mode'] = (int)($persona['publish_mode'] ?? 1);
+            $data['run_mode'] = AiPersona::normalizeRunMode($persona['run_mode'] ?? AiPersona::RUN_MODE_PHONE);
             $data = self::appendTemplateConfig($data);
             self::$returnData = $data;
             return true;
@@ -348,6 +414,7 @@ class SynthesisConfigLogic extends ApiLogic
             'speech_rate' => AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT,
             'copywriting_generation_type' => AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE,
             'copywriting_generation_custom' => '',
+            'daily_video_count' => AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_UNSET,
             'create_time'        => $time,
             'update_time'        => $time,
         ];
@@ -377,6 +444,21 @@ class SynthesisConfigLogic extends ApiLogic
             'publish_mode' => $publishMode,
             'update_time' => time(),
         ]);
+    }
+
+    /**
+     * 运行模式存人设表: 1=手机模式 2=无手机模式
+     */
+    public static function syncPersonaRunMode(int $personaId, int $runMode): void
+    {
+        $oldMode = AiPersona::resolveRunMode($personaId);
+        $newMode = AiPersona::normalizeRunMode($runMode);
+        AiPersona::where('id', $personaId)->update([
+            'run_mode' => $newMode,
+            'update_time' => time(),
+        ]);
+        // 24h 任务的两条生成 cron 都只认手机模式，模式一变当天的任务就得跟着重置
+        PersonaRunModeSwitchService::apply($personaId, $oldMode, $newMode);
     }
 
     public static function applyCopywritingGenerationFields(array $params, $config): array

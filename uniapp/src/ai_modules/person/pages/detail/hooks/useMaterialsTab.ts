@@ -13,15 +13,17 @@ import {
     getVideoSliceStatistics,
     getVoiceList as getVoiceListApi,
     updateMaterial,
+    updatePerson,
 } from "@/api/person";
 import { UploadAlbumTypeEnum, UploadCategoryEnum } from "@/enums/appEnums";
 import { useMaterial } from "@/ai_modules/person/hooks/useMaterial";
-import useUpload from "@/hooks/useUpload";
+import { MATERIAL_KIND_TO_USE_MODE, MaterialKindEnum, normalizeMaterialUseMode } from "@/ai_modules/person/enums";
+import useUpload, { type UploadFailedItem } from "@/hooks/useUpload";
 import usePolling from "@/hooks/usePolling";
 import { useAudio } from "@/hooks/useAudio";
 import cache from "@/utils/cache";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
-import { computed, nextTick, reactive, ref, toRef, type Ref } from "vue";
+import { computed, nextTick, reactive, ref, toRef, watch, type Ref } from "vue";
 
 export enum MaterialTabEnum {
     COMPOSE = "compose",
@@ -49,6 +51,12 @@ export enum VideoSliceStatusEnum {
 
 const SLICE_POLLING_INTERVAL = 3000;
 const VIDEO_SLICE_FILE_IDS_CACHE_KEY = "persona_video_slice_file_ids";
+/** 素材表原图标记：原图模式入库 keep_original=1 且 source_type=original；自动适配入库 keep_original=0 */
+const KEEP_ORIGINAL_YES = 1;
+const KEEP_ORIGINAL_NO = 0;
+const SOURCE_TYPE_ORIGINAL = "original";
+/** 原图拦截清单最多展示的文件数，超出折叠成「等 N 个」 */
+const ORIGINAL_REJECT_LIST_LIMIT = 6;
 
 enum MaterialUploadScene {
     COMPOSE = "compose",
@@ -57,8 +65,7 @@ enum MaterialUploadScene {
 }
 
 const MUSIC_FILE_ACCEPT = ["mp3", "wav"] as const;
-const DEFAULT_UPLOAD_CATEGORY_TIP =
-    "支持同时选择图片与视频，特定场景仅支持选择视频或图片";
+const DEFAULT_UPLOAD_CATEGORY_TIP = "支持同时选择图片与视频，特定场景仅支持选择视频或图片";
 const MUSIC_UPLOAD_CATEGORY_TIP = "可从聊天记录、素材库或素材组选择 MP3 / WAV 音频文件";
 
 export interface MaterialItem {
@@ -74,6 +81,10 @@ export interface MaterialItem {
     grab_type: number;
     slice_status?: number;
     slice_status_text?: string;
+    /** 1 = 原图模式入库（keep_original），合成时不压缩不适配 */
+    keep_original?: number;
+    source_type?: string;
+    source_type_text?: string;
 }
 
 export interface SliceStatistics {
@@ -113,8 +124,7 @@ const normalizeSliceStatistics = (raw: any): SliceStatistics => {
     const totalSliceCount = pickSliceField(raw, summary, lists, "total_slice_count");
     const successSliceCount = pickSliceField(raw, summary, lists, "success_slice_count");
     const itemCount = pickSliceField(raw, summary, lists, "item_count") || totalSliceCount;
-    const totalCount =
-        pickSliceField(raw, summary, lists, "total_count") || toFiniteNumber(raw?.total) || lists.length;
+    const totalCount = pickSliceField(raw, summary, lists, "total_count") || toFiniteNumber(raw?.total) || lists.length;
 
     return {
         total_count: totalCount,
@@ -170,6 +180,11 @@ export interface AvatarItem {
     bind_desc?: string;
     is_original_voice?: number;
     use_num?: number;
+    /** 上游形象/音色还能不能参与合成；false 时仍然列出来，但要标出原因（会员到期冻结等） */
+    available?: boolean;
+    /** 形象本身（闪剪形象）是否可用：false 表示换音色也救不回来，界面要收掉绑定入口 */
+    anchor_available?: boolean;
+    unavailable_reason?: string;
 }
 
 export interface VoiceItem {
@@ -180,6 +195,9 @@ export interface VoiceItem {
     is_local?: boolean;
     use_num?: number;
     create_time?: string;
+    /** 上游音色还能不能参与合成；false 时仍然列出来，但要标出原因（会员到期冻结等） */
+    available?: boolean;
+    unavailable_reason?: string;
 }
 
 export interface ChooseListRef {
@@ -190,6 +208,8 @@ export interface ChooseListRef {
 interface UseMaterialsTabOptions {
     personId: Ref<string>;
     publishMode: Ref<PublishMode>;
+    /** 人设接口 material_use_mode，回显素材模式（人设表为准） */
+    materialUseMode: Ref<number>;
     playItem: Ref<{ url: string; pic: string }>;
     showVideoPreview: Ref<boolean>;
     chooseAnchorRef: Ref<ChooseListRef | null>;
@@ -233,9 +253,43 @@ export const materialFilters = [
     { name: "图片", value: PersonaMaterialTypeEnum.IMAGE },
 ] as const;
 
+/** 素材模式切换项（仅剪辑原片库） */
+export const materialKindOptions = [
+    { value: MaterialKindEnum.AUTO, label: "自动适配" },
+    { value: MaterialKindEnum.ORIGINAL, label: "原图" },
+] as const;
+
+export const materialKindHint: Record<MaterialKindEnum, string> = {
+    [MaterialKindEnum.AUTO]: "上传后自动转码压缩，不合规格也能用，画质会有轻微损失",
+    [MaterialKindEnum.ORIGINAL]: "不压缩不适配，规格不符会被拦下",
+};
+
+/** 原图硬规格与站长 OriginalMaterialSpec 一致，改规格两边要同步 */
+export const materialKindSpec: Record<MaterialKindEnum, { title: string; lines: string[]; note: string }> = {
+    [MaterialKindEnum.AUTO]: {
+        title: "自动适配：上传后由平台统一处理，不合规格也能用",
+        lines: [
+            "视频：自动转 H.264 · 帧率 30 · 短边 1080，超过 10 秒可自动切片",
+            "图片：自动压缩适配",
+            "音乐：MP3 / WAV 上传后统一转码",
+        ],
+        note: "处理需要一点时间，画质会有轻微损失；对画质有要求请切「原图」。合成只取自动适配下传的素材，原图素材要切到原图模式才会用上。",
+    },
+    [MaterialKindEnum.ORIGINAL]: {
+        title: "原图模式：素材不做任何适配，必须满足",
+        lines: [
+            "视频：MP4/MOV 容器 · H.264 编码 · 帧率 25~30 · 长边 ≤2000 · 单条 ≤59 秒",
+            "图片：JPG/PNG · 长边 ≤2000",
+            "音乐：MP3/M4A/AAC/WAV，不重新编码",
+        ],
+        note: "长边一律不超过 2000（合成端硬限制，超过会被拒）。不符合的上传时会被拦下，素材入库后不再转码。",
+    },
+};
+
 export const useMaterialsTab = ({
     personId,
     publishMode,
+    materialUseMode,
     playItem,
     showVideoPreview,
     chooseAnchorRef,
@@ -265,12 +319,12 @@ export const useMaterialsTab = ({
     const materialList = ref<MaterialItem[]>([]);
     const materialLoading = ref(false);
     const materialFinished = ref(false);
+    let materialRequestId = 0;
     const materialParams = reactive({
         page_no: 1,
         page_size: 10,
     });
     const activeDirectMaterialFilter = ref(0);
-    const directPagingRefreshKey = ref(0);
 
     const avatars = ref<AvatarItem[]>([]);
     const voices = ref<VoiceItem[]>([]);
@@ -299,6 +353,7 @@ export const useMaterialsTab = ({
 
     const showChooseAnchor = ref(false);
     const showChooseVoice = ref(false);
+    const showAvatarVoiceMenu = ref(false);
     const showAvatarVoicePicker = ref(false);
     const currentBindingAvatar = ref<AvatarItem | null>(null);
     const currVoiceId = ref<string | null>(null);
@@ -347,22 +402,98 @@ export const useMaterialsTab = ({
     const pendingUploadCategory = ref<UploadAlbumTypeEnum | null>(null);
     const shouldManualAddAfterUpload = ref(false);
 
+    // 素材模式：回显人设接口 material_use_mode，切换走 aiPersona/update（人设表 + 合成配置双写）；默认自动适配，保持原有转码 / 切片链路
+    const materialKind = ref<MaterialKindEnum>(MaterialKindEnum.AUTO);
+    watch(
+        materialUseMode,
+        (mode) => {
+            materialKind.value = normalizeMaterialUseMode(mode);
+        },
+        { immediate: true },
+    );
+    const isOriginalKind = (): boolean => materialKind.value === MaterialKindEnum.ORIGINAL;
+    // 剪辑原片库两种模式各看各的：原图只看 keep_original=1 且 source_type=original，
+    // 自动适配显式传 keep_original=0——不传时服务端不过滤，原图素材会混进来。
+    // 音乐库不用这个过滤（见 queryMusicList）
+    const getMaterialKindQuery = (): { keep_original: number; source_type?: string } =>
+        isOriginalKind()
+            ? { keep_original: KEEP_ORIGINAL_YES, source_type: SOURCE_TYPE_ORIGINAL }
+            : { keep_original: KEEP_ORIGINAL_NO };
+    // 原图只对剪辑原片库的相册上传生效：material_kind=original + ffmpeg=0，服务端校验后直接入库
+    const isOriginalKindUpload = (): boolean => isComposeOriginalLibraryUpload() && isOriginalKind();
+
+    const handleSwitchMaterialKind = async (kind: MaterialKindEnum): Promise<void> => {
+        if (materialKind.value === kind) return;
+        uni.showLoading({ title: "切换中...", mask: true });
+        try {
+            await updatePerson({ id: personId.value, material_use_mode: MATERIAL_KIND_TO_USE_MODE[kind] });
+            materialKind.value = kind;
+            // 素材列表按 keep_original 过滤，模式变了必须重拉，
+            // 否则列表还是上一个模式的结果，来回切几次就会显示成空的。
+            // 音乐库不分模式，不需要跟着刷
+            await resetMaterialList();
+            uni.hideLoading();
+            uni.$u.toast(
+                kind === MaterialKindEnum.ORIGINAL
+                    ? "已切到原图：上传按规格校验，不再压缩"
+                    : "已切到自动适配：上传后平台统一转码",
+            );
+        } catch (error: any) {
+            uni.hideLoading();
+            uni.$u.toast(error || "切换失败，请重试");
+        }
+    };
+
+    // 上传失败清单：文件名 + 服务端给的原因一起列出来（可能一次多个），方便对照规格重新导出。
+    // 原图模式额外给一个"切自动适配"的出口；其余场景只报原因，不做引导。
+    const showUploadRejects = (failed: UploadFailedItem[]): void => {
+        if (!failed.length) return;
+        const isOriginal = isOriginalKindUpload();
+
+        const lines = failed
+            .slice(0, ORIGINAL_REJECT_LIST_LIMIT)
+            .map((item) => `${item.name}：${item.reason || (isOriginal ? "未达原图规格" : "上传失败")}`);
+        if (failed.length > ORIGINAL_REJECT_LIST_LIMIT) lines.push(`…等 ${failed.length} 个文件`);
+        uni.showModal({
+            title: isOriginal ? `${failed.length} 个文件未达原图规格` : `${failed.length} 个文件上传失败`,
+            content: lines.join("\n"),
+            showCancel: isOriginal,
+            cancelText: "知道了",
+            confirmText: isOriginal ? "自动适配" : "知道了",
+            success: ({ confirm }) => {
+                if (isOriginal && confirm) handleSwitchMaterialKind(MaterialKindEnum.AUTO);
+            },
+            fail: (err) => {
+                console.log("err", err);
+            },
+        });
+    };
+
     const {
         showUploadProgress: showComposeUploadProgress,
         uploadMaterialList: composeUploadList,
         uploadAndProcessFiles,
     } = useUpload({
-        isTranscode: () => !isDirectUploadScene(),
+        isTranscode: () => !isDirectUploadScene() && !isOriginalKindUpload(),
         isFetchVideoInfo: true,
         imageResolution: [999999, 999999],
         videoDuration: () => [1, 300],
+        onPartialFail: showUploadRejects,
         onSuccess: (res: any[]) => {
+            // 原图模式：上传接口已按规格校验并直接入库（返回 material_id），这里只刷列表，不再 batchAdd
+            if (isOriginalKindUpload()) {
+                shouldManualAddAfterUpload.value = false;
+                uni.$u.toast(`已入库 ${res.length} 个原图素材`);
+                reloadMaterialList();
+                return;
+            }
             const needManualAdd = isDirectUploadScene() || shouldManualAddAfterUpload.value;
             shouldManualAddAfterUpload.value = false;
             const toPayload = (list: any[]): MaterialPayload[] =>
                 list.map((item) => ({
                     file_url: item.url,
-                    material_type: item.type === "image" ? PersonaMaterialTypeEnum.IMAGE : PersonaMaterialTypeEnum.VIDEO,
+                    material_type:
+                        item.type === "image" ? PersonaMaterialTypeEnum.IMAGE : PersonaMaterialTypeEnum.VIDEO,
                     material_name: item.name,
                     duration: item.duration ?? 0,
                     thumbnail_url: item.pic,
@@ -373,9 +504,7 @@ export const useMaterialsTab = ({
                 const images = res.filter((item) => item.type === "image");
                 if (videos.length) {
                     // 合并已有跟踪 id，避免二次上传覆盖第一批切割中的 file_ids
-                    const fileIds = [
-                        ...new Set([...getCachedVideoSliceFileIds(), ...getUploadedFileIds(videos)]),
-                    ];
+                    const fileIds = [...new Set([...getCachedVideoSliceFileIds(), ...getUploadedFileIds(videos)])];
                     setCachedVideoSliceFileIds(fileIds);
                     if (!images.length) reloadMaterialList();
                     refreshSliceStatistics(fileIds);
@@ -436,10 +565,11 @@ export const useMaterialsTab = ({
     );
 
     const isMusicUploadScene = computed(() => uploadScene.value === MaterialUploadScene.MUSIC);
-    const uploadCategoryShowCategories = computed((): Array<UploadAlbumTypeEnum | UploadCategoryEnum> =>
-        isMusicUploadScene.value
-            ? [UploadAlbumTypeEnum.File, UploadCategoryEnum.Library, UploadCategoryEnum.Group]
-            : [],
+    const uploadCategoryShowCategories = computed(
+        (): Array<UploadAlbumTypeEnum | UploadCategoryEnum> =>
+            isMusicUploadScene.value
+                ? [UploadAlbumTypeEnum.File, UploadCategoryEnum.Library, UploadCategoryEnum.Group]
+                : [],
     );
     const uploadCategoryTip = computed(() =>
         isMusicUploadScene.value ? MUSIC_UPLOAD_CATEGORY_TIP : DEFAULT_UPLOAD_CATEGORY_TIP,
@@ -454,26 +584,34 @@ export const useMaterialsTab = ({
     const isCurrentPlaying = (voiceId: string) => isPlaying.value && currVoiceId.value === voiceId;
     const isCurrentMusicPlaying = (musicId: string) => isPlaying.value && currMusicId.value === musicId;
 
-    const queryMaterialList = async () => {
-        if (materialLoading.value || materialFinished.value) return;
+    const queryMaterialList = async (reload = false): Promise<boolean> => {
+        if ((!reload && materialLoading.value) || materialFinished.value) return false;
+        // 切回配置原片库或快速切筛选时，新查询不能被旧请求挡住，也不能接收旧结果。
+        const requestId = ++materialRequestId;
+        const pageNo = materialParams.page_no;
         try {
             materialLoading.value = true;
             const { lists = [], count = 0 } = await getMaterialLibraryList({
                 persona_id: personId.value,
-                page_no: materialParams.page_no,
+                page_no: pageNo,
                 page_size: materialParams.page_size,
                 material_type: materialFilters[activeMaterialFilter.value].value,
                 publish_mode: publishMode.value,
+                // 素材模式只管剪辑原片库；成品直发库不按原图过滤
+                ...(publishMode.value === 1 ? getMaterialKindQuery() : {}),
             });
-            materialList.value = materialParams.page_no === 1 ? lists : materialList.value.concat(lists);
+            if (requestId !== materialRequestId) return false;
+            materialList.value = pageNo === 1 ? lists : materialList.value.concat(lists);
             if (materialList.value.length >= count || lists.length < materialParams.page_size) {
                 materialFinished.value = true;
             }
         } catch {
+            if (requestId !== materialRequestId) return false;
             materialFinished.value = true;
         } finally {
-            materialLoading.value = false;
+            if (requestId === materialRequestId) materialLoading.value = false;
         }
+        return true;
     };
 
     const queryMusicList = async () => {
@@ -486,6 +624,8 @@ export const useMaterialsTab = ({
                 page_size: musicParams.page_size,
                 material_type: PersonaMaterialTypeEnum.MUSIC,
                 use_status: 1,
+                // 音乐库不跟随素材模式分库：原图/自动适配讲的是视频图片要不要转码，
+                // 一段背景音频没有「原图」可言。传过的音乐两种模式都能看到、都能用
             });
             musicList.value = musicParams.page_no === 1 ? lists : musicList.value.concat(lists);
             if (musicList.value.length >= count || lists.length < musicParams.page_size) {
@@ -517,6 +657,8 @@ export const useMaterialsTab = ({
         try {
             await batchAddMaterial({
                 persona_id: personId.value,
+                // 原图模式：服务端按 MP3/M4A/AAC/WAV 校验并标 keep_original=1，合成时不重新编码
+                ...(isOriginalKind() ? { material_kind: MaterialKindEnum.ORIGINAL } : {}),
                 items: items.map((item) => ({
                     ...item,
                     material_type: PersonaMaterialTypeEnum.MUSIC,
@@ -550,7 +692,7 @@ export const useMaterialsTab = ({
         materialList.value = [];
         materialFinished.value = false;
         handleCancelBatchDelete();
-        await queryMaterialList();
+        return queryMaterialList(true);
     };
 
     // 切割统计轮询：以统计接口为准，逐次刷新片段进度
@@ -560,8 +702,7 @@ export const useMaterialsTab = ({
         try {
             // 完成前是否在切割中（含列表兜底），用于「完成时必刷」且避免初始化重复拉列表
             const wasRunning =
-                (!!sliceStatistics.value && isSliceTaskRunning(sliceStatistics.value)) ||
-                hasSlicingMaterial.value;
+                (!!sliceStatistics.value && isSliceTaskRunning(sliceStatistics.value)) || hasSlicingMaterial.value;
             const res = await getVideoSliceStatistics({ persona_id: personId.value });
             sliceStatistics.value = normalizeSliceStatistics(res);
 
@@ -614,7 +755,7 @@ export const useMaterialsTab = ({
     };
 
     const resetMaterialList = async () => {
-        await reloadMaterialList();
+        if (!(await reloadMaterialList())) return;
         // 图片筛选下列表可能看不到切割中视频，仍有缓存 id 时继续轮询，避免误清
         if (hasSlicingMaterial.value || getCachedVideoSliceFileIds().length > 0) {
             await refreshSliceStatistics();
@@ -622,6 +763,12 @@ export const useMaterialsTab = ({
         }
         clearSliceProgress();
     };
+
+    // 素材模式变了（人设回显到位 / 用户切换）查询条件跟着变，只重拉已经拉过的列表，没打开过的等首次加载
+    watch(materialKind, () => {
+        if (materialList.value.length || materialFinished.value) resetMaterialList();
+        if (musicList.value.length || musicFinished.value) resetMusicList();
+    });
 
     // 仅自动合成模式（publish_mode 1）涉及视频切割
     const refreshSliceStatistics = async (fileIds = getCachedVideoSliceFileIds()) => {
@@ -643,8 +790,10 @@ export const useMaterialsTab = ({
         }
     };
 
-    const resetDirectMaterialList = () => {
-        directPagingRefreshKey.value += 1;
+    // 成品直发库渲染的就是 materialList（publish_mode=2），跟剪辑原片库同一份列表，
+    // 所以刷新只能走 reloadMaterialList；早期 z-paging 版那个 refreshKey 没有组件消费，加了也不会刷新
+    const resetDirectMaterialList = async () => {
+        await reloadMaterialList();
     };
 
     const loadNextMaterialPage = () => {
@@ -685,8 +834,13 @@ export const useMaterialsTab = ({
         showUploadCategoryPanel.value = true;
     };
 
+    // 素材内容的「上传」按钮两个库共用，落哪个库要看当前在看哪个：
+    // 一直按 COMPOSE 场景走，成品会被当成剪辑原片入库（原图模式下还会带上原图硬规格，
+    // 59 秒以上的成品直接被服务端拒掉）
     const handleOpenComposeUpload = (): void => {
-        handleOpenUploadCategoryPanel();
+        handleOpenUploadCategoryPanel(
+            publishMode.value === 2 ? MaterialUploadScene.DIRECT : MaterialUploadScene.COMPOSE,
+        );
     };
 
     const handleOpenMusicUpload = (): void => {
@@ -722,6 +876,16 @@ export const useMaterialsTab = ({
             uploadAndProcessFiles(category, {});
             return;
         }
+        // 原图模式：不转码不切割，material_kind=original + ffmpeg=0（缺一不可，服务端会拒），校验通过直接入库
+        if (isOriginalKindUpload()) {
+            shouldManualAddAfterUpload.value = false;
+            uploadAndProcessFiles(category, {
+                persona_id: personId.value,
+                ffmpeg: 0,
+                material_kind: MaterialKindEnum.ORIGINAL,
+            });
+            return;
+        }
         // 剪辑原片库：切割走后端自动入库；不切割传 ffmpeg=1 并手动添加
         if (cutMode === "none") {
             shouldManualAddAfterUpload.value = true;
@@ -754,9 +918,10 @@ export const useMaterialsTab = ({
             UploadAlbumTypeEnum.Video === category
         ) {
             pendingUploadScene.value = uploadScene.value;
-            // 剪辑原片库选相册/视频时先选切割模式；纯图片无需切割，ffmpeg=1 后手动入库
+            // 剪辑原片库选相册/视频时先选切割模式；纯图片无需切割，ffmpeg=1 后手动入库；原图模式不切割，跳过选择
             if (
                 isComposeOriginalLibraryUpload() &&
+                !isOriginalKind() &&
                 (category === UploadAlbumTypeEnum.File || category === UploadAlbumTypeEnum.Video)
             ) {
                 pendingUploadCategory.value = category;
@@ -858,17 +1023,24 @@ export const useMaterialsTab = ({
     const handleAddMaterial = async (items: MaterialPayload[], scene = uploadScene.value): Promise<void> => {
         if (!items.length) return;
         uni.showLoading({ title: "添加中...", mask: true });
+        // 原图是剪辑原片库的素材模式，成品直发库不分模式。按目标库判定，
+        // 不能只看 scene：在成品直发库点通用上传时 scene 仍是 COMPOSE
+        const targetPublishMode = scene === MaterialUploadScene.DIRECT ? 2 : publishMode.value;
         try {
             await batchAddMaterial({
                 persona_id: personId.value,
+                // 原图模式手动同步（素材库 / 素材组 / 创作库选入）：服务端逐条探测规格，不合格整批拒绝并给原因
+                ...(isOriginalKind() && targetPublishMode === 1
+                    ? { material_kind: MaterialKindEnum.ORIGINAL }
+                    : {}),
                 items: items.map((item: any) => ({
                     ...item,
-                    publish_mode: scene === MaterialUploadScene.DIRECT ? 2 : publishMode.value,
+                    publish_mode: targetPublishMode,
                 })),
             });
             uni.showToast({ title: "添加成功", icon: "none", duration: 3000 });
             if (scene === MaterialUploadScene.DIRECT) {
-                resetDirectMaterialList();
+                await resetDirectMaterialList();
             } else {
                 // 走 batchAdd 的都是图片 / 不切割视频，本身无切割进度；只刷列表
                 await reloadMaterialList();
@@ -909,14 +1081,14 @@ export const useMaterialsTab = ({
         uni.showModal({
             title: "提示",
             content: "确定移除该直发素材吗？",
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             success: async ({ confirm }) => {
                 if (!confirm) return;
                 uni.showLoading({ title: "移除中...", mask: true });
                 try {
                     await deleteMaterial({ id: item.id });
                     uni.showToast({ title: "已移除", icon: "none", duration: 2000 });
-                    resetDirectMaterialList();
+                    await resetDirectMaterialList();
                 } catch (error: any) {
                     uni.showToast({ title: error || "移除失败", icon: "none", duration: 3000 });
                 } finally {
@@ -958,7 +1130,7 @@ export const useMaterialsTab = ({
         uni.showModal({
             title: "批量删除",
             content: `确定删除已选的 ${selectedMaterialIds.value.length} 个素材吗？`,
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             confirmText: "删除",
             success: async ({ confirm }) => {
                 if (!confirm) return;
@@ -986,7 +1158,7 @@ export const useMaterialsTab = ({
         uni.showModal({
             title: "一键删除",
             content: `确定删除全部 ${failedMaterialCount.value} 条切割失败的视频吗？`,
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             confirmText: "删除",
             success: async ({ confirm }) => {
                 if (!confirm) return;
@@ -1180,7 +1352,7 @@ export const useMaterialsTab = ({
         uni.showModal({
             title: "批量移出",
             content: `确定移出已选的 ${selectedMusicIds.value.length} 首音乐吗？`,
-            confirmColor: "#EF4444",
+            confirmColor: "#F56C6C",
             confirmText: "移出",
             success: async ({ confirm }) => {
                 if (!confirm) return;
@@ -1247,7 +1419,15 @@ export const useMaterialsTab = ({
             uni.showToast({ title: "保存成功", icon: "none", duration: 3000 });
             await getAvatarList();
         } catch (error: any) {
-            uni.showToast({ title: error || "保存失败", icon: "none", duration: 3000 });
+            // 服务端会说清是哪一个形象、为什么加不进来（冻结 / 未克隆完），
+            // 这种解释性文案塞 toast 会被截断，用弹窗保证看得全
+            uni.hideLoading();
+            uni.showModal({
+                title: "形象没能加入",
+                content: String(error || "保存失败，请重试"),
+                showCancel: false,
+                confirmText: "知道了",
+            });
         } finally {
             uni.hideLoading();
         }
@@ -1257,7 +1437,7 @@ export const useMaterialsTab = ({
         uni.showModal({
             title: "提示",
             content: `确定移除形象「${item.name}」吗？`,
-            confirmColor: "#FF4D4F",
+            confirmColor: "#F56C6C",
             success: async ({ confirm }) => {
                 if (!confirm) return;
                 uni.showLoading({ title: "删除中...", mask: true });
@@ -1279,6 +1459,7 @@ export const useMaterialsTab = ({
     };
 
     const handleOpenVoiceForAvatar = (item: AvatarItem): void => {
+        showAvatarVoiceMenu.value = true;
         uni.showActionSheet({
             itemList: ["选择原音", "选择音色"],
             success: async ({ tapIndex }) => {
@@ -1300,6 +1481,9 @@ export const useMaterialsTab = ({
                     ]);
                 }
             },
+            complete: () => {
+                showAvatarVoiceMenu.value = false;
+            },
         });
     };
 
@@ -1311,11 +1495,10 @@ export const useMaterialsTab = ({
                 voice_id: 0,
                 is_original_voice: 1,
             });
-            item.is_original_voice = 1;
-            item.voice_id = "";
-            item.voice_name = "";
-            item.bind_desc = "形象原音";
             uni.showToast({ title: "原音绑定成功", icon: "none", duration: 2000 });
+            // 换绑之后这个形象可能从「不可用」变回可用（原来只是音色被冻结），
+            // 就地改几个字段看不出这个变化，必须重拉列表让 available 重新算
+            await getAvatarList();
         } catch (error: any) {
             uni.showToast({ title: error ?? "绑定失败，请重试", icon: "none", duration: 3000 });
         } finally {
@@ -1323,10 +1506,14 @@ export const useMaterialsTab = ({
         }
     };
 
-    const handleAvatarVoiceSelect = async (res: VoiceItem[]): Promise<void> => {
-        if (!currentBindingAvatar.value || res.length === 0) return;
-        const selected = res[0];
+    const handleAvatarVoiceSelect = async (res: VoiceItem | VoiceItem[] | undefined): Promise<void> => {
+        if (!currentBindingAvatar.value) return;
+        const selected = Array.isArray(res) ? res[0] : res;
         const target = currentBindingAvatar.value;
+        if (!selected) {
+            currentBindingAvatar.value = null;
+            return;
+        }
         uni.showLoading({ title: "保存中...", mask: true });
         try {
             await bindAvatarVoice({
@@ -1334,10 +1521,9 @@ export const useMaterialsTab = ({
                 voice_id: selected.id,
                 is_original_voice: 0,
             });
-            target.is_original_voice = 0;
-            target.voice_id = selected.id;
-            target.voice_name = selected.name;
             uni.showToast({ title: "音色绑定成功", icon: "none", duration: 2000 });
+            // 同上：绑上可用音色后这个形象就能用了，列表要重拉才看得到
+            await getAvatarList();
         } catch (error: any) {
             uni.showToast({ title: error ?? "绑定失败，请重试", icon: "none", duration: 3000 });
         } finally {
@@ -1379,7 +1565,7 @@ export const useMaterialsTab = ({
         uni.showModal({
             title: "提示",
             content: `确定移除音色「${item.name}」吗？`,
-            confirmColor: "#FF4D4F",
+            confirmColor: "#F56C6C",
             success: async ({ confirm }) => {
                 if (!confirm) return;
                 uni.showLoading({ title: "删除中...", mask: true });
@@ -1406,6 +1592,8 @@ export const useMaterialsTab = ({
     };
 
     const cleanup = () => {
+        materialRequestId += 1;
+        showAvatarVoiceMenu.value = false;
         destroyAudio();
         stopSlicePolling();
     };
@@ -1417,7 +1605,6 @@ export const useMaterialsTab = ({
         avatars,
         batchDeleteMode,
         cleanup,
-        directPagingRefreshKey,
         destroyAudio,
         formatMaterialTime,
         getAvatarList,
@@ -1457,6 +1644,7 @@ export const useMaterialsTab = ({
         handleSelectMaterial,
         handleSetDirectPublishVisible,
         handleSwitchPublishMode,
+        handleSwitchMaterialKind,
         handleSwitchMaterialTab,
         handleToggleBatchDelete,
         handleToggleMaterialSelected,
@@ -1479,6 +1667,7 @@ export const useMaterialsTab = ({
         loadNextMaterialPage,
         loadNextMusicPage,
         materialFinished,
+        materialKind,
         materialList,
         materialLoading,
         materialParams,
@@ -1499,6 +1688,7 @@ export const useMaterialsTab = ({
         selectedMaterialCount,
         selectedMaterialIds,
         sliceStatistics,
+        showAvatarVoiceMenu,
         showAvatarVoicePicker,
         showChooseAnchor,
         showChooseVoice,

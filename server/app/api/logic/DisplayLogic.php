@@ -22,6 +22,7 @@ use app\common\model\sv\SvGroupBuyRecord;
 use app\common\model\wechat\AiWechatCreateGroupLog;
 use app\common\model\wechat\AiWechatLog;
 use app\common\model\sv\SvDeviceTakeOverRecord;
+use app\common\service\display\DySearchIntentionMapper;
 use app\common\service\display\IntentionCustomerService;
 use app\common\service\FileService;
 use app\common\model\aiPersona\Material as AiPersonaMaterial;
@@ -666,18 +667,20 @@ class DisplayLogic extends ApiLogic
                 ->count();
             $addFriendCount = SvAddWechatRecord::where('user_id', self::$uid)
                 ->where('status', 'in', [1, 2])
+                ->where('reg_wechat', '<>', '')
                 ->when($platform !== null, function ($query) use ($platform) {
                     $query->where(function ($query) use ($platform) {
                         $query->where('account_type', $platform)->whereOr('channel', $platform);
                     });
                 })
-                ->group('account')
+                ->group('reg_wechat')
                 ->count();
             $createGroupCount = AiWechatCreateGroupLog::where('user_id', self::$uid)
                 ->where('status', 1)
                 ->group('group_name')
                 ->count();
             $sourceStats = self::formatIntentionSourceStats(IntentionCustomerService::summarySourceStats((int)self::$uid, $platform));
+            $clueCount += IntentionCustomerService::dySearchClueCount((int)self::$uid, $platform);
 
             self::$returnData = [
                 'summary_text' => '累计触达意向客户',
@@ -688,6 +691,7 @@ class DisplayLogic extends ApiLogic
                 'douyin_nearby' => $sourceStats['douyin_nearby'],
                 'xhs_peer' => $sourceStats['xhs_peer'],
                 'group_buy' => $sourceStats['group_buy'],
+                'dy_search' => $sourceStats['dy_search'],
             ];
             return true;
         } catch (\Throwable $th) {
@@ -717,18 +721,30 @@ class DisplayLogic extends ApiLogic
                 'count' => 0,
                 'unit' => '人',
             ],
+            'dy_search' => [
+                'key' => 'dy_search',
+                'name' => DySearchIntentionMapper::SOURCE_PILL_NAME,
+                'count' => 0,
+                'contact_count' => 0,
+                'unit' => '人',
+            ],
         ];
 
         foreach ($stats as $item) {
             $key = (string)($item['key'] ?? '');
-            if (isset($defaults[$key])) {
-                $defaults[$key] = [
-                    'key' => $key,
-                    'name' => (string)($item['name'] ?? $defaults[$key]['name']),
-                    'count' => (int)($item['count'] ?? 0),
-                    'unit' => (string)($item['unit'] ?? $defaults[$key]['unit']),
-                ];
+            if (!isset($defaults[$key])) {
+                continue;
             }
+            $row = [
+                'key' => $key,
+                'name' => (string)($item['name'] ?? $defaults[$key]['name']),
+                'count' => (int)($item['count'] ?? 0),
+                'unit' => (string)($item['unit'] ?? $defaults[$key]['unit']),
+            ];
+            if (array_key_exists('contact_count', $defaults[$key])) {
+                $row['contact_count'] = (int)($item['contact_count'] ?? 0);
+            }
+            $defaults[$key] = $row;
         }
 
         return $defaults;
@@ -1455,14 +1471,21 @@ class DisplayLogic extends ApiLogic
             $wechatRecord = self::findFollowWechatRecord($customer, $messages);
             $customer = self::mergeFollowCustomerData($customer, $privateRecords, $messages, $wechatRecord);
 
-            self::$returnData = [
-                'customer' => self::formatFollowCustomer($customer),
-                'records' => [
+            if (DySearchIntentionMapper::isDySearchSource((string)($customer['source_key'] ?? ''))) {
+                [$replyCount, $latestTime] = self::followWechatReplyStats($customer, $wechatRecord);
+                $records = DySearchIntentionMapper::buildFollowRecords($customer, $wechatRecord, $replyCount, $latestTime);
+            } else {
+                $records = [
                     self::buildFollowInflowRecord($customer),
                     self::buildFollowPublicChatRecord($messages),
                     self::buildFollowWechatAddRecord($customer, $wechatRecord),
                     self::buildFollowPrivateChatRecord($customer, $wechatRecord),
-                ],
+                ];
+            }
+
+            self::$returnData = [
+                'customer' => self::formatFollowCustomer($customer),
+                'records' => $records,
             ];
             return true;
         } catch (\Throwable $th) {
@@ -1527,6 +1550,7 @@ class DisplayLogic extends ApiLogic
         $account = trim((string)($params['account'] ?? ''));
         $customerName = trim((string)($params['customer_name'] ?? '')) ?: $account;
         $wechatNo = trim((string)($params['wechat_no'] ?? ''));
+        $isDySearch = DySearchIntentionMapper::isDySearchSource($sourceKey);
 
         return [
             'id' => $id,
@@ -1538,10 +1562,12 @@ class DisplayLogic extends ApiLogic
             'account' => $account,
             'wechat_no' => $wechatNo,
             'wechat_status' => $wechatNo !== '' ? 'recognized' : 'unrecognized',
-            'domain' => $wechatNo !== '' ? 'private' : 'public',
+            'domain' => ($wechatNo !== '' && !$isDySearch) ? 'private' : 'public',
             'source_key' => $sourceKey,
             'source_name' => $sourceName,
-            'source_text' => $sourceName !== '' ? '通过【' . $sourceName . '】流入' : '',
+            'source_text' => $isDySearch
+                ? DySearchIntentionMapper::sourceText((string)($params['exec_keyword'] ?? ''))
+                : ($sourceName !== '' ? '通过【' . $sourceName . '】流入' : ''),
             'create_time' => '',
         ];
     }
@@ -1578,6 +1604,10 @@ class DisplayLogic extends ApiLogic
 
     private static function findFollowWechatRecord(array $customer, array $messages): array
     {
+        if (DySearchIntentionMapper::isDySearchSource((string)($customer['source_key'] ?? ''))) {
+            return self::findDySearchFollowWechatRecord($customer);
+        }
+
         $messageContents = array_map(static fn(array $message) => (string)($message['content'] ?? ''), $messages);
         $wechatNo = trim((string)($customer['wechat_no'] ?? '')) ?: self::extractFollowContactToken($messageContents);
         $platform = (int)($customer['platform'] ?? 0);
@@ -1629,6 +1659,44 @@ class DisplayLogic extends ApiLogic
         return empty($record) ? [] : $record->toArray();
     }
 
+    /**
+     * 搜寻客资只查加微渠道 4 或 account_type=4。
+     */
+    private static function findDySearchFollowWechatRecord(array $customer): array
+    {
+        $wechatNo = trim((string)($customer['wechat_no'] ?? ''));
+        $account = trim((string)($customer['account'] ?? ''));
+        if ($wechatNo === '' && $account === '') {
+            return [];
+        }
+
+        $query = SvAddWechatRecord::where('user_id', self::$uid)
+            ->whereNull('delete_time')
+            ->where(function ($query) {
+                $query->where('channel', DySearchIntentionMapper::ADD_CHANNEL)
+                    ->whereOr('account_type', DeviceEnum::ACCOUNT_TYPE_DY);
+            })
+            ->where(function ($query) use ($wechatNo, $account) {
+                if ($wechatNo !== '') {
+                    $query->where('reg_wechat', $wechatNo);
+                }
+                if ($account !== '') {
+                    if ($wechatNo === '') {
+                        $query->where('user_account', $account);
+                    } else {
+                        $query->whereOr('user_account', $account);
+                    }
+                }
+            });
+
+        $record = $query
+            ->field('id,user_id,account,account_type,user_account,original_message,reg_wechat,wechat_no,wechat_name,wechat_avatar,action,status,result,task_id,channel,exec_type,remark,image,create_time,update_time')
+            ->order('id desc')
+            ->find();
+
+        return empty($record) ? [] : $record->toArray();
+    }
+
     private static function mergeFollowCustomerData(array $customer, array $privateRecords, array $messages, array $wechatRecord): array
     {
         $firstRecord = $privateRecords[0] ?? [];
@@ -1655,6 +1723,15 @@ class DisplayLogic extends ApiLogic
         $customer['wechat_no'] = $wechatNo;
 
         $hasReply = !empty(array_filter($messages, static fn(array $message) => ($message['direction'] ?? '') === 'self'));
+        if (DySearchIntentionMapper::isDySearchSource((string)($customer['source_key'] ?? ''))) {
+            $addSuccess = !empty($wechatRecord) && (int)($wechatRecord['status'] ?? 0) === 1;
+            $customer['domain'] = DySearchIntentionMapper::resolveDomain($addSuccess);
+            if ($wechatNo !== '') {
+                $customer['wechat_status'] = $hasReply ? 'replied' : 'recognized';
+            }
+            return $customer;
+        }
+
         if ($wechatNo !== '' || !empty($wechatRecord) || $hasReply) {
             $customer['domain'] = 'private';
             $customer['wechat_status'] = $hasReply ? 'replied' : (($customer['wechat_status'] ?? '') ?: 'recognized');
@@ -1828,7 +1905,7 @@ class DisplayLogic extends ApiLogic
     private static function followWechatApplyStatusDesc(int $status): string
     {
         $maps = [
-            0 => '添加好友失败',
+            0 => '无效线索，添加好友失败',
             1 => '已添加好友',
             2 => '已提交添加好友申请，等待通过',
             3 => '当前账号存在安全风险，暂停添加',
@@ -1853,6 +1930,7 @@ class DisplayLogic extends ApiLogic
             'city_touch' => '同城视频',
             'group_buy' => '团购',
             'crawling' => '视频号获客',
+            'dy_search' => DySearchIntentionMapper::SOURCE_NAME,
             'sph_like' => '视频号点赞',
             'private_message' => '私信/评论',
         ];

@@ -113,7 +113,10 @@
                     style="width: 100%; font-size: 24rpx; color: #374151; line-height: 1.75; min-height: 120rpx"
                     @focus="onFocus"
                     @blur="onBlur" />
-                <view class="flex justify-end mt-[8rpx]">
+                <view class="flex items-center justify-end gap-[12rpx] mt-[8rpx]">
+                    <text v-if="estimatedDuration" class="text-[19rpx] text-[#9CA3AF]">
+                        成片约 {{ estimatedDuration }}
+                    </text>
                     <text class="text-[19rpx] text-[#d1d5db]"> {{ (step.confirmContent || "").length }}/1000 字 </text>
                 </view>
             </view>
@@ -237,6 +240,8 @@
 </template>
 
 <script setup lang="ts">
+import { formatEstimatedDuration } from "@/ai_modules/hot_write/enums";
+
 type StepStatus = "done" | "running" | "confirm" | "pending" | "failed";
 type DoneType = "text" | "tags" | "content" | "kv";
 
@@ -258,6 +263,8 @@ interface Step {
     confirmLabel?: string;
     rejectLabel?: string;
     videoUrl?: string;
+    /** 口播文案步专用：按字数估算成片时长，提示用户文案越长视频越长 */
+    showDuration?: boolean;
 }
 
 const props = withDefaults(
@@ -268,6 +275,10 @@ const props = withDefaults(
     {
         failReason: "",
     },
+);
+
+const estimatedDuration = computed(() =>
+    props.step.showDuration ? formatEstimatedDuration(props.step.confirmContent || "") : "",
 );
 
 const emit = defineEmits<{

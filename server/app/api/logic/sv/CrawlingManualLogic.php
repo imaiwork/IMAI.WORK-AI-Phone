@@ -75,6 +75,8 @@ class CrawlingManualLogic extends SvBaseLogic
                 $recordData = self::_getRecordByFile($params['fileurl'], $task);
             } elseif ($params['source'] == 2) {
                 $recordData = self::_getRecordByAutoClue($params['crawling_task_ids'], $task);
+            } elseif ((int)$params['source'] === 3) {
+                $recordData = self::_getRecordByDySearchClue($params['crawling_task_ids'], $task);
             }
             if (!empty($recordData)) {
                 SvCrawlingManualTaskRecord::insertAll($recordData);
@@ -149,7 +151,7 @@ class CrawlingManualLogic extends SvBaseLogic
                     continue;
                 }
                 $tmps = array_filter(explode(',', $item[0]));
-                foreach ($tmps as $key => $tmp) {
+                foreach ($tmps as $tkey => $tmp) {
                     // $find = SvCrawlingManualTaskRecord::where('clue_wechat', $tmp)->where('user_id', $task->user_id)->findOrEmpty();
                     // if (!$find->isEmpty()) {
                     //     continue;
@@ -175,7 +177,7 @@ class CrawlingManualLogic extends SvBaseLogic
     }
 
 
-    private static function downloadExcelWithCurl($url)
+    private static function downloadExcelWithCurl(string $url)
     {
         $ch = curl_init();
 
@@ -222,6 +224,38 @@ class CrawlingManualLogic extends SvBaseLogic
             // if (!$find->isEmpty()) {
             //     continue;
             // }
+            if (array_key_exists($item['reg_wechat'], $recordData)) {
+                continue;
+            }
+            $recordData[$item['reg_wechat']] = [
+                'user_id' => $task->user_id,
+                'task_id' => $task->id,
+                'clue_wechat' => $item['reg_wechat'],
+                'status' => 4,
+                'create_time' => time()
+            ];
+        }
+        unset($items);
+        return array_values($recordData);
+    }
+
+    /**
+     * 复刻 source=2：从加微队按抖音获客任务 id 取号。
+     */
+    private static function _getRecordByDySearchClue(string $crawling_task_ids, SvCrawlingManualTask $task): array
+    {
+        $recordData = array();
+        $crawling_task_ids = json_decode($crawling_task_ids, true);
+        $items = SvAddWechatRecord::alias('a')
+            ->join('sv_dy_search_task t', 'a.dy_search_task_id = t.id and t.delete_time is null')
+            ->where('a.dy_search_task_id', 'in', $crawling_task_ids)
+            ->where('a.user_id', $task->user_id)
+            ->where('a.channel', \app\common\service\display\DySearchIntentionMapper::ADD_CHANNEL)
+            ->where('a.status', 'in', [4, 5])
+            ->where('t.status', 'in', [3, 4])
+            ->select()
+            ->toArray();
+        foreach ($items as $item) {
             if (array_key_exists($item['reg_wechat'], $recordData)) {
                 continue;
             }
@@ -543,7 +577,7 @@ class CrawlingManualLogic extends SvBaseLogic
         return '';
     }
 
-    private static function setLog($content, $type = 'crontab')
+    private static function setLog(mixed $content, $type = 'crontab')
     {
         if (is_array($content)) {
             $content = json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);

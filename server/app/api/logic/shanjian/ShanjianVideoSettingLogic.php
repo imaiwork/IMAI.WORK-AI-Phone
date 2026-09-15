@@ -5,7 +5,12 @@ namespace app\api\logic\shanjian;
 use app\api\logic\ApiLogic;
 use app\api\logic\HumanLogic;
 use app\api\logic\service\TokenLogService;
+use app\common\enum\user\AccountLogEnum;
 use app\common\exception\MaterialNotReadyException;
+use app\common\logic\AccountLogLogic;
+use app\common\model\aiPersona\AiPersona;
+use app\common\model\aiPersona\Material;
+use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
 use app\common\model\human\HumanAnchor;
 use app\common\model\human\HumanVoice;
 use app\common\model\minimax\MinimaxShanjianTask;
@@ -13,7 +18,10 @@ use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\model\user\UserTokensLog;
+use app\common\service\FileService;
 use app\common\service\MemberService;
+use app\common\service\OriginalMaterialSpec;
 use app\common\service\UserDisplaySanitizer;
 use think\facade\Db;
 use think\facade\Log;
@@ -29,8 +37,620 @@ class ShanjianVideoSettingLogic extends ApiLogic
     public const ENGINE_TYPE_SHANJIAN = 1;
     /** 无包装引擎：蝉镜 */
     public const ENGINE_TYPE_CHANJING = 2;
+    /** 素材使用方式：自动适配（切片/现网） */
+    public const MATERIAL_USE_MODE_SLICE = 1;
+    /** 素材使用方式：原图（未转码原片） */
+    public const MATERIAL_USE_MODE_ORIGINAL = 2;
     /** 蝉镜视频原音占位 voice_id，无真实音色，由 cron 从形象视频克隆 */
     public const CHANJING_ORIGINAL_VOICE_ID = '-1';
+    /** 收口横线(分钟):子任务超过 1440 分钟(24 小时)未出终态才收口,以内仍归回调与轮询 */
+    private const CLOSE_AGE_MINUTES = 1440;
+    /** 收口退费年龄线(天):超过这个岁数的僵尸子任务只标失败、不再退费 */
+    private const CLOSE_REFUND_MAX_DAYS = 30;
+
+    public static function normalizeMaterialUseMode($value): int
+    {
+        return (int)$value === self::MATERIAL_USE_MODE_ORIGINAL
+            ? self::MATERIAL_USE_MODE_ORIGINAL
+            : self::MATERIAL_USE_MODE_SLICE;
+    }
+
+    /**
+     * 读人设表素材模式；非法或无人设归自动适配
+     */
+    public static function resolvePersonaMaterialUseMode(int $personaId): int
+    {
+        if ($personaId <= 0) {
+            return self::MATERIAL_USE_MODE_SLICE;
+        }
+        $raw = AiPersona::where('id', $personaId)->value('material_use_mode');
+        return self::normalizeMaterialUseMode($raw ?? self::MATERIAL_USE_MODE_SLICE);
+    }
+
+    /**
+     * 人设表与合成配置表双写素材模式；配置行不存在时只写人设
+     */
+    public static function syncMaterialUseMode(int $personaId, $mode): int
+    {
+        $mode = self::normalizeMaterialUseMode($mode);
+        if ($personaId <= 0) {
+            return $mode;
+        }
+        $now = time();
+        AiPersona::where('id', $personaId)->update([
+            'material_use_mode' => $mode,
+            'update_time' => $now,
+        ]);
+        AiPersonaSynthesisConfig::where('persona_id', $personaId)->update([
+            'material_use_mode' => $mode,
+            'update_time' => $now,
+        ]);
+        return $mode;
+    }
+
+    /**
+     * 未显式传 material_kind 且人设为原图时，按人设推断为 original
+     */
+    public static function inferMaterialKind(string $materialKind, int $personaId): string
+    {
+        $materialKind = trim($materialKind);
+        if ($materialKind !== '') {
+            return $materialKind;
+        }
+        if ($personaId > 0 && self::resolvePersonaMaterialUseMode($personaId) === self::MATERIAL_USE_MODE_ORIGINAL) {
+            return 'original';
+        }
+        return '';
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public static function requireValidMaterialUseMode($value): int
+    {
+        if (!self::isValidMaterialUseModeInput($value)) {
+            throw new \Exception('素材使用方式不正确，1=自动适配 2=原图');
+        }
+        return self::normalizeMaterialUseMode($value);
+    }
+
+    public static function isValidMaterialUseModeInput($value): bool
+    {
+        if (is_bool($value) || is_array($value) || is_object($value)) {
+            return false;
+        }
+        if (is_string($value) && !is_numeric(trim($value))) {
+            return false;
+        }
+        $mode = (int)$value;
+        return $mode === self::MATERIAL_USE_MODE_SLICE || $mode === self::MATERIAL_USE_MODE_ORIGINAL;
+    }
+
+    public static function materialUseModeLabel(int $mode): string
+    {
+        return self::normalizeMaterialUseMode($mode) === self::MATERIAL_USE_MODE_ORIGINAL
+            ? '原图'
+            : '自动适配';
+    }
+
+    /**
+     * 素材模式实际变更时写人设日志；未变化返回空串
+     */
+    public static function buildMaterialUseModeChangeLog(
+        int $personaId,
+        int $userId,
+        int $from,
+        int $to,
+        string $source = 'aiPersona.update',
+        string $personaName = ''
+    ): string {
+        $from = self::normalizeMaterialUseMode($from);
+        $to = self::normalizeMaterialUseMode($to);
+        if ($from === $to) {
+            return '';
+        }
+        return '人设素材模式变更' . json_encode([
+            'persona_id' => $personaId,
+            'user_id' => $userId,
+            'persona_name' => $personaName,
+            'from' => $from,
+            'to' => $to,
+            'from_text' => self::materialUseModeLabel($from),
+            'to_text' => self::materialUseModeLabel($to),
+            'source' => $source,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    public static function logPersonaMaterialUseModeChange(
+        int $personaId,
+        int $userId,
+        int $from,
+        int $to,
+        string $source = 'aiPersona.update',
+        string $personaName = ''
+    ): void {
+        $message = self::buildMaterialUseModeChangeLog(
+            $personaId,
+            $userId,
+            $from,
+            $to,
+            $source,
+            $personaName
+        );
+        if ($message === '') {
+            return;
+        }
+        Log::channel('ipPersona')->write($message);
+    }
+
+    public static function applyMaterialUseModeToExtra(array $extra, array $params = []): array
+    {
+        $raw = array_key_exists('material_use_mode', $params)
+            ? $params['material_use_mode']
+            : ($extra['material_use_mode'] ?? self::MATERIAL_USE_MODE_SLICE);
+        $extra['material_use_mode'] = self::normalizeMaterialUseMode($raw);
+        return $extra;
+    }
+
+    public static function persistMaterialUseMode(array &$decodedData, array &$params): int
+    {
+        $extra = is_array($decodedData['extra'] ?? null) ? $decodedData['extra'] : [];
+        $hasTop = array_key_exists('material_use_mode', $params);
+        $hasExtra = array_key_exists('material_use_mode', $extra);
+        if ($hasTop || $hasExtra) {
+            $raw = $hasTop ? $params['material_use_mode'] : $extra['material_use_mode'];
+            if ($raw !== null && $raw !== '' && !self::isValidMaterialUseModeInput($raw)) {
+                throw new \Exception('素材使用方式不正确，1=自动适配 2=原图');
+            }
+        }
+        $extra = self::applyMaterialUseModeToExtra($extra, $params);
+        $decodedData['extra'] = $extra;
+        $params['extra'] = json_encode($extra, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        return (int)$extra['material_use_mode'];
+    }
+
+    /** 背景音乐：自定义上传 */
+    public const MUSIC_SOURCE_CUSTOM = 1;
+    /** 背景音乐：系统内置 */
+    public const MUSIC_SOURCE_SYSTEM = 2;
+    /** 背景音乐：不用 */
+    public const MUSIC_SOURCE_NONE = 3;
+
+    /**
+     * 高级设置：包装开关 / 音乐来源 / 音量 / 语速。
+     * speech_volume 仅落库，闪剪 speakerExtra 无人声音量字段。
+     *
+     * @param array $options require_speech=type1/3；news=type4 固定音乐音量 0.3
+     */
+    public static function normalizeAdvancedSettings(array &$extra, array $musicData, array $options = []): void
+    {
+        if (!array_key_exists('music_source', $extra) || $extra['music_source'] === '' || $extra['music_source'] === null) {
+            $hasMusic = self::hasCustomMusic($musicData);
+            $aiMusic = !empty($extra['ai_music']) || !empty($extra['aimusic']);
+            if ($hasMusic) {
+                $extra['music_source'] = self::MUSIC_SOURCE_CUSTOM;
+            } elseif ($aiMusic) {
+                $extra['music_source'] = self::MUSIC_SOURCE_SYSTEM;
+            } else {
+                $extra['music_source'] = self::MUSIC_SOURCE_NONE;
+            }
+        } else {
+            $source = (int)$extra['music_source'];
+            if (!in_array($source, [self::MUSIC_SOURCE_CUSTOM, self::MUSIC_SOURCE_SYSTEM, self::MUSIC_SOURCE_NONE], true)) {
+                throw new \Exception('背景音乐设置不正确，1=自定义 2=系统内置 3=不用');
+            }
+            $extra['music_source'] = $source;
+        }
+
+        if ((int)$extra['music_source'] === self::MUSIC_SOURCE_CUSTOM && !self::hasCustomMusic($musicData)) {
+            throw new \Exception('自定义背景音乐不能为空');
+        }
+
+        foreach (['header_switch', 'material_switch', 'subtitle_switch', 'keyword_switch'] as $key) {
+            if (array_key_exists($key, $extra)) {
+                $extra[$key] = self::normalizePackSwitch($extra[$key]);
+            }
+        }
+
+        if (!empty($options['news'])) {
+            $extra['music_volume'] = 0.3;
+        } elseif (array_key_exists('music_volume', $extra)) {
+            $extra['music_volume'] = self::normalizeVolumeValue($extra['music_volume'], '背景音乐音量');
+        }
+
+        if (!empty($options['require_speech'])) {
+            if (array_key_exists('speed_ratio', $extra)) {
+                $extra['speed_ratio'] = self::normalizeSpeedRatioValue($extra['speed_ratio']);
+            } else {
+                $extra['speed_ratio'] = 1.0;
+            }
+            if (array_key_exists('speech_volume', $extra)) {
+                // 闪剪 speakerExtra 无音量字段，只存 extra 供前端回显
+                $extra['speech_volume'] = self::normalizeVolumeValue($extra['speech_volume'], '人声音量');
+            }
+        }
+    }
+
+    public static function applyAdvancedSettings(array &$decodedData, array &$params, array $options = []): void
+    {
+        $extra = is_array($decodedData['extra'] ?? null) ? $decodedData['extra'] : [];
+        $musicData = is_array($decodedData['music'] ?? null) ? $decodedData['music'] : [];
+        self::normalizeAdvancedSettings($extra, $musicData, $options);
+        $decodedData['extra'] = $extra;
+        $params['extra'] = json_encode($extra, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    public static function applyPackagingAdvancedSettings(array &$packaging): void
+    {
+        $musicData = [];
+        if (!empty($packaging['music']) && is_array($packaging['music'])) {
+            $musicData = $packaging['music'];
+        }
+        $existing = trim((string)($packaging['music_url'] ?? ''));
+        if ($existing !== '' && !self::hasCustomMusic($musicData)) {
+            $musicData[] = $existing;
+        }
+        self::normalizeAdvancedSettings($packaging, $musicData, ['require_speech' => false]);
+        $source = (int)($packaging['music_source'] ?? self::MUSIC_SOURCE_NONE);
+        if ($source === self::MUSIC_SOURCE_NONE) {
+            $packaging['music_url'] = '';
+            return;
+        }
+        if ($source === self::MUSIC_SOURCE_CUSTOM && $existing !== '') {
+            $packaging['music_url'] = $existing;
+            return;
+        }
+        $packaging['music_url'] = self::resolveMusicUrlBySource($musicData, $packaging, 0);
+    }
+
+    public static function resolveMusicUrlBySource(array $musicData, array $extra, int $index): string
+    {
+        if (!array_key_exists('music_source', $extra) || $extra['music_source'] === '' || $extra['music_source'] === null) {
+            if (self::hasCustomMusic($musicData)) {
+                $extra['music_source'] = self::MUSIC_SOURCE_CUSTOM;
+            } elseif (!empty($extra['ai_music']) || !empty($extra['aimusic'])) {
+                $extra['music_source'] = self::MUSIC_SOURCE_SYSTEM;
+            } else {
+                $extra['music_source'] = self::MUSIC_SOURCE_NONE;
+            }
+        }
+        $source = (int)$extra['music_source'];
+        if ($source === self::MUSIC_SOURCE_NONE) {
+            return '';
+        }
+        if ($source === self::MUSIC_SOURCE_SYSTEM) {
+            return self::randomSystemMusicUrl();
+        }
+        return self::pickCustomMusicUrl($musicData, $extra, $index);
+    }
+
+    public static function musicStrategyLabel(array $extra): string
+    {
+        $source = (int)($extra['music_source'] ?? self::MUSIC_SOURCE_NONE);
+        if ($source === self::MUSIC_SOURCE_SYSTEM) {
+            return 'system';
+        }
+        if ($source === self::MUSIC_SOURCE_NONE) {
+            return 'none';
+        }
+        return ((int)($extra['music'] ?? 1) === 1) ? 'sequential' : 'random';
+    }
+
+    public static function extractMusicItemUrl($item): string
+    {
+        if (is_array($item)) {
+            return trim((string)($item['fileUrl'] ?? $item['file_url'] ?? $item['url'] ?? ''));
+        }
+        return trim((string)$item);
+    }
+
+    public static function hasCustomMusic(array $musicData): bool
+    {
+        foreach ($musicData as $item) {
+            if (self::extractMusicItemUrl($item) !== '') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static function pickCustomMusicUrl(array $musicData, array $extra, int $index): string
+    {
+        $urls = [];
+        foreach ($musicData as $item) {
+            $url = self::extractMusicItemUrl($item);
+            if ($url !== '') {
+                $urls[] = $url;
+            }
+        }
+        if ($urls === []) {
+            return '';
+        }
+        if ((int)($extra['music'] ?? 1) === 1) {
+            return $urls[$index % count($urls)];
+        }
+        return $urls[array_rand($urls)];
+    }
+
+    public static function randomSystemMusicUrl(): string
+    {
+        return rtrim((string)config('app.app_host'), '/') . '/static/audio/music/' . random_int(1, 20) . '.mp3';
+    }
+
+    public static function normalizePackSwitch($value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_string($value)) {
+            return in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true);
+        }
+        return (bool)$value;
+    }
+
+    public static function normalizeVolumeValue($value, string $label): float
+    {
+        if (!is_numeric($value)) {
+            throw new \Exception($label . '必须是数字');
+        }
+        $value = round((float)$value, 1);
+        if ($value < 0 || $value > 1) {
+            throw new \Exception($label . '必须在 0 到 1 之间，当前值为：' . $value);
+        }
+        return $value;
+    }
+
+    public static function normalizeSpeedRatioValue($value): float
+    {
+        if (!is_numeric($value)) {
+            throw new \Exception('人声语速必须是数字');
+        }
+        $value = round((float)$value, 1);
+        if ($value < 0.5 || $value > 2) {
+            throw new \Exception('人声语速必须在 0.5 到 2 之间，当前值为：' . $value);
+        }
+        return $value;
+    }
+
+    public static function resolveMaterialUseModeFromExtra($extra): int
+    {
+        if (is_string($extra) && $extra !== '') {
+            $decoded = json_decode($extra, true);
+            $extra = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+        }
+        if (!is_array($extra)) {
+            $extra = [];
+        }
+        return self::normalizeMaterialUseMode($extra['material_use_mode'] ?? self::MATERIAL_USE_MODE_SLICE);
+    }
+
+    /**
+     * @param bool $allowScreenedExternal 调用方已按原图硬规格逐条筛过库外素材（见 allowsScreenedExternalOriginals）
+     */
+    public static function assertManualOriginalMaterials(
+        array $materials,
+        int $userId,
+        int $shanjianType = 0,
+        bool $allowScreenedExternal = false
+    ): bool {
+        $videoCount = 0;
+        foreach (self::flattenMaterialItems($materials) as $item) {
+            $type = (string)($item['type'] ?? '');
+            $fileUrl = (string)($item['fileUrl'] ?? $item['file_url'] ?? '');
+            if ($type === 'video') {
+                if (!self::acceptsOriginalMaterialUrl($fileUrl, $userId, Material::MATERIAL_TYPE_VIDEO, $allowScreenedExternal)) {
+                    self::setError('所选视频不是原图模式素材，请重新选择');
+                    return false;
+                }
+                $videoCount++;
+                continue;
+            }
+            if ($type === 'image') {
+                if (!self::acceptsOriginalMaterialUrl($fileUrl, $userId, Material::MATERIAL_TYPE_IMAGE, $allowScreenedExternal)) {
+                    self::setError('所选图片不是原图模式素材，请重新选择');
+                    return false;
+                }
+            }
+        }
+        if (in_array($shanjianType, [3, 4], true) && $videoCount <= 0) {
+            self::setError('原图模式必须选择原图模式视频');
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 原图模式单条素材能否下发。
+     * 人设素材库里查得到的，必须是启用中的 keep_original=1；
+     * 库里压根没有的（AI 找素材/热点库转存不进人设库）只有在调用方已按原图硬规格筛过时才放行——
+     * 否则「不进库」这件事本身就会被判成「不是原图素材」，AI 素材永远过不去。
+     */
+    private static function acceptsOriginalMaterialUrl(
+        string $fileUrl,
+        int $userId,
+        int $materialType,
+        bool $allowScreenedExternal
+    ): bool {
+        if (trim($fileUrl) === '' || $userId <= 0) {
+            return false;
+        }
+        if (self::isKeepOriginalMaterialUrl($fileUrl, $userId, $materialType)) {
+            return true;
+        }
+        return $allowScreenedExternal
+            && !self::isPersonaLibraryMaterialUrl($fileUrl, $userId, $materialType);
+    }
+
+    /** 该地址是否是此用户人设素材库里的素材（不看 keep_original / use_status） */
+    public static function isPersonaLibraryMaterialUrl(string $fileUrl, int $userId, int $materialType): bool
+    {
+        $candidates = self::materialFileUrlCandidates($fileUrl);
+        if ($candidates === []) {
+            return false;
+        }
+        return Material::where('user_id', $userId)
+            ->where('material_type', $materialType)
+            ->whereIn('file_url', $candidates)
+            ->findOrEmpty()
+            ->isEmpty() === false;
+    }
+
+    /**
+     * 素材是否已由调用方按原图硬规格筛过。
+     * 热点追踪的 AI 找素材走热点库（sv_media），不落人设素材表，库里查无此地址是常态；
+     * 这些素材在 VideoService::resolveMaterials 里已逐条过 OriginalMaterialSpec，
+     * 下发前 preflightMaterials 还会再按同一套规格复检一次。
+     */
+    public static function allowsScreenedExternalOriginals($extra): bool
+    {
+        if (is_string($extra) && $extra !== '') {
+            $decoded = json_decode($extra, true);
+            $extra = json_last_error() === JSON_ERROR_NONE ? $decoded : [];
+        }
+        return is_array($extra) && (string)($extra['source'] ?? '') === 'hotspot';
+    }
+
+    /**
+     * 拍平素材组：热点混剪/type3 传 [[item,item]]，手动创作传 [item,item]。
+     * 有 type 或文件地址的视为一条素材，其余当作分组继续往下拆。
+     */
+    public static function flattenMaterialItems(array $materials): array
+    {
+        $out = [];
+        foreach ($materials as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $type = trim((string)($item['type'] ?? ''));
+            $fileUrl = trim((string)($item['fileUrl'] ?? $item['file_url'] ?? ''));
+            if ($type !== '' || $fileUrl !== '') {
+                $out[] = $item;
+                continue;
+            }
+            foreach (self::flattenMaterialItems($item) as $inner) {
+                $out[] = $inner;
+            }
+        }
+        return $out;
+    }
+
+    public static function isKeepOriginalMaterialUrl(string $fileUrl, int $userId, int $materialType): bool
+    {
+        if ($userId <= 0 || trim($fileUrl) === '') {
+            return false;
+        }
+        $candidates = self::materialFileUrlCandidates($fileUrl);
+        if (empty($candidates)) {
+            return false;
+        }
+        return Material::where('user_id', $userId)
+            ->where('material_type', $materialType)
+            ->where('keep_original', Material::KEEP_ORIGINAL_YES)
+            ->where('use_status', Material::USE_STATUS_ENABLED)
+            ->whereIn('file_url', $candidates)
+            ->findOrEmpty()
+            ->isEmpty() === false;
+    }
+
+    public static function isVideoMaterialItem(array $item): bool
+    {
+        $type = (string)($item['type'] ?? '');
+        $materialType = (int)($item['material_type'] ?? 0);
+        return $type === 'video' || $materialType === Material::MATERIAL_TYPE_VIDEO;
+    }
+
+    /**
+     * 原图裁完没有视频时的文案：缺时长、真超限、本来就没视频分开说。
+     *
+     * @param array $after  trim 之后
+     * @param array $before trim 之前，缺省则无法区分缺时长
+     */
+    public static function originalModeEmptyVideoError(array $after, array $before = []): string
+    {
+        foreach ($after as $item) {
+            if (is_array($item) && self::isVideoMaterialItem($item)) {
+                return '';
+            }
+        }
+        $beforeVideos = [];
+        foreach ($before as $item) {
+            if (is_array($item) && self::isVideoMaterialItem($item)) {
+                $beforeVideos[] = $item;
+            }
+        }
+        if ($beforeVideos === []) {
+            return $before === []
+                ? '原图模式素材单条超过59秒或总时长超过290秒，无法按原图模式合成'
+                : '原图模式必须选择原图模式视频';
+        }
+        foreach ($beforeVideos as $item) {
+            if ((float)($item['duration'] ?? 0) <= 0) {
+                return '原图模式视频缺少有效时长，无法合成';
+            }
+        }
+        return '原图模式素材单条超过59秒或总时长超过290秒，无法按原图模式合成';
+    }
+
+    /**
+     * 视频缺 duration 时按 fileUrl 回表补齐，避免 trim 把未带时长的原片误丢。
+     */
+    public static function fillMaterialDurationsFromStore(array $materials, int $userId): array
+    {
+        if ($userId <= 0) {
+            return $materials;
+        }
+        foreach ($materials as &$item) {
+            if (!is_array($item) || !self::isVideoMaterialItem($item)) {
+                continue;
+            }
+            if ((float)($item['duration'] ?? 0) > 0) {
+                continue;
+            }
+            $fileUrl = trim((string)($item['fileUrl'] ?? $item['file_url'] ?? ''));
+            $candidates = self::materialFileUrlCandidates($fileUrl);
+            if ($candidates === []) {
+                continue;
+            }
+            $found = Material::where('user_id', $userId)
+                ->where('material_type', Material::MATERIAL_TYPE_VIDEO)
+                ->where('use_status', Material::USE_STATUS_ENABLED)
+                ->whereIn('file_url', $candidates)
+                ->where('duration', '>', 0)
+                ->order('id', 'desc')
+                ->value('duration');
+            if ((float)$found > 0) {
+                $item['duration'] = (float)$found;
+            }
+        }
+        unset($item);
+        return $materials;
+    }
+
+    private static function materialFileUrlCandidates(string $fileUrl): array
+    {
+        $fileUrl = trim(str_replace('\\', '/', $fileUrl));
+        if ($fileUrl === '') {
+            return [];
+        }
+        $candidates = [$fileUrl];
+        $relative = FileService::setFileUrl($fileUrl);
+        $path = $fileUrl;
+        if (preg_match('/^https?:\/\//i', $fileUrl) === 1) {
+            $urlPath = (string)parse_url($fileUrl, PHP_URL_PATH);
+            if ($urlPath !== '') {
+                $path = ltrim($urlPath, '/');
+            }
+        }
+        foreach ([$path, $relative] as $item) {
+            $item = trim(str_replace('\\', '/', (string)$item));
+            if ($item === '') {
+                continue;
+            }
+            $candidates[] = ltrim($item, '/');
+            $candidates[] = '/' . ltrim($item, '/');
+        }
+        return array_values(array_unique($candidates));
+    }
 
     /**
      * 蝉镜视频原音：voice 未传、空串或 -1
@@ -50,39 +670,64 @@ class ShanjianVideoSettingLogic extends ApiLogic
      * @param array $params      原始 params(读取 pic 字段作为封面)
      * @return bool  true 通过,false 已 setError,调用方应直接 return false
      */
-    public static function preflightMaterials(array $decodedData, array $params): bool
+    public static function preflightMaterials(array $decodedData, array $params, int $materialUseMode = 1, int $userId = 0): bool
     {
-        // 收集本次要发给闪剪的所有素材 URL(material + pic)
-        $submittedUrls = [];
+        $materialUseMode = self::normalizeMaterialUseMode($materialUseMode);
+        $isOriginalMode = $materialUseMode === self::MATERIAL_USE_MODE_ORIGINAL;
+
+        $materialItems = [];
         foreach (($decodedData['material'] ?? []) as $m) {
             if (!empty($m['fileUrl'])) {
-                $submittedUrls[] = [
+                $materialItems[] = [
                     'url' => $m['fileUrl'],
                     'type' => ($m['type'] ?? '') === 'video' ? 'video' : 'image',
                 ];
             }
         }
+        $coverItem = null;
         if (!empty($params['pic'])) {
             $picUrl = str_starts_with((string)$params['pic'], 'http')
                 ? $params['pic']
-                : \app\common\service\FileService::getFileUrl($params['pic']);
-            $submittedUrls[] = ['url' => $picUrl, 'type' => 'image'];
+                : FileService::getFileUrl($params['pic']);
+            $coverItem = ['url' => $picUrl, 'type' => 'image'];
+        }
+
+        if ($isOriginalMode) {
+            foreach ($materialItems as $item) {
+                $guard = ($item['type'] ?? '') === 'video'
+                    ? OriginalMaterialSpec::assertVideo(['url' => $item['url']])
+                    : OriginalMaterialSpec::assertImage(['url' => $item['url']]);
+                if ($guard !== true) {
+                    Log::channel('shanjiannotice')->write('原图预检规格失败 ' . json_encode([
+                            'user_id' => $userId,
+                            'item' => $item,
+                            'error' => $guard,
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
+                    self::setError($guard);
+                    return false;
+                }
+            }
+            if ($coverItem === null) {
+                return true;
+            }
+            // 封面只查转码就绪，不套自动适配的「最大边≤2000」门禁：
+            // 原图模式的图片硬规格是「长边≥2048」，两条线互斥，合规的原图封面必然被判超标。
+            // 封面是否合规由 resolveSubmitCover() 在下发前归一（不合规的直接不带封面）。
+            self::assertCoverTranscodeReady([$coverItem]);
+            return true;
+        }
+
+        $submittedUrls = $materialItems;
+        if ($coverItem !== null) {
+            $submittedUrls[] = $coverItem;
         }
         if (empty($submittedUrls)) {
             return true;
         }
 
-        // 门禁 1:转码就绪检查
-        // 任一素材在 iw_file 表里 transcode_status=1(待转码) 或 2(转码中) → 不下发
         $relativeUris = [];
         foreach ($submittedUrls as $item) {
-            $uri = (string)$item['url'];
-            if (str_starts_with($uri, 'http')) {
-                $path = parse_url($uri, PHP_URL_PATH) ?: '';
-                $uri = ltrim($path, '/');
-            } else {
-                $uri = ltrim($uri, '/');
-            }
+            $uri = self::toRelativeUri((string)$item['url']);
             if ($uri !== '') {
                 $relativeUris[] = $uri;
             }
@@ -91,10 +736,6 @@ class ShanjianVideoSettingLogic extends ApiLogic
             $check = \app\common\service\MaterialReadinessService::checkFileUrlsForSubmit($relativeUris);
             $blockedUris = $check['pending_uris'] ?? [];
             if (!empty($blockedUris)) {
-                // 转码未就绪是"暂时性"状态(等待转码完成),不是失败:
-                // - 抛 MaterialNotReadyException,cron 路径会透传清缓存等下一轮(不落库失败 task)
-                // - 用户主动触发的 add* 路径会被外层 catch 转成友好提示返回(不落库)
-                // 绝不能 return false 让上游当成永久失败而落库"生成失败"记录
                 throw new MaterialNotReadyException(
                     '素材正在转码处理中(' . count($blockedUris) . ' 条未就绪)'
                 );
@@ -106,38 +747,153 @@ class ShanjianVideoSettingLogic extends ApiLogic
                         'failed_uris' => $failedUris,
                         'submitted_count' => count($relativeUris),
                     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
-
             }
         }
 
-        // 门禁 2:分辨率兜底预检
-        // 针对绕过转码直接上传的图(封面、anchor 头像等)、历史未转码的老视频。
-        // 超标时优先自动投递转码,抛 MaterialNotReadyException 让 cron 保持"生成中"等下一轮;
-        // 仅当无法投递(无 file 记录/入队失败)时才视为永久失败。
         $violations = \app\common\service\ResolutionValidator::findViolations($submittedUrls);
-        if (!empty($violations)) {
-            $dispatch = \app\common\service\UploadService::dispatchTranscodeForOversizedUrls($violations);
-            $waiting = count($dispatch['dispatched']) + count($dispatch['pending']);
-            Log::channel('shanjiannotice')->write('[分辨率超标自动转码] ' . json_encode([
-                    'violations' => $violations,
-                    'dispatched' => $dispatch['dispatched'],
-                    'pending' => $dispatch['pending'],
-                    'skipped' => $dispatch['skipped'],
-                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
+        if (empty($violations)) {
+            return true;
+        }
+        return self::dispatchOversizedOrFail($violations, $userId);
+    }
 
-            if ($waiting > 0) {
-                throw new MaterialNotReadyException(
-                    '素材分辨率超标,已自动投递转码('
-                    . count($dispatch['dispatched']) . ' 条新投递,'
-                    . count($dispatch['pending']) . ' 条处理中)'
-                );
+    private static function toRelativeUri(string $uri): string
+    {
+        if (str_starts_with($uri, 'http')) {
+            $path = parse_url($uri, PHP_URL_PATH) ?: '';
+            return ltrim((string)$path, '/');
+        }
+        return ltrim($uri, '/');
+    }
+
+    /** 封面转码就绪检查（不含分辨率门禁）：未就绪抛异常，保持 status=0 等下一轮 */
+    private static function assertCoverTranscodeReady(array $coverItems): void
+    {
+        $relativeUris = [];
+        foreach ($coverItems as $item) {
+            $uri = self::toRelativeUri((string)($item['url'] ?? ''));
+            if ($uri !== '') {
+                $relativeUris[] = $uri;
             }
+        }
+        if (empty($relativeUris)) {
+            return;
+        }
+        $check = \app\common\service\MaterialReadinessService::checkFileUrlsForSubmit($relativeUris);
+        $blockedUris = $check['pending_uris'] ?? [];
+        if (!empty($blockedUris)) {
+            throw new MaterialNotReadyException(
+                '素材正在转码处理中(' . count($blockedUris) . ' 条未就绪)'
+            );
+        }
+    }
 
-            self::setError(\app\common\service\ResolutionValidator::formatViolationMessage($violations));
-            return false;
+    /**
+     * 原图模式的封面口径：合规返回原值，不合规返回 ''（不带封面继续合成）。
+     *
+     * 封面走原图规格(OriginalMaterialSpec::assertImage)判定，不合规就不带封面继续合成：
+     * 之前这里错用了 dispatchOversizedOrFail，一张超标封面自动转码一次仍超标后转"不可恢复"，
+     * 会把整条视频任务标成失败（remark 写"请重新上传"）——而封面本来就是可选的
+     * （thumb_status=4 就是无封面的合法态），丢掉一张缩略图远比整条报废划算。
+     */
+    public static function resolveSubmitCover(
+        string $picUrl,
+        int $materialUseMode = self::MATERIAL_USE_MODE_SLICE,
+        int $userId = 0,
+        string $taskId = ''
+    ): string {
+        $picUrl = trim($picUrl);
+        if ($picUrl === '') {
+            return '';
+        }
+        $url = str_starts_with($picUrl, 'http') ? $picUrl : FileService::getFileUrl($picUrl);
+
+        // 原图模式：按原图规格判（长边≤2000），不合规直接丢封面
+        if (self::normalizeMaterialUseMode($materialUseMode) === self::MATERIAL_USE_MODE_ORIGINAL) {
+            $guard = OriginalMaterialSpec::assertImage(['url' => $url]);
+            if ($guard === true) {
+                return $picUrl;
+            }
+            self::logDroppedCover($taskId, $userId, $url, is_string($guard) ? $guard : '原图规格不符');
+            return '';
         }
 
-        return true;
+        // 自动适配：先等转码就绪，再看分辨率
+        $coverItems = [['url' => $url, 'type' => 'image']];
+        self::assertCoverTranscodeReady($coverItems);
+        $violations = \app\common\service\ResolutionValidator::findViolations($coverItems);
+        if (empty($violations)) {
+            return $picUrl;
+        }
+
+        // 超标就投一次转码等下一轮；投不动了（转码失败/已投过仍超标）就丢封面继续合成
+        $dispatch = \app\common\service\UploadService::dispatchTranscodeForOversizedUrls($violations);
+        $waiting = count($dispatch['dispatched']) + count($dispatch['pending']);
+        if ($waiting > 0) {
+            throw new MaterialNotReadyException(
+                '封面分辨率超标,已自动投递转码('
+                . count($dispatch['dispatched']) . ' 条新投递,'
+                . count($dispatch['pending']) . ' 条处理中)'
+            );
+        }
+
+        self::logDroppedCover(
+            $taskId,
+            $userId,
+            $url,
+            \app\common\service\ResolutionValidator::formatViolationMessage($violations)
+        );
+        return '';
+    }
+
+    /**
+     * 封面用不了就记一笔并返回空，绝不因此把整条视频判失败。
+     * 封面是可选的（下发处 `thumb_status==2 && pic!=''` 才带封面，thumb_status=4 就是无封面的合法态），
+     * 而它一旦压不下去又修不好（如 transcode_status=4），会把这个人设**每天每条**视频永久判死。
+     */
+    private static function logDroppedCover(string $taskId, int $userId, string $url, string $reason): void
+    {
+        Log::channel('shanjiannotice')->write('[封面不可用,改为不带封面下发] ' . json_encode([
+                'task_id' => $taskId,
+                'user_id' => $userId,
+                'pic' => $url,
+                'reason' => $reason,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
+    }
+
+    private static function preflightCoverByExistingGate(array $coverItems, int $userId): bool
+    {
+        self::assertCoverTranscodeReady($coverItems);
+
+        $violations = \app\common\service\ResolutionValidator::findViolations($coverItems);
+        if (empty($violations)) {
+            return true;
+        }
+        return self::dispatchOversizedOrFail($violations, $userId);
+    }
+
+    private static function dispatchOversizedOrFail(array $violations, int $userId): bool
+    {
+        $dispatch = \app\common\service\UploadService::dispatchTranscodeForOversizedUrls($violations);
+        $waiting = count($dispatch['dispatched']) + count($dispatch['pending']);
+        Log::channel('shanjiannotice')->write('[分辨率超标自动转码] ' . json_encode([
+                'user_id' => $userId,
+                'violations' => $violations,
+                'dispatched' => $dispatch['dispatched'],
+                'pending' => $dispatch['pending'],
+                'skipped' => $dispatch['skipped'],
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE));
+
+        if ($waiting > 0) {
+            throw new MaterialNotReadyException(
+                '素材分辨率超标,已自动投递转码('
+                . count($dispatch['dispatched']) . ' 条新投递,'
+                . count($dispatch['pending']) . ' 条处理中)'
+            );
+        }
+
+        self::setError(\app\common\service\ResolutionValidator::formatViolationMessage($violations));
+        return false;
     }
 
     /**
@@ -190,6 +946,81 @@ class ShanjianVideoSettingLogic extends ApiLogic
         }
 
         return array_values($kept);
+    }
+
+    /**
+     * 画面素材来源：未配置时按纯素材库兜底
+     */
+    public static function resolveVisualMaterialSource($config): int
+    {
+        $source = is_array($config)
+            ? (int)($config['visual_material_source'] ?? 0)
+            : (int)($config->visual_material_source ?? 0);
+
+        return $source > 0 ? $source : AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_MATERIAL;
+    }
+
+    /**
+     * 该类型能否靠 AI 抓素材：数字人口播混剪(1) + 纯AI(1)/AI+素材库(2)。
+     * 素材混剪(3)/新闻体(4) 必须走素材库，与 requiresLibraryMaterials 同一口径。
+     * 自动化各链路共用，别再各写一份 in_array 判断。
+     */
+    public static function canUseAiMaterials(int $shanjianType, int $visualMaterialSource): bool
+    {
+        return $shanjianType === 1 && in_array($visualMaterialSource, [
+            AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_AI,
+            AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_AI_MATERIAL,
+        ], true);
+    }
+
+    /**
+     * 本批是否还有能靠 AI 抓素材的类型：有就不在入口按"素材库为空"拦截，
+     * 留给单条任务自己成败（AI 抓不到再落失败任务）。
+     */
+    public static function hasAiMaterialType(array $videoTypes, int $visualMaterialSource): bool
+    {
+        foreach ($videoTypes as $type) {
+            if (self::canUseAiMaterials((int)$type, $visualMaterialSource)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 素材行 → 闪剪 material 载荷（type / fileUrl / duration）
+     * 保留 id、thumbnail_url 供调用方取用后自行删除；file_url 统一转成可访问地址。
+     * 自动化各链路（社媒 DeviceLogic、朋友圈 aiPersona\VideoSynthesis）共用，避免口径漂移。
+     */
+    public static function formatMaterialsForSetting(array $materials): array
+    {
+        foreach ($materials as &$value) {
+            if (!is_array($value)) {
+                continue;
+            }
+            if ((int)($value['material_type'] ?? 0) === 1) {
+                $value['type'] = 'video';
+            } else {
+                $value['type'] = 'image';
+                $value['duration'] = 2;
+            }
+            $value['fileUrl'] = FileService::getFileUrl((string)($value['file_url'] ?? $value['fileUrl'] ?? ''));
+            unset($value['user_id']);
+            unset($value['persona_id']);
+            unset($value['material_name']);
+            unset($value['material_type']);
+            unset($value['height']);
+            unset($value['width']);
+            unset($value['publish_mode']);
+            unset($value['create_time']);
+            unset($value['update_time']);
+            unset($value['file_url']);
+            unset($value['use_status']);
+        }
+        unset($value);
+
+        return array_values($materials);
     }
 
     public static function hasNonEmptyMaterialFileUrl(array $materialData): bool
@@ -315,7 +1146,29 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $materialCount = !empty($decodedData['material']) && is_array($decodedData['material'])
             ? count($decodedData['material'])
             : 0;
-        return self::calculateTextDuration($decodedData['copywriting'] ?? []) * $videoCount * $materialCount;
+        return self::resolveNewsTaskDuration([], $extra, $decodedData['copywriting'] ?? [])
+            * $videoCount
+            * $materialCount;
+    }
+
+    /**
+     * 新闻体成片时长：优先 extra.videoDuration（前端/人设配置的成片秒数），
+     * 其次文案字数/3。手动创建只传 title、不传 content，必须走 videoDuration，
+     * 否则下发闪剪 duration=0 被拒（duration必须大于0）。
+     */
+    private static function resolveNewsTaskDuration(array $copywritingItem, array $extra, array $copywritingList = []): float
+    {
+        $configured = (float)($extra['videoDuration'] ?? 0);
+        if ($configured > 0) {
+            return self::formatBillingDuration($configured);
+        }
+        $textDuration = !empty($copywritingItem)
+            ? self::taskTextDuration($copywritingItem)
+            : self::calculateTextDuration($copywritingList);
+        if ($textDuration > 0) {
+            return self::formatBillingDuration($textDuration);
+        }
+        return (float)\app\common\model\aiPersona\AiPersonaSynthesisConfig::NEWS_MIXCUT_DURATION_DEFAULT;
     }
 
     private static function formatBillingDuration(float $duration): float
@@ -391,10 +1244,18 @@ class ShanjianVideoSettingLogic extends ApiLogic
             }
 
             $duration = self::calculateVirtualmanDuration($decodedData);
+            self::persistMaterialUseMode($decodedData, $params);
             $extra = $decodedData['extra'] ?? [];
             $volume = $extra['volume'] ?? 0.3;
             if ($volume < 0 || $volume > 1) {
                 self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
+            try {
+                self::applyAdvancedSettings($decodedData, $params, ['require_speech' => true]);
+                $extra = $decodedData['extra'];
+            } catch (\Exception $e) {
+                self::setError($e->getMessage());
                 return false;
             }
             $video_count = $extra['video_count'] ?? 0;
@@ -531,6 +1392,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
             }
 
+            self::persistMaterialUseMode($decodedData, $params);
             $params['update_time'] = time();
 
             // 开始事务
@@ -611,6 +1473,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $settingData[$field] = [];
                 }
             }
+
+            $extra = is_array($settingData['extra'] ?? null) ? $settingData['extra'] : [];
+            $extra['material_use_mode'] = self::normalizeMaterialUseMode($extra['material_use_mode'] ?? self::MATERIAL_USE_MODE_SLICE);
+            $settingData['extra'] = $extra;
+            $settingData['material_use_mode'] = $extra['material_use_mode'];
 
             self::$returnData = $settingData;
             return true;
@@ -763,26 +1630,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                         : ['voice_id' => ''];
                 }
 
-                $number = random_int(1, 20);
-                $music = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-
-                // 音乐选择：1=顺序，0=随机
-                if (count($musicData) == 0) {
-                    if ($aimusicMode) {
-                        $music_url = $music;
-                    } else {
-                        $music_url = '';
-                    }
-                } else {
-                    if ($musicMode == 1) {
-                        // 顺序选择
-                        $music_url = $musicData[$globalTaskIndex % count($musicData)] ?? $music;
-                    } else {
-                        // 随机选择
-                        $randomIndex = random_int(0, count($musicData) - 1);
-                        $music_url = $musicData[$randomIndex] ?? $music;
-                    }
-                }
+                $music_url = self::resolveMusicUrlBySource($musicData, $extraData, $globalTaskIndex);
 
                 // 剪辑模板选择：1=顺序，0=随机
                 if (count($clipData) == 0) {
@@ -883,10 +1731,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $extra['timed_words'] = $taskContent['words'];
                 }
                 $mergedArray = array_merge($extra, $extraData);
-                //                $taskname = ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($globalTaskIndex + 1);
                 $taskContent['title'] = $taskContent['title'] ?? '';
-                $taskname = !empty($taskContent['title']) ? $taskContent['title'] : "数字人口播混剪" . date('YmdHis');
-                $taskname = mb_substr($taskname, 0, 120, 'UTF-8');
+                $taskname = self::childTaskName(
+                    (string)($params['name'] ?? ''),
+                    $globalTaskIndex + 1,
+                    '数字人口播混剪' . date('YmdHis')
+                );
                 // 未指定全局封面时，按当前形象独立取封面
                 $taskPic = $defaultPic !== '' ? $defaultPic : (string)($selectedAnchor['pic'] ?? '');
                 $taskItem = [
@@ -935,6 +1785,20 @@ class ShanjianVideoSettingLogic extends ApiLogic
      * 文案内容长度上限(统一放开到1800字)
      */
     const COPYWRITING_MAX_LENGTH = 1800;
+
+    /**
+     * 子任务展示名：父任务（设置层）名称 + _1 起的序号
+     */
+    private static function childTaskName(string $parentName, int $indexFrom1, string $fallback): string
+    {
+        $baseName = trim($parentName);
+        if ($baseName === '') {
+            $baseName = $fallback;
+        }
+        $suffix = '_' . max(1, $indexFrom1);
+        $maxBase = max(1, 50 - mb_strlen($suffix, 'UTF-8'));
+        return mb_substr($baseName, 0, $maxBase, 'UTF-8') . $suffix;
+    }
 
     /**
      * 会员软冻结状态值（与 MemberService 一致，音色/数字人均为 9）
@@ -1173,6 +2037,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 self::setError('引擎类型不正确，1=' . $v2Name . ' 2=' . $v1Name);
                 return false;
             }
+            if ($aiClipEnabled && !empty($packaging)) {
+                try {
+                    self::applyPackagingAdvancedSettings($packaging);
+                } catch (\Exception $e) {
+                    self::setError($e->getMessage());
+                    return false;
+                }
+            }
             unset($params['ai_clip_enabled'], $params['packaging'], $params['engine_type']);
 
             $params['user_id'] = self::$uid;
@@ -1259,6 +2131,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 return self::addType5Chanjing($params, $decodedData, $aiClipEnabled, $packaging, $volume, $video_count);
             }
 
+            self::persistMaterialUseMode($decodedData, $params);
             return self::addType5Shanjian($params, $decodedData, $aiClipEnabled, $packaging, $volume, $video_count);
         } catch (\Exception $e) {
             self::setError($e->getMessage());
@@ -1666,11 +2539,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
                 $sharedTaskId = generate_unique_task_id();
                 $taskUserId = self::$uid !== 0 ? (int)self::$uid : (int)$params['user_id'];
-                $settingName = trim((string)($params['name'] ?? ''));
-                $taskname = $taskContent['title'] !== ''
-                    ? $taskContent['title']
-                    : ($settingName !== '' ? $settingName : '数字人口播' . date('YmdHis'));
-                $taskname = mb_substr($taskname, 0, 50, 'UTF-8');
+                $taskname = self::childTaskName(
+                    (string)($params['name'] ?? ''),
+                    $globalTaskIndex + 1,
+                    '数字人口播' . date('YmdHis')
+                );
 
                 // 先建蝉镜任务（MiniMax 时 audio_url 先空，TTS 完成后回填）
                 $humanTask = HumanLogic::createType5ChanjingVideoTask([
@@ -1831,17 +2704,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                         : ['voice_id' => ''];
                 }
 
-                $number = random_int(1, 20);
-                $defaultMusic = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-                if (count($musicData) == 0) {
-                    $music_url = $aimusicMode ? $defaultMusic : '';
-                } else {
-                    if ($musicMode == 1) {
-                        $music_url = $musicData[$globalTaskIndex % count($musicData)] ?? $defaultMusic;
-                    } else {
-                        $music_url = $musicData[random_int(0, count($musicData) - 1)] ?? $defaultMusic;
-                    }
-                }
+                $music_url = self::resolveMusicUrlBySource($musicData, $extraData, $globalTaskIndex);
 
                 $material = json_encode(is_array($materialData) ? array_values($materialData) : [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -1907,12 +2770,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $mergedArray['packaging'] = $packaging;
                 }
 
-                // 优先文案 title，其次设置层自定义视频名称，最后默认名
-                $settingName = trim((string)($params['name'] ?? ''));
-                $taskname = $taskContent['title'] !== ''
-                    ? $taskContent['title']
-                    : ($settingName !== '' ? $settingName : '数字人口播' . date('YmdHis'));
-                $taskname = mb_substr($taskname, 0, 120, 'UTF-8');
+                $taskname = self::childTaskName(
+                    (string)($params['name'] ?? ''),
+                    $globalTaskIndex + 1,
+                    '数字人口播' . date('YmdHis')
+                );
                 $taskPic = $pic ?: ($selectedAnchor['pic'] ?? '');
                 if ($taskPic === '') {
                     $taskPic = $anchorPicMap[$selectedAnchor['anchor_id'] ?? ''] ?? '';
@@ -1995,95 +2857,13 @@ class ShanjianVideoSettingLogic extends ApiLogic
     {
         try {
             $settings = ShanjianVideoSetting::whereIn('status', [1, 2])
-                ->where('create_time', '<=', strtotime('-1440 minutes'))
+                ->where('create_time', '<=', strtotime('-' . self::CLOSE_AGE_MINUTES . ' minutes'))
                 ->order('id', 'asc')
                 ->limit(5)
                 ->select();
 
             foreach ($settings as $item) {
-                Db::startTrans();
-                try {
-                    $settingId = (int)$item->id;
-                    $now = time();
-
-                    // 获取需要标记为失败的子任务（用于后续退费）
-                    // 加行锁:notify 回调同样 lock(true) 该行,保证 SELECT→UPDATE→退费期间状态不会被并发翻成 SUCCESS,
-                    // 否则会出现"视频已交付却被全额退费"
-                    $failedTasks = ShanjianVideoTask::where('video_setting_id', $settingId)
-                        ->whereIn('status', [
-                            ShanjianVideoTask::STATUS_PENDING,
-                            ShanjianVideoTask::STATUS_PROCESSING,
-                        ])
-                        ->lock(true)
-                        ->select();
-                    $failedTaskIds = [];
-                    foreach ($failedTasks as $task) {
-                        $failedTaskIds[] = (int)$task->id;
-                    }
-
-                    // 未完成子任务一并标失败,避免父任务已收口但子任务仍挂"生成中"
-                    if ($failedTaskIds) {
-                        ShanjianVideoTask::whereIn('id', $failedTaskIds)
-                            ->whereIn('status', [
-                                ShanjianVideoTask::STATUS_PENDING,
-                                ShanjianVideoTask::STATUS_PROCESSING,
-                            ])
-                            ->update([
-                                'status' => ShanjianVideoTask::STATUS_FAILED,
-                                'remark' => '父任务超时未完成，系统自动标记失败',
-                                'update_time' => $now,
-                            ]);
-                    }
-
-                    // 对超时失败的子任务进行退费处理(仅退本事务内确实被标记失败的任务)
-                    foreach ($failedTasks as $task) {
-                        if ((int)ShanjianVideoTask::where('id', $task->id)->value('status') !== ShanjianVideoTask::STATUS_FAILED) {
-                            continue;
-                        }
-                        try {
-                            self::refundTimeoutTaskTokens($task);
-                        } catch (\Throwable $e) {
-                            Log::channel('shanjiannotice')->write(
-                                '[设置超时收口退费失败] task_id=' . $task->task_id . ' err=' . $e->getMessage()
-                            );
-                        }
-                    }
-
-                    $successNum = (int)ShanjianVideoTask::where('video_setting_id', $settingId)
-                        ->where('status', ShanjianVideoTask::STATUS_SUCCESS)
-                        ->count();
-                    $videoCount = max((int)$item->video_count, 0);
-                    $errorNum = max($videoCount - $successNum, 0);
-
-                    if ($successNum <= 0) {
-                        $status = 5; // 全部失败
-                    } elseif ($errorNum <= 0) {
-                        $status = 3; // 全部成功
-                    } else {
-                        $status = 4; // 部分成功
-                    }
-
-                    ShanjianVideoSetting::where('id', $settingId)->update([
-                        'success_num' => $successNum,
-                        'error_num' => $errorNum,
-                        'status' => $status,
-                        'update_time' => $now,
-                    ]);
-
-                    Db::commit();
-                    Log::channel('shanjiannotice')->write('[设置超时收口] ' . json_encode([
-                        'video_setting_id' => $settingId,
-                        'success_num' => $successNum,
-                        'error_num' => $errorNum,
-                        'video_count' => $videoCount,
-                        'status' => $status,
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-                } catch (\Throwable $e) {
-                    Db::rollback();
-                    Log::channel('shanjiannotice')->write(
-                        '[设置超时收口失败] setting_id=' . ($item->id ?? 0) . ' err=' . $e->getMessage()
-                    );
-                }
+                self::closeSettingUnfinishedTasks($item, '设置超时收口', '父任务超时未完成，系统自动标记失败');
             }
 
             return true;
@@ -2094,9 +2874,183 @@ class ShanjianVideoSettingLogic extends ApiLogic
     }
 
     /**
-     * 退费处理：超时失败的任务退还已扣除的算力
+     * 孤儿子任务收口:父设置已是终态(3/4/5)、子任务却还挂在待处理/处理中的行。
+     *
+     * check() 只按父设置状态 1/2 捞,父设置一旦被 notify 推成终态就再也选不到它,
+     * 底下没跑完的子任务永远挂着——不标失败、不退费、用户端一直显示"生成中",
+     * 还会把 ShanjianVideoTaskLogic::check() 的 limit 名额占死。这里按子任务反查父设置补口。
+     *
+     * 名额分配:先按子任务捞一批候选父 id(只用来缩小范围),再从中筛已终态的父,
+     * limit(5) 作用在筛完之后——非终态的父归 check() 管,不让它们占死收口名额。
+     * 年龄门槛与 check() 对齐(1440 分钟):24 小时内的在途任务仍由回调和轮询负责。
      */
-    private static function refundTimeoutTaskTokens(ShanjianVideoTask $task): bool
+    public static function checkOrphanTasks()
+    {
+        try {
+            $unfinished = [
+                ShanjianVideoTask::STATUS_PENDING,
+                ShanjianVideoTask::STATUS_PROCESSING,
+            ];
+            $settingIds = ShanjianVideoTask::whereIn('status', $unfinished)
+                ->where('create_time', '<=', strtotime('-' . self::CLOSE_AGE_MINUTES . ' minutes'))
+                ->where('video_setting_id', '>', 0)
+                ->group('video_setting_id')
+                ->order('video_setting_id', 'asc')
+                ->limit(200)
+                ->column('video_setting_id');
+            if (empty($settingIds)) {
+                return true;
+            }
+
+            $settings = ShanjianVideoSetting::whereIn('id', $settingIds)
+                ->whereIn('status', [3, 4, 5])
+                ->order('id', 'asc')
+                ->limit(5)
+                ->select();
+
+            foreach ($settings as $item) {
+                self::closeSettingUnfinishedTasks($item, '孤儿子任务收口', '父任务已收口，子任务超时未完成，系统自动标记失败');
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 收口单个设置:未完成子任务标失败 → 退费 → 回写父设置计数与状态,单事务。
+     * check() 与 checkOrphanTasks() 共用这一条路径,避免两处退费逻辑各写一份而跑偏。
+     *
+     * @param ShanjianVideoSetting $item 父设置行
+     * @param string $tag 日志标识
+     * @param string $reason 子任务失败原因,写入 remark 与退费流水
+     */
+    private static function closeSettingUnfinishedTasks(ShanjianVideoSetting $item, string $tag, string $reason): void
+    {
+        Db::startTrans();
+        try {
+            $settingId = (int)$item->id;
+            $now = time();
+
+            // 获取需要标记为失败的子任务（用于后续退费）
+            // 加行锁:notify 回调同样 lock(true) 该行,保证 SELECT→UPDATE→退费期间状态不会被并发翻成 SUCCESS,
+            // 否则会出现"视频已交付却被全额退费"
+            // 只收口过了 1440 分钟横线的子任务:父设置终态后重新提交的重试任务还在回调/轮询窗口内,
+            // 收口会把正在跑的活任务误杀;它们真挂了下一轮再由 checkOrphanTasks() 接走。
+            $failedTasks = ShanjianVideoTask::where('video_setting_id', $settingId)
+                ->whereIn('status', [
+                    ShanjianVideoTask::STATUS_PENDING,
+                    ShanjianVideoTask::STATUS_PROCESSING,
+                ])
+                ->where('create_time', '<=', strtotime('-' . self::CLOSE_AGE_MINUTES . ' minutes'))
+                ->lock(true)
+                ->select();
+            $failedTaskIds = [];
+            foreach ($failedTasks as $task) {
+                $failedTaskIds[] = (int)$task->id;
+            }
+
+            // 未完成子任务一并标失败,避免父任务已收口但子任务仍挂"生成中"
+            if ($failedTaskIds) {
+                ShanjianVideoTask::whereIn('id', $failedTaskIds)
+                    ->whereIn('status', [
+                        ShanjianVideoTask::STATUS_PENDING,
+                        ShanjianVideoTask::STATUS_PROCESSING,
+                    ])
+                    ->update([
+                        'status' => ShanjianVideoTask::STATUS_FAILED,
+                        'remark' => $reason,
+                        'update_time' => $now,
+                    ]);
+            }
+
+            // 退费年龄线:超过 CLOSE_REFUND_MAX_DAYS 的僵尸行只收口不退费——它们是历史遗留
+            // (父设置早已终态、上游查无此单),隔几个月再退一笔算力对用户和对账都是噪音。
+            // 年龄在 SQL 里比:模型开了 auto_timestamp,读 $task->create_time 拿到的是格式化字符串。
+            $refundableIds = [];
+            if ($failedTaskIds) {
+                $refundableIds = array_map('intval', ShanjianVideoTask::whereIn('id', $failedTaskIds)
+                    ->where('create_time', '>=', strtotime('-' . self::CLOSE_REFUND_MAX_DAYS . ' days'))
+                    ->column('id'));
+            }
+            $agedOutIds = array_values(array_diff($failedTaskIds, $refundableIds));
+            if ($agedOutIds) {
+                // 备注里写明不退费,免得几个月后客服再倒查一遍为什么没退
+                ShanjianVideoTask::whereIn('id', $agedOutIds)
+                    ->where('status', ShanjianVideoTask::STATUS_FAILED)
+                    ->update([
+                        'remark' => $reason . '（已超过退费时限，未退还算力）',
+                        'update_time' => $now,
+                    ]);
+            }
+            $refundable = array_flip($refundableIds);
+
+            // 对超时失败的子任务进行退费处理(仅退本事务内确实被标记失败的任务)
+            $agedOutNum = 0;
+            foreach ($failedTasks as $task) {
+                if ((int)ShanjianVideoTask::where('id', $task->id)->value('status') !== ShanjianVideoTask::STATUS_FAILED) {
+                    continue;
+                }
+                if (!isset($refundable[(int)$task->id])) {
+                    $agedOutNum++;
+                    continue;
+                }
+                try {
+                    self::refundTimeoutTaskTokens($task, $reason);
+                } catch (\Throwable $e) {
+                    Log::channel('shanjiannotice')->write(
+                        '[' . $tag . '退费失败] task_id=' . $task->task_id . ' err=' . $e->getMessage()
+                    );
+                }
+            }
+
+            $successNum = (int)ShanjianVideoTask::where('video_setting_id', $settingId)
+                ->where('status', ShanjianVideoTask::STATUS_SUCCESS)
+                ->count();
+            $videoCount = max((int)$item->video_count, 0);
+            $errorNum = max($videoCount - $successNum, 0);
+
+            if ($successNum <= 0) {
+                $status = 5; // 全部失败
+            } elseif ($errorNum <= 0) {
+                $status = 3; // 全部成功
+            } else {
+                $status = 4; // 部分成功
+            }
+
+            ShanjianVideoSetting::where('id', $settingId)->update([
+                'success_num' => $successNum,
+                'error_num' => $errorNum,
+                'status' => $status,
+                'update_time' => $now,
+            ]);
+
+            Db::commit();
+            Log::channel('shanjiannotice')->write('[' . $tag . '] ' . json_encode([
+                'video_setting_id' => $settingId,
+                'closed_task_num' => count($failedTaskIds),
+                'aged_out_no_refund' => $agedOutNum,
+                'success_num' => $successNum,
+                'error_num' => $errorNum,
+                'video_count' => $videoCount,
+                'status' => $status,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        } catch (\Throwable $e) {
+            Db::rollback();
+            Log::channel('shanjiannotice')->write(
+                '[' . $tag . '失败] setting_id=' . ($item->id ?? 0) . ' err=' . $e->getMessage()
+            );
+        }
+    }
+
+    /**
+     * 退费处理：超时失败的任务退还已扣除的算力
+     *
+     * @param string $reason 失败原因,写入退费流水;默认值保持超时收口既有措辞
+     */
+    private static function refundTimeoutTaskTokens(ShanjianVideoTask $task, string $reason = '父任务超时未完成，系统自动标记失败'): bool
     {
         $userId = (int)$task->user_id;
         $taskId = (string)$task->task_id;
@@ -2138,7 +3092,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
         // 执行退费
         AccountLogLogic::recordUserTokensLog(false, $userId, $typeID, $points, $taskId, [
             '扣费项目' => '超时收口算力退回',
-            '失败原因' => '父任务超时未完成，系统自动标记失败',
+            '失败原因' => $reason,
         ]);
 
         Log::channel('shanjiannotice')->write('[超时收口退费] ' . json_encode([
@@ -2244,10 +3198,18 @@ class ShanjianVideoSettingLogic extends ApiLogic
             $materialCount = !empty($decodedData['material']) && is_array($decodedData['material']) ? count($decodedData['material']) : 0;
             $themeVideoCount = !empty($decodedData['anchor']) && is_array($decodedData['anchor']) ? count($decodedData['anchor']) : 0;
 
+            self::persistMaterialUseMode($decodedData, $params);
             $extra = $decodedData['extra'] ?? [];
             $volume = $extra['volume'] ?? 0.3;
             if ($volume < 0 || $volume > 1) {
                 self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
+            try {
+                self::applyAdvancedSettings($decodedData, $params, ['require_speech' => false]);
+                $extra = $decodedData['extra'];
+            } catch (\Exception $e) {
+                self::setError($e->getMessage());
                 return false;
             }
             $video_count = $extra['video_count'] ?? 0;
@@ -2336,37 +3298,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
             for ($videoIndex = 0; $videoIndex < $video_count; $videoIndex++) {
 
                 // ===== 音乐选择逻辑 =====
-                $number = random_int(1, 20);
-                $defaultMusic = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-
-                if ($musicCount > 0) {
-                    if ($musicMode == 1) {
-                        // 按顺序选择音乐，基于素材索引*视频数量+视频索引循环
-                        $musicIndex = $videoIndex % $musicCount;
-                        // 检查当前索引的音乐是否有值
-                        if (isset($musicData[$musicIndex]) && !empty($musicData[$musicIndex])) {
-                            $music_url = $musicData[$musicIndex];
-                            $musicStrategy = 'sequential';
-                        } else {
-                            // 当前索引不存在，从初始开始循环选择
-                            $music_url = $musicData[0] ?? $defaultMusic;
-                            $musicStrategy = 'sequential_restart_from_beginning';
-                        }
-                    } else {
-                        // 随机选择音乐
-                        $randomIndex = array_rand($musicData);
-                        $music_url = $musicData[$randomIndex] ?? $defaultMusic;
-                        $musicStrategy = 'random';
-                    }
-                } else {
-                    // 没有music数据时，每个视频使用不同的随机音乐
-                    if ($aimusicMode) {
-                        $music_url = $defaultMusic;
-                    } else {
-                        $music_url = '';
-                    }
-                    $musicStrategy = 'default_random';
-                }
+                $music_url = self::resolveMusicUrlBySource($musicData, $extraData, $anchorIndex * $video_count + $videoIndex);
+                $musicStrategy = self::musicStrategyLabel($extraData);
 
                 // ===== 剪辑模板选择逻辑 =====
                 if ($clipCount > 0) {
@@ -2526,10 +3459,28 @@ class ShanjianVideoSettingLogic extends ApiLogic
             }
 
             $duration = self::calculateMixcutDuration($decodedData);
+            $useMode = self::persistMaterialUseMode($decodedData, $params);
             $extra = $decodedData['extra'] ?? [];
+            if ($useMode === self::MATERIAL_USE_MODE_ORIGINAL
+                && !self::assertManualOriginalMaterials(
+                    $decodedData['material'] ?? [],
+                    (int)self::$uid,
+                    3,
+                    self::allowsScreenedExternalOriginals($extra)
+                )
+            ) {
+                return false;
+            }
             $volume = $extra['volume'] ?? 0.3;
             if ($volume < 0 || $volume > 1) {
                 self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
+            try {
+                self::applyAdvancedSettings($decodedData, $params, ['require_speech' => true]);
+                $extra = $decodedData['extra'];
+            } catch (\Exception $e) {
+                self::setError($e->getMessage());
                 return false;
             }
             $params['status'] = 1;
@@ -2689,16 +3640,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 if ($minimaxTaskId <= 0) {
                     throw new \Exception('MiniMax音频任务创建失败');
                 }
-                $defaultMusic = config('app.app_host') . '/static/audio/music/' . random_int(1, 20) . '.mp3';
-                if (!empty($musicData)) {
-                    $musicIndex = $musicMode === 1
-                        ? $globalIndex % count($musicData)
-                        : array_rand($musicData);
-                    $musicItem = $musicData[$musicIndex] ?? '';
-                    $musicUrl = is_array($musicItem) ? (string)($musicItem['fileUrl'] ?? '') : (string)$musicItem;
-                } else {
-                    $musicUrl = $useDefaultMusic ? $defaultMusic : '';
-                }
+                $musicUrl = self::resolveMusicUrlBySource($musicData, $extraData, $globalIndex);
 
                 $taskExtra = is_array($extraData) ? $extraData : [];
                 $taskExtra['minimax_task_id'] = $minimaxTaskId;
@@ -2851,30 +3793,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
 
                 // ===== 音乐选择逻辑 =====
-                $number = random_int(1, 20);
-                $defaultMusic = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-
-                if (count($musicData) > 0) {
-                    if ($musicMode == 1) {
-                        // 顺序选择音乐
-                        $musicIndex = $globalIndex % count($musicData);
-                        $music_url = $musicData[$musicIndex] ?? $defaultMusic;
-                        $musicStrategy = 'sequential';
-                    } else {
-                        // 随机选择音乐
-                        $randomIndex = array_rand($musicData);
-                        $music_url = $musicData[$randomIndex] ?? $defaultMusic;
-                        $musicStrategy = 'random';
-                    }
-                } else {
-                    // 控制是否使用默认音乐
-                    if ($aimusicMode) {
-                        $music_url = $defaultMusic;
-                    } else {
-                        $music_url = '';
-                    }
-                    $musicStrategy = 'default_random';
-                }
+                $music_url = self::resolveMusicUrlBySource($musicData, $extraData, $globalIndex);
+                $musicStrategy = self::musicStrategyLabel($extraData);
 
                 // ===== 内容选择逻辑（文案或音频）=====
                 $taskItem = [];
@@ -3067,26 +3987,9 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $musicCount = count($musicData);
 
         // ===== 音乐选择逻辑 =====
-        $number = random_int(1, 20);
-        $defaultMusic = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-
-        if ($musicCount > 0) {
-            if ($musicMode == 1) {
-                // 顺序选择音乐
-                $musicIndex = $globalIndex % $musicCount;
-                $music_url = $musicData[$musicIndex] ?? $defaultMusic;
-                $musicStrategy = 'sequential';
-            } else {
-                // 随机选择音乐
-                $randomIndex = array_rand($musicData);
-                $music_url = $musicData[$randomIndex] ?? $defaultMusic;
-                $musicStrategy = 'random';
-            }
-        } else {
-            // 没有music数据时使用默认音乐
-            $music_url = $defaultMusic;
-            $musicStrategy = 'default_random';
-        }
+        $musicExtra = $selectionContext['extra'] ?? ['music' => $musicMode, 'music_source' => $musicCount > 0 ? self::MUSIC_SOURCE_CUSTOM : self::MUSIC_SOURCE_SYSTEM];
+        $music_url = self::resolveMusicUrlBySource($musicData, $musicExtra, $globalIndex);
+        $musicStrategy = self::musicStrategyLabel($musicExtra);
 
         // ===== 剪辑模板选择逻辑 =====
         if ($clipCount > 0) {
@@ -3221,26 +4124,9 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $musicCount = count($musicData);
 
         // ===== 音乐选择逻辑 =====
-        $number = random_int(1, 20);
-        $defaultMusic = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-
-        if ($musicCount > 0) {
-            if ($musicMode == 1) {
-                // 顺序选择音乐
-                $musicIndex = $globalIndex % $musicCount;
-                $music_url = $musicData[$musicIndex] ?? $defaultMusic;
-                $musicStrategy = 'sequential';
-            } else {
-                // 随机选择音乐
-                $randomIndex = array_rand($musicData);
-                $music_url = $musicData[$randomIndex] ?? $defaultMusic;
-                $musicStrategy = 'random';
-            }
-        } else {
-            // 没有music数据时使用默认音乐
-            $music_url = $defaultMusic;
-            $musicStrategy = 'default_random';
-        }
+        $musicExtra = $selectionContext['extra'] ?? ['music' => $musicMode, 'music_source' => $musicCount > 0 ? self::MUSIC_SOURCE_CUSTOM : self::MUSIC_SOURCE_SYSTEM];
+        $music_url = self::resolveMusicUrlBySource($musicData, $musicExtra, $globalIndex);
+        $musicStrategy = self::musicStrategyLabel($musicExtra);
 
         // ===== 剪辑模板选择逻辑 =====
         if ($clipCount > 0) {
@@ -3392,15 +4278,28 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     throw new \Exception("标题必须填写");
                 }
             }
+            $useMode = self::persistMaterialUseMode($decodedData, $params);
             $extra = $decodedData['extra'] ?? [];
             if (!self::hasNonEmptyMaterialFileUrl($decodedData['material'] ?? [])) {
                 self::setError("素材不能为空");
+                return false;
+            }
+            if ($useMode === self::MATERIAL_USE_MODE_ORIGINAL
+                && !self::assertManualOriginalMaterials($decodedData['material'] ?? [], (int)self::$uid, 4)
+            ) {
                 return false;
             }
 
             $volume = $extra['volume'] ?? 0.3;
             if ($volume < 0 || $volume > 1) {
                 self::setError("声音值必须在 0 到 1 之间，当前值为：$volume");
+                return false;
+            }
+            try {
+                self::applyAdvancedSettings($decodedData, $params, ['news' => true]);
+                $extra = $decodedData['extra'];
+            } catch (\Exception $e) {
+                self::setError($e->getMessage());
                 return false;
             }
             $params['status'] = 1;
@@ -3710,8 +4609,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
             $anchor = $decodedData['anchor'] ?? [];
             $params['status'] = 1;
+            $useMode = self::persistMaterialUseMode($decodedData, $params);
             if (!self::hasNonEmptyMaterialFileUrl($decodedData['material'] ?? [])) {
                 self::setError("素材不能为空");
+                return false;
+            }
+            if ($useMode === self::MATERIAL_USE_MODE_ORIGINAL
+                && !self::assertManualOriginalMaterials($decodedData['material'] ?? [], (int)self::$uid, 4)
+            ) {
                 return false;
             }
 
@@ -3847,30 +4752,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
 
                 // ===== 音乐选择逻辑 =====
-                $number = random_int(1, 20);
-                $defaultMusic = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-
-                if (count($musicData) > 0) {
-                    if ($musicMode == 1) {
-                        // 顺序选择音乐
-                        $musicIndex = $globalIndex % count($musicData);
-                        $music_url = $musicData[$musicIndex] ?? $defaultMusic;
-                        $musicStrategy = 'sequential';
-                    } else {
-                        // 随机选择音乐
-                        $randomIndex = array_rand($musicData);
-                        $music_url = $musicData[$randomIndex] ?? $defaultMusic;
-                        $musicStrategy = 'random';
-                    }
-                } else {
-                    // 控制是否使用默认音乐
-                    if ($aimusicMode) {
-                        $music_url = $defaultMusic;
-                    } else {
-                        $music_url = '';
-                    }
-                    $musicStrategy = 'default_random';
-                }
+                $music_url = self::resolveMusicUrlBySource($musicData, $extraData, $globalIndex);
+                $musicStrategy = self::musicStrategyLabel($extraData);
 
                 // ===== 内容选择逻辑（文案或音频）=====
                 $taskItem = [];
@@ -3881,7 +4764,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 $copywritingIndex = $globalIndex % $copywritingCount;
                 $copywritingItem = $copywritingData[$copywritingIndex];
                 $contentStrategy = 'sequential_copywriting';
-                $taskDuration = self::formatBillingDuration(self::taskTextDuration($copywritingItem));
+                $taskDuration = self::resolveNewsTaskDuration($copywritingItem, $extraData);
                 $taskItem = [
                     'pic' => $taskPic,
                     'thumb_status' => $taskThumbStatus,
@@ -3971,9 +4854,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
      */
     private static function createTaskItemWithAudioType4(int $index, array $params, $audioItem, array $characterDesignData, array $selectedMaterial, array $musicData, array $clipData, array $clip_template_id, int $clip_template_total, int $settingId): array
     {
-        $number = random_int(1, 20);
-        $music = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-        $music_url = !empty($musicData) ? $musicData[$index % count($musicData)]['fileUrl'] ?? $music : $music;
+        $music_url = self::resolveMusicUrlBySource($musicData, [
+            'music_source' => !empty($musicData) ? self::MUSIC_SOURCE_CUSTOM : self::MUSIC_SOURCE_SYSTEM,
+            'music' => 1,
+        ], $index);
 
         $clip = random_int(0, $clip_template_total);
         $clip_id = !empty($clipData) ? $clipData[$index % count($clipData)]['clip_template_id'] ?? $clip_template_id[$clip] : $clip_template_id[$clip];
@@ -4030,9 +4914,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
      */
     private static function createTaskItemWithCopywritingType4(int $index, array $params, array $copywritingItem, array $characterDesignData, array $selectedMaterial, array $musicData, array $clipData, array $clip_template_id, int $clip_template_total, int $settingId): array
     {
-        $number = random_int(1, 20);
-        $music = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
-        $music_url = !empty($musicData) ? $musicData[$index % count($musicData)]['fileUrl'] ?? $music : $music;
+        $music_url = self::resolveMusicUrlBySource($musicData, [
+            'music_source' => !empty($musicData) ? self::MUSIC_SOURCE_CUSTOM : self::MUSIC_SOURCE_SYSTEM,
+            'music' => 1,
+        ], $index);
 
         $clip = random_int(0, $clip_template_total);
         $clip_id = !empty($clipData) ? $clipData[$index % count($clipData)]['clip_template_id'] ?? $clip_template_id[$clip] : $clip_template_id[$clip];

@@ -28,6 +28,9 @@ class ShanjianVideoTaskLists extends BaseAdminDataLists implements ListsSearchIn
             ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
             $query->whereBetween('sj.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
         })
+            ->when($this->excludeHotspot(), function ($query) {
+                $query->whereRaw(ShanjianVideoTask::notHotspotSourceCond('sj.'));
+            })
             ->where($this->searchWhere)
             ->order(['sj.id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
@@ -59,6 +62,19 @@ class ShanjianVideoTaskLists extends BaseAdminDataLists implements ListsSearchIn
             ->join('user u', 'u.id = sj.user_id');
         return $count->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
             $query->whereBetween('sj.create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
+        })->when($this->excludeHotspot(), function ($query) {
+            $query->whereRaw(ShanjianVideoTask::notHotspotSourceCond('sj.'));
         })->where($this->searchWhere)->count();
+    }
+
+    /**
+     * 是否剔除热点追踪来源的任务。
+     * 人设详情「IP 创作记录」只看人设自己的创作，热点追踪有独立的后台模块，
+     * 混在一起会把人设记录淹掉（实测人设 271 是 29/48、276 是 10/12 都来自热点追踪）。
+     * 默认不剔除，保持混剪创作详情等既有调用方行为不变。
+     */
+    private function excludeHotspot(): bool
+    {
+        return !empty($this->params['exclude_hotspot']);
     }
 }

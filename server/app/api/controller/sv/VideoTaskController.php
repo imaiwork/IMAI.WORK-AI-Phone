@@ -9,6 +9,7 @@ use app\api\lists\sv\SvVideoTaskLists;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 /**
  * VideoSettingController
  */
@@ -30,7 +31,12 @@ class VideoTaskController extends BaseApiController
             $type = $this->request->param('human_type');
             $modelVersion = $this->request->param('model_version');
             $data = $this->request->all();
-            Log::channel('sv')->write('接收数字人参数'.json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('sv')->write('接收数字人参数'.json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('sv', '批量生产数字人', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $key = md5(json_encode($data));
             $val =  cache($key);
             if ($val){
@@ -58,7 +64,7 @@ class VideoTaskController extends BaseApiController
 
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('sv')->write('数字人参数'.json_encode($data).'数字人回调失败'.$e->getMessage());
+            Log::channel('sv')->write('数字人参数'.json_encode(CallbackTokenService::maskForLog($data)).'数字人回调失败'.$e->getMessage());
             return $this->success('fail');
         }
     }
@@ -117,14 +123,19 @@ class VideoTaskController extends BaseApiController
     {
         $data = $this->request->all();
         try {
+            if (!CallbackTokenService::guard('clip', '批量生产剪辑', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $result = SvVideoTaskLogic::updateClipVideo($data);
             if (!$result){
                 return   $this->fail(SvVideoTaskLogic::getError());
             }
-            Log::channel('clip')->write('剪辑回调接收数字人参数'.json_encode($data));
+            Log::channel('clip')->write('剪辑回调接收数字人参数'.json_encode(CallbackTokenService::maskForLog($data)));
             return $this->success('ok');
         } catch (\Exception $e) {
-            Log::channel('clip')->write('剪辑回调接收数字人参数'.json_encode($data).'数字人回调失败'.$e->getMessage());
+            Log::channel('clip')->write('剪辑回调接收数字人参数'.json_encode(CallbackTokenService::maskForLog($data)).'数字人回调失败'.$e->getMessage());
             return $this->fail('fail');
         }
     }

@@ -28,9 +28,9 @@ return [
             // 数据库名
             'database'        => env('database.database', 'localhost'),
             // 用户名
-            'username'        => env('database.username', 'root'),
-            // 密码
-            'password'        => env('database.password', 'root'),
+            'username'        => env('database.username', ''),
+            // 密码：不给 root/root 兜底，缺 .env 配置直接连不上，而不是拿默认弱口令去试
+            'password'        => env('database.password', ''),
             // 端口
             'hostport'        => env('database.hostport', '3306'),
             // 数据库连接参数
@@ -52,7 +52,7 @@ return [
             // 是否需要断线重连
             'break_reconnect' => true,
             // 监听SQL
-            'trigger_sql'     => env('app_debug', true),
+            'trigger_sql'     => env('app_debug', false),
             // 开启字段缓存
             'fields_cache'    => false,
             'options'         => [],

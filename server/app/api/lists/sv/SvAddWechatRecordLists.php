@@ -10,6 +10,7 @@ use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvDevice;
+use app\common\model\sv\SvDySearchTask;
 
 /**
  * 列表
@@ -19,10 +20,15 @@ use app\common\model\sv\SvDevice;
  */
 class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInterface, ListsExcelInterface
 {
-    private array $channel = array(
-        3 => '小红书',
-        1 => '视频号',
-    );
+    public static function channelName(int $ch): string
+    {
+        $map = [
+            3 => '小红书',
+            1 => '视频号',
+            4 => '抖音获客',
+        ];
+        return $map[$ch] ?? '/';
+    }
 
     public function setSearch(): array
     {
@@ -55,20 +61,20 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
-                if((time() - strtotime($item->create_time)) > (7 * 86400) && $item->status == 2){
-                    $item->status = 0;
-                    $item->result = '加微执行失败';
-                    $item->save();
-                }
                 $item['account_detail'] = SvAccount::where('account', $item['account'])
                     ->where('user_id', $item['user_id'])
                     ->where('device_code', $item['device_code'])
                     ->limit(1)
                     ->find();
                 $item['device_model'] = SvDevice::where('device_code', $item['device_code'])->value('device_model');
-                $item['channel_name'] = $this->channel[$item['channel']] ?? '/';
+                $item['channel_name'] = self::channelName((int)$item['channel']);
                 $item['device_name'] = SvDevice::where('device_code', $item['device_code'])->value('device_name');
-                $item['task_name'] = SvCrawlingTask::where('id', $item['crawling_task_id'])->value('name') ?? '私信接管任务';
+                $dySearchTaskId = (int)($item['dy_search_task_id'] ?? 0);
+                if ($dySearchTaskId > 0) {
+                    $item['task_name'] = (string)(SvDySearchTask::where('id', $dySearchTaskId)->value('name') ?? '');
+                } else {
+                    $item['task_name'] = SvCrawlingTask::where('id', $item['crawling_task_id'])->value('name') ?? '私信接管任务';
+                }
                 $intentionTypeMap = [
                     -1 => '待处理',
                     0 => '其他',

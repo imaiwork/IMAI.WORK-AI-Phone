@@ -1,1 +1,0 @@
-"use strict";const e=require("../../../../../common/vendor.js"),o={};if(!Array){e.resolveComponent("u-icon")()}Math;const n=e._export_sfc(o,[["render",function(o,n){return{a:e.p({name:"info-circle",color:"#2F73F6",size:"30"})}}]]);wx.createComponent(n);

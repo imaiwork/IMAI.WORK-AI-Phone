@@ -212,7 +212,8 @@ import useUpload from "@/hooks/useUpload";
 import { saveImageToPhotosAlbum } from "@/utils/file";
 import { IMAGE_REF_MAX } from "../../enums/workbench";
 import { useStudioScrollBottom } from "../../composables/useStudioScrollBottom";
-import { useStudioKeyboardSpacer, useStudioSendGuard } from "../../composables/useStudioKeyboardSpacer";
+import { useKeyboardSpacer } from "../../composables/useKeyboardSpacer";
+import { useStudioSendGuard } from "../../composables/useStudioGuards";
 import { useStableTextareaAutoHeight } from "../../composables/useStableTextareaAutoHeight";
 import ImageOptimizeCard from "../image-optimize-card.vue";
 import ImageResultCard from "./image-result-card.vue";
@@ -275,7 +276,7 @@ const {
 } = useStableTextareaAutoHeight(localInput);
 const { scrollTop, scrollToBottom } = useStudioScrollBottom();
 const { keyboardOpen, spacerHeight, showToolbar, guardToolbarAction, dismissKeyboard, hideKeyboard } =
-    useStudioKeyboardSpacer(() => props.tabbarVisible);
+    useKeyboardSpacer({ tabbarVisible: () => !!props.tabbarVisible });
 const { guardSend, markSent, isUploadMisfire } = useStudioSendGuard();
 
 const modelInitial = computed(() => {

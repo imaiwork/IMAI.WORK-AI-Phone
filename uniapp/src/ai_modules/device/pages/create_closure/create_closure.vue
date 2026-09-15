@@ -325,7 +325,37 @@
                                     {{ item }}
                                 </view>
                             </view>
-                            <view class="flex flex-wrap gap-[12rpx]">
+
+                            <!-- 触达方式：固定话术 / AI 接管，私信与评论共用 touch_type / agent_id -->
+                            <view class="flex bg-[#F0F2F5] rounded-[20rpx] p-[6rpx] gap-[6rpx] mb-[20rpx]">
+                                <view
+                                    v-for="tab in TOUCH_MODE_TABS"
+                                    :key="tab.value"
+                                    class="flex-1 h-[68rpx] rounded-[16rpx] flex items-center justify-center font-semibold transition-all duration-200"
+                                    :class="
+                                        formData.touch_type === tab.value
+                                            ? 'bg-white text-primary shadow-[0_2rpx_8rpx_rgba(0,0,0,0.08)]'
+                                            : 'text-[#9CA3AF]'
+                                    "
+                                    @click="switchTouchType(tab.value)">
+                                    {{ tab.label }}
+                                </view>
+                            </view>
+
+                            <view
+                                v-if="isAiTouch"
+                                class="bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] flex items-center justify-between border border-solid border-[#E5E9F0]"
+                                @click="handleChooseAgent">
+                                <text class="text-[#4B5563]">关联智能体</text>
+                                <view class="flex items-center gap-[8rpx]">
+                                    <text class="text-xs text-primary">
+                                        {{ formData.agent_name || "选择智能体" }}
+                                    </text>
+                                    <u-icon name="arrow-right" color="#0065fb" size="24" />
+                                </view>
+                            </view>
+
+                            <view v-if="!isAiTouch" class="flex flex-wrap gap-[12rpx]">
                                 <view
                                     v-for="(item, index) in displayedCommentContentItems"
                                     :key="index"
@@ -346,7 +376,7 @@
                                 </view>
                             </view>
                             <view
-                                v-if="formData.comment_content_list.length > commentContentDefaultShowCount"
+                                v-if="!isAiTouch && formData.comment_content_list.length > commentContentDefaultShowCount"
                                 class="flex items-center justify-center pt-[16rpx] gap-[4rpx]"
                                 @click="toggleCommentContentExpand">
                                 <text class="text-xs text-[#9CA3AF]">
@@ -733,6 +763,11 @@
         :show-close="false"
         @close="handleCreateTaskSuccess"
         @confirm="handleCreateTaskSuccess" />
+    <choose-agent
+        ref="chooseAgentRef"
+        v-model="showChooseAgent"
+        title="选择截流智能体"
+        @confirm="handleChooseAgentConfirm" />
     <choose-region v-model="showChooseRegionPopup" @confirm="handleChooseRegionConfirm" />
     <choose-age ref="chooseAgeRef" v-model="showAgePopup" @confirm="handleAgeConfirm" />
     <choose-comment-time
@@ -829,6 +864,7 @@ import ChooseAge from "@/ai_modules/device/components/choose-age/choose-age.vue"
 import ChooseCommentTime from "@/ai_modules/device/components/choose-comment-time/choose-comment-time.vue";
 import RegionForm from "@/ai_modules/device/components/region-form/region-form.vue";
 import TaskConflictDialog from "@/ai_modules/device/components/task-conflict-dialog/task-conflict-dialog.vue";
+import ChooseAgent from "@/ai_modules/device/components/choose-agent/choose-agent.vue";
 
 import {
     STEPS,
@@ -836,6 +872,8 @@ import {
     COMMENT_NUM_LIST,
     COMMENT_TIME_LIST,
     TOUCH_TYPE_LIST_DEFAULT,
+    TOUCH_MODE_TABS,
+    TouchTypeEnum,
     createDefaultFormData,
 } from "./hooks/types";
 import type { CommentFilterItem } from "./hooks/types";
@@ -857,6 +895,8 @@ const touchTypeList = ref([...TOUCH_TYPE_LIST_DEFAULT.map((i) => ({ ...i }))]);
 // ── 共享 computed ─────────────────────────────────────────────────
 const isCollect = computed(() => createType.value === CreateTypeEnum.COLLECT_MARKETING);
 const isComment = computed(() => commentIndex.value === 1);
+// 触达方式对「发送私信 / 发送评论」共用同一组 touch_type / agent_id；留痕不走这张卡片
+const isAiTouch = computed(() => !isCollect.value && formData.touch_type === TouchTypeEnum.AI);
 
 const getTouchTypeList = computed(() =>
     formData.customer_type == 1 ? touchTypeList.value.filter((item: any) => item.name != 1) : touchTypeList.value,
@@ -999,6 +1039,11 @@ const {
     toggleCommentFilterExpand,
     toggleCommentContentExpand,
     toggleFixedCommentExpand,
+    chooseAgentRef,
+    showChooseAgent,
+    switchTouchType,
+    handleChooseAgent,
+    handleChooseAgentConfirm,
 } = useCommentStep(formData, isCollect, commentIndex, commentContentMap, commentFilterMap, currentFilterMapKey);
 
 // ── Hook：Step4 创建任务 ──────────────────────────────────────────

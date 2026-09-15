@@ -108,6 +108,16 @@ class HotspotController extends BaseApiController
         return $this->data(HotspotLogic::personas((int)$this->userId));
     }
 
+    /** 不选人设模式：自选数字人形象与音色候选 */
+    public function generationOptions()
+    {
+        $result = HotspotLogic::generationOptions((int)$this->userId);
+        if (false === $result) {
+            return $this->fail(HotspotLogic::getError());
+        }
+        return $this->data($result);
+    }
+
     public function avatars()
     {
         $params = (new HotspotValidate())->get()->goCheck('avatars');

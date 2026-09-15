@@ -5,6 +5,7 @@ namespace app\api\validate;
 
 
 use app\common\model\user\User;
+use app\common\service\UserProfileConfigService;
 use app\common\validate\BaseValidate;
 
 
@@ -43,10 +44,18 @@ class SetUserInfoValidate extends BaseValidate
             'sex',
             'avatar',
             'real_name',
+            'store_name',
+            'certificate_image',
         ];
 
         if (!in_array($value, $allowField)) {
             return '参数错误';
+        }
+
+        // 门店/资质证书由后台「用户设置」的收集开关决定是否可填
+        if (in_array($value, [UserProfileConfigService::FIELD_STORE_NAME, UserProfileConfigService::FIELD_CERTIFICATE_IMAGE])
+            && !UserProfileConfigService::isOpen($value)) {
+            return '该资料项未开启';
         }
 
         if ($value == 'account') {

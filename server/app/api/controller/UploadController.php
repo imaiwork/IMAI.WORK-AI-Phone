@@ -6,6 +6,8 @@ use app\common\enum\FileEnum;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\lianlian\LlConversation;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\common\service\OriginalMaterialSpec;
 use app\common\service\UploadService;
 use Exception;
 use think\facade\Log;
@@ -32,6 +34,20 @@ class UploadController extends BaseApiController
             $cid = $this->request->post('cid/d', 0);
             $ffmpeg = $this->request->post('ffmpeg/d', 0);
             $personaId = $this->request->post('persona_id/d', 0);
+            $materialKind = ShanjianVideoSettingLogic::inferMaterialKind(
+                (string)$this->request->post('material_kind', ''),
+                $personaId
+            );
+            $isOriginal = OriginalMaterialSpec::isOriginalKind($materialKind);
+            if ($isOriginal) {
+                if ((int)$ffmpeg !== 0) {
+                    return $this->fail('原图模式图片上传必须 ffmpeg=0');
+                }
+                if ($personaId <= 0) {
+                    return $this->fail('原图模式图片上传必须传 persona_id');
+                }
+                $ffmpeg = 0;
+            }
 
             $logParams = $this->request->post();
             unset($logParams['file']);
@@ -48,6 +64,31 @@ class UploadController extends BaseApiController
                 'uploads/images',
                 $ffmpeg
             );
+
+            if ($isOriginal) {
+                $guard = OriginalMaterialSpec::assertImage([
+                    'url'    => (string)($result['url'] ?? ''),
+                    'name'   => (string)($result['name'] ?? ''),
+                    'width'  => (int)($result['width'] ?? 0),
+                    'height' => (int)($result['height'] ?? 0),
+                ]);
+                if ($guard !== true) {
+                    return $this->fail($guard);
+                }
+                $material = $this->createPersonaImageMaterial(
+                    $result,
+                    $personaId,
+                    0,
+                    Material::KEEP_ORIGINAL_YES
+                );
+                if (empty($material['id'])) {
+                    return $this->fail('原图模式素材入库失败');
+                }
+                $result['material_id'] = (int)$material['id'];
+                $result['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
+                $result['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                return $this->success('上传成功', $result);
+            }
 
             $material = $this->createPersonaImageMaterial($result, $personaId, $ffmpeg);
             if (!empty($material['id'])) {
@@ -133,6 +174,10 @@ class UploadController extends BaseApiController
             $ffmpeg = $this->request->post('ffmpeg/d', 0);
             $clip = $this->request->post('clip/a', []);
             $personaId = $this->request->post('persona_id/d', 0);
+            $materialKind = ShanjianVideoSettingLogic::inferMaterialKind(
+                (string)$this->request->post('material_kind', ''),
+                $personaId
+            );
             $scene = (string)$this->request->post('scene', 'persona');
             if (!in_array($scene, ['ai_creation', 'persona'], true)) {
                 $scene = 'persona';
@@ -141,11 +186,22 @@ class UploadController extends BaseApiController
             if ((int)$ffmpeg === 2 && $personaId <= 0) {
                 return $this->fail('切割上传必须传 persona_id');
             }
+            if (OriginalMaterialSpec::isOriginalKind($materialKind)) {
+                if ((int)$ffmpeg !== 0) {
+                    return $this->fail('原图模式视频上传必须 ffmpeg=0');
+                }
+                if ($personaId <= 0) {
+                    return $this->fail('原图模式视频上传必须传 persona_id');
+                }
+            }
 
             // 获取缩略图相关参数
             $generateThumbnail = $this->request->post('generate_thumbnail/b', false);
             $thumbnailOptions = $this->getThumbnailOptions();
             $fetchVideoInfo = $this->request->post('fetch_video_info/b', false);
+            if (OriginalMaterialSpec::isOriginalKind($materialKind)) {
+                $fetchVideoInfo = true;
+            }
 
             $logParams = $this->request->post();
             unset($logParams['file']);
@@ -170,9 +226,30 @@ class UploadController extends BaseApiController
                 $scene
             );
 
-            // ffmpeg=0：原始完整视频立即入库，不转码、不切割、不扣费（需 persona_id）。
+            // ffmpeg=0：完整视频立即入库，不转码、不切割、不扣费（需 persona_id）。
+            // material_kind=original：未转码原片，keep_original=1，供闪剪原图模式使用。
             // ffmpeg=1：仅异步转码；传了 persona_id 则转码队列自动入库，否则由前端调素材新增。
             // ffmpeg=2：转码成功后自动发起切割（预扣+入队），必须传 persona_id。
+            if (OriginalMaterialSpec::isOriginalKind($materialKind)) {
+                $guard = $this->assertOriginalMaterialReady($result);
+                if ($guard !== true) {
+                    return $this->fail($guard);
+                }
+                $material = $this->createPersonaOriginalVideoMaterial(
+                    $result,
+                    $personaId,
+                    0,
+                    Material::KEEP_ORIGINAL_YES
+                );
+                if (empty($material['id'])) {
+                    return $this->fail('原图模式素材入库失败');
+                }
+                $result['material_id'] = (int)$material['id'];
+                $result['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
+                $result['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                return $this->success('上传成功', $result);
+            }
+
             $material = $this->createPersonaOriginalVideoMaterial($result, $personaId, $ffmpeg);
             if (!empty($material['id'])) {
                 $result['material_id'] = (int)$material['id'];
@@ -195,11 +272,27 @@ class UploadController extends BaseApiController
         set_time_limit(0);
 
         try {
+            $personaId = $this->request->post('persona_id/d', 0);
+            $materialKind = ShanjianVideoSettingLogic::inferMaterialKind(
+                (string)$this->request->post('material_kind', ''),
+                $personaId
+            );
             $result = UploadService::audio(
                 0,
                 $this->userId,
                 FileEnum::SOURCE_USER
             );
+            if (OriginalMaterialSpec::isOriginalKind($materialKind)) {
+                $guard = OriginalMaterialSpec::assertMusic([
+                    'url'  => (string)($result['url'] ?? ''),
+                    'name' => (string)($result['name'] ?? ''),
+                ]);
+                if ($guard !== true) {
+                    return $this->fail($guard);
+                }
+                $result['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                $result['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
+            }
 
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
@@ -273,9 +366,18 @@ class UploadController extends BaseApiController
     /**
      * @notes 图片上传后自动写入IP人设素材库
      */
-    private function createPersonaImageMaterial(array $uploadResult, int $personaId, int $ffmpeg): array
-    {
-        if (!in_array($ffmpeg, [1, 2], true) || $personaId <= 0) {
+    private function createPersonaImageMaterial(
+        array $uploadResult,
+        int $personaId,
+        int $ffmpeg,
+        int $keepOriginal = Material::KEEP_ORIGINAL_NO
+    ): array {
+        $isOriginal = $keepOriginal === Material::KEEP_ORIGINAL_YES;
+        if ($isOriginal) {
+            if ((int)$ffmpeg !== 0 || $personaId <= 0) {
+                return [];
+            }
+        } elseif (!in_array($ffmpeg, [1, 2], true) || $personaId <= 0) {
             return [];
         }
 
@@ -304,7 +406,7 @@ class UploadController extends BaseApiController
             }
 
             $now = time();
-            $material = Material::create([
+            $payload = [
                 'persona_id'    => $personaId,
                 'user_id'       => $this->userId,
                 'material_name' => (string)($uploadResult['name'] ?? ''),
@@ -318,7 +420,12 @@ class UploadController extends BaseApiController
                 'publish_mode'  => (int)($persona->publish_mode ?? Material::PUBLISH_MODE_MAKE_VIDEO),
                 'create_time'   => $now,
                 'update_time'   => $now,
-            ]);
+            ];
+            if ($isOriginal) {
+                $payload['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                $payload['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
+            }
+            $material = Material::create($payload);
 
             $materialData = $material->toArray();
             Log::channel('upload_image')->write('图片上传素材入库成功: ' . json_encode([
@@ -340,10 +447,39 @@ class UploadController extends BaseApiController
     }
 
     /**
-     * @notes ffmpeg=0 视频上传后，原始完整视频立即入库为可用素材
+     * 原图模式视频门禁：容器/编码/帧率/分辨率/单条时长；探针失败拒绝
+     * @return true|string
      */
-    private function createPersonaOriginalVideoMaterial(array $uploadResult, int $personaId, int $ffmpeg): array
+    private function assertOriginalMaterialReady(array $uploadResult)
     {
+        $fileUrl = trim((string)($uploadResult['url'] ?? ''));
+        if ($fileUrl === '') {
+            return '原图模式素材上传失败，文件地址为空';
+        }
+        if ((int)($uploadResult['type'] ?? 0) !== FileEnum::VIDEO_TYPE) {
+            return '原图模式该入口仅支持视频文件';
+        }
+        return OriginalMaterialSpec::assertVideoForIngest([
+            'url'         => $fileUrl,
+            'name'        => (string)($uploadResult['name'] ?? ''),
+            'duration'    => (float)($uploadResult['duration'] ?? 0),
+            'width'       => (int)($uploadResult['width'] ?? 0),
+            'height'      => (int)($uploadResult['height'] ?? 0),
+            'fps'         => (float)($uploadResult['fps'] ?? 0),
+            'codec'       => (string)($uploadResult['codec'] ?? ''),
+            'format_name' => (string)($uploadResult['format_name'] ?? ''),
+        ]);
+    }
+
+    /**
+     * @notes ffmpeg=0 视频上传后，完整视频立即入库为可用素材
+     */
+    private function createPersonaOriginalVideoMaterial(
+        array $uploadResult,
+        int $personaId,
+        int $ffmpeg,
+        int $keepOriginal = Material::KEEP_ORIGINAL_NO
+    ): array {
         if ((int)$ffmpeg !== 0 || $personaId <= 0) {
             return [];
         }
@@ -370,6 +506,9 @@ class UploadController extends BaseApiController
                     'duration'      => (float)($uploadResult['duration'] ?? 0),
                     'width'         => (int)($uploadResult['width'] ?? 0),
                     'height'        => (int)($uploadResult['height'] ?? 0),
+                    'keep_original' => $keepOriginal === Material::KEEP_ORIGINAL_YES
+                        ? Material::KEEP_ORIGINAL_YES
+                        : Material::KEEP_ORIGINAL_NO,
                 ]
             );
 

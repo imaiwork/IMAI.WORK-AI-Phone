@@ -33,11 +33,32 @@ class SyncShanjianClipTemplatesCron extends Command
                 return true;
             }
 
-            $result = ShanjianClipTemplateSyncService::syncFromPlatform();
-            $message = '同步剪辑模板成功: ' . json_encode($result, JSON_UNESCAPED_UNICODE);
-            $output->writeln($message);
-            Log::channel('crontab')->info($message);
-            return true;
+            $ok = true;
+            try {
+                $result = ShanjianClipTemplateSyncService::syncFromPlatform();
+                $message = '同步剪辑模板成功: ' . json_encode($result, JSON_UNESCAPED_UNICODE);
+                $output->writeln($message);
+                Log::channel('crontab')->info($message);
+            } catch (\Throwable $e) {
+                $ok = false;
+                $message = '同步剪辑模板失败: ' . $e->getMessage();
+                $output->writeln($message);
+                Log::channel('crontab')->error($message);
+            }
+
+            // 爆款玩法模板走同一个定时任务（2026-09-02）；两域互不阻塞
+            try {
+                $playResult = \app\common\service\PlayVideoTemplateSyncService::syncFromTemplateCenter();
+                $message = '同步玩法模板成功: ' . json_encode($playResult, JSON_UNESCAPED_UNICODE);
+                $output->writeln($message);
+                Log::channel('crontab')->info($message);
+            } catch (\Throwable $e) {
+                $ok = false;
+                $message = '同步玩法模板失败: ' . $e->getMessage();
+                $output->writeln($message);
+                Log::channel('crontab')->error($message);
+            }
+            return $ok;
         } catch (\Throwable $e) {
             $message = '同步剪辑模板失败: ' . $e->getMessage();
             Log::channel('crontab')->error($message);

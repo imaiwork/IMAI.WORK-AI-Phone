@@ -3,6 +3,7 @@
 namespace app\common\Jobs;
 
 use app\api\logic\ChatLogic;
+use app\common\enum\ChatEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\model\chat\ChatLog;
 use app\common\service\chat\ChatBillingService;
@@ -158,7 +159,7 @@ class WechatAIMessageJob
      */
     private function handleResponse(array $response): string
     {
-        $modelAlias = $this->request['model'] ?? 'gpt-4o';
+        $modelAlias = $this->request['model'] ?? ChatEnum::DEFAULT_CHAT_MODEL_ALIAS;
         ChatBillingService::checkBalance($this->uid, $modelAlias);
 
         $reply = $response['data']['message'] ?? '';

@@ -310,6 +310,8 @@ enum VideoType {
     DIGITAL_HUMAN_SHANJIAN = 9,
     /** 热点追踪（闪剪任务按 extra.source=hotspot 区分） */
     HOTSPOT = 10,
+    /** 爆款玩法 */
+    PLAY_VIDEO = 11,
 }
 
 const typeList = [
@@ -322,6 +324,7 @@ const typeList = [
     { name: "一句话生成", key: VideoType.SENTENCE },
     { name: "分镜混剪", key: VideoType.MONTAGE_STORYBOARD },
     { name: "热点追踪", key: VideoType.HOTSPOT },
+    { name: "爆款玩法", key: VideoType.PLAY_VIDEO },
 ];
 
 type AllTabKey = "video" | "image";
@@ -391,6 +394,10 @@ const getStatus = (item: any) => {
     const { type, status } = item || {};
     if (type === 1) {
         if (status === 0 || status === 1 || status === 2) return status;
+        return 3;
+    } else if (type === 11) {
+        if (status === 2) return 1;
+        if (status === 3 || status === 4) return 2;
         return 3;
     } else {
         if (status === 0) return 0;

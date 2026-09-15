@@ -247,6 +247,7 @@ class AccountLogEnum
 
     const TOKENS_DEC_SPH_OCR = 11003;
     const TOKENS_DEC_SPH_LOCAL_OCR = 11004;
+    const TOKENS_DEC_DY_SEARCH_CLUE = 11005;
 
     const TOKENS_DEC_COZE_AGENT_CHAT = 10100;
     const TOKENS_DEC_COZE_WORKFLOW = 10101;
@@ -297,12 +298,20 @@ class AccountLogEnum
     const TOKENS_DEC_GEO_MATCH_BRAND = 14009; // AI匹配品牌信息(按次,向导第一步行业/别名回填)
     const TOKENS_DEC_GEO_REPORT = 14010;      // GEO诊断报告(按次,含报告内AI优化建议)
 
+    // 爆款玩法 · 按次一口价(提交预扣,失败自动退费;16001 影视引流拼接 P1 启用)
+    const TOKENS_DEC_PLAY_SPLICE = 16001;
+    const TOKENS_DEC_PLAY_FACE = 16002;
+    const TOKENS_DEC_PLAY_DANCE = 16003;
+
     // 热点追踪 · TikHub 按次 / 方舟按模型
     const TOKENS_DEC_HOTSPOT_HOT_DAY = 15001;
     const TOKENS_DEC_HOTSPOT_HOT_WORDS = 15002;
     const TOKENS_DEC_HOTSPOT_INSIGHT = 15003;
     const TOKENS_DEC_HOTSPOT_ARK_CHAT = 15004;
     const TOKENS_DEC_HOTSPOT_ARK_SEARCH = 15005;
+
+    // 作品数据 · 按次一口价（缓存未命中/强制刷新才扣）
+    const TOKENS_DEC_WORK_DATA_FETCH = 17001;
 
     // 自动化功能
     // 社媒平台
@@ -473,6 +482,7 @@ class AccountLogEnum
         self::TOKENS_DEC_CREATE_VECTOR_KNOWLEDGE,
         self::TOKENS_DEC_SPH_OCR,
         self::TOKENS_DEC_SPH_LOCAL_OCR,
+        self::TOKENS_DEC_DY_SEARCH_CLUE,
         self::TOKENS_DEC_COZE_AGENT_CHAT,
         self::TOKENS_DEC_COZE_WORKFLOW,
         self::TOKENS_DEC_COZE_TEXT,
@@ -548,12 +558,20 @@ class AccountLogEnum
         self::TOKENS_DEC_GEO_MATCH_BRAND,
         self::TOKENS_DEC_GEO_REPORT,
 
+        // 爆款玩法
+        self::TOKENS_DEC_PLAY_SPLICE,
+        self::TOKENS_DEC_PLAY_FACE,
+        self::TOKENS_DEC_PLAY_DANCE,
+
         // 热点追踪
         self::TOKENS_DEC_HOTSPOT_HOT_DAY,
         self::TOKENS_DEC_HOTSPOT_HOT_WORDS,
         self::TOKENS_DEC_HOTSPOT_INSIGHT,
         self::TOKENS_DEC_HOTSPOT_ARK_CHAT,
         self::TOKENS_DEC_HOTSPOT_ARK_SEARCH,
+
+        // 作品数据
+        self::TOKENS_DEC_WORK_DATA_FETCH,
 
         // 视频复刻
         self::TOKENS_DEC_VIDEO_IMITATION,
@@ -714,11 +732,15 @@ class AccountLogEnum
             self::TOKENS_DEC_GEO_VIDEO => 'GEO文章转短视频减少算力',
             self::TOKENS_DEC_GEO_MATCH_BRAND => 'GEO匹配品牌信息减少算力',
             self::TOKENS_DEC_GEO_REPORT => 'GEO诊断报告减少算力',
+            self::TOKENS_DEC_PLAY_SPLICE => '爆款玩法影视引流拼接减少算力',
+            self::TOKENS_DEC_PLAY_FACE => '爆款玩法影视换脸改词减少算力',
+            self::TOKENS_DEC_PLAY_DANCE => '爆款玩法跳舞换脸减少算力',
             self::TOKENS_DEC_HOTSPOT_HOT_DAY => '热点追踪热榜拉取减少算力',
             self::TOKENS_DEC_HOTSPOT_HOT_WORDS => '热点追踪热搜词拉取减少算力',
             self::TOKENS_DEC_HOTSPOT_INSIGHT => '热点追踪话题洞察减少算力',
             self::TOKENS_DEC_HOTSPOT_ARK_CHAT => '热点追踪方舟对话减少算力',
             self::TOKENS_DEC_HOTSPOT_ARK_SEARCH => '热点追踪方舟联网检索减少算力',
+            self::TOKENS_DEC_WORK_DATA_FETCH => '作品数据报表减少算力',
 
             self::KEYWORD_TO_TITLE => 'Ai标题生成费用扣除减少算力',
             self::KEYWORD_TO_SUBTITLE => 'Ai正文描述生成费用扣除减少算力',
@@ -771,6 +793,7 @@ class AccountLogEnum
             self::TOKENS_DEC_CREATE_VECTOR_KNOWLEDGE => '创建向量知识库减少算力',
             self::TOKENS_DEC_SPH_OCR => '视频号OCR减少算力',
             self::TOKENS_DEC_SPH_LOCAL_OCR => '本地OCR减少算力',
+            self::TOKENS_DEC_DY_SEARCH_CLUE => '抖音获客减少算力',
             self::TOKENS_DEC_COZE_AGENT_CHAT => 'Coze智能体聊天减少算力',
             self::TOKENS_DEC_COZE_WORKFLOW => 'Coze智能体工作流减少算力',
             self::TOKENS_DEC_COZE_TEXT => '口播混剪视频文案生成减少算力',

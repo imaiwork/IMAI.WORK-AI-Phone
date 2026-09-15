@@ -3,6 +3,7 @@
 // ============================================================
 import WechatOA from "@/utils/wechat";
 import { createManualAddWechat, checkTaskPublishTime } from "@/api/device";
+import { ClueSourceEnum } from "@/ai_modules/device/enums";
 import type { AddFriendFormData } from "./types";
 
 interface UseCreateTaskOptions {
@@ -26,8 +27,9 @@ export function useCreateTask(options: UseCreateTaskOptions) {
         try {
             await createManualAddWechat({
                 ...formData,
-                crawling_task_ids: formData.source === 2 ? taskList.value.map((item) => item.id) : [],
-                fileurl: formData.source === 1 ? taskList.value[0].url : "",
+                crawling_task_ids:
+                    formData.source === ClueSourceEnum.FILE ? [] : taskList.value.map((item) => item.id),
+                fileurl: formData.source === ClueSourceEnum.FILE ? taskList.value[0].url : "",
                 time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
                 add_interval_time: timeIntervalIndex.value === 4 ? timeInterval.value : formData.add_interval_time,
             });

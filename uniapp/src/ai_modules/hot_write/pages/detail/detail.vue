@@ -392,6 +392,8 @@ interface Step {
     videoUrl?: string;
     /** 洗稿：视频类型/形象/音色选择步骤 */
     washConfig?: boolean;
+    /** 口播文案步：按字数实时估算成片时长 */
+    showDuration?: boolean;
 }
 
 /** 视频详情内部阶段（勿与接口 HotWriteTaskStatus.FAIL=4 混用） */
@@ -500,6 +502,8 @@ const buildInitialSteps = (): Step[] => [
         confirmLabel: "确认文案",
         rejectLabel: "换一个",
         tag: "AI",
+        // 文案字数直接决定成片时长，编辑时实时提示，避免出几分钟的长视频
+        showDuration: true,
     },
     {
         id: 8,
@@ -979,7 +983,15 @@ const onConfirmGroupA = async (step: Step) => {
 
 /** 洗稿：确认视频类型/形象/音色并启动合成（一并提交编辑后的洗稿文案） */
 const washSubmitting = ref(false);
-const onConfirmWashConfig = async (payload: { generation_type: number; avatar_id: number; voice_id: number }) => {
+const onConfirmWashConfig = async (payload: {
+    generation_type: number;
+    avatar_id: number;
+    voice_id: number;
+    music_volume?: number;
+    speech_rate?: number;
+    clip_template_id: string;
+    music_url: string;
+}) => {
     if (washSubmitting.value) return;
     const rewriteStep = allSteps.value.find((s) => s.id === 7);
     const rewrittenText = String(rewriteStep?.confirmContent || taskDetail.value?.rewritten_text || "").trim();
@@ -997,8 +1009,12 @@ const onConfirmWashConfig = async (payload: { generation_type: number; avatar_id
         await confirmGenerationOptions({
             id: taskId.value,
             generation_type: payload.generation_type,
+            music_volume: payload.music_volume,
+            speech_rate: payload.speech_rate,
             avatar_id: payload.avatar_id,
             voice_id: payload.voice_id,
+            clip_template_id: payload.clip_template_id,
+            music_url: payload.music_url,
             rewritten_text: rewrittenText,
         });
         uni.hideLoading();

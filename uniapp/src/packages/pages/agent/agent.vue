@@ -152,6 +152,29 @@
                     </view>
                 </scroll-view>
             </view>
+            <view
+                v-if="showPersonaEntry"
+                class="mx-[32rpx] mt-[24rpx] h-[88rpx] flex items-center justify-between rounded-[16rpx] bg-white px-[24rpx]"
+                @click="togglePersonaView(true)">
+                <view class="flex items-center gap-[12rpx]">
+                    <view class="text-sm font-medium">来自 IP 人设的智能体</view>
+                    <view class="px-[12rpx] h-[36rpx] flex items-center rounded-full bg-primary text-white text-xs">
+                        {{ personaAgentCount }}
+                    </view>
+                </view>
+                <view class="text-[#959FAF] text-xs">展开查看 ›</view>
+            </view>
+            <view
+                v-else-if="personaView"
+                class="mx-[32rpx] mt-[24rpx] h-[88rpx] flex items-center justify-between rounded-[16rpx] bg-white px-[24rpx]"
+                @click="togglePersonaView(false)">
+                <view class="flex items-center gap-[12rpx]">
+                    <u-icon name="arrow-left" size="26" color="#959FAF"></u-icon>
+                    <view class="text-sm font-medium">IP 人设的智能体</view>
+                </view>
+                <view class="text-[#959FAF] text-xs">返回我创建的</view>
+            </view>
+
             <view class="grow min-h-0 mt-4">
                 <z-paging
                     ref="pagingCozeRef"
@@ -160,11 +183,13 @@
                     :safe-area-inset-bottom="true"
                     @query="handleQueryAgentList">
                     <view class="grid grid-cols-2 gap-4 px-[32rpx]">
+                        <template v-for="(item, index) in agentList" :key="index">
+                        <view v-if="showPersonaSection(index)" class="col-span-2 flex items-center pt-[8rpx]">
+                            <view class="text-[24rpx] font-medium text-[#6D6E70]">{{ personaSectionTitle(item) }}</view>
+                        </view>
                         <view
                             class="agent-item"
                             :class="{ 'opacity-70': !canUseCurrentAgent(item) }"
-                            v-for="(item, index) in agentList"
-                            :key="index"
                             @click="handleSelectAgent(item)">
                             <view
                                 class="flex-shrink-0 h-[200rpx] w-full bg-no-repeat bg-center bg-cover relative"
@@ -203,6 +228,7 @@
                                 </view>
                             </view>
                         </view>
+                        </template>
                     </view>
                     <template #empty>
                         <empty />
@@ -272,6 +298,14 @@ const agentCateLists = [
     { label: "Coze工作流", value: 3 },
 ]; // 智能体分类列表
 const currAgentType = ref<any>(1); // 当前选中的智能体分类类型
+
+// 智能体来源，与后端 kb_robot.origin 对齐
+enum AgentOriginEnum {
+    MANUAL = 1, // 用户手工创建
+    PERSONA = 2, // IP 人设自动开通
+}
+const personaView = ref(false); // 是否在看人设自动开通的智能体
+const personaAgentCount = ref(0); // 人设自动开通的智能体数量
 const agentList = ref<any[]>([]); // 智能体列表数据
 
 const canUseCurrentAgent = (item: any) => canUseAgent(item, userInfo.value);
@@ -429,7 +463,52 @@ const handleRobot = (data: any) => {
  */
 const handleAgentCateClick = (item: any) => {
     currAgentType.value = item.value;
+    personaView.value = false;
     pagingCozeRef.value?.reload(); // 重新加载智能体列表
+};
+
+/**
+ * 展开态下是否需要在这条前面起一个人设分节
+ * @param {number} index - 当前条在列表中的下标
+ */
+const showPersonaSection = (index: number) => {
+    if (!personaView.value) return false;
+    if (index === 0) return true;
+    return (agentList.value[index]?.persona_id || 0) !== (agentList.value[index - 1]?.persona_id || 0);
+};
+
+/**
+ * 分节标题：取人设名，取不到就退回占位
+ * @param {any} item - 当前条数据
+ */
+const personaSectionTitle = (item: any) =>
+    item?.persona_name || (item?.persona_id ? `人设 #${item.persona_id}` : "未绑定人设");
+
+/**
+ * 拉取人设自动开通的智能体数量，用于折叠区入口计数
+ */
+const loadPersonaAgentCount = async () => {
+    try {
+        const res: any = await getAgentList({ page_no: 1, page_size: 1, origin: AgentOriginEnum.PERSONA });
+        personaAgentCount.value = Number(res?.count ?? 0);
+    } catch (error) {
+        personaAgentCount.value = 0;
+    }
+};
+
+// 是否展示折叠区入口
+const showPersonaEntry = computed(
+    () => currAgentType.value === 1 && !personaView.value && personaAgentCount.value > 0,
+);
+
+/**
+ * 展开或收起人设自动开通的智能体
+ * @param {boolean} value - true 展开折叠区，false 回到手工创建的列表
+ */
+const togglePersonaView = (value: boolean) => {
+    if (personaView.value === value) return;
+    personaView.value = value;
+    pagingCozeRef.value?.reload();
 };
 
 /**
@@ -519,6 +598,7 @@ const handleMore = (item: any) => {
                             duration: 3000,
                         });
                         agentList.value = agentList.value.filter((value) => value.id != item.id);
+                        if (currAgentType.value === 1) loadPersonaAgentCount();
                     } catch (error: any) {
                         uni.hideLoading();
                         uni.showToast({
@@ -541,12 +621,16 @@ const handleMore = (item: any) => {
 const handleQueryAgentList = async (page_no: number, page_size: number) => {
     try {
         const isType1 = currAgentType.value === 1;
+        // tab 是后点开的，onLoad 那次可能还没登录；每次拉第一页时补一次计数
+        if (isType1 && page_no === 1) loadPersonaAgentCount();
         // 根据类型选择不同的API和参数
         const api = isType1 ? getAgentList : getCozeAgentList;
         const params = {
             page_no,
             page_size,
-            ...(isType1 ? {} : { type: currAgentType.value === 2 ? 1 : 2 }),
+            ...(isType1
+                ? { origin: personaView.value ? AgentOriginEnum.PERSONA : AgentOriginEnum.MANUAL }
+                : { type: currAgentType.value === 2 ? 1 : 2 }),
         };
         // @ts-ignore
         const response = await api(params);
@@ -584,6 +668,7 @@ onLoad(({ id }: any) => {
     if (id) {
         state.cate_id = id;
     }
+    loadPersonaAgentCount();
 });
 </script>
 

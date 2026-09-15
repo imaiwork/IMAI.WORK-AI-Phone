@@ -22,6 +22,7 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'shanjian_type' => 'in:1,2,3,4,5',
         'ai_clip_enabled' => 'in:0,1,true,false',
         'engine_type' => 'in:1,2',
+        'material_use_mode' => 'in:1,2',
     ];
 
     protected $message = [
@@ -37,6 +38,7 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'shanjian_type.in' => '闪剪类型值不正确',
         'ai_clip_enabled.in' => 'AI智剪开关值不正确',
         'engine_type.in' => '引擎类型不正确，1=闪剪 2=蝉镜',
+        'material_use_mode.in' => '素材使用方式不正确，1=自动适配 2=原图',
     ];
 
     /**
@@ -57,14 +59,14 @@ class ShanjianVideoSettingValidate extends BaseValidate
     // 添加场景
     public function sceneAdd()
     {
-        return $this->only(['anchor', 'voice', 'title', 'character_design', 'material', 'audio', 'copywriting'])
+        return $this->only(['anchor', 'voice', 'title', 'character_design', 'material', 'audio', 'copywriting', 'material_use_mode'])
                    ->append(['audio' => 'checkAudioCopywriting']);
     }
 
     // 更新场景
     public function sceneUpdate()
     {
-        return $this->only(['id', 'name', 'status', 'video_count', 'anchor', 'voice', 'title', 'character_design', 'material', 'clip', 'music', 'audio', 'copywriting'])
+        return $this->only(['id', 'name', 'status', 'video_count', 'anchor', 'voice', 'title', 'character_design', 'material', 'clip', 'music', 'audio', 'copywriting', 'material_use_mode'])
                    ->append(['audio' => 'checkAudioCopywriting']);
     }
 

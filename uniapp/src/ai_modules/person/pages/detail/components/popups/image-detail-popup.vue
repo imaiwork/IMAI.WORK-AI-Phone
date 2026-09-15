@@ -8,15 +8,15 @@
         :mask-close-able="true"
         :z-index="5001">
         <template #header>
-            <view class="px-[32rpx] pt-3 pb-[24rpx] border-[0] border-b border-solid border-[#F3F4F6]">
-                <view class="w-[80rpx] h-[8rpx] rounded-full bg-[#E5E7EB] mx-auto mb-3"></view>
+            <view class="px-[32rpx] pt-3 pb-[24rpx] border-[0] border-b border-solid border-[#F2F3F5]">
+                <view class="w-[80rpx] h-[8rpx] rounded-full bg-[#E2E2E2] mx-auto mb-3"></view>
                 <view class="flex items-center">
                     <view
-                        class="w-[64rpx] h-[64rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center shrink-0"
+                        class="detail-close w-[64rpx] h-[64rpx] rounded-full bg-[#F2F3F5] flex items-center justify-center shrink-0"
                         @click="emit('update:modelValue', false)">
-                        <u-icon name="arrow-down" color="#6B7280" size="28"></u-icon>
+                        <u-icon name="arrow-down" color="#999999" size="24"></u-icon>
                     </view>
-                    <text class="flex-1 text-center text-sm font-semibold text-[#1F2937]">图文详情</text>
+                    <text class="flex-1 text-center text-sm font-semibold text-[#1D2129]">图文详情</text>
                     <view class="w-[64rpx] h-[64rpx] shrink-0"></view>
                 </view>
             </view>
@@ -27,7 +27,7 @@
                     <scroll-view scroll-y class="h-full">
                         <view>
                             <view
-                                class="relative w-full overflow-hidden bg-[#F3F4F6]"
+                                class="relative w-full overflow-hidden bg-[#F2F3F5]"
                                 style="aspect-ratio: 4 / 3"
                                 @click="handlePreviewImage">
                                 <image
@@ -35,7 +35,7 @@
                                     :src="currentImage"
                                     class="w-full h-full"
                                     mode="aspectFill"></image>
-                                <view v-else class="w-full h-full flex items-center justify-center bg-[#EEF3FF]">
+                                <view v-else class="w-full h-full flex items-center justify-center bg-[#E6EFFF]">
                                     <u-icon name="photo" color="#0065FB" size="48"></u-icon>
                                 </view>
                                 <view
@@ -70,7 +70,7 @@
                                 </text>
                                 <text
                                     v-if="copyText"
-                                    class="block text-sm text-[#4B5563] mt-[24rpx] leading-relaxed whitespace-pre-wrap">
+                                    class="block text-sm text-[#666666] mt-[24rpx] leading-relaxed whitespace-pre-wrap">
                                     {{ copyText }}
                                 </text>
                                 <view v-if="tags.length" class="flex flex-wrap gap-[16rpx] mt-[32rpx]">
@@ -79,14 +79,14 @@
                                     </text>
                                 </view>
                                 <view
-                                    class="flex items-center gap-[16rpx] mt-[32rpx] pt-[24rpx] border-[0] border-t border-solid border-[#F3F4F6]">
+                                    class="flex items-center gap-[16rpx] mt-[32rpx] pt-[24rpx] border-[0] border-t border-solid border-[#F2F3F5]">
                                     <text
                                         v-if="platformBadge"
                                         class="text-[22rpx] font-bold text-white px-[16rpx] py-[4rpx] rounded-[8rpx]"
                                         :style="`background:${platformBadge.bg}`">
                                         {{ platformBadge.label }}
                                     </text>
-                                    <text v-if="timeText" class="text-[22rpx] text-[#9CA3AF]">
+                                    <text v-if="timeText" class="text-[22rpx] text-[#999999]">
                                         生成于 {{ timeText }}
                                     </text>
                                 </view>
@@ -142,7 +142,7 @@ const dotStyle = (index: number) => {
     return {
         width: active ? "36rpx" : "12rpx",
         height: "12rpx",
-        background: active ? "#2F73F6" : "#D1D5DB",
+        background: active ? "#0065FB" : "#C8C9CC",
     };
 };
 
@@ -175,3 +175,14 @@ watch(
     },
 );
 </script>
+
+<style lang="scss" scoped>
+.detail-close {
+    @apply relative;
+
+    &::after {
+        content: "";
+        @apply absolute inset-[-12rpx];
+    }
+}
+</style>

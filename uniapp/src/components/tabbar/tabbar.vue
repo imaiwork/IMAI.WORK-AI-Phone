@@ -65,6 +65,10 @@ const resolveTabPath = (path = "") => {
 
 const isSameTabPath = (a = "", b = "") => resolveTabPath(a) === resolveTabPath(b);
 
+// 只有小程序页面链接才做路径归一化；webview 是外链、miniapp 是他方小程序页面路径，补 "/" 或截断 query 都会把地址改坏
+const isPageLink = (type?: string) =>
+    type !== TabbarLinkType.WEBVIEW && type !== TabbarLinkType.MINIAPP;
+
 // 接口无数据时的空态兜底
 const DEFAULT_TABBAR: TabbarItem[] = [
     {
@@ -113,7 +117,7 @@ const tabbarList = computed<TabbarItem[]>(() => {
             text: item.name,
             link: {
                 ...link,
-                path: resolveTabPath(link.path),
+                path: isPageLink(link.type) ? resolveTabPath(link.path) : link.path || "",
             },
         };
     });
@@ -123,7 +127,9 @@ const activeColor = computed(() => appStore.getTabbarStyle.selected_color || DEF
 const inactiveColor = computed(() => appStore.getTabbarStyle.default_color || DEFAULT_COLOR);
 
 const currentIndex = computed(() => {
-    const idx = tabbarList.value.findIndex((item) => isSameTabPath(item.link.path, route.path));
+    const idx = tabbarList.value.findIndex(
+        (item) => isPageLink(item.link.type) && isSameTabPath(item.link.path, route.path),
+    );
     return idx < 0 ? 0 : idx;
 });
 

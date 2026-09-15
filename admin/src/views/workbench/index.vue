@@ -325,6 +325,9 @@ const getAiPersonConfig = computed(() => {
             "human_audio_minimax_turbo",
             "shanjian_ai_cover",
             "human_avatar_shanjian_pro",
+            "play_face",
+            "play_dance",
+            "play_splice",
         ].includes(item.scene),
     );
 });
@@ -368,6 +371,7 @@ const getSphConfig = computed(() => {
             "sph_search_terms",
             "sph_ocr",
             "sph_local_ocr",
+            "dy_search_clue",
         ].includes(item.scene),
     );
 });
@@ -399,6 +403,7 @@ const getOtherConfig = computed(() => {
             "video_imitation_copywriting_parse",
             "material_slice_oss",
             "material_slice_local",
+            "work_data_fetch",
         ].includes(item.scene),
     );
 });

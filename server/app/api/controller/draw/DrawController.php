@@ -8,6 +8,7 @@ use app\api\controller\BaseApiController;
 use app\api\logic\draw\DrawLogic;
 use app\api\logic\draw\PptLogic;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 
 /**
  * draw 生图/生视频 / PPT
@@ -157,6 +158,9 @@ class DrawController extends BaseApiController
 
     public function notify(): Json
     {
+        if (!CallbackTokenService::guard('file', 'AI画图', (string)$this->request->get('token', ''))) {
+            return $this->fail('unauthorized');
+        }
         $params = $this->request->post();
         $ok = DrawLogic::notify($params);
         return $ok

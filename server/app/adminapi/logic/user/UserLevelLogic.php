@@ -11,6 +11,8 @@ use app\common\model\user\UserLevel;
 use app\common\service\MemberService;
 use Exception;
 use think\facade\Db;
+use think\facade\Event;
+use think\facade\Log;
 
 /**
  * 用户等级逻辑层（含订阅配额）
@@ -102,19 +104,85 @@ class UserLevelLogic extends BaseLogic
                 throw new Exception('请填写等级名称');
             }
 
+            $quota = self::quotaPayload($params);
+            $quotaChanged = false;
+            foreach (array_unique(array_column(MemberService::ENTITIES, 'quota_field')) as $field) {
+                if ((int)$level->getData($field) !== $quota[$field]) {
+                    $quotaChanged = true;
+                    break;
+                }
+            }
+
             $level->save(array_merge([
                 'level_name' => $levelName,
                 'sort' => $sort,
                 'update_time' => time(),
-            ], self::quotaPayload($params)));
+            ], $quota));
 
             Db::commit();
+            if ($quotaChanged) {
+                // HttpEnd 在响应发送后执行，PHP-FPM 下无需等待全量用户冻结/解冻才关闭弹窗。
+                // 只在实体配额变化时对齐，名称、排序等修改不扫描用户。
+                $levelId = (int)$level->id;
+                Event::listen('HttpEnd', static function () use ($levelId) {
+                    self::applyQuotaToLevelUsers($levelId);
+                });
+            }
             return true;
         } catch (Exception $e) {
             Db::rollback();
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 把等级配额应用到挂在该等级下的用户（超出的冻结、放开的解冻）。
+     * 失败只记日志不抛：等级本身已经保存成功，对齐可由到期/续费兜底。
+     */
+    private static function applyQuotaToLevelUsers(int $levelId): void
+    {
+        if ($levelId <= 0) {
+            return;
+        }
+        $handled = 0;
+        try {
+            // 有效额度取自订阅记录；无有效订阅的用户使用默认等级，user.level_id 可能仍是 -1 或旧等级。
+            $isDefault = (int)UserLevel::where('id', $levelId)->value('is_default') === 1;
+            $memberUsers = MemberUser::alias('m')
+                ->join('user_level l', 'l.id = m.level_id')
+                ->whereNull('l.delete_time')
+                ->where('m.level_id', '>', 0)
+                ->where('m.status', MemberUser::STATUS_ACTIVE)
+                ->where(function ($query) {
+                    $query->where('m.end_time', '<=', 0)->whereOr('m.end_time', '>=', time());
+                })
+                ->where('m.level_id', $isDefault ? '<>' : '=', $levelId)
+                ->field('m.user_id')
+                ->buildSql();
+            $users = $isDefault
+                ? User::whereNotIn('id', Db::raw($memberUsers))
+                : User::whereIn('id', Db::raw($memberUsers));
+            $users
+                ->field('id')
+                ->chunk(200, function ($users) use (&$handled) {
+                    foreach ($users as $user) {
+                        MemberService::applyQuota((int)$user->id);
+                        $handled++;
+                    }
+                });
+        } catch (\Throwable $e) {
+            Log::channel('member')->write('等级配额对齐失败:' . json_encode([
+                'level_id' => $levelId,
+                'handled'  => $handled,
+                'error'    => $e->getMessage(),
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            return;
+        }
+        Log::channel('member')->write('等级配额对齐完成:' . json_encode([
+            'level_id' => $levelId,
+            'users'    => $handled,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
     public static function delete($id): bool

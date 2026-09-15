@@ -25,6 +25,7 @@ use app\common\model\sv\SvPublishSettingAccount;
 use app\common\model\sv\SvWechatStrategy;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\model\sv\SvDevicePreciseClues;
+use app\common\model\sv\SvDySearchTask;
 
 /**
  * 设备任务列表
@@ -67,7 +68,7 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
             ->each(function ($item) {
                 $item['start_time'] = date('H:i', $item['start_time']);
                 $item['end_time'] = date('H:i', $item['end_time']);
-                $item['account_type'] = $item['source'] === DeviceEnum::TASK_SOURCE_WECHAT_RPA ? 2 : $item['account_type'];
+                $item['account_type'] = DeviceEnum::isWechatAccountDisplay($item['source']) ? 2 : $item['account_type'];
                 //$item['task_category'] = !in_array($item['source'], [5, 7, 8])? DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskTypeDesc($item['task_type']) : DeviceEnum::getTaskSceneDesc($item['task_type']);
                 $item['task_category'] = DeviceEnum::getAccountTypeDesc($item['account_type']) . DeviceEnum::getTaskSceneDesc($item['task_scene']);
                 if(
@@ -185,6 +186,14 @@ class TaskLists extends BaseApiDataLists implements ListsSearchInterface
                         //sv_precise_clues_task_account
                         $taskinfo = SvDevicePreciseClues::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
                         $item['name'] = $taskinfo['task_name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_DY_SEARCH:
+                        $taskinfo = SvDySearchTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? '';
+                        break;
+                    case DeviceEnum::TASK_SOURCE_DY_SEARCH_WECHAT:
+                        $taskinfo = SvDySearchTask::where('id', $item['sub_task_id'])->findOrEmpty()->toArray();
+                        $item['name'] = $taskinfo['name'] ?? $item['task_name'];
                         break;
                     default:
                         break;

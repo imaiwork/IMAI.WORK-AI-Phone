@@ -210,124 +210,166 @@
                                 <text class="text-[24rpx] text-[#9CA3AF]">正在拉取平台热度洞察…</text>
                             </view>
 
-                            <!-- 步骤 2 选择人设 -->
+                            <!-- 步骤 2 选择人设（可不选：不选人设时跳过契合分析，形象/音色改到高级设置里自选） -->
                             <view class="flex items-center gap-[12rpx] mt-[32rpx] mb-[16rpx]">
                                 <view class="step-no" :class="research ? 'bg-primary' : 'bg-[#D1D5DB]'">
                                     <text class="text-white">2</text>
                                 </view>
-                                <text class="text-[29rpx] font-bold text-[#111827]">选择人设</text>
+                                <text class="text-[29rpx] font-bold text-[#111827]">
+                                    {{ isManualMode ? "内容口吻" : "选择人设" }}
+                                </text>
                             </view>
                             <view v-if="!research" class="flow-card">
                                 <text class="text-[25rpx] text-[#D1D5DB]">搜索完成后可选</text>
                             </view>
                             <template v-else>
-                                <view v-if="!personas.length" class="flow-card">
-                                    <text class="text-[25rpx] text-[#9CA3AF]">
-                                        还没有可用人设，请先到「AI 数字员工」创建人设
+                                <view class="inline-flex items-center bg-[#E9EBF0] rounded-full p-[6rpx] mb-[16rpx]">
+                                    <text
+                                        v-for="mode in personaModeOptions"
+                                        :key="mode.val"
+                                        class="px-[22rpx] py-[12rpx] rounded-full text-[22rpx]"
+                                        :class="
+                                            opt.persona_mode === mode.val
+                                                ? 'bg-white text-primary font-semibold'
+                                                : 'text-[#9CA3AF]'
+                                        "
+                                        @click="switchPersonaMode(mode.val)">
+                                        {{ mode.label }}
                                     </text>
-                                </view>
-                                <view v-else class="grid grid-cols-2 gap-[16rpx]">
-                                    <view
-                                        v-for="persona in personas"
-                                        :key="persona.id"
-                                        class="flow-card flex items-center gap-[18rpx] border-[3rpx] border-solid"
-                                        :class="personaId === persona.id ? 'border-primary' : 'border-[transparent]'"
-                                        @click="pickPersona(persona.id)">
-                                        <image
-                                            :src="persona.avatar"
-                                            mode="aspectFill"
-                                            class="w-[72rpx] h-[72rpx] rounded-[14rpx] bg-[#F3F4F6] flex-shrink-0" />
-                                        <view class="flex-1 min-w-0">
-                                            <text class="block text-[26rpx] font-bold text-[#111827] line-clamp-1">
-                                                {{ persona.name }}
-                                            </text>
-                                            <text class="block text-[20rpx] text-[#9CA3AF] mt-[4rpx] line-clamp-1">
-                                                {{ persona.tag || "" }}
-                                            </text>
-                                        </view>
-                                    </view>
                                 </view>
 
-                                <view v-if="analyzing" class="flow-card mt-[16rpx] flex items-center gap-[20rpx]">
-                                    <u-loading mode="circle" size="40" color="#0065fb"></u-loading>
-                                    <view>
-                                        <text class="block text-sm font-semibold text-primary">
-                                            正在分析热点与人设的结合点…
-                                        </text>
-                                        <text class="block text-[22rpx] text-[#9CA3AF] mt-[4rpx]">
-                                            判断契合度、切入方式和风险
-                                        </text>
-                                    </view>
-                                </view>
-                                <view v-else-if="analyzeErr" class="err-box mt-[16rpx]">
+                                <view v-if="isManualMode" class="flow-card flex items-start gap-[12rpx]">
                                     <view class="flex-shrink-0 mt-[2rpx]">
-                                        <u-icon name="error-circle" color="#EF4444" :size="26"></u-icon>
+                                        <u-icon name="info-circle" color="#2563EB" :size="26"></u-icon>
                                     </view>
-                                    <text class="flex-1 text-xs text-[#EF4444] leading-relaxed">{{ analyzeErr }}</text>
-                                </view>
-                                <view v-else-if="analysis" class="flow-card mt-[16rpx]">
-                                    <view class="flex items-center justify-between">
-                                        <text class="text-[26rpx] font-bold text-[#111827]">热点 × 人设 结合分析</text>
-                                        <text class="text-[24rpx] font-bold" :class="fitTextClass">
-                                            {{ fitLevelText }} {{ analysis.fit_score }}
-                                        </text>
-                                    </view>
-                                    <view class="h-[12rpx] bg-[#F3F4F6] rounded-full mt-[14rpx] overflow-hidden">
-                                        <view
-                                            class="h-full rounded-full"
-                                            :class="fitBarClass"
-                                            :style="`width:${analysis.fit_score}%`"></view>
-                                    </view>
-                                    <text
-                                        v-if="analysis.fit_reason"
-                                        class="block text-[24rpx] text-[#6B7280] leading-relaxed mt-[16rpx] break-all">
-                                        {{ analysis.fit_reason }}
+                                    <text class="flex-1 text-[24rpx] text-[#2563EB] leading-relaxed">
+                                        不选人设：跳过「热点 × 人设」契合分析，AI
+                                        按热点用中立口吻写口播；数字人形象与音色在下方高级设置里自选，画面素材固定由 AI
+                                        找。
                                     </text>
-                                    <template v-if="analysis.hooks?.length">
-                                        <text class="block text-[22rpx] font-bold text-[#9CA3AF] mt-[22rpx] mb-[10rpx]">
-                                            可以这么切
+                                </view>
+                                <template v-else>
+                                    <view v-if="!personas.length" class="flow-card">
+                                        <text class="text-[25rpx] text-[#9CA3AF]">
+                                            还没有可用人设，请先到「AI 数字员工」创建人设
                                         </text>
+                                    </view>
+                                    <view v-else class="grid grid-cols-2 gap-[16rpx]">
                                         <view
-                                            v-for="(hook, hi) in analysis.hooks"
-                                            :key="hi"
-                                            class="bg-[#F9FAFB] rounded-[16rpx] p-[18rpx] mb-[10rpx]">
-                                            <text class="block text-[25rpx] font-semibold text-primary">
-                                                {{ hook.label }}
-                                            </text>
-                                            <text
-                                                class="block text-[24rpx] text-[#6B7280] leading-relaxed mt-[6rpx] break-all">
-                                                {{ hook.detail }}
-                                            </text>
+                                            v-for="persona in personas"
+                                            :key="persona.id"
+                                            class="flow-card flex items-center gap-[18rpx] border-[3rpx] border-solid"
+                                            :class="[
+                                                personaId === persona.id
+                                                    ? 'border-primary'
+                                                    : 'border-[transparent]',
+                                                persona.enabled === false ? 'opacity-50' : ''
+                                            ]"
+                                            @click="pickPersona(persona.id)">
+                                            <image
+                                                :src="persona.avatar"
+                                                mode="aspectFill"
+                                                class="w-[72rpx] h-[72rpx] rounded-[14rpx] bg-[#F3F4F6] flex-shrink-0" />
+                                            <view class="flex-1 min-w-0">
+                                                <text class="block text-[26rpx] font-bold text-[#111827] line-clamp-1">
+                                                    {{ persona.name }}
+                                                </text>
+                                                <!-- 冻结的人设照样列出来，但要说清楚，选中也会被拦 -->
+                                                <text
+                                                    v-if="persona.enabled === false"
+                                                    class="block text-[20rpx] text-[#CC7A00] mt-[4rpx] line-clamp-1">
+                                                    已冻结 · 恢复会员后可用
+                                                </text>
+                                                <text
+                                                    v-else
+                                                    class="block text-[20rpx] text-[#9CA3AF] mt-[4rpx] line-clamp-1">
+                                                    {{ persona.tag || "" }}
+                                                </text>
+                                            </view>
                                         </view>
-                                    </template>
-                                    <view
-                                        v-if="analysis.risks?.length"
-                                        class="flex items-start gap-[10rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] mt-[12rpx] bg-[#FFFBEB] border-[2rpx] border-solid border-[#FDE68A]">
-                                        <u-icon
-                                            name="warning"
-                                            color="#F59E0B"
-                                            :size="26"
-                                            class="flex-shrink-0"></u-icon>
-                                        <view class="flex-1 min-w-0">
-                                            <text
-                                                v-for="(risk, ri) in analysis.risks"
-                                                :key="ri"
-                                                class="block text-xs text-[#D97706] leading-relaxed break-all">
-                                                {{ risk }}
+                                    </view>
+
+                                    <view v-if="analyzing" class="flow-card mt-[16rpx] flex items-center gap-[20rpx]">
+                                        <u-loading mode="circle" size="40" color="#0065fb"></u-loading>
+                                        <view>
+                                            <text class="block text-sm font-semibold text-primary">
+                                                正在分析热点与人设的结合点…
+                                            </text>
+                                            <text class="block text-[22rpx] text-[#9CA3AF] mt-[4rpx]">
+                                                判断契合度、切入方式和风险
                                             </text>
                                         </view>
                                     </view>
-                                </view>
+                                    <view v-else-if="analyzeErr" class="err-box mt-[16rpx]">
+                                        <view class="flex-shrink-0 mt-[2rpx]">
+                                            <u-icon name="error-circle" color="#EF4444" :size="26"></u-icon>
+                                        </view>
+                                        <text class="flex-1 text-xs text-[#EF4444] leading-relaxed">{{ analyzeErr }}</text>
+                                    </view>
+                                    <view v-else-if="analysis" class="flow-card mt-[16rpx]">
+                                        <view class="flex items-center justify-between">
+                                            <text class="text-[26rpx] font-bold text-[#111827]">热点 × 人设 结合分析</text>
+                                            <text class="text-[24rpx] font-bold" :class="fitTextClass">
+                                                {{ fitLevelText }} {{ analysis.fit_score }}
+                                            </text>
+                                        </view>
+                                        <view class="h-[12rpx] bg-[#F3F4F6] rounded-full mt-[14rpx] overflow-hidden">
+                                            <view
+                                                class="h-full rounded-full"
+                                                :class="fitBarClass"
+                                                :style="`width:${analysis.fit_score}%`"></view>
+                                        </view>
+                                        <text
+                                            v-if="analysis.fit_reason"
+                                            class="block text-[24rpx] text-[#6B7280] leading-relaxed mt-[16rpx] break-all">
+                                            {{ analysis.fit_reason }}
+                                        </text>
+                                        <template v-if="analysis.hooks?.length">
+                                            <text class="block text-[22rpx] font-bold text-[#9CA3AF] mt-[22rpx] mb-[10rpx]">
+                                                可以这么切
+                                            </text>
+                                            <view
+                                                v-for="(hook, hi) in analysis.hooks"
+                                                :key="hi"
+                                                class="bg-[#F9FAFB] rounded-[16rpx] p-[18rpx] mb-[10rpx]">
+                                                <text class="block text-[25rpx] font-semibold text-primary">
+                                                    {{ hook.label }}
+                                                </text>
+                                                <text
+                                                    class="block text-[24rpx] text-[#6B7280] leading-relaxed mt-[6rpx] break-all">
+                                                    {{ hook.detail }}
+                                                </text>
+                                            </view>
+                                        </template>
+                                        <view
+                                            v-if="analysis.risks?.length"
+                                            class="flex items-start gap-[10rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] mt-[12rpx] bg-[#FFFBEB] border-[2rpx] border-solid border-[#FDE68A]">
+                                            <u-icon
+                                                name="warning"
+                                                color="#F59E0B"
+                                                :size="26"
+                                                class="flex-shrink-0"></u-icon>
+                                            <view class="flex-1 min-w-0">
+                                                <text
+                                                    v-for="(risk, ri) in analysis.risks"
+                                                    :key="ri"
+                                                    class="block text-xs text-[#D97706] leading-relaxed break-all">
+                                                    {{ risk }}
+                                                </text>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </template>
                             </template>
 
                             <!-- 步骤 3 高级设置 -->
                             <view class="flex items-center gap-[12rpx] mt-[32rpx] mb-[16rpx]">
-                                <view class="step-no" :class="analysis ? 'bg-primary' : 'bg-[#D1D5DB]'">
+                                <view class="step-no" :class="stepReady ? 'bg-primary' : 'bg-[#D1D5DB]'">
                                     <text class="text-white">3</text>
                                 </view>
                                 <text class="text-[29rpx] font-bold text-[#111827]">高级设置</text>
                                 <view
-                                    v-if="analysis"
+                                    v-if="stepReady"
                                     class="ml-auto flex items-center gap-[6rpx] bg-[#E9EBF0] rounded-full px-[18rpx] py-[6rpx]"
                                     @click="showAdv = !showAdv">
                                     <text class="text-[20rpx] text-[#6B7280]">{{ showAdv ? "收起" : "展开" }}</text>
@@ -337,8 +379,10 @@
                                         :size="20"></u-icon>
                                 </view>
                             </view>
-                            <view v-if="!analysis" class="flow-card">
-                                <text class="text-[25rpx] text-[#D1D5DB]">选好人设、分析完成后可配置</text>
+                            <view v-if="!stepReady" class="flow-card">
+                                <text class="text-[25rpx] text-[#D1D5DB]">
+                                    {{ isManualMode ? "搜索完成后可配置" : "选好人设、分析完成后可配置" }}
+                                </text>
                             </view>
                             <view
                                 v-else-if="!showAdv"
@@ -352,6 +396,22 @@
                                     class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#F5F3FF] text-[#7C3AED] text-[20rpx] font-semibold">
                                     {{ videoTypeLabel(opt.video_type)
                                     }}{{ opt.video_type === "digital" && opt.avatar ? " · " + opt.avatar : "" }}
+                                </text>
+                                <text
+                                    v-if="isManualMode && opt.voice"
+                                    class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#ECFDF5] text-[#059669] text-[20rpx] font-semibold">
+                                    音色 · {{ opt.voice }}
+                                </text>
+                                <!-- 音量/语速只在改过默认值时才占位，避免收起态标签过长 -->
+                                <text
+                                    v-if="isManualMode && opt.music_volume !== HOTSPOT_MUSIC_VOLUME_DEFAULT"
+                                    class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#F3F4F6] text-[#6B7280] text-[20rpx]">
+                                    音量 {{ musicVolumeText }}
+                                </text>
+                                <text
+                                    v-if="isManualMode && opt.speech_rate !== HOTSPOT_SPEECH_RATE_DEFAULT"
+                                    class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#F3F4F6] text-[#6B7280] text-[20rpx]">
+                                    语速 {{ opt.speech_rate.toFixed(1) }}x
                                 </text>
                                 <text
                                     class="px-[14rpx] py-[6rpx] rounded-[8rpx] bg-[#F3F4F6] text-[#6B7280] text-[20rpx]">
@@ -408,12 +468,16 @@
                                             必选
                                         </text>
                                     </view>
-                                    <view v-if="avatarLoading" class="flex items-center gap-[12rpx] py-[16rpx]">
+                                    <view v-if="assetLoading" class="flex items-center gap-[12rpx] py-[16rpx]">
                                         <u-loading mode="circle" size="26" color="#0065fb"></u-loading>
                                         <text class="text-[22rpx] text-[#9CA3AF]">加载形象中…</text>
                                     </view>
                                     <text v-else-if="!avatarList.length" class="text-[22rpx] text-[#9CA3AF]">
-                                        该人设暂无可用数字人形象，请先到人设中心创建
+                                        {{
+                                            isManualMode
+                                                ? "暂无可用数字人形象，请先在「数字人克隆」中创建形象"
+                                                : "该人设暂无可用数字人形象，请先到人设中心创建"
+                                        }}
                                     </text>
                                     <scroll-view v-else scroll-x class="w-full" :show-scrollbar="false">
                                         <view class="inline-flex gap-[16rpx] pb-[6rpx]">
@@ -445,8 +509,158 @@
                                     </scroll-view>
                                 </template>
 
+                                <!-- 不选人设：音色不再随形象捆绑，需单独选（素材混剪同样要音色配音） -->
+                                <template v-if="isManualMode">
+                                    <view class="flex items-center gap-[10rpx] mt-[28rpx] mb-[14rpx]">
+                                        <text class="text-[24rpx] font-bold text-[#374151]">音色</text>
+                                        <text
+                                            class="text-[18rpx] font-semibold text-[#EF4444] bg-[#FEF2F2] px-[10rpx] py-[2rpx] rounded-[6rpx]">
+                                            必选
+                                        </text>
+                                    </view>
+                                    <view v-if="assetLoading" class="flex items-center gap-[12rpx] py-[16rpx]">
+                                        <u-loading mode="circle" size="26" color="#0065fb"></u-loading>
+                                        <text class="text-[22rpx] text-[#9CA3AF]">加载音色中…</text>
+                                    </view>
+                                    <text v-else-if="!voiceOptions.length" class="text-[22rpx] text-[#9CA3AF]">
+                                        {{ voiceEmptyTip }}
+                                    </text>
+                                    <template v-else>
+                                        <view
+                                            v-for="voice in visibleVoices"
+                                            :key="voice.id"
+                                            class="flex items-center gap-[14rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] mb-[12rpx] border-[2rpx] border-solid"
+                                            :class="
+                                                opt.voice_id === voice.id
+                                                    ? 'bg-[#EFF6FF] border-primary'
+                                                    : 'bg-[#F9FAFB] border-[transparent]'
+                                            "
+                                            @click="pickVoice(voice)">
+                                            <text
+                                                class="flex-1 min-w-0 text-[24rpx] font-semibold line-clamp-1"
+                                                :class="opt.voice_id === voice.id ? 'text-primary' : 'text-[#374151]'">
+                                                {{ voice.name || "未命名音色" }}
+                                            </text>
+                                            <text
+                                                v-if="voice.id === HOTSPOT_ORIGIN_VOICE_ID"
+                                                class="flex-shrink-0 text-[18rpx] font-semibold text-[#D97706] bg-[#FFFBEB] px-[10rpx] py-[2rpx] rounded-[6rpx]">
+                                                推荐
+                                            </text>
+                                            <u-icon
+                                                v-if="opt.voice_id === voice.id"
+                                                name="checkmark-circle-fill"
+                                                color="#2563EB"
+                                                :size="30"></u-icon>
+                                        </view>
+                                        <view
+                                            v-if="hasMoreVoices"
+                                            class="flex items-center justify-center gap-[8rpx] py-[12rpx]"
+                                            @click="voiceShowCount += VOICE_PAGE_SIZE">
+                                            <text class="text-[22rpx] text-primary">
+                                                加载更多音色（还有 {{ voiceOptions.length - voiceShowCount }} 个）
+                                            </text>
+                                            <u-icon name="arrow-down" color="#0065fb" :size="20"></u-icon>
+                                        </view>
+                                    </template>
+
+                                    <!-- 视频模板：不选人设没有人设合成配置可依，剪辑风格改由用户当次自选 -->
+                                    <view class="flex items-center gap-[10rpx] mt-[28rpx] mb-[14rpx]">
+                                        <text class="text-[24rpx] font-bold text-[#374151]">视频模板</text>
+                                        <text class="text-[20rpx] text-[#D1D5DB]">选填 · 点播放键看样片</text>
+                                    </view>
+                                    <!-- key 绑视频类型：两种类型是两套模板，不换 key 的话
+                                         切过去还停在上一套滑到的位置，看不到打头的「自动随机」 -->
+                                    <scroll-view :key="opt.video_type" scroll-x class="w-full whitespace-nowrap">
+                                        <view class="inline-flex gap-[16rpx] pb-[8rpx]">
+                                            <!-- 自动随机放首位，等价于不指定模板 -->
+                                            <view
+                                                class="w-[228rpx] rounded-[16rpx] overflow-hidden bg-white border-[3rpx] border-solid"
+                                                :class="!opt.clip_template_id ? 'border-primary' : 'border-[#EDEFF3]'"
+                                                @click="opt.clip_template_id = ''">
+                                                <view
+                                                    class="w-full h-[304rpx] bg-[#F3F4F6] flex flex-col items-center justify-center">
+                                                    <u-icon
+                                                        name="reload"
+                                                        :color="!opt.clip_template_id ? '#0065fb' : '#9CA3AF'"
+                                                        :size="44"></u-icon>
+                                                    <text class="text-[20rpx] text-[#9CA3AF] mt-[12rpx]">
+                                                        每次随机挑一个
+                                                    </text>
+                                                </view>
+                                                <text
+                                                    class="block text-[22rpx] text-center py-[12rpx] line-clamp-1 px-[8rpx]"
+                                                    :class="
+                                                        !opt.clip_template_id
+                                                            ? 'text-primary font-semibold'
+                                                            : 'text-[#6B7280]'
+                                                    ">
+                                                    自动随机
+                                                </text>
+                                            </view>
+                                            <view
+                                                v-for="template in clipTemplates"
+                                                :key="template.id"
+                                                class="w-[228rpx] rounded-[16rpx] overflow-hidden bg-white border-[3rpx] border-solid"
+                                                :class="
+                                                    opt.clip_template_id === template.id
+                                                        ? 'border-primary'
+                                                        : 'border-[#EDEFF3]'
+                                                "
+                                                @click="pickClipTemplate(template.id)">
+                                                <view class="relative w-full h-[304rpx] bg-[#F3F4F6]">
+                                                    <image
+                                                        v-if="template.cover_url"
+                                                        :src="template.cover_url"
+                                                        mode="aspectFill"
+                                                        lazy-load
+                                                        class="w-full h-full" />
+                                                    <!-- 封面只看得出配色看不出剪辑风格，播放键单独拦一下点击去放样片 -->
+                                                    <view
+                                                        v-if="template.demo_url"
+                                                        class="absolute inset-0 flex items-center justify-center"
+                                                        @click.stop="previewClipTemplate(template)">
+                                                        <view
+                                                            class="w-[72rpx] h-[72rpx] rounded-full flex items-center justify-center"
+                                                            style="background: rgba(0, 0, 0, 0.45)">
+                                                            <u-icon
+                                                                name="play-right-fill"
+                                                                color="#ffffff"
+                                                                :size="30"
+                                                                class="ml-[4rpx]"></u-icon>
+                                                        </view>
+                                                    </view>
+                                                    <view
+                                                        v-if="opt.clip_template_id === template.id"
+                                                        class="absolute top-[8rpx] right-[8rpx] w-[36rpx] h-[36rpx] rounded-full bg-primary flex items-center justify-center">
+                                                        <u-icon name="checkmark" color="#ffffff" :size="20"></u-icon>
+                                                    </view>
+                                                </view>
+                                                <text
+                                                    class="block text-[22rpx] text-center py-[12rpx] line-clamp-1 px-[8rpx]"
+                                                    :class="
+                                                        opt.clip_template_id === template.id
+                                                            ? 'text-primary font-semibold'
+                                                            : 'text-[#6B7280]'
+                                                    ">
+                                                    {{ template.name || "未命名模板" }}
+                                                </text>
+                                            </view>
+                                        </view>
+                                    </scroll-view>
+                                    <text v-if="!clipTemplates.length" class="text-[22rpx] text-[#9CA3AF]">
+                                        当前视频类型暂无可选模板，将自动随机
+                                    </text>
+                                </template>
+
                                 <text class="adv-label mt-[28rpx]">素材来源</text>
-                                <view class="flex items-center bg-[#F3F4F6] rounded-full p-[6rpx]">
+                                <!-- 不选人设时本地素材库按人设归属查不到，来源锁死 AI 找素材，不给切换入口 -->
+                                <view
+                                    v-if="isManualMode"
+                                    class="inline-flex items-center gap-[10rpx] px-[22rpx] py-[12rpx] rounded-full bg-[#EFF6FF]">
+                                    <text class="text-[22rpx] text-primary font-semibold">AI找素材</text>
+                                    <text class="text-[20rpx] text-[#9CA3AF]">不选人设时固定由 AI 找画面素材</text>
+                                </view>
+                                <view v-else class="flex items-center bg-[#F3F4F6] rounded-full p-[6rpx]">
                                     <text
                                         v-for="material in optionsData.materials"
                                         :key="material.key"
@@ -646,6 +860,116 @@
                                     </text>
                                 </view>
 
+                                <!-- 不选人设没有人设合成配置可依，背景音乐/音量/语速改由用户当次自选（人设模式仍跟随人设设置） -->
+                                <template v-if="isManualMode">
+                                    <view class="flex items-center gap-[10rpx] mt-[28rpx] mb-[14rpx]">
+                                        <text class="text-[24rpx] font-bold text-[#374151]">背景音乐</text>
+                                        <text class="text-[20rpx] text-[#D1D5DB]">音量拖到 0 即不加背景音乐</text>
+                                    </view>
+                                    <view class="flex items-center gap-[14rpx]">
+                                        <view
+                                            v-for="source in HOTSPOT_MUSIC_SOURCE_OPTIONS"
+                                            :key="source.val"
+                                            class="flex-1 rounded-[16rpx] px-[16rpx] py-[18rpx] text-center border-[2rpx] border-solid"
+                                            :class="
+                                                opt.music_source === source.val
+                                                    ? 'bg-[#EFF6FF] border-primary'
+                                                    : 'bg-[#F9FAFB] border-[transparent]'
+                                            "
+                                            @click="pickMusicSource(source.val)">
+                                            <text
+                                                class="text-[23rpx] font-semibold"
+                                                :class="opt.music_source === source.val ? 'text-primary' : 'text-[#6B7280]'">
+                                                {{ source.label }}
+                                            </text>
+                                        </view>
+                                    </view>
+                                    <template v-if="opt.music_source === HotspotMusicSource.UPLOAD">
+                                        <view
+                                            class="flex items-center gap-[14rpx] mt-[14rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] bg-[#F9FAFB]">
+                                            <u-icon name="volume-up" color="#0065fb" :size="28"></u-icon>
+                                            <text
+                                                class="flex-1 min-w-0 text-[22rpx] line-clamp-1"
+                                                :class="opt.music_url ? 'text-[#374151]' : 'text-[#9CA3AF]'">
+                                                {{ opt.music_name || "还没有上传音乐" }}
+                                            </text>
+                                            <text
+                                                class="flex-shrink-0 text-[22rpx] text-primary font-semibold"
+                                                @click="handleUploadMusic">
+                                                {{ opt.music_url ? "重新上传" : "上传" }}
+                                            </text>
+                                        </view>
+                                        <text class="block text-[20rpx] text-[#9CA3AF] mt-[8rpx]">
+                                            支持 mp3/wav/m4a/aac，微信端需先把音频文件发到聊天再选取
+                                        </text>
+                                    </template>
+
+                                    <view class="flex items-center justify-between mt-[24rpx] mb-[14rpx]">
+                                        <text class="text-[24rpx] font-bold text-[#374151]">音乐音量</text>
+                                        <text class="text-[22rpx] font-semibold text-primary">
+                                            {{ musicVolumeText }}
+                                        </text>
+                                    </view>
+                                    <slider
+                                        :value="musicVolumeStep"
+                                        :min="0"
+                                        :max="10"
+                                        :step="1"
+                                        :block-size="20"
+                                        activeColor="#0065fb"
+                                        backgroundColor="#E5E9F0"
+                                        @changing="onMusicVolumeChange"
+                                        @change="onMusicVolumeChange" />
+                                    <view class="flex justify-between px-[4rpx]">
+                                        <text
+                                            v-for="label in MUSIC_VOLUME_LABELS"
+                                            :key="label"
+                                            class="text-[20rpx] text-[#9CA3AF]">
+                                            {{ label }}
+                                        </text>
+                                    </view>
+
+                                    <view class="flex items-center justify-between mt-[24rpx] mb-[14rpx]">
+                                        <text class="text-[24rpx] font-bold text-[#374151]">口播语速</text>
+                                        <text
+                                            v-if="!speechRateDisabled"
+                                            class="text-[22rpx] font-semibold text-primary">
+                                            {{ opt.speech_rate.toFixed(1) }}x
+                                        </text>
+                                    </view>
+                                    <!-- MiniMax 音色由预渲染音频驱动，闪剪不认 speedRatio，调了也无效，直接说明而不是给个假开关 -->
+                                    <view
+                                        v-if="speechRateDisabled"
+                                        class="flex items-start gap-[10rpx] px-[20rpx] py-[14rpx] rounded-[16rpx] bg-[#F9FAFB]">
+                                        <view class="flex-shrink-0 mt-[2rpx]">
+                                            <u-icon name="info-circle" color="#9CA3AF" :size="24"></u-icon>
+                                        </view>
+                                        <text class="flex-1 text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                                            所选音色由 MiniMax 合成，语速跟随音色本身，暂不支持在这里调节
+                                        </text>
+                                    </view>
+                                    <template v-else>
+                                        <slider
+                                            :value="speechRateStep"
+                                            :min="5"
+                                            :max="20"
+                                            :step="1"
+                                            :block-size="20"
+                                            activeColor="#0065fb"
+                                            backgroundColor="#E5E9F0"
+                                            @changing="onSpeechRateChange"
+                                            @change="onSpeechRateChange" />
+                                        <view class="flex justify-between px-[4rpx]">
+                                            <text
+                                                v-for="label in SPEECH_RATE_LABELS"
+                                                :key="label"
+                                                class="text-[20rpx] text-[#9CA3AF]">
+                                                {{ label }}
+                                            </text>
+                                        </view>
+                                    </template>
+                                </template>
+
                                 <view class="flex items-center gap-[8rpx] mt-[28rpx] mb-[14rpx]">
                                     <text class="text-[24rpx] font-bold text-[#374151]">结尾引导语</text>
                                     <text class="text-[20rpx] text-[#D1D5DB]">选填</text>
@@ -764,12 +1088,24 @@
             </view>
         </template>
     </popup-bottom>
+
+    <!-- 模板样片：封面只看得出配色，看完样片再决定用不用（确认即选中该模板）。
+         必须放在 popup-bottom 外面：u-popup 打开态带 transform，嵌在里面会让样片弹窗的
+         position:fixed 相对面板定位（遮罩只盖住面板、内容位置错位） -->
+    <video-preview
+        v-model="showTemplatePreview"
+        title="模板样片"
+        confirm-btn-text="使用该模板"
+        :video-url="previewTemplate?.demo_url || ''"
+        :poster="previewTemplate?.cover_url || ''"
+        @confirm="pickPreviewedTemplate" />
 </template>
 
 <script setup lang="ts">
 import {
     getHotspotAvatars,
     getHotspotClipMaterials,
+    getHotspotGenerationOptions,
     hotspotAnalyze,
     hotspotResearch,
     hotspotScript,
@@ -777,8 +1113,21 @@ import {
     getHotspotInsight,
     getHotspotLastFlow,
 } from "@/api/hotspot";
-import { HotspotPlatform, HotspotVideoType, platformLabel, type HotspotOptionsData } from "@/ai_modules/hotspot/enums";
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import {
+    HOTSPOT_MUSIC_SOURCE_OPTIONS,
+    HOTSPOT_MUSIC_VOLUME_DEFAULT,
+    HOTSPOT_ORIGIN_VOICE_ID,
+    HOTSPOT_PERSONA_MODE_OPTIONS,
+    HOTSPOT_SPEECH_RATE_DEFAULT,
+    HotspotMusicSource,
+    HotspotPersonaMode,
+    HotspotPlatform,
+    HotspotVideoType,
+    platformLabel,
+    type HotspotOptionsData,
+} from "@/ai_modules/hotspot/enums";
+import { montageConfig } from "@/enums/montageEnums";
+import useUpload from "@/hooks/useUpload";
 import IconDigitalBlue from "@/ai_modules/hotspot/static/icons/video_digital_blue.svg";
 import IconClipsBlue from "@/ai_modules/hotspot/static/icons/video_clips_blue.svg";
 
@@ -790,7 +1139,7 @@ interface HotTopic {
     heat_text?: string;
     days_on_board?: number;
     rank_diff?: number;
-    /** 后端按分析记录标记，已分析的热点可从服务端还原上次现场 */
+    /** 后端按分析记录或已建任务标记，已分析的热点可从服务端还原上次现场 */
     analyzed?: boolean;
 }
 
@@ -909,15 +1258,27 @@ const restoreFlowFromCache = (cached: Record<string, any>) => {
         if (cached.opt && typeof cached.opt === "object") {
             Object.assign(opt, cached.opt, {
                 materials: Array.isArray(cached.opt.materials) ? [...cached.opt.materials] : [],
+                // 旧版本缓存没有这几个字段，缺省回落人设模式，避免 undefined 让模式判断失效
+                persona_mode: Number(cached.opt.persona_mode) || HotspotPersonaMode.PERSONA,
+                voice_id: Number(cached.opt.voice_id) || 0,
+                voice: String(cached.opt.voice || ""),
+                music_volume: normalizeMusicVolume(cached.opt.music_volume),
+                speech_rate: normalizeSpeechRate(cached.opt.speech_rate),
+                clip_template_id: String(cached.opt.clip_template_id || ""),
+                music_url: String(cached.opt.music_url || ""),
+                music_source: Number(cached.opt.music_source) || HotspotMusicSource.SYSTEM,
+                music_name: String(cached.opt.music_name || ""),
             });
         }
     });
     fromCache.value = true;
     cachedAt.value = Number(cached.savedAt || 0);
     // 还原到第三步（已分析、未生成文案）时同样默认展开高级设置
-    showAdv.value = !!analysis.value && !script.value;
-    if (personaId.value) {
-        // 资产列表要重新拉，但保留缓存里的形象/素材选择
+    showAdv.value = stepReady.value && !script.value;
+    if (isManualMode.value) {
+        // 资产列表要重新拉，但保留缓存里的形象/音色选择
+        loadManualAssets(true);
+    } else if (personaId.value) {
         loadPersonaAssets(personaId.value, true);
     }
 };
@@ -953,6 +1314,14 @@ const restoreFlowFromServer = (data: Record<string, any>): boolean => {
             Object.assign(opt, options, {
                 materials: Array.isArray(options.materials) ? options.materials.map(Number) : [],
                 avatar_id: Number(options.avatar_id) || 0,
+                voice_id: Number(options.voice_id) || 0,
+                persona_mode: Number(options.persona_mode) || HotspotPersonaMode.PERSONA,
+                music_volume: normalizeMusicVolume(options.music_volume),
+                speech_rate: normalizeSpeechRate(options.speech_rate),
+                clip_template_id: String(options.clip_template_id || ""),
+                music_url: String(options.music_url || ""),
+                music_source: Number(options.music_source) || HotspotMusicSource.SYSTEM,
+                music_name: String(options.music_name || ""),
             });
         }
         if (scriptText) {
@@ -970,8 +1339,10 @@ const restoreFlowFromServer = (data: Record<string, any>): boolean => {
     fromCache.value = true;
     const createdTs = Date.parse(String(data.created_at || "").replace(/-/g, "/"));
     cachedAt.value = Number.isFinite(createdTs) ? createdTs : 0;
-    showAdv.value = !!analysis.value && !script.value;
-    if (personaId.value) {
+    showAdv.value = stepReady.value && !script.value;
+    if (isManualMode.value) {
+        loadManualAssets(true);
+    } else if (personaId.value) {
         loadPersonaAssets(personaId.value, true);
     }
     saveFlowSnapshot();
@@ -1008,13 +1379,23 @@ const cachedAt = ref(0);
 
 const MATERIAL_PAGE_SIZE = 30;
 
-const avatarList = ref<{ id: number; name: string; img: string }[]>([]);
+// origin_voice_* 只有「不选人设」的自选形象才带，人设形象列表没有这两个字段
+const avatarList = ref<
+    {
+        id: number;
+        name: string;
+        img: string;
+        origin_voice_available?: boolean;
+        origin_voice_preview_url?: string;
+    }[]
+>([]);
 const avatarLoading = ref(false);
 /** 素材总时长限制（秒），与混剪模块同一配置：视频按实际时长、图片按固定秒数/张 */
 const MATERIAL_DURATION_LIMIT = Number(montageConfig.materialTotalDuration) * 60;
 
 /** material_type：1=视频 2=图片（与后端 Material::MATERIAL_TYPE_* 一致） */
-const materialList = ref<{ id: number; name: string; img: string; material_type: number; duration: number }[]>([]);
+type ClipMaterial = { id: number; name: string; img: string; material_type: number; duration: number };
+const materialList = ref<ClipMaterial[]>([]);
 const materialLoading = ref(false);
 const materialLoadingMore = ref(false);
 const materialPage = ref(1);
@@ -1023,6 +1404,7 @@ const materialFinished = ref(false);
 const opt = reactive({
     goal: "traffic",
     direction: "观点输出",
+    persona_mode: HotspotPersonaMode.PERSONA as number,
     material_mode: "ai_persona",
     duration_sec: 60,
     product: "",
@@ -1030,8 +1412,194 @@ const opt = reactive({
     video_type: HotspotVideoType.DIGITAL as string,
     avatar: "",
     avatar_id: 0,
+    voice: "",
+    voice_id: 0,
+    music_volume: HOTSPOT_MUSIC_VOLUME_DEFAULT,
+    speech_rate: HOTSPOT_SPEECH_RATE_DEFAULT,
+    clip_template_id: "",
+    music_url: "",
+    // 来源与曲名一并进 opt：只存 music_url 的话，「选了自传但还没传」和「要系统随机」
+    // 两种状态回到页面时长得一模一样，曲名也会丢
+    music_source: HotspotMusicSource.SYSTEM as number,
+    music_name: "",
     materials: [] as number[],
 });
+
+/** 不选人设：跳过人设契合分析，形象/音色自选，素材固定 AI 找素材（与爆款复刻洗稿模式一致） */
+const isManualMode = computed(() => opt.persona_mode === HotspotPersonaMode.MANUAL);
+
+const personaModeOptions = HOTSPOT_PERSONA_MODE_OPTIONS;
+
+type HotspotVoice = {
+    id: number;
+    name: string;
+    preview_url: string;
+    provider: string;
+    speech_rate_supported?: boolean;
+};
+type HotspotClipTemplate = { id: string; name: string; cover_url: string; demo_url?: string };
+
+/** 不选人设时可自选的音色（形象共用 avatarList，两套模式渲染一致） */
+const voiceList = ref<HotspotVoice[]>([]);
+const clipTemplateMap = ref<Record<string, HotspotClipTemplate[]>>({});
+const manualAssetLoading = ref(false);
+
+/** 形象加载态两套模式各一个来源，模板统一用这个判断 */
+const assetLoading = computed(() => (isManualMode.value ? manualAssetLoading.value : avatarLoading.value));
+
+/** 音量/语速：与人设合成配置同口径（音量 0~1、语速 0.5~2，均保留一位小数）
+ *  滑块用 uni 原生 slider（整数刻度：音量 0~10、语速 5~20），不用 u-slider */
+const MUSIC_VOLUME_LABELS = ["静音", "较轻", "适中", "较响", "最大"] as const;
+const SPEECH_RATE_LABELS = ["0.5x", "较慢", "标准", "较快", "2x"] as const;
+const roundToOne = (value: number): number => Math.round(value * 10) / 10;
+const normalizeMusicVolume = (value: unknown): number => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return HOTSPOT_MUSIC_VOLUME_DEFAULT;
+    return Math.min(1, Math.max(0, roundToOne(num)));
+};
+const normalizeSpeechRate = (value: unknown): number => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return HOTSPOT_SPEECH_RATE_DEFAULT;
+    return Math.min(2, Math.max(0.5, roundToOne(num)));
+};
+const musicVolumeStep = computed(() => Math.round(opt.music_volume * 10));
+const speechRateStep = computed(() => Math.round(opt.speech_rate * 10));
+const musicVolumeText = computed(() =>
+    opt.music_volume <= 0 ? "静音" : `${Math.round(opt.music_volume * 100)}%`,
+);
+const onMusicVolumeChange = (e: any) => {
+    opt.music_volume = normalizeMusicVolume(Number(e?.detail?.value ?? 0) / 10);
+};
+const onSpeechRateChange = (e: any) => {
+    opt.speech_rate = normalizeSpeechRate(Number(e?.detail?.value ?? 10) / 10);
+};
+
+/** 形象原音跟着所选形象走：只有数字人口播、且该形象克隆时出了原音才给这个选项
+ *  （与爆款复刻洗稿模式同口径，音色库里没有这条记录，后端按形象解析 speakerId） */
+const selectedManualAvatar = computed(() => avatarList.value.find((a: any) => a.id === opt.avatar_id));
+const originVoiceOption = computed<HotspotVoice | null>(() => {
+    if (!isManualMode.value || opt.video_type !== HotspotVideoType.DIGITAL) return null;
+    const avatar: any = selectedManualAvatar.value;
+    if (!avatar?.origin_voice_available) return null;
+    const avatarName = String(avatar.name || "").trim();
+    return {
+        id: HOTSPOT_ORIGIN_VOICE_ID,
+        name: avatarName ? `形象原音·${avatarName}` : "形象原音",
+        provider: "shanjian",
+        speech_rate_supported: true,
+        preview_url: String(avatar.origin_voice_preview_url || ""),
+    };
+});
+const voiceOptions = computed<HotspotVoice[]>(() =>
+    originVoiceOption.value ? [originVoiceOption.value, ...voiceList.value] : voiceList.value,
+);
+
+/** MiniMax 音色走预渲染音频（audioUrl），闪剪只对 speakerId 路径认 speedRatio，
+ *  所以这类音色下语速调了也不生效，直接不给调，免得用户以为设上了 */
+const speechRateDisabled = computed(() => {
+    const voice = voiceOptions.value.find((v) => v.id === opt.voice_id);
+    if (!voice) return false;
+    return voice.speech_rate_supported === false || voice.provider === "minimax";
+});
+
+/** 换形象或换视频类型后原音可能已不可选，清掉选中态，避免提交一个后端会拒的音色 */
+watch([() => opt.avatar_id, () => opt.video_type], () => {
+    if (opt.voice_id !== HOTSPOT_ORIGIN_VOICE_ID || originVoiceOption.value) return;
+    // 形象列表还没到手时不能判死：还原现场是「opt 先落地、资产后到」，
+    // 这一刻 originVoiceOption 恒为 null，照清会把还原出来的「形象原音」误清掉。
+    // 资产回来后 loadManualAssets 会按 voiceOptions 再核一次，真失效那次才清。
+    if (!avatarList.value.length) return;
+    opt.voice_id = 0;
+    opt.voice = "";
+});
+
+/** 没有克隆音色时别让用户以为只能去声音克隆——先选形象就能用原音 */
+const voiceEmptyTip = computed(() =>
+    opt.video_type === HotspotVideoType.DIGITAL && !opt.avatar_id
+        ? "请先选择上方形象，可直接使用该形象的原音"
+        : "暂无可用音色，请先在「声音克隆」中创建音色",
+);
+
+/** 音色可能很多，先展示一屏、点了才继续放（与爆款洗稿选型组件同口径） */
+const VOICE_PAGE_SIZE = 5;
+const voiceShowCount = ref(VOICE_PAGE_SIZE);
+const visibleVoices = computed(() => voiceOptions.value.slice(0, voiceShowCount.value));
+const hasMoreVoices = computed(() => voiceOptions.value.length > voiceShowCount.value);
+
+/** 剪辑模板：按视频类型取候选，空 id = 自动随机（不指定模板，每次生成随机挑一个风格） */
+const clipTemplates = computed<HotspotClipTemplate[]>(() => clipTemplateMap.value[opt.video_type] || []);
+const pickClipTemplate = (id: string) => {
+    opt.clip_template_id = opt.clip_template_id === id ? "" : id;
+};
+/** 样片预览：播放键只在有样片时才渲染，这里再兜一层，别弹出一个空播放器 */
+const showTemplatePreview = ref(false);
+const previewTemplate = ref<HotspotClipTemplate | null>(null);
+const previewClipTemplate = (template: HotspotClipTemplate) => {
+    if (!template.demo_url) {
+        pickClipTemplate(template.id);
+        return;
+    }
+    previewTemplate.value = template;
+    showTemplatePreview.value = true;
+};
+const pickPreviewedTemplate = () => {
+    if (previewTemplate.value) opt.clip_template_id = previewTemplate.value.id;
+};
+// 换视频类型后模板场景变了，旧选择不再适用
+watch(
+    () => opt.video_type,
+    () => {
+        if (opt.clip_template_id && !clipTemplates.value.some((t) => t.id === opt.clip_template_id)) {
+            opt.clip_template_id = "";
+        }
+    },
+);
+
+/** 背景音乐：系统随机 / 上传我的音乐，来源与曲名都存在 opt 里，跟着现场一起还原 */
+const { uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    count: 1,
+    fileAccept: ["mp3", "wav", "m4a", "aac"],
+    fileSize: 20,
+    onSuccess: (materials: any[]) => {
+        const item = materials?.[0];
+        if (!item?.url) return;
+        opt.music_url = item.url;
+        opt.music_name = String(item.name || "").trim() || "已上传音乐";
+        opt.music_source = HotspotMusicSource.UPLOAD;
+        saveFlowSnapshot();
+    },
+});
+const pickMusicSource = (val: number) => {
+    if (opt.music_source === val) return;
+    opt.music_source = val;
+    // 切回系统随机就丢弃已传的曲子，避免提交时两个状态打架
+    if (val === HotspotMusicSource.SYSTEM) {
+        opt.music_url = "";
+        opt.music_name = "";
+    }
+    saveFlowSnapshot();
+};
+const handleUploadMusic = async () => {
+    await uploadAndProcessFiles("file");
+    // 通用 useUpload 的失败提示被注释掉了，这里自己兜一下
+    const failed = uploadMaterialList.value.find((i: any) => i.status === "fail");
+    if (failed && !opt.music_url) uni.$u.toast("音乐上传失败，请重试");
+};
+/** 还原现场后把音乐来源纠正回实际状态：有曲子必是自传；老缓存没有这两个字段时按 url 兜底 */
+const syncMusicSourceFromOpt = () => {
+    if (opt.music_url) {
+        opt.music_source = HotspotMusicSource.UPLOAD;
+        if (!opt.music_name) opt.music_name = "已上传音乐";
+        return;
+    }
+    if (opt.music_source !== HotspotMusicSource.UPLOAD) {
+        opt.music_source = HotspotMusicSource.SYSTEM;
+        opt.music_name = "";
+    }
+};
+
+/** 契合分析只属于人设模式；不选人设时第 3 步只等搜索完成即可配置 */
+const stepReady = computed(() => (isManualMode.value ? !!research.value : !!analysis.value));
 
 const videoTypeOptions = computed(() => [
     {
@@ -1146,6 +1714,9 @@ const resetFlow = () => {
     fromCache.value = false;
     cachedAt.value = 0;
     avatarList.value = [];
+    voiceList.value = [];
+    voiceShowCount.value = VOICE_PAGE_SIZE;
+    manualAssetLoading.value = false;
     materialList.value = [];
     materialLoadingMore.value = false;
     materialPage.value = 1;
@@ -1153,6 +1724,7 @@ const resetFlow = () => {
     Object.assign(opt, {
         goal: "traffic",
         direction: "观点输出",
+        persona_mode: HotspotPersonaMode.PERSONA,
         material_mode: "ai_persona",
         duration_sec: 60,
         product: "",
@@ -1160,8 +1732,18 @@ const resetFlow = () => {
         video_type: HotspotVideoType.DIGITAL,
         avatar: "",
         avatar_id: 0,
+        voice: "",
+        voice_id: 0,
+        music_volume: HOTSPOT_MUSIC_VOLUME_DEFAULT,
+        speech_rate: HOTSPOT_SPEECH_RATE_DEFAULT,
+        clip_template_id: "",
+        music_url: "",
+        music_source: HotspotMusicSource.SYSTEM,
+        music_name: "",
         materials: [],
     });
+    clipTemplateMap.value = {};
+    syncMusicSourceFromOpt();
 };
 
 const runResearch = async () => {
@@ -1210,8 +1792,126 @@ const loadInsight = async () => {
     }
 };
 
+/** 切换人设模式：两套模式的形象来源与素材规则完全不同，切换即清掉上一套的选择与分析结果 */
+const switchPersonaMode = (mode: number) => {
+    if (opt.persona_mode === mode || analyzing.value) return;
+    opt.persona_mode = mode;
+    personaId.value = null;
+    analysis.value = null;
+    analyzeErr.value = "";
+    script.value = null;
+    scriptErr.value = "";
+    scriptBusy.value = false;
+    editedScript.value = "";
+    syncedCta = "";
+    avatarList.value = [];
+    voiceList.value = [];
+    voiceShowCount.value = VOICE_PAGE_SIZE;
+    materialList.value = [];
+    materialPage.value = 1;
+    materialFinished.value = false;
+    materialLoadingMore.value = false;
+    opt.avatar = "";
+    opt.avatar_id = 0;
+    opt.voice = "";
+    opt.voice_id = 0;
+    opt.music_volume = HOTSPOT_MUSIC_VOLUME_DEFAULT;
+    opt.speech_rate = HOTSPOT_SPEECH_RATE_DEFAULT;
+    opt.clip_template_id = "";
+    opt.music_url = "";
+    opt.music_source = HotspotMusicSource.SYSTEM;
+    opt.music_name = "";
+    opt.materials = [];
+    syncMusicSourceFromOpt();
+    if (mode === HotspotPersonaMode.MANUAL) {
+        // 无人设归属的本地素材库查不到，素材来源只能是纯 AI 找素材（与后端 normalizeOptions 同口径）
+        opt.material_mode = "ai";
+        showAdv.value = true;
+        loadManualAssets();
+    } else {
+        opt.material_mode = "ai_persona";
+        showAdv.value = false;
+    }
+    saveFlowSnapshot();
+};
+
+/** 拉取不选人设模式下的自选形象与音色（用户自有数字人 + 自有克隆音色）
+ *  preserveSelection：还原缓存/服务端现场时保留已选，仅在已失效时清掉 */
+const loadManualAssets = async (preserveSelection = false) => {
+    const token = flowToken;
+    if (!preserveSelection) {
+        opt.avatar = "";
+        opt.avatar_id = 0;
+        opt.voice = "";
+        opt.voice_id = 0;
+    }
+    manualAssetLoading.value = true;
+    voiceShowCount.value = VOICE_PAGE_SIZE;
+    try {
+        const res = await getHotspotGenerationOptions();
+        if (token !== flowToken) return;
+        avatarList.value = Array.isArray(res?.avatars) ? res.avatars : [];
+        voiceList.value = Array.isArray(res?.voices) ? res.voices : [];
+        clipTemplateMap.value = res?.clip_templates && typeof res.clip_templates === "object"
+            ? res.clip_templates
+            : {};
+        if (preserveSelection) {
+            // 缓存里选的形象/音色已被删除时清掉，避免带失效 id 提交
+            if (opt.avatar_id && !avatarList.value.some((a) => a.id === opt.avatar_id)) {
+                opt.avatar_id = 0;
+                opt.avatar = "";
+            }
+            // 形象原音不在音色库里，按 voiceOptions 找（形象已失效时上面的 watch 会清掉它）
+            const voiceIndex = opt.voice_id ? voiceOptions.value.findIndex((v) => v.id === opt.voice_id) : -1;
+            if (opt.voice_id && voiceIndex < 0) {
+                opt.voice_id = 0;
+                opt.voice = "";
+            } else if (voiceIndex >= 0) {
+                if (voiceIndex >= voiceShowCount.value) {
+                    // 已选音色排在折叠范围外会看不见，补足展示条数
+                    voiceShowCount.value = voiceIndex + 1;
+                }
+                // 还原出来的组合可能是「MiniMax 音色 + 非默认语速」，该链路语速不生效，复位免得显示一个假值
+                if (voiceOptions.value[voiceIndex]?.provider === "minimax") {
+                    opt.speech_rate = HOTSPOT_SPEECH_RATE_DEFAULT;
+                }
+            }
+            // 模板可能已下架，留着提交后端也会回落自动随机，这里先对齐显示
+            if (opt.clip_template_id && !clipTemplates.value.some((t) => t.id === opt.clip_template_id)) {
+                opt.clip_template_id = "";
+            }
+            syncMusicSourceFromOpt();
+        }
+    } catch {
+        if (token !== flowToken) return;
+        avatarList.value = [];
+        voiceList.value = [];
+        clipTemplateMap.value = {};
+    } finally {
+        if (token === flowToken) manualAssetLoading.value = false;
+    }
+};
+
+const pickVoice = (voice: { id: number; name: string; provider?: string }) => {
+    if (opt.voice_id === voice.id) {
+        opt.voice_id = 0;
+        opt.voice = "";
+        return;
+    }
+    opt.voice_id = voice.id;
+    opt.voice = voice.name;
+    // 改选 MiniMax 音色时把语速复位：该链路下发的是预渲染音频，留着非默认值只会让详情页显示一个没生效的数
+    if (voice.provider === "minimax") opt.speech_rate = HOTSPOT_SPEECH_RATE_DEFAULT;
+};
+
 const pickPersona = async (id: number) => {
     if (analyzing.value || !props.topic || !research.value) return;
+    // 会员到期冻结的人设还列在选择页里，但口播文案链路取不到它的画像。
+    // 不在这里拦住，用户要一直走到第 4 步才看到报错
+    if (props.personas.find((item) => item.id === id)?.enabled === false) {
+        uni.$u.toast("该人设已冻结，恢复会员权益后可继续使用");
+        return;
+    }
     const token = flowToken;
     personaId.value = id;
     analysis.value = null;
@@ -1276,7 +1976,41 @@ const loadPersonaAssets = async (id: number, preserveSelection = false) => {
         if (token === flowToken && personaId.value === id) avatarLoading.value = false;
     }
     await fetchMaterialPage(id, 1);
+    if (preserveSelection && token === flowToken && personaId.value === id) {
+        await syncRestoredMaterials(id, token);
+    }
     if (token === flowToken && personaId.value === id) materialLoading.value = false;
+};
+
+/** 合并去重并保持接口的 id 倒序：回捞进来的已选素材与后续分页会有交集，重复项会撞 :key */
+const mergeMaterials = (base: ClipMaterial[], rows: ClipMaterial[]): ClipMaterial[] => {
+    const seen = new Set(base.map((row) => Number(row.id)));
+    return [...base, ...rows.filter((row) => !seen.has(Number(row.id)))].sort(
+        (a, b) => Number(b.id) - Number(a.id),
+    );
+};
+
+/** 还原出来的已选素材可能已被删除或禁用，人设换了素材模式后也不再可选：
+ *  这些 id 不在当前列表里，用户看不见也取消不掉，提交时会被后端整单打回。
+ *  按 id 回捞一次，失效的剔掉、仍可用但不在首页的补进列表，让「已选」等于真能提交的那些 */
+const syncRestoredMaterials = async (id: number, token: number) => {
+    const selected = [...opt.materials];
+    if (!selected.length) return;
+    try {
+        const list = await getHotspotClipMaterials({ persona_id: id, ids: selected.join(",") });
+        if (token !== flowToken || personaId.value !== id) return;
+        const rows = Array.isArray(list) ? list : [];
+        const usable = new Set(rows.map((row: ClipMaterial) => Number(row.id)));
+        // 后端若还没带 ids 过滤（前端先发版），返回的是第一页全量，据此剪已选会误删；
+        // 出现没请求过的 id 就认定这次回捞不可信，放弃核对
+        const requested = new Set(selected.map(Number));
+        if ([...usable].some((materialId) => !requested.has(materialId))) return;
+        opt.materials = selected.filter((materialId) => usable.has(Number(materialId)));
+        materialList.value = mergeMaterials(materialList.value, rows);
+        saveFlowSnapshot();
+    } catch {
+        // 回捞失败不动已选，交给创建时的后端校验兜底
+    }
 };
 
 /** 素材分页：接口不返回总数，按「返回条数 < 页大小」判定到底 */
@@ -1290,7 +2024,7 @@ const fetchMaterialPage = async (id: number, pageNo: number) => {
         });
         if (token !== flowToken || personaId.value !== id) return;
         const rows = Array.isArray(list) ? list : [];
-        materialList.value = pageNo === 1 ? rows : [...materialList.value, ...rows];
+        materialList.value = pageNo === 1 ? rows : mergeMaterials(materialList.value, rows);
         materialPage.value = pageNo;
         materialFinished.value = rows.length < MATERIAL_PAGE_SIZE;
     } catch {
@@ -1352,6 +2086,7 @@ const toggleMaterial = (id: number) => {
 const buildOptions = () => ({
     goal: opt.goal,
     direction: opt.direction,
+    persona_mode: opt.persona_mode,
     material_mode: opt.material_mode,
     duration_sec: opt.duration_sec,
     product: opt.product.trim(),
@@ -1359,8 +2094,20 @@ const buildOptions = () => ({
     video_type: opt.video_type,
     avatar: opt.avatar,
     avatar_id: opt.avatar_id,
+    voice: opt.voice,
+    voice_id: opt.voice_id,
+    music_volume: opt.music_volume,
+    speech_rate: opt.speech_rate,
+    // 剪辑模板与自选背景音乐只在「不选人设」下有效，人设模式跟随人设合成配置
+    clip_template_id: isManualMode.value ? opt.clip_template_id : "",
+    music_url: isManualMode.value ? opt.music_url : "",
+    music_source: isManualMode.value ? opt.music_source : HotspotMusicSource.SYSTEM,
+    music_name: isManualMode.value ? opt.music_name : "",
     materials: submittedMaterials.value,
 });
+
+/** 提交给后端的人设字段：不选人设时必须留空，否则后端会按人设模式解析形象/音色 */
+const buildPersonaPayload = () => (isManualMode.value || !personaId.value ? {} : { id: personaId.value });
 
 /** 只快照影响文案内容的设置：视频类型/形象/素材/素材来源只决定画面，
  *  且形象/素材会被资产异步回填改动，纳入快照会误报「设置已变更」白丢已扣费的文案 */
@@ -1369,6 +2116,8 @@ const scriptAffectingOptions = () => {
     return JSON.stringify({
         goal: options.goal,
         direction: options.direction,
+        // 人设模式决定口播是否带人设口吻，属于影响文案内容的设置
+        persona_mode: options.persona_mode,
         duration_sec: options.duration_sec,
         product: options.product,
         cta: options.cta,
@@ -1376,7 +2125,8 @@ const scriptAffectingOptions = () => {
 };
 
 const runScript = async () => {
-    if (scriptBusy.value || !props.topic || !research.value || !personaId.value) return;
+    if (scriptBusy.value || !props.topic || !research.value) return;
+    if (!isManualMode.value && !personaId.value) return;
     const token = flowToken;
     // 快照发起时的人设与设置：生成期间用户换人设/改设置时，过期响应直接丢弃，
     // 避免旧口吻/旧时长的文案挂到新选择上被提交
@@ -1392,7 +2142,7 @@ const runScript = async () => {
             platform: props.topic.platform,
             core_points: research.value.core_points || [],
             summary: research.value.summary || "",
-            persona: { id: personaId.value },
+            persona: buildPersonaPayload(),
             analysis: analysis.value || {},
             options: buildOptions(),
         });
@@ -1416,9 +2166,23 @@ const runScript = async () => {
 
 /** 生成视频前的硬性校验（与后端 assertCreateOptions 同口径） */
 /** 混剪素材必选：纯人设素材（数字人口播/素材混剪均需用户提供）；「AI+人设素材」需用户提供人设素材 */
-const materialRequired = computed(() => opt.material_mode === "ai_persona" || opt.material_mode === "persona");
+const materialRequired = computed(
+    () => !isManualMode.value && (opt.material_mode === "ai_persona" || opt.material_mode === "persona"),
+);
 
 const videoGate = computed(() => {
+    if (isManualMode.value) {
+        // 不选人设：形象与音色互不捆绑，各自单独必选（与后端 assertCreateOptions 同口径）
+        if (opt.video_type === HotspotVideoType.DIGITAL && !opt.avatar_id) {
+            return "请先选择数字人形象";
+        }
+        if (!opt.voice_id) return "请先选择音色";
+        // 选了自传音乐却没传：默默按系统音乐出片等于把用户的选择吞了（与后端 assertCreateOptions 同口径）
+        if (opt.music_source === HotspotMusicSource.UPLOAD && !opt.music_url) {
+            return "请先上传背景音乐";
+        }
+        return "";
+    }
     if (opt.video_type === HotspotVideoType.DIGITAL && !opt.avatar_id && !opt.avatar) {
         return "请先选择数字人形象";
     }
@@ -1442,9 +2206,11 @@ const mainBtn = computed(() => {
     // gate=true：必填项未操作，按钮灰显但可点，点击展开高级设置并提示
     if (researchErr.value) return { text: "重试搜索", disabled: false, cost: "" };
     if (!research.value) return { text: "搜索中…", disabled: true, cost: "" };
-    if (analyzing.value) return { text: "分析中…", disabled: true, cost: "" };
-    if (!personaId.value) return { text: "请先选择人设", disabled: true, cost: "" };
-    if (analyzeErr.value) return { text: "重试分析", disabled: false, cost: "" };
+    if (!isManualMode.value) {
+        if (analyzing.value) return { text: "分析中…", disabled: true, cost: "" };
+        if (!personaId.value) return { text: "请先选择人设", disabled: true, cost: "" };
+        if (analyzeErr.value) return { text: "重试分析", disabled: false, cost: "" };
+    }
     if (script.value) {
         // 重新生成期间禁止用旧文案去生成视频，避免新文案回来前提交
         if (scriptBusy.value) return { text: "口播文案重新生成中…", disabled: true, cost: "" };
@@ -1472,7 +2238,7 @@ const handleMainAction = () => {
         loadInsight();
         return;
     }
-    if (analyzeErr.value && personaId.value) {
+    if (!isManualMode.value && analyzeErr.value && personaId.value) {
         pickPersona(personaId.value);
         return;
     }
@@ -1489,7 +2255,8 @@ const handleMainAction = () => {
 };
 
 const startVideo = async () => {
-    if (creating.value || !props.topic || !script.value || !personaId.value) return;
+    if (creating.value || !props.topic || !script.value) return;
+    if (!isManualMode.value && !personaId.value) return;
     const finalScript = editedScript.value.trim();
     if (!finalScript) {
         uni.$u.toast("口播文案不能为空");
@@ -1504,12 +2271,15 @@ const startVideo = async () => {
             script: finalScript,
             hashtags: script.value.hashtags || [],
             shots: script.value.shots || [],
-            persona: { id: personaId.value },
+            persona: buildPersonaPayload(),
             core_points: research.value?.core_points || [],
             citations: research.value?.citations || [],
             analysis: analysis.value || {},
             options: buildOptions(),
         });
+        // 不选人设没有结合分析这一步，落库的「做过」标记来自任务本身，
+        // 这里补一次让热榜条目立刻点亮「已分析」，不必等整榜刷新
+        if (props.topic) emit("analyzed", props.topic);
         // 用户在创建期间关掉了面板：仅刷新队列，不再强制跳转详情页
         const stillOpen = props.modelValue;
         emit("created", task || {}, stillOpen);

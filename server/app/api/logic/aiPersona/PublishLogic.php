@@ -45,6 +45,10 @@ class PublishLogic extends BasePersonaLogic
     private const SHANJIAN_PERSONA_PUBLISH_LOCK_TTL = 600;
     private const SHANJIAN_PERSONA_PUBLISH_STALE_SECONDS = 1800;
     private const SHANJIAN_PUBLISH_DEADLOCK_MAX_RETRIES = 3;
+    // 单轮设备遍历的时间预算(秒)。整个 PublishDetailCron 受 php-fpm request_terminate_timeout(600) 限制，
+    // 这里留出余量给后续 5 个步骤；到点即停并保存游标，下一轮从断点继续。
+    private const SHANJIAN_PERSONA_PUBLISH_ROUND_BUDGET = 300;
+    private const SHANJIAN_PERSONA_PUBLISH_CURSOR_TTL = 86400;
 
     private static function getContentPublishKeywords(AiPersona $persona, string $defaultKeywords, int $platform = AiPersona::PUBLISH_PLATFORM_XHS): string
     {
@@ -690,24 +694,28 @@ class PublishLogic extends BasePersonaLogic
 
             foreach ($matchedSchedules as $sjKey => $schedule) {
                 $window = self::resolveScheduleWindow($schedule);
-                $st = strtotime($date . ' ' . $window['start_time'] . ':00');
-                $et = strtotime($date . ' ' . $window['end_time'] . ':00');
-
                 $platforms = self::normalizeShanjianPublishPlatforms($window['platform']);
-                if (empty($platforms) || $st === false || $et === false || $et <= $st) {
+                $slots = AutoTaskSceneScheduleSyncService::splitPlatformSlots(
+                    $date,
+                    $window['start_time'],
+                    $window['end_time'],
+                    $platforms
+                );
+                if (empty($slots)) {
                     \think\facade\Log::channel('auto')->write($device->device_code . ' 内容发布时间段平台配置为空，跳过该时段 persona_id=' . $device->persona_id . ' schedule_id=' . ($schedule->id ?? 0), 'create');
                     continue;
                 }
-                $interval = ($et - $st) / count($platforms);
-                $sort = array_column($platforms, 'order');
-                array_multisort($sort, SORT_ASC, $platforms);
                 $execTime = $window['time_range'];
                 if(!isset($medias[$sjKey])){
                     continue;
                 }
                 $media = $medias[$sjKey];
                 $slotCreated = 0;
-                foreach ($platforms as $index => $platform) {
+                foreach ($slots as $slot) {
+                    $platform = $slot['platform'];
+                    $index = (int)$slot['index'];
+                    $startTime = (int)$slot['start_time'];
+                    $endTime = (int)$slot['end_time'];
                     if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
                         DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH,
                         (int)($platform['account_type'] ?? 0),
@@ -716,8 +724,6 @@ class PublishLogic extends BasePersonaLogic
                     )) {
                         continue;
                     }
-                    $startTime = $st + $index * $interval;
-                    $endTime = $startTime + $interval;
                     $account =  SvAccount::field('id,account,type,nickname,avatar')->where('type', $platform['account_type'])->where('user_id', $device->user_id)->where('device_code', $device->device_code)->findOrEmpty();
                     if ($account->isEmpty()) {
                         continue;
@@ -1616,7 +1622,7 @@ class PublishLogic extends BasePersonaLogic
     }
 
     /**
-     * 发布排期有效窗：剥离已关平台后按每平台 10 分钟锁定结束时间。
+     * 发布排期有效窗：剥离已关平台后按节点原始窗均分；内容发布不锁定结束时间。
      *
      * @param object|array $schedule
      * @return array{scene:int,start_time:string,end_time:string,time_range:string,platform:array}
@@ -1657,15 +1663,22 @@ class PublishLogic extends BasePersonaLogic
         $schedules = self::getAutoSchedule($persona, 5);
         foreach ($schedules as $schedule) {
             $window = self::resolveScheduleWindow($schedule);
-            $st = strtotime($day . ' ' . $window['start_time'] . ':00');
-            $et = strtotime($day . ' ' . $window['end_time'] . ':00');
             $platforms = self::normalizeShanjianPublishPlatforms($window['platform']);
-            if (empty($platforms) || $st === false || $et === false || $et <= $st) {
+            $slots = AutoTaskSceneScheduleSyncService::splitPlatformSlots(
+                $day,
+                $window['start_time'],
+                $window['end_time'],
+                $platforms
+            );
+            if (empty($slots)) {
                 continue;
             }
 
-            $interval = ($et - $st) / count($platforms);
-            foreach ($platforms as $index => $platformItem) {
+            foreach ($slots as $slot) {
+                $platformItem = $slot['platform'];
+                $index = (int)$slot['index'];
+                $startTime = (int)$slot['start_time'];
+                $endTime = (int)$slot['end_time'];
                 if ((int)$platformItem['account_type'] !== $platform) {
                     continue;
                 }
@@ -1677,8 +1690,6 @@ class PublishLogic extends BasePersonaLogic
                 )) {
                     continue;
                 }
-                $startTime = (int)($st + $index * $interval);
-                $endTime = (int)($startTime + $interval);
                 $account = SvAccount::field('id,account,type,nickname,avatar')
                     ->where('type', $platform)
                     ->where('user_id', $device->user_id)
@@ -1774,6 +1785,10 @@ class PublishLogic extends BasePersonaLogic
         try {
             $maxDay = date('Y-m-d', time());
 
+            // 陈旧占用回收放在设备遍历之前：遍历会因单轮时间预算提前中断，
+            // 放在末尾会长期执行不到，导致被中断流程占用的素材迟迟回不到可用状态。
+            self::recoverStaleShanjianPublishMedia();
+
             $devices = SvDevice::alias('d')
                 ->field('d.device_code,d.auto_type,d.status,d.user_id,ap.persona_type,d.persona_id,ap.publish_mode')
                 ->join('ai_persona ap', 'ap.id = d.persona_id')
@@ -1794,7 +1809,34 @@ class PublishLogic extends BasePersonaLogic
                 //->limit(10)
                 ->select();
             //print_r(Db::getLastSql());die;
-            foreach ($devices as $device) {
+            $deviceList = [];
+            foreach ($devices as $deviceRow) {
+                $deviceList[] = $deviceRow;
+            }
+            $total = count($deviceList);
+            if ($total === 0) {
+                return true;
+            }
+
+            // 游标轮转：从上轮停下的设备之后接着跑，走到队尾再绕回队首，
+            // 保证一轮之内每台最多处理一次，且队列后段不会因为轮次总是从头开始而被饿死。
+            $cursorKey = self::getShanjianPersonaPublishCursorKey($maxDay);
+            $startIndex = self::resolveShanjianPersonaPublishStartIndex($cursorKey, $deviceList);
+
+            $deadline = time() + self::SHANJIAN_PERSONA_PUBLISH_ROUND_BUDGET;
+            $processed = 0;
+            $firstCode = '';
+            $lastCode = '';
+            $budgetReached = false;
+
+            for ($offset = 0; $offset < $total; $offset++) {
+                if (time() >= $deadline) {
+                    $budgetReached = true;
+                    break;
+                }
+
+                $device = $deviceList[($startIndex + $offset) % $total];
+
                 $videos = ShanjianVideoTask::field('id,device_code, video_setting_id,pic, msg, video_result_url, status,persona_id, remark')
                     ->where('auto_type', 1)
                     ->where('wechat_type', 0)
@@ -1807,13 +1849,35 @@ class PublishLogic extends BasePersonaLogic
                     ->where('create_time', 'between', [strtotime($maxDay . ' 00:00:00'), strtotime($maxDay . ' 23:59:59')])
                     ->order('id', 'asc')
                     ->select();
-                if (!$videos->isEmpty()) {
-
-                    self::runCreateShanjianPublish($videos, $device, $maxDay);
+                if ($videos->isEmpty()) {
+                    continue;
                 }
+
+                // 先落游标再干活：本轮若被 php-fpm 超时杀掉，下一轮从这台之后继续，
+                // 避免每轮都卡在同一台慢设备上原地打转。
+                self::saveShanjianPersonaPublishCursor($cursorKey, (string)$device->device_code);
+
+                if ($firstCode === '') {
+                    $firstCode = (string)$device->device_code;
+                }
+                $lastCode = (string)$device->device_code;
+                $processed++;
+
+                self::runCreateShanjianPublish($videos, $device, $maxDay);
             }
 
-            self::recoverStaleShanjianPublishMedia();
+            \think\facade\Log::channel('auto')->write(
+                '闪剪人设发布轮次结束：' . json_encode([
+                    '队列设备数' => $total,
+                    '起始位次' => $startIndex + 1,
+                    '本轮处理设备数' => $processed,
+                    '起始设备' => $firstCode,
+                    '结束设备' => $lastCode,
+                    '结束原因' => $budgetReached ? '达到单轮时间预算' : '已遍历完整队列',
+                    '单轮预算秒' => self::SHANJIAN_PERSONA_PUBLISH_ROUND_BUDGET,
+                ], JSON_UNESCAPED_UNICODE),
+                'create'
+            );
 
             return true;
         } catch (\Throwable $th) {
@@ -2555,6 +2619,56 @@ class PublishLogic extends BasePersonaLogic
         }
     }
 
+    private static function getShanjianPersonaPublishCursorKey(string $date): string
+    {
+        return 'shanjian_persona_publish:cursor:' . $date;
+    }
+
+    /**
+     * 解析本轮起始位次：上轮游标指向的设备之后一台；游标缺失或设备已掉出队列时从头开始。
+     */
+    private static function resolveShanjianPersonaPublishStartIndex(string $cursorKey, array $deviceList): int
+    {
+        $total = count($deviceList);
+        if ($total === 0) {
+            return 0;
+        }
+
+        try {
+            $redis = Cache::store('redis')->handler();
+            $last = (string)$redis->get($cursorKey);
+        } catch (\Throwable $th) {
+            \think\facade\Log::channel('auto')->write('闪剪人设发布游标读取失败：' . $th->getMessage(), 'create');
+            return 0;
+        }
+
+        if ($last === '') {
+            return 0;
+        }
+
+        foreach ($deviceList as $index => $device) {
+            if ((string)$device->device_code === $last) {
+                return ($index + 1) % $total;
+            }
+        }
+
+        return 0;
+    }
+
+    private static function saveShanjianPersonaPublishCursor(string $cursorKey, string $deviceCode): void
+    {
+        if ($cursorKey === '' || $deviceCode === '') {
+            return;
+        }
+
+        try {
+            $redis = Cache::store('redis')->handler();
+            $redis->setex($cursorKey, self::SHANJIAN_PERSONA_PUBLISH_CURSOR_TTL, $deviceCode);
+        } catch (\Throwable $th) {
+            \think\facade\Log::channel('auto')->write('闪剪人设发布游标写入失败：' . $th->getMessage(), 'create');
+        }
+    }
+
     private static function getShanjianPersonaPublishLockKey(SvDevice $device, string $date): string
     {
         return 'shanjian_persona_publish:' . $date . ':' . $device->user_id . ':' . $device->device_code . ':' . $device->persona_id;
@@ -2847,9 +2961,13 @@ class PublishLogic extends BasePersonaLogic
 
     private static function getAvailableShanjianPublishAccounts(SvDevice $device, array $platforms, int $st, int $et): array
     {
-        $interval = ($et - $st) / count($platforms);
+        $slots = AutoTaskSceneScheduleSyncService::splitPlatformSlotsByTimestamp($st, $et, $platforms);
         $accounts = [];
-        foreach ($platforms as $index => $platform) {
+        foreach ($slots as $slot) {
+            $platform = $slot['platform'];
+            $index = (int)$slot['index'];
+            $startTime = (int)$slot['start_time'];
+            $endTime = (int)$slot['end_time'];
             if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
                 DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH,
                 (int)($platform['account_type'] ?? 0),
@@ -2858,8 +2976,6 @@ class PublishLogic extends BasePersonaLogic
             )) {
                 continue;
             }
-            $startTime = (int)($st + $index * $interval);
-            $endTime = (int)($startTime + $interval);
             $account = SvAccount::field('id,account,type,nickname,avatar')
                 ->where('type', $platform['account_type'])
                 ->where('user_id', $device->user_id)

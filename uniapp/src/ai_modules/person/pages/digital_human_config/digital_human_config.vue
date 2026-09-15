@@ -90,8 +90,17 @@
                             <view
                                 class="relative w-full aspect-[3/4] rounded-[24rpx] overflow-hidden bg-[#F4F5F7] border border-solid border-[#000000]/5">
                                 <image :src="item.pic" class="w-full aspect-[3/4]" mode="aspectFill" />
+                                <!-- 冻结/失效的绑定照常列出来，标清楚，别让用户以为形象自己没了 -->
                                 <view
-                                    class="absolute top-2 right-2 w-[44rpx] h-[44rpx] rounded-full bg-[#000000]/30 flex items-center justify-center border border-[#ffffff]/20"
+                                    v-if="item.available === false"
+                                    class="absolute inset-0 bg-[#0B172A]/45 flex items-center justify-center">
+                                    <text
+                                        class="px-[20rpx] py-[8rpx] rounded-full bg-[#0B172A]/70 text-[22rpx] text-white font-bold">
+                                        不可用
+                                    </text>
+                                </view>
+                                <view
+                                    class="absolute top-2 right-2 w-[44rpx] h-[44rpx] rounded-full bg-[#000000]/30 flex items-center justify-center border border-[#ffffff]/20 z-10"
                                     @click.stop="handleRemoveAvatar(item)">
                                     <u-icon name="close" color="#ffffff" size="20" />
                                 </view>
@@ -110,7 +119,20 @@
                                 {{ item.name }}
                             </text>
 
+                            <text
+                                v-if="item.available === false"
+                                class="text-[22rpx] leading-[1.5] text-[#CC7A00] text-center px-1">
+                                {{ item.unavailable_reason }}
+                            </text>
+                            <!-- 形象本身被冻结/失效时换什么声音都救不回来，收掉入口；
+                                 只是音色坏了的要留着，换一个可用音色就能恢复 -->
                             <view
+                                v-if="item.anchor_available === false"
+                                class="flex items-center justify-center gap-[6rpx] rounded-[16rpx] py-[10rpx] border border-solid bg-[#F3F4F6] border-[#E5E7EB]">
+                                <text class="text-[22rpx] font-medium truncate text-[#9AA6B6]">暂不可绑定</text>
+                            </view>
+                            <view
+                                v-else
                                 class="flex items-center justify-center gap-[6rpx] rounded-[16rpx] py-[10rpx] border border-solid bg-[#EBF3FF] border-[#C5D9FF]"
                                 @click="handleOpenVoiceForAvatar(item)">
                                 <text class="text-[22rpx] font-medium truncate text-primary">
@@ -163,6 +185,12 @@
                             </view>
                             <view class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                                 <text class="text-[32rpx] font-extrabold text-[#1A1A1A] truncate">{{ item.name }}</text>
+                                <!-- 冻结/失效的绑定照常列出来，标清楚，别让用户以为音色自己没了 -->
+                                <text
+                                    v-if="item.available === false"
+                                    class="text-[22rpx] leading-[1.5] text-[#CC7A00]">
+                                    {{ item.unavailable_reason }}
+                                </text>
                             </view>
 
                             <view class="flex items-center gap-2">
@@ -360,8 +388,15 @@ const handleChooseAnchor = async (res: AvatarItem[]): Promise<void> => {
         uni.showToast({ title: "保存成功", icon: "none", duration: 3000 });
         getAvatarList();
     } catch (error: any) {
+        // 服务端会说清是哪一个形象、为什么加不进来（冻结 / 未克隆完），
+        // 这种解释性文案塞 toast 会被截断，用弹窗保证看得全
         uni.hideLoading();
-        uni.showToast({ title: error, icon: "none", duration: 3000 });
+        uni.showModal({
+            title: "形象没能加入",
+            content: String(error || "保存失败，请重试"),
+            showCancel: false,
+            confirmText: "知道了",
+        });
     }
 };
 
@@ -407,10 +442,10 @@ const handleBindOriginalVoice = async (item: AvatarItem): Promise<void> => {
             voice_id: 0,
             is_original_voice: 1,
         });
-        item.is_original_voice = 1;
-        item.voice_id = "";
-        item.voice_name = "";
         uni.showToast({ title: "原音绑定成功", icon: "none", duration: 2000 });
+        // 换绑之后这个形象可能从「不可用」变回可用（原来只是音色被冻结），
+        // 就地改几个字段看不出这个变化，必须重拉列表让 available 重新算
+        await getAvatarList();
     } catch (error: any) {
         uni.showToast({ title: error ?? "绑定失败，请重试", icon: "none", duration: 3000 });
     } finally {
@@ -432,11 +467,10 @@ const handleAvatarVoiceSelect = async (res: VoiceItem[]): Promise<void> => {
             voice_id: selected.id,
             is_original_voice: 0,
         });
-        target.is_original_voice = 0;
-        target.voice_id = selected.id;
-        target.voice_name = selected.name;
         uni.hideLoading();
         uni.showToast({ title: "音色绑定成功", icon: "none", duration: 2000 });
+        // 同上：绑上可用音色后这个形象就能用了，列表要重拉才看得到
+        await getAvatarList();
     } catch (error: any) {
         uni.hideLoading();
         uni.showToast({ title: error ?? "绑定失败，请重试", icon: "none", duration: 3000 });

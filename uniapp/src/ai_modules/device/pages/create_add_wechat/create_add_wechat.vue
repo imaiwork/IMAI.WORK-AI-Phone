@@ -50,7 +50,7 @@
                                     @click="handleDeleteTask(index)">
                                     <u-icon name="close" size="18" color="#ffffff" />
                                 </view>
-                                <clue-card :data="item" :type="item.file_type" />
+                                <clue-card :data="item" :type="item.file_type" :source="item.source" />
                             </view>
                         </view>
                     </scroll-view>
@@ -344,7 +344,7 @@ import { getPublishAccountList } from "@/api/device";
 import { useAppStore } from "@/stores/app";
 import { useDictOptions } from "@/hooks/useDictOptions";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
-import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import { ListenerTypeEnum, ClueSourceEnum } from "@/ai_modules/device/enums";
 import Steps from "@/ai_modules/device/components/steps/steps.vue";
 import ClueCard from "@/ai_modules/device/components/clue-card/clue-card.vue";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
@@ -427,10 +427,12 @@ onLoad(() => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.WECHAT_CLUE) {
             if (data && data.length > 0) {
-                if (formData.source === 1) {
+                const nextSource = data[0].source ?? ClueSourceEnum.AUTO_CLUE;
+                // 一条加微任务只带一个 source，换来源就把上一批清掉，避免混选后只提交其中一种
+                if (formData.source !== nextSource) {
                     taskList.value = [];
                     formData.fileurl = "";
-                    formData.source = 2;
+                    formData.source = nextSource;
                 }
                 taskList.value = taskList.value.concat(data);
             }

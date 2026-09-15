@@ -7,9 +7,7 @@
                 <div class="team-entry__aside-inner">
                     <span class="team-entry__eyebrow">企业协作</span>
                     <h1 class="team-entry__title">团队模式</h1>
-                    <p class="team-entry__lead">
-                        把算力、成员与品牌收拢到一个企业空间，用自己的域名和小程序对外获客。
-                    </p>
+                    <p class="team-entry__lead">把算力、成员与品牌收拢到一个企业空间，用自己的域名和小程序对外获客。</p>
                     <ul class="team-entry__points">
                         <li v-for="item in points" :key="item">
                             <span class="team-entry__check" aria-hidden="true">
@@ -56,7 +54,7 @@
                         size="large"
                         maxlength="30"
                         clearable
-                        placeholder="例如：星云科技"
+                        placeholder="例如：请输入团队名称"
                         @keyup.enter="onCreate" />
                     <ElButton
                         type="primary"
@@ -237,10 +235,7 @@ const points = ["成员席位与算力划拨", "独立域名与站点品牌", "�
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    transition:
-        background 180ms ease,
-        color 180ms ease,
-        box-shadow 180ms ease;
+    transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
 
     &.active {
         background: #fff;

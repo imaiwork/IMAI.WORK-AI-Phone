@@ -16,9 +16,10 @@ use app\common\model\sv\SvPrivateMessage;
 use app\common\model\sv\SvReplyStrategy;
 use app\common\model\sv\SvRobotKeyword;
 use app\common\model\sv\SvWechatStrategy;
-use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\sv\GroupTriggerKeywordMatcher;
+use app\common\service\sv\SvSphClueDedupService;
 use app\common\service\sv\XhsPrivateMessageAiChatService;
 use app\common\service\sv\XhsPrivateMessageReplyAllocator;
 use app\common\service\sv\XhsPrivateMessageWriteGuard;
@@ -1030,56 +1031,50 @@ class MessageHandler extends BaseMessageHandler
                             if (empty($match)) {
                                 continue;
                             }
-                            $userWechatNo = $match[0];
+                            $userWechatNo = trim((string)$match[0]);
                             $this->setLog($userWechatNo, 'msg');
 
-                            if (in_array(strtolower($userWechatNo), $blacklist)) {
+                            if ($userWechatNo === '' || in_array(strtolower($userWechatNo), $blacklist)) {
                                 $this->setLog('忽略字符串', 'msg');
                                 continue;
                             }
 
-                            $currentTime = time(); // 获取当前时间戳
-                            $coolingThreshold = $currentTime - 7200; // 2小时前的时间戳（7200秒）
-                            $wechat = AiWechat::field('*')
-                                ->where('user_id', $strategy['user_id'])
-                                ->where('wechat_id', 'in', explode(',', $strategy['wechat_id']))
-                                ->where(function ($query) use ($coolingThreshold) {
-                                    $query->where('is_cooling', 0)
-                                        ->whereOr('cooling_time', '<', $coolingThreshold);
-                                })
-                                ->order('update_time asc')->limit(1)->findOrEmpty();
-                            $this->setLog(Db::getLastSql(), 'msg');
-                            $record = [
-                                'user_id' => $account['user_id'],
-                                'device_code' => $account['device_code'],
-                                'channel' => (int)$account['type'] === 1 ? 2 : $account['type'],
-                                'account' => $account['account'],
-                                'account_type'  => $account['type'],
-                                'user_account' => $payload['replyName'],
-                                'original_message' => $content,
-                                'reg_wechat' => $userWechatNo,
-                                'action' => 1,
-                                'status' => 2,
-                                'task_id' => time() . rand(100, 9999),
-                                'create_time' => time()
-                            ];
-                            if (!$wechat->isEmpty()) {
-                                $this->setLog($wechat, 'msg');
-                                $record['wechat_no'] = $wechat['wechat_id'];
-                                $record['wechat_name'] = $wechat['wechat_nickname'];
-                                $record['status'] = 2;
-                                $this->setLog($record, 'msg');
+                            $userId = (int)$account['user_id'];
+                            $addLockValue = SvSphClueDedupService::claimAddWechatContact($userId, $userWechatNo);
+                            if ($addLockValue === null) {
+                                $this->setLog($userWechatNo . '该账号已有加微记录,忽略', 'msg');
+                                continue;
+                            }
 
-                                $this->sendChannelMessage([
-                                    'WechatId' => $wechat['wechat_id'],
-                                    'DeviceCode' => $wechat['device_code'],
-                                    'Phones' => $userWechatNo,
-                                    'message' => $strategy['remark'],
-                                ], $wechat, $record);
-                            } else {
-                                $record['status'] = 3;
-                                $record['result'] = '当前账号存在安全风险，暂停添加';
+                            try {
+                                $record = [
+                                    'user_id' => $userId,
+                                    'device_code' => $account['device_code'],
+                                    'channel' => (int)$account['type'] === 1 ? 2 : $account['type'],
+                                    'account' => $account['account'],
+                                    'account_type' => $account['type'],
+                                    'user_account' => $payload['replyName'],
+                                    'original_message' => $content,
+                                    'reg_wechat' => $userWechatNo,
+                                    'wechat_no' => $accountWechat->account,
+                                    'wechat_name' => $accountWechat->nickname,
+                                    'action' => 1,
+                                    'status' => 4,
+                                    'result' => '待执行添加好友',
+                                    'task_id' => time() . rand(100, 9999),
+                                    'create_time' => time(),
+                                ];
+                                $this->setLog($record, 'msg');
                                 SvAddWechatRecord::create($record);
+                                AiWechatLog::create([
+                                    'user_id' => $userId,
+                                    'wechat_id' => $accountWechat->account,
+                                    'friend_id' => $userWechatNo,
+                                    'log_type' => AiWechatLog::TYPE_ACCEPT_FRIEND,
+                                    'create_time' => time(),
+                                ]);
+                            } finally {
+                                SvSphClueDedupService::releaseAddWechatContact($userId, $userWechatNo, $addLockValue);
                             }
                         }
                     }
@@ -1102,62 +1097,6 @@ class MessageHandler extends BaseMessageHandler
         }
 
         return [false, []];
-    }
-
-    private function sendChannelMessage(array $payload, AiWechat $wechat, array $insertData)
-    {
-        try {
-            $record = SvAddWechatRecord::create($insertData);
-            //进程通信
-            $message = [
-                'DeviceId' => $payload['DeviceCode'],
-                'WeChatId' => $payload['WechatId'],
-                'Phones' => [$payload['Phones']],
-                'Message' => $payload['message'],
-                'TaskId' => $insertData['task_id'],
-                'Remark' => $payload['Remark'] ?? '',
-            ];
-
-            $this->setLog($message, 'msg');
-            $addNum = 0;
-            if ($addNum <= 20) {
-                $content = \app\common\workerman\wechat\handlers\client\AddFriendsTaskHandler::handle($message);
-                $message = new \Jubo\JuLiao\IM\Wx\Proto\TransportMessage();
-                $message->setMsgType($content['MsgType']);
-                $any = new \Google\Protobuf\Any();
-                $any->pack($content['Content']);
-                $message->setContent($any);
-                $pushMessage = $message->serializeToString();
-
-                $channel = "socket.{$payload['DeviceCode']}.message";
-                $this->setLog('channel: ' . $channel, 'msg');
-
-                \Channel\Client::connect('127.0.0.1', env('WORKERMAN.CHANNEL_PROT', 2206));
-                \Channel\Client::publish($channel, [
-                    'data' => is_array($pushMessage) ? json_encode($pushMessage) : $pushMessage
-                ]);
-                //$wechat->add_num += 1;
-                $wechat->is_cooling = 0;
-                $wechat->cooling_time = 0;
-                $wechat->update_time = time();
-                $wechat->save();
-
-                AiWechatLog::create([
-                    'user_id' => $wechat->user_id,
-                    'wechat_id' => $wechat->wechat_id,
-                    'log_type' => 0,
-                    'friend_id' => $payload['Phones'],
-                    'create_time' => time()
-                ]);
-            } else {
-                $record->status = 0;
-                $record->result = '检测当天添加好友超过阈值';
-                $record->save();
-                $this->setLog('当前微信号加好友超限', 'msg');
-            }
-        } catch (\Throwable $e) {
-            $this->setLog('异常信息' . $e, 'msg');
-        }
     }
 
     /**
@@ -2331,16 +2270,7 @@ LUA;
      */
     private function matchGroupKeywords(array $contents, array $keywords): int
     {
-        $text = implode('', $contents);
-        if ($text === '' || empty($keywords)) {
-            return 0;
-        }
-        foreach ($keywords as $kw) {
-            if ($this->isGroupKeywordMatched($text, (string)$kw)) {
-                return 1;
-            }
-        }
-        return 0;
+        return GroupTriggerKeywordMatcher::match($contents, $keywords);
     }
 
     /**
@@ -2348,19 +2278,7 @@ LUA;
      */
     private function isGroupKeywordMatched(string $text, string $keyword): bool
     {
-        $text = trim($text);
-        $keyword = trim($keyword);
-        if ($text === '' || $keyword === '') {
-            return false;
-        }
-
-        foreach ($this->splitGroupKeywordParts($keyword) as $part) {
-            if (mb_stripos($text, $part) !== false || mb_stripos($part, $text) !== false) {
-                return true;
-            }
-        }
-
-        return false;
+        return GroupTriggerKeywordMatcher::isMatched($text, $keyword);
     }
 
     /**
@@ -2369,18 +2287,7 @@ LUA;
      */
     private function splitGroupKeywordParts(string $keyword): array
     {
-        $keyword = trim(str_replace('；', ';', $keyword));
-        if ($keyword === '') {
-            return [];
-        }
-
-        $parts = preg_split('/[，,、；;\s]+/u', $keyword, -1, PREG_SPLIT_NO_EMPTY);
-        if (!is_array($parts)) {
-            return [$keyword];
-        }
-
-        $parts = array_values(array_unique(array_filter(array_map('trim', $parts), 'strlen')));
-        return $parts ?: [$keyword];
+        return GroupTriggerKeywordMatcher::splitParts($keyword);
     }
 
     private function getReplyFiles(array $contents): array

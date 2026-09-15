@@ -1,0 +1,1 @@
+"use strict";const e=require("../../../../common/vendor.js"),o=e.defineComponent({__name:"skeleton-block",props:{w:{default:"100%"},h:{default:"24rpx"},radius:{default:"8rpx"}},setup:e=>(o,t)=>({a:e.w,b:e.h,c:e.radius})}),t=e._export_sfc(o,[["__scopeId","data-v-250fcdc9"]]);wx.createComponent(t);

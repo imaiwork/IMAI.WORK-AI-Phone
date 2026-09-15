@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\common\traits;
 
+use app\common\enum\ChatEnum;
 use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\model\ChatPrompt;
@@ -402,7 +403,7 @@ trait SphTaskTrait
 
             $request = [
                 'stream' => false,
-                'model' => 'gpt-4o',
+                'model' => ChatEnum::DEFAULT_CHAT_MODEL_ALIAS,
                 'messages' => [
                     ['role' => 'system', 'content' => $keyword],
                     [

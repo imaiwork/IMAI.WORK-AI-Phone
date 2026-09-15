@@ -1,26 +1,30 @@
 <template>
-    <view class="bg-white rounded-t-[48rpx] pt-[18rpx] pb-[28rpx] px-[32rpx]">
-        <view class="w-[80rpx] h-[8rpx] rounded-full bg-[#E5E7EB] mx-auto mb-[28rpx]"></view>
-        <view class="flex items-center gap-[20rpx]">
-            <view
-                v-if="customer"
-                class="w-[80rpx] h-[80rpx] rounded-[24rpx] flex items-center justify-center shrink-0 overflow-hidden"
-                :class="customer.avatarClass">
-                <image v-if="customer.avatar" :src="customer.avatar" class="w-full h-full" mode="aspectFill"></image>
-                <text v-else class="text-white text-[18rpx] font-bold text-center leading-tight">
-                    {{ avatarText }}
-                </text>
-            </view>
+    <view class="popup-header">
+        <view class="w-[64rpx] h-[8rpx] rounded-full bg-[#DCE3EB] mx-auto mb-[12rpx]"></view>
+        <view class="flex items-center gap-[16rpx]">
             <view class="flex-1 min-w-0">
-                <text class="text-sm font-bold text-[#111827] block">{{ title }}</text>
-                <text class="text-[22rpx] text-[#9CA3AF] mt-[4rpx] block line-clamp-1">
+                <text class="text-[34rpx] font-semibold leading-snug text-[#1E293B] block">{{
+                    title
+                }}</text>
+                <text
+                    v-if="subtitleText"
+                    class="text-[24rpx] leading-relaxed text-[#617087] mt-[8rpx] block break-all"
+                >
                     {{ subtitleText }}
                 </text>
             </view>
             <view
-                class="w-[64rpx] h-[64rpx] rounded-full bg-[#F4F6FA] flex items-center justify-center"
-                @click.stop="emit('close')">
-                <u-icon name="close" color="#6B7280" size="26"></u-icon>
+                class="w-[88rpx] h-[88rpx] shrink-0 flex items-center justify-center"
+                hover-class="opacity-70"
+                role="button"
+                aria-label="关闭弹窗"
+                @click.stop="emit('close')"
+            >
+                <view
+                    class="w-[56rpx] h-[56rpx] rounded-full bg-[#F1F4F8] text-[#617087] flex items-center justify-center"
+                >
+                    <u-icon name="close" color="currentColor" size="28"></u-icon>
+                </view>
             </view>
         </view>
     </view>
@@ -28,27 +32,34 @@
 
 <script setup lang="ts">
 interface PopupCustomer {
-    name: string;
-    avatarClass: string;
-    avatar?: string;
+    name: string
+    avatarClass: string
+    avatar?: string
 }
 
 const props = withDefaults(
     defineProps<{
-        customer?: PopupCustomer | null;
-        title: string;
-        subtitle?: string;
+        customer?: PopupCustomer | null
+        title: string
+        subtitle?: string
     }>(),
     {
         customer: null,
-        subtitle: "",
-    },
-);
+        subtitle: ''
+    }
+)
 
 const emit = defineEmits<{
-    (event: "close"): void;
-}>();
+    (event: 'close'): void
+}>()
 
-const avatarText = computed(() => props.customer?.name.slice(0, 2) || "");
-const subtitleText = computed(() => props.subtitle || props.customer?.name || "");
+const subtitleText = computed(() =>
+    [props.customer?.name, props.subtitle].filter(Boolean).join(' · ')
+)
 </script>
+
+<style scoped lang="scss">
+.popup-header {
+    @apply bg-white rounded-t-[48rpx] pt-[16rpx] pb-[24rpx] pl-[32rpx] pr-[16rpx] border-[0] border-b-[2rpx] border-solid border-[#E7ECF2];
+}
+</style>

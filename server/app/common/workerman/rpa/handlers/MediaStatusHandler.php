@@ -15,6 +15,7 @@ use app\common\workerman\rpa\WorkerEnum;
 use app\common\enum\DeviceEnum;
 use app\common\model\sv\SvDeviceLog;
 use app\common\model\sv\SvDeviceTaskLog;
+use app\common\service\sv\PublishRemarkGuard;
 
 
 
@@ -32,11 +33,13 @@ class MediaStatusHandler extends BaseMessageHandler
             $this->publishPlatform = $content['publish_platform'] ?? 0;
 
             $mediaId = $content['material_id'] ?? 0;
-            $status = $content['status'] ?? 0;
+            $status = (int)($content['status'] ?? 0);
             $where = [];
             if ($this->publishPlatform === DeviceEnum::PUBLISH_PLATFORM_WX) {
                 $media = AiWechatCircleTask::where('id', $mediaId)->findOrEmpty();
-                if (!$media->isEmpty()) {
+                $wechatCurrent = $media->isEmpty() ? 0 : ((int)$media->send_status === 2 ? 1 : ((int)$media->send_status === 3 ? 2 : 0));
+                if (!$media->isEmpty() && in_array($status, [1, 2], true)
+                    && PublishRemarkGuard::shouldApplyRpaDetailStatus($status, $wechatCurrent, (string)$media->remark)) {
                     $media->send_status = $status === 1 ? 2 : 3;
                     $media->remark = 'RPA执行：' . ($content['msg'] ?? '发布失败');
                     $media->update_time = time();
@@ -52,9 +55,7 @@ class MediaStatusHandler extends BaseMessageHandler
             } else {
                 $media = SvPublishSettingDetail::where('id', $mediaId)->findOrEmpty();
                 if (!$media->isEmpty()) {
-                    // 服务端已写入算力不足等系统失败时, 禁止设备进度文案覆盖失败原因
-                    $protectRemark = $this->isProtectedFailureRemark((string)$media->remark);
-                    if (!$protectRemark) {
+                    if (PublishRemarkGuard::shouldApplyRpaDetailStatus($status, (int)$media->status, (string)$media->remark)) {
                         $media->status = $status;
                         $media->remark = 'RPA执行：' . ($content['msg'] ?? '');
                         $media->update_time = time();
@@ -90,8 +91,7 @@ class MediaStatusHandler extends BaseMessageHandler
                     3 => DeviceEnum::TASK_STATUS_RUNNING,
                 ];
 
-                $protectTaskRemark = $this->isProtectedFailureRemark((string)$task->remark);
-                if (!$protectTaskRemark) {
+                if (PublishRemarkGuard::shouldApplyRpaTaskStatus($status, (int)$task->status, (string)$task->remark)) {
                     $task->status = $maps[$status] ?? DeviceEnum::TASK_STATUS_RUNNING;
                     $task->remark = $content['msg'] ?? '';
                     $task->update_time = time();
@@ -151,14 +151,4 @@ class MediaStatusHandler extends BaseMessageHandler
         }
     }
 
-    /** 服务端系统失败原因, 不允许被设备进度文案覆盖 */
-    private function isProtectedFailureRemark(string $remark): bool
-    {
-        $remark = trim($remark);
-        if ($remark === '') {
-            return false;
-        }
-        return str_contains($remark, '算力不足')
-            || str_starts_with($remark, '任务执行失败');
-    }
 }

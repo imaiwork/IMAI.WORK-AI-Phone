@@ -60,6 +60,11 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
             }
         }
 
+        // 标题筛选（原标题/发布标题）
+        if (isset($this->params['title']) && $this->params['title'] !== '') {
+            $where[] = ['t.title|t.publish_title', 'like', '%' . $this->params['title'] . '%'];
+        }
+
         // 用户信息组合筛选（用户主键ID，用户sn，用户名）
         if (isset($this->params['keyword']) && $this->params['keyword'] !== '') {
             $userWhere = User::where(function ($query) {

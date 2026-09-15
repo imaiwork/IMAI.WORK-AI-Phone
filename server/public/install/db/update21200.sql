@@ -212,7 +212,7 @@ WHERE `type` = 'M'
 
 INSERT INTO `la_system_menu`
   (`pid`, `type`, `name`, `icon`, `sort`, `perms`, `paths`, `component`, `selected`, `params`, `is_cache`, `is_show`, `is_disable`, `create_time`, `update_time`)
-SELECT p.id, 'M', '团队管理', 'el-icon-OfficeBuilding', 50, '', 'team', '', '', '', 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+SELECT p.id, 'M', '团队管理', '', 50, '', 'team', '', '', '', 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
 FROM (
     SELECT id FROM `la_system_menu`
     WHERE `type` = 'M' AND (`name` = '营销管理' OR `id` = 438)
@@ -475,5 +475,6 @@ WHERE page.`type` = 'C' AND page.`component` = 'finance/oem_pricing/index'
       SELECT 1 FROM `la_system_menu` WHERE `perms` = 'oem.oem/saveOemPricing' AND `type` = 'A'
   )
 LIMIT 1;
+
 
 UPDATE `la_dev_crontab` SET    `expression` = '*/8 * * * *'   WHERE `command` = 'auto_video_synthesis';

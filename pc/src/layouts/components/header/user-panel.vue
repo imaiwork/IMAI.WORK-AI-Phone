@@ -126,6 +126,33 @@
             </div>
 
             <div class="p-3 space-y-1">
+                <router-link to="/user/profile" class="menu-item group">
+                    <div class="icon-box bg-slate-100 group-hover:bg-primary">
+                        <svg
+                            class="w-4 h-4 text-slate-500 group-hover:text-white transition-colors"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <span class="label">个人资料</span>
+                    <svg
+                        class="w-3.5 h-3.5 ml-auto text-slate-300 group-hover:text-primary group-hover:translate-x-0.5 transition-all"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M9 18l6-6-6-6"></path>
+                    </svg>
+                </router-link>
+
                 <router-link to="/creation" class="menu-item group">
                     <div class="icon-box bg-blue-50 group-hover:bg-primary">
                         <svg

@@ -38,14 +38,19 @@ class MusicLogic extends ApiLogic
             $music = Music::where('id', $params['id'])
                 ->where('source', 1)
                 ->where('source_id', self::$uid)
-                ->findOrEmpty()->toArray();
+                ->findOrEmpty();
             
-            if (!$music) {
+            if ($music->isEmpty()) {
                 self::setError('音乐不存在');
                 return false;
             }
-            Music::update($params);
-            self::$returnData = Music::where('id', $params['id'])->findOrEmpty()->toArray();
+            // 只允许改白名单字段，且走模型实例保存：防止 params 带 source / source_id 改归属或改到别人的行，
+            // 同时保留 setUrlAttr 去域名与 update_time 自动写入
+            $data = array_intersect_key($params, array_flip(['style', 'name', 'url', 'status', 'sort']));
+            if ($data) {
+                $music->save($data);
+            }
+            self::$returnData = Music::where('id', $music->id)->findOrEmpty()->toArray();
             return true;
         } catch (\Exception $e) {
             self::setError($e->getMessage());

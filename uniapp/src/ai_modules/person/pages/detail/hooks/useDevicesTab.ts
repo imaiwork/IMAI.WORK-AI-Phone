@@ -37,8 +37,8 @@ interface ChooseDeviceRef {
 }
 
 const STATUS_STYLE_MAP: Record<TaskStatusEnum, { dotColor: string; label: string }> = {
-    [TaskStatusEnum.OFFLINE]: { dotColor: "#FAAD14", label: "离线待机" },
-    [TaskStatusEnum.IDLE]: { dotColor: "#52C41A", label: "在线运行中" },
+    [TaskStatusEnum.OFFLINE]: { dotColor: "#FF9900", label: "离线待机" },
+    [TaskStatusEnum.IDLE]: { dotColor: "#19BE6B", label: "在线运行中" },
     [TaskStatusEnum.WORKING]: { dotColor: "#0065FB", label: "执行中" },
 };
 
@@ -47,13 +47,13 @@ const ONLINE_STATUS = [TaskStatusEnum.IDLE, TaskStatusEnum.WORKING];
 // 平台标签：按账号平台类型展示品牌色标签，与设备列表页保持一致
 const PLATFORM_STYLE_MAP: Record<string | number, { label: string; className: string }> = {
     [AppTypeEnum.DOUYIN]: { label: "抖音", className: "bg-[#000000] text-white" },
-    [AppTypeEnum.XHS]: { label: "小红书", className: "bg-[#EF4444] text-white" },
+    [AppTypeEnum.XHS]: { label: "小红书", className: "bg-[#FF2442] text-white" },
     [AppTypeEnum.WECHAT]: { label: "微信", className: "bg-[#22C55E] text-white" },
     [AppTypeEnum.KUAISHOU]: { label: "快手", className: "bg-[#F97316] text-white" },
-    sph: { label: "视频号", className: "bg-[#F3F4F6] text-[#6B7280]" },
+    sph: { label: "视频号", className: "bg-[#F2F3F5] text-[#999999]" },
 };
 
-const DEFAULT_PLATFORM_STYLE = { label: "平台账号", className: "bg-[#F3F4F6] text-[#6B7280]" };
+const DEFAULT_PLATFORM_STYLE = { label: "平台账号", className: "bg-[#F2F3F5] text-[#999999]" };
 
 export const useDevicesTab = (
     personId: Ref<string>,
@@ -158,7 +158,7 @@ export const useDevicesTab = (
         uni.showModal({
             title: "解除绑定",
             content: `确定要解除绑定「${device.device_name}」吗？`,
-            confirmColor: "#FF4D4F",
+            confirmColor: "#F56C6C",
             success: async ({ confirm }) => {
                 if (!confirm) return;
                 try {

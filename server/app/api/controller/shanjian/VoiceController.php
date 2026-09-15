@@ -6,6 +6,7 @@ use app\api\controller\BaseApiController;
 use app\api\lists\shanjian\VoiceLists;
 use app\api\logic\shanjian\VoiceLogic;
 use app\api\validate\shanjian\VoiceValidate;
+use app\common\service\CallbackTokenService;
 use app\common\service\MemberService;
 use think\exception\HttpResponseException;
 use think\facade\Log;
@@ -42,11 +43,21 @@ class VoiceController extends BaseApiController
     }
 
 
+    /**
+     * 异步接收闪剪音色回调（免登录，令牌鉴权见 CallbackTokenService::judge）。
+     */
     public function notify()
     {
         try {
             $data = $this->request->all();
-            Log::channel('shanjian')->write('接收闪剪音色合成参数'.json_encode($data,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            Log::channel('shanjian')->write('接收闪剪音色合成参数'.json_encode(CallbackTokenService::maskForLog($data),JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+            if (!CallbackTokenService::guard('shanjian', '闪剪音色', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
+
             $result = VoiceLogic::notify($data);
             if ($result) {
                 return $this->data(VoiceLogic::getReturnData());

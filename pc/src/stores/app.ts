@@ -67,6 +67,8 @@ export const useAppStore = defineStore("appStore", {
     getters: {
         getChatData: (state) => state.chatConfig || {},
         getWebsiteConfig: (state) => state.config.website || {},
+        /** 完善资料弹窗的选填项开关: store_name_open / certificate_image_open */
+        getUserProfileFields: (state) => state.config.user_profile_fields || {},
         /** 页脚备案：OEM 用品牌字段(空则不展示主站主体)；主站用平台 copyright */
         getCopyRightConfig: (state) => {
             const oem = state.oem || {};

@@ -12,6 +12,7 @@ use app\common\service\{ConfigService, FileService};
 use app\common\service\chat\ChatModelsService;
 use app\common\service\DigitalHumanModelConfigService;
 use app\common\service\UserDisplaySanitizer;
+use app\common\service\UserProfileConfigService;
 
 /**
  * 配置类逻辑层
@@ -72,6 +73,9 @@ class ConfigLogic
 
             // 用户注册方式配置(开放 / 邀请码 / 关闭 + 默认邀请来源)
             'register' => self::getRegisterConfig(),
+
+            // 注册资料填写项开关(所在门店 / 资质证书)
+            'user_profile_fields' => UserProfileConfigService::getConfig(),
 
             // banner
             'banner' => FileService::getFileUrl(ConfigService::get('website', 'banner')),
@@ -217,6 +221,13 @@ class ConfigLogic
             $params = [
                 'register_mode' => $mode,
                 'default_invite_source' => (string)($params['default_invite_source'] ?? ''),
+            ];
+        }
+
+        if ($type == 'user' && $name == 'profile_fields' && is_array($params)) {
+            $params = [
+                'store_name_open' => !empty($params['store_name_open']) ? 1 : 0,
+                'certificate_image_open' => !empty($params['certificate_image_open']) ? 1 : 0,
             ];
         }
 

@@ -255,7 +255,7 @@ import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
 import { voiceClone, shanjianVoiceClone, minimaxAudioUpload, minimaxVoiceClone } from "@/api/digital_human";
 import { useAudio } from "@/hooks/useAudio";
-import { useRecorder } from "@/hooks/useRecorder";
+import { useRecorder } from "@/ai_modules/digital_human/hooks/useMp3Recorder";
 import { formatAudioTime } from "@/utils/util";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";

@@ -9,7 +9,7 @@ use app\common\model\sv\SvAccount;
 use app\common\model\wechat\AiWechat;
 use app\api\logic\sv\MessageLogic;
 use think\facade\Db;
-
+use app\common\service\FileService;
 use app\common\model\kb\KbRobot;
 
 /**
@@ -20,6 +20,8 @@ use app\common\model\kb\KbRobot;
  */
 class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
 {
+    private ?array $mergedAccounts = null;
+
     public function setSearch(): array
     {
         return [
@@ -33,49 +35,55 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function lists(): array
     {
-        if ($this->userId > 0) {
-            $this->searchWhere[] = ['w.user_id', '=', $this->userId];
-        }
-        
+        return array_map(fn (array $item) => $this->formatAccount($item), $this->pagedAccounts());
+    }
 
-        $svAccount = SvAccount::alias('w')
-            ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
-                    s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model, "sv" as source')
-            ->join('sv_device d', 'd.device_code = w.device_code and d.user_id = w.user_id')
-            ->join('sv_setting s', 's.account = w.account and s.user_id = w.user_id')
-            ->where($this->searchWhere)
+    /**
+     * @notes 是否需要合并 ai_wechat 数据（该段按 user_id 过滤，未登录时并进来也是空集）
+     */
+    private function mergeWechat(): bool
+    {
+        return $this->userId > 0 && (int)$this->request->get('type', 0) === 1;
+    }
+
+    /**
+     * @notes 当前页账号
+     * 合并 ai_wechat 时必须先合并去重再分页：ai_wechat 段没有分页条件，逐页追加会让同一账号在第二页后重复出现
+     */
+    private function pagedAccounts(): array
+    {
+        if ($this->mergeWechat()) {
+            return array_slice($this->getMergedAccounts(), $this->limitOffset, $this->limitLength);
+        }
+
+        return $this->uniqueByTypeAccount(
+            $this->accountQuery()
+                ->order('w.id', 'desc')
+                ->limit($this->limitOffset, $this->limitLength)
+                ->group('w.type, w.account')
+                ->select()
+                ->toArray()
+        );
+    }
+
+    /**
+     * @notes sv_account 与 ai_wechat 合并去重后的全量账号（未分页）
+     */
+    private function getMergedAccounts(): array
+    {
+        if ($this->mergedAccounts !== null) {
+            return $this->mergedAccounts;
+        }
+
+        $svAccount = $this->accountQuery()
             ->order('w.id', 'desc')
-            ->limit($this->limitOffset, $this->limitLength)
             ->group('w.type, w.account')
             ->select()
-            ->each(function ($item) {
-                $item['device_name'] = is_null($item['device_name']) ? $item['device_model'] : $item['device_name'];
-                if (empty($item['takeover_mode'])) {
-                    $item['takeover_mode'] = 0;
-                }
-
-                if (empty($item['robot_id'])) {
-                    $item['robot_id'] = 0;
-                }
-
-                $item['robot_name'] = KbRobot::where('id', $item['robot_id'])->where('user_id', $this->userId)->value('name', '');
-
-                if (!empty($item['extra'])) {
-                    $extraArray = json_decode($item['extra'], true);
-                } else {
-                    $extraArray = [];
-                }
-                foreach ($extraArray  as $key => $v) {
-                    $item[$key] = $v;
-                }
-
-                return $item;
-            })
             ->toArray();
-        if((int)$this->request->get('type', 0) === 1){
-            $account = array_column($svAccount, 'account');
-            $wechatAccount = AiWechat::alias('w')
-            ->field('w.user_id,w.id,w.device_code,w.wechat_id as account,w.wechat_nickname as nickname,w.wechat_avatar as avatar,w.wechat_status as status,w.create_time, s.model, 
+
+        $account = array_column($svAccount, 'account');
+        $wechatAccount = AiWechat::alias('w')
+            ->field('w.user_id,w.id,w.device_code,w.wechat_id as account,w.wechat_nickname as nickname,w.wechat_avatar as avatar,w.wechat_status as status,w.create_time, s.model,
             s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type, s.robot_id, 1 as type, "wechat" as source')
             ->join('ai_wechat_setting s', 's.wechat_id = w.wechat_id')
             ->where('w.user_id', $this->userId)
@@ -84,25 +92,70 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
             ->order(['s.sort' => 'desc', 'w.id' => 'desc'])
             ->group('w.wechat_id')
             ->select()
-            ->each(function ($item) {
-                if (empty($item['takeover_mode'])) {
-                    $item['takeover_mode'] = 0;
-                }
-
-                if (empty($item['robot_id'])) {
-                    $item['robot_id'] = 0;
-                }
-
-                $item['robot_name'] = KbRobot::where('id', $item['robot_id'])->where('user_id', $this->userId)->value('name', '');
-
-                $item['wechat_status'] = 0;
-                
-            })
             ->toArray();
-            $svAccount = array_merge($svAccount, $wechatAccount);
+
+        return $this->mergedAccounts = $this->uniqueByTypeAccount(array_merge($svAccount, $wechatAccount));
+    }
+
+    /**
+     * @notes 补全展示字段，sv 与 wechat 两个来源的补全口径不同
+     */
+    private function formatAccount(array $item): array
+    {
+        if (empty($item['takeover_mode'])) {
+            $item['takeover_mode'] = 0;
         }
 
-        return $this->uniqueByTypeAccount($svAccount);
+        if (empty($item['robot_id'])) {
+            $item['robot_id'] = 0;
+        }
+
+        $item['robot_name'] = KbRobot::where('id', $item['robot_id'])->where('user_id', $this->userId)->value('name', '');
+
+        if (($item['source'] ?? '') === 'wechat') {
+            $item['wechat_status'] = 0;
+            return $item;
+        }
+
+        $item['device_name'] = is_null($item['device_name']) ? $item['device_model'] : $item['device_name'];
+
+        $extraArray = empty($item['extra']) ? [] : json_decode($item['extra'], true);
+        foreach ((array)$extraArray as $key => $v) {
+            $item[$key] = $v;
+        }
+        $item['avatar'] = FileService::getFileUrl($item['avatar']);
+
+        return $item;
+    }
+
+    /**
+     * 与设备详情对齐：当前用户名下的账号，或挂在当前用户设备上的账号。
+     * setting / device 用左连接，避免快手等账号缺 sv_setting 时被内连接滤掉。
+     */
+    private function accountQuery()
+    {
+        $query = SvAccount::alias('w')
+            ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
+                    s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model, "sv" as source')
+            ->leftJoin('sv_device d', 'd.device_code = w.device_code')
+            ->leftJoin('sv_setting s', 's.account = w.account and s.user_id = w.user_id')
+            ->where($this->searchWhere);
+
+        if ($this->userId > 0) {
+            $query->where(function ($q) {
+                $q->where('w.user_id', $this->userId)
+                    ->whereOr('d.user_id', $this->userId);
+            });
+        } else {
+            // 免登录只允许设备端按自己的 device_code 或指定 account 查，不给无条件全站拉取账号的口子
+            $deviceCode = trim((string)$this->request->get('device_code', ''));
+            $account = trim((string)$this->request->get('account', ''));
+            if ($deviceCode === '' && $account === '') {
+                $query->whereRaw('1=0');
+            }
+        }
+
+        return $query;
     }
 
     /**
@@ -130,13 +183,12 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function count(): int
     {
-        $this->searchWhere[] = ['w.user_id', '=', $this->userId];
-        return  SvAccount::alias('w')
-            ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
-                    s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id')
-            ->join('sv_device d', 'd.device_code = w.device_code', 'left')
-            ->join('sv_setting s', 's.account = w.account')
+        if ($this->mergeWechat()) {
+            return count($this->getMergedAccounts());
+        }
+
+        return $this->accountQuery()
             ->group('w.type, w.account')
-            ->where($this->searchWhere)->count();
+            ->count();
     }
 }

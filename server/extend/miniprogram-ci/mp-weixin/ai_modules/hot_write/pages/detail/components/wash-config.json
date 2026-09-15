@@ -2,6 +2,8 @@
   "component": true,
   "usingComponents": {
     "u-loading": "../../../../../uni_modules/vk-uview-ui/components/u-loading/u-loading",
-    "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon"
+    "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
+    "video-preview": "../../../../../components/video-preview/video-preview",
+    "upload-progress": "../../../../../components/upload-progress/upload-progress"
   }
 }

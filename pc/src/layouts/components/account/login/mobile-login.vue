@@ -250,6 +250,13 @@ const { lockFn: loginLock, isLock } = useLockFn(async () => {
         }
         userStore.login(data.token);
         await userStore.getUser();
+        // 手机号注册的新用户在这里补性别/所在门店/资质证书(全部选填);
+        // 微信扫码注册的资料在小程序端的完善资料弹窗收集,PC 不再重复弹
+        if (isRegister.value) {
+            userStore.showLogin = false;
+            userStore.showCompleteProfile = true;
+            return;
+        }
         window.location.reload();
     } catch (error) {
         feedback.msgError(error);

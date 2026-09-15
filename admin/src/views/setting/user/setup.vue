@@ -51,6 +51,11 @@
                         </el-radio>
                     </el-radio-group>
                 </el-form-item>
+                <el-form-item label="初始密码">
+                    <div class="form-tips">
+                        用户注册完成后，初始登录密码为当前站点域名（不含 http:// 或 https://，如：{{ siteDomain }}），请提醒用户登录后及时修改。
+                    </div>
+                </el-form-item>
                 <el-form-item label="默认邀请来源" v-if="[1, 2].includes(registerFormData.register_mode)">
                     <div class="invite-source-wrap">
                         <el-input
@@ -66,6 +71,39 @@
                         type="primary"
                         :loading="isRegisterLock"
                         @click="saveRegisterFormLock"
+                        >保存</el-button
+                    >
+                </el-form-item>
+            </el-form>
+        </el-card>
+
+        <el-card class="!border-none mt-4" shadow="never">
+            <div class="font-medium mb-7">注册资料填写项</div>
+            <el-form :model="profileFieldsFormData" label-width="120px">
+                <el-form-item label="所在门店">
+                    <div class="profile-field-wrap">
+                        <el-switch
+                            v-model="profileFieldsFormData.store_name_open"
+                            :active-value="1"
+                            :inactive-value="0" />
+                        <div class="form-tips">开启后，用户完善资料时可填写所在门店，选填。</div>
+                    </div>
+                </el-form-item>
+                <el-form-item label="资质证书">
+                    <div class="profile-field-wrap">
+                        <el-switch
+                            v-model="profileFieldsFormData.certificate_image_open"
+                            :active-value="1"
+                            :inactive-value="0" />
+                        <div class="form-tips">开启后，用户完善资料时可上传资质证书图片，选填。</div>
+                    </div>
+                </el-form-item>
+                <el-form-item>
+                    <el-button
+                        v-perms="['setting.user.user/setConfig']"
+                        type="primary"
+                        :loading="isProfileFieldsLock"
+                        @click="saveProfileFieldsFormLock"
                         >保存</el-button
                     >
                 </el-form-item>
@@ -128,6 +166,8 @@ const saveSurveyForm = async () => {
 const { lockFn: saveSurveyFormLock, isLock: isSurveyLock } = useLockFn(saveSurveyForm);
 
 // ─── 注册方式 ───────────────────────────────────────────
+// 后台与用户端同域部署,当前域名即用户注册后的初始密码(后端取注册请求的 host,不含协议与端口)
+const siteDomain = window.location.hostname;
 // 1=开放手机号 / 2=邀请码 / 3=手机号+邀请码 / 4=关闭
 const registerFormData = reactive<{ register_mode: number; default_invite_source: string }>({
     register_mode: 1,
@@ -154,6 +194,31 @@ const saveRegisterForm = async () => {
 };
 const { lockFn: saveRegisterFormLock, isLock: isRegisterLock } = useLockFn(saveRegisterForm);
 getRegisterConfig();
+
+// ─── 注册资料填写项 ─────────────────────────────────────
+// 性别始终收集(默认未知);所在门店、资质证书由这两个开关控制,三项都是选填
+const profileFieldsFormData = reactive({
+    store_name_open: 1,
+    certificate_image_open: 1,
+});
+
+const getProfileFieldsConfig = () => {
+    const fields = appStore.config?.user_profile_fields ?? {};
+    profileFieldsFormData.store_name_open = Number(fields.store_name_open ?? 1) ? 1 : 0;
+    profileFieldsFormData.certificate_image_open = Number(fields.certificate_image_open ?? 1) ? 1 : 0;
+};
+
+const saveProfileFieldsForm = async () => {
+    await saveConfig({
+        type: "user",
+        name: "profile_fields",
+        data: profileFieldsFormData,
+    });
+    await appStore.getConfig();
+    getProfileFieldsConfig();
+};
+const { lockFn: saveProfileFieldsFormLock, isLock: isProfileFieldsLock } = useLockFn(saveProfileFieldsForm);
+getProfileFieldsConfig();
 
 // 表单数据
 const formData = reactive({
@@ -246,6 +311,12 @@ getData();
     }
 }
 .invite-source-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+.profile-field-wrap {
     display: flex;
     flex-direction: column;
     gap: 6px;

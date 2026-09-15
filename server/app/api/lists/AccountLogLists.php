@@ -6,6 +6,7 @@ namespace app\api\lists;
 use app\common\enum\deviceauth\DeviceAuthOrderEnum;
 use app\common\enum\PayEnum;
 use app\common\enum\user\AccountLogEnum;
+use app\common\lists\ListsExtendInterface;
 use app\common\model\deviceauth\DeviceAuthOrder;
 use app\common\model\deviceauth\DeviceAuthPlan;
 use app\common\model\pay\PayConfig;
@@ -20,7 +21,7 @@ use app\common\service\draw\DrawBillingService;
  * Class AccountLogLists
  * @package app\shopapi\lists
  */
-class AccountLogLists extends BaseApiDataLists
+class AccountLogLists extends BaseApiDataLists implements ListsExtendInterface
 {
 
     /**
@@ -53,6 +54,14 @@ class AccountLogLists extends BaseApiDataLists
             // 指定企业
             if (!empty($this->params['team_id'])) {
                 $where[] = ['team_id', '=', (int)$this->params['team_id']];
+            }
+            // 日期范围(小程序充值记录按本月/上月/指定日期筛选)
+            [$start, $end] = $this->dateRange();
+            if ($start !== null) {
+                $where[] = ['create_time', '>=', $start];
+            }
+            if ($end !== null) {
+                $where[] = ['create_time', '<=', $end];
             }
         }
 
@@ -285,6 +294,32 @@ class AccountLogLists extends BaseApiDataLists
     }
 
     /**
+     * start_time/end_time(ListsValidate 已按 date 规则校验)转时间戳,未传的一侧为 null
+     * @return array{0: ?int, 1: ?int}
+     */
+    private function dateRange(): array
+    {
+        $start = !empty($this->params['start_time']) ? strtotime((string)$this->params['start_time']) : false;
+        $end = !empty($this->params['end_time']) ? strtotime((string)$this->params['end_time']) : false;
+        return [
+            $start === false ? null : $start,
+            $end === false ? null : $end,
+        ];
+    }
+
+    /**
+     * 订阅记录汇总:所选时段充值算力合计(CDK 现金订单是人民币,不计入)
+     */
+    public function extend(): array
+    {
+        if (!$this->isSubscribeTokensList()) {
+            return [];
+        }
+        $total = (float)UserTokensLog::where($this->queryWhere())->sum('change_amount');
+        return ['total_tokens' => round($total, 2)];
+    }
+
+    /**
      * 是否为小程序「订阅记录」：type=tokens 且 action=增加
      */
     private function isSubscribeTokensList(): bool
@@ -308,8 +343,10 @@ class AccountLogLists extends BaseApiDataLists
             $need = $this->limitLength;
         }
 
+        // 按 create_time 倒序走 idx_user_time(user_id, create_time)：
+        // 写成 ORDER BY id 时优化器会为了 LIMIT 改走主键倒扫，充值行稀疏的用户要扫完整张表
         $tokenLogs = UserTokensLog::where($this->queryWhere())
-            ->order('id', 'desc')
+            ->order(['create_time' => 'desc', 'id' => 'desc'])
             ->limit($need)
             ->select()
             ->toArray();
@@ -342,11 +379,19 @@ class AccountLogLists extends BaseApiDataLists
 
     private function cdkOrderQuery()
     {
-        return DeviceAuthOrder::where([
+        $query = DeviceAuthOrder::where([
             ['user_id', '=', $this->userId],
             ['pay_type', '=', DeviceAuthOrderEnum::PAY_TYPE_ONLINE],
             ['pay_status', '=', DeviceAuthOrderEnum::PAY_STATUS_PAID],
         ]);
+        [$start, $end] = $this->dateRange();
+        if ($start !== null) {
+            $query->where('pay_time', '>=', $start);
+        }
+        if ($end !== null) {
+            $query->where('pay_time', '<=', $end);
+        }
+        return $query;
     }
 
     private function formatTokenLogItem(array $item): array

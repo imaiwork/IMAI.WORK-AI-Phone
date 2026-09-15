@@ -176,7 +176,8 @@
 
 <script setup lang="ts">
 import { useStudioScrollBottom } from "../../composables/useStudioScrollBottom";
-import { useStudioKeyboardSpacer, useStudioSendGuard } from "../../composables/useStudioKeyboardSpacer";
+import { useKeyboardSpacer } from "../../composables/useKeyboardSpacer";
+import { useStudioSendGuard } from "../../composables/useStudioGuards";
 import { useStableTextareaAutoHeight } from "../../composables/useStableTextareaAutoHeight";
 import PptFollowupCard from "./ppt-followup-card.vue";
 import PptResultCard from "./ppt-result-card.vue";
@@ -238,7 +239,7 @@ const {
 } = useStableTextareaAutoHeight(localInput);
 const { scrollTop, scrollToBottom } = useStudioScrollBottom();
 const { keyboardOpen, spacerHeight, showToolbar, guardToolbarAction, dismissKeyboard, hideKeyboard } =
-    useStudioKeyboardSpacer(() => props.tabbarVisible);
+    useKeyboardSpacer({ tabbarVisible: () => !!props.tabbarVisible });
 const { guardSend } = useStudioSendGuard();
 
 const modelInitial = computed(() => {

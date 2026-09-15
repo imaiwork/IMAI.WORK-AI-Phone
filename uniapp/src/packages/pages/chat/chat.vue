@@ -164,8 +164,7 @@
                         <empty-content
                             :agent="currAgent"
                             :model="currModel"
-                            :phone-control-active="mountedDevices.length > 0"
-                            @select-model="handleSelectModel" />
+                            :phone-control-active="mountedDevices.length > 0" />
                     </template>
                 </workbench-chat-scroll>
             </view>
@@ -189,6 +188,30 @@
                     </scroll-view>
                 </view>
 
+                <view
+                    v-if="showPersonaEntry"
+                    class="mx-[32rpx] mt-[24rpx] h-[88rpx] flex items-center justify-between rounded-[28rpx] bg-white px-[28rpx] border border-solid border-[#E5E7EB]"
+                    @click="togglePersonaView(true)">
+                    <view class="flex items-center gap-[12rpx]">
+                        <view class="text-[26rpx] font-medium">来自 IP 人设的智能体</view>
+                        <view
+                            class="px-[12rpx] h-[36rpx] flex items-center rounded-full bg-primary text-white text-[20rpx]">
+                            {{ personaAgentCount }}
+                        </view>
+                    </view>
+                    <view class="text-[#959FAF] text-[22rpx]">展开查看 ›</view>
+                </view>
+                <view
+                    v-else-if="personaView"
+                    class="mx-[32rpx] mt-[24rpx] h-[88rpx] flex items-center justify-between rounded-[28rpx] bg-white px-[28rpx] border border-solid border-[#E5E7EB]"
+                    @click="togglePersonaView(false)">
+                    <view class="flex items-center gap-[12rpx]">
+                        <u-icon name="arrow-left" size="26" color="#959FAF"></u-icon>
+                        <view class="text-[26rpx] font-medium">IP 人设的智能体</view>
+                    </view>
+                    <view class="text-[#959FAF] text-[22rpx]">返回我创建的</view>
+                </view>
+
                 <view class="grow min-h-0 mt-[24rpx]" v-show="currAgentType !== AgentCateType.ASSISTANT">
                     <z-paging
                         ref="pagingCozeRef"
@@ -197,11 +220,17 @@
                         :safe-area-inset-bottom="true"
                         @query="handleQueryAgentList">
                         <view class="flex flex-col gap-[16rpx] px-[32rpx]">
+                            <template v-for="(item, index) in agentList" :key="index">
+                            <view
+                                v-if="showPersonaSection(index)"
+                                class="flex items-center gap-[12rpx] pt-[8rpx]">
+                                <view class="text-[24rpx] font-medium text-[#6D6E70]">
+                                    {{ personaSectionTitle(item) }}
+                                </view>
+                            </view>
                             <view
                                 class="bg-white rounded-[28rpx] flex p-[28rpx] shadow-sm border border-solid border-[#E5E7EB]"
                                 :class="{ 'opacity-70': !canUseCurrentAgent(item) }"
-                                v-for="(item, index) in agentList"
-                                :key="index"
                                 @click="handleSelectAgent(item)">
                                 <view class="w-[96rpx] h-[96rpx] shrink-0">
                                     <image
@@ -255,6 +284,7 @@
                                     </view>
                                 </view>
                             </view>
+                            </template>
                         </view>
 
                         <template #empty>
@@ -481,6 +511,7 @@ import {
 import { parseChatStreamErrorPayload, resolveChatErrorMessage } from "@/utils/chatStream";
 import { RequestCodeEnum } from "@/enums/requestEnums";
 import usePolling from "@/hooks/usePolling";
+import { resetKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import EmptyContent from "./components/empty-content.vue";
 import HistoryPopup from "./components/history-popup.vue";
 import KnowledgeList from "./components/knowledge-list.vue";
@@ -497,7 +528,7 @@ import PptPagesPopup from "./components/popups/ppt-pages-popup.vue";
 import PptScenePopup from "./components/popups/ppt-scene-popup.vue";
 import { WorkbenchMode, resolvePptPageCount } from "./enums/workbench";
 import { useWorkbenchMode } from "./composables/useWorkbenchMode";
-import { useWorkbenchImage } from "./composables/useWorkbenchImage";
+import { useWorkbenchImage, type ImageGenSnapshot } from "./composables/useWorkbenchImage";
 import { useWorkbenchVideo } from "./composables/useWorkbenchVideo";
 import { useWorkbenchMap } from "./composables/useWorkbenchMap";
 import { useWorkbenchPpt } from "./composables/useWorkbenchPpt";
@@ -523,6 +554,8 @@ interface ChatMessage {
     refImages?: string[];
     /** 重新生成时使用的最终提示词 */
     genPrompt?: string;
+    /** 本轮生图固化的参数，重新生成据此复现原轮，不跟随当前面板 */
+    imageParams?: ImageGenSnapshot;
     workbench?: {
         kind: "image" | "video" | "ppt" | "map" | "text" | "prompt-optimize" | "prompt-optimizing";
         title?: string;
@@ -656,6 +689,7 @@ const {
     applyCaseRef,
     removeRefImage,
     optimizeKeywords: optimizeImageKeywords,
+    buildGenSnapshot: buildImageGenSnapshot,
     submit: submitImage,
     cancelPending: cancelImagePending,
     resetConversation: resetImageSession,
@@ -781,8 +815,8 @@ const setVideoOptimize = (v: boolean) => {
 let workbenchModeSwitchAt = 0;
 const handleWorkbenchModeChange = async (mode: WorkbenchMode | string) => {
     // 先收起键盘，避免切到工作室后残留点击/confirm 误触发发送
-    uni.hideKeyboard();
-    chattingRef.value?.hideKeyboard?.();
+    // 走全局复位：工作室模式下 chattingRef 为空，只靠它清不掉共享的键盘高度
+    resetKeyboardHeight();
     workbenchModeSwitchAt = Date.now();
     lockStudioSheets();
     const next = mode as WorkbenchMode;
@@ -903,6 +937,9 @@ const createWorkbenchAssistant = () => {
 /** 用指定提示词执行图像生成，写入结果卡（对齐 HTML doGenerate，无文案气泡） */
 const runImageGenerate = async (result: ChatMessage, prompt: string, jobId?: number) => {
     const jid = jobId ?? workbenchJobSeq;
+    // 首次生成固化面板参数，重新生成复用同一份，不跟着当前面板走
+    const snap = result.imageParams ?? buildImageGenSnapshot();
+    result.imageParams = snap;
     result.loading = true;
     result.reply = "";
     result.error = "";
@@ -910,27 +947,27 @@ const runImageGenerate = async (result: ChatMessage, prompt: string, jobId?: num
     result.workbench = {
         kind: "image",
         status: "generating",
-        count: imageCount.value,
-        modelName: imageCurrentModelName.value,
-        ratio: imageRatio.value,
-        sizeLabel: imageSizeLabel.value,
-        aspectRatio: imageAspectRatio.value,
+        count: snap.n,
+        modelName: snap.modelName,
+        ratio: snap.ratio,
+        sizeLabel: snap.sizeLabel,
+        aspectRatio: snap.aspectRatio,
         urls: [],
     };
     try {
-        const res = await submitImage(prompt, result.refImages || []);
+        const res = await submitImage(prompt, result.refImages || [], snap);
         if (!isWorkbenchJobActive(jid)) return;
         const n = res.urls?.length || 0;
         result.loading = false;
         result.workbench = {
             kind: "image",
             status: "done",
-            count: n || imageCount.value,
-            modelName: imageCurrentModelName.value,
-            ratio: imageRatio.value,
-            sizeLabel: imageSizeLabel.value,
-            aspectRatio: imageAspectRatio.value,
-            title: n ? `已生成 ${n} 张 · ${imageSizeLabel.value}` : imageSizeLabel.value,
+            count: n || snap.n,
+            modelName: snap.modelName,
+            ratio: snap.ratio,
+            sizeLabel: snap.sizeLabel,
+            aspectRatio: snap.aspectRatio,
+            title: n ? `已生成 ${n} 张 · ${snap.sizeLabel}` : snap.sizeLabel,
             urls: res.urls,
         };
     } catch (error: any) {
@@ -940,14 +977,17 @@ const runImageGenerate = async (result: ChatMessage, prompt: string, jobId?: num
         result.workbench = {
             kind: "image",
             status: "error",
-            count: imageCount.value,
-            modelName: imageCurrentModelName.value,
-            ratio: imageRatio.value,
-            sizeLabel: imageSizeLabel.value,
-            aspectRatio: imageAspectRatio.value,
+            count: snap.n,
+            modelName: snap.modelName,
+            ratio: snap.ratio,
+            sizeLabel: snap.sizeLabel,
+            aspectRatio: snap.aspectRatio,
             urls: [],
         };
         throw error;
+    } finally {
+        // 出结果就同步一次算力，右上角实时反映本次消耗
+        userStore.refreshTokens();
     }
 };
 
@@ -1077,6 +1117,8 @@ const runVideoGenerate = async (result: ChatMessage, prompt: string, jobId?: num
             urls: [],
         };
         throw error;
+    } finally {
+        userStore.refreshTokens();
     }
 };
 
@@ -1293,6 +1335,8 @@ const handleWorkbenchContentPost = async (userInput?: string) => {
                     throw error;
                 }
                 throw error;
+            } finally {
+                userStore.refreshTokens();
             }
         } else if (workbenchMode.value === WorkbenchMode.Ppt) {
             const jobId = beginWorkbenchJob();
@@ -1477,6 +1521,8 @@ const runPptGenerate = async (
         result.reply = "";
         if (result.workbench) result.workbench.status = "error";
         throw error;
+    } finally {
+        userStore.refreshTokens();
     }
 };
 
@@ -1648,6 +1694,7 @@ const handleMapLoadMore = async () => {
     } finally {
         if (isWorkbenchJobActive(jobId)) isReceiving.value = false;
         scrollActiveBottom();
+        userStore.refreshTokens();
     }
 };
 
@@ -1706,18 +1753,6 @@ const chatLogParams = reactive<ChatLogParams>({
  */
 const handleUpdateNetwork = (value: boolean) => {
     isNetwork.value = value;
-};
-
-/**
- * 选择模型处理
- */
-const handleSelectModel = (item: any) => {
-    if (mountedDevices.value.length) {
-        uni.$u.toast("已挂载设备时不能选择大模型");
-        return;
-    }
-    currModel.value = item;
-    chattingRef.value?.handleModel(item);
 };
 
 /**
@@ -1922,19 +1957,44 @@ const handleSelectWorkbenchRecord = async (item: any) => {
                         Number(params.width) > 0 && Number(params.height) > 0
                             ? Number(params.width) / Number(params.height)
                             : bw / bh;
+                    // 参考图存在 params.image，回填到结果消息，历史会话里「重新生成」才能继续带上
+                    const historyRefImages = Array.isArray(params.image)
+                        ? params.image.map((u: any) => String(u || "")).filter(Boolean)
+                        : [];
+                    // 这一轮的模型/尺寸/张数一并还原，重新生成才是复现而不是按当前面板重来
+                    const historyRatio = String(params.ratio || imageRatio.value);
+                    const historyResolution = String(params.resolution || "高清 2K");
+                    const historyCount = urls.length || Number(params.n || 1) || 1;
+                    const historySizeLabel =
+                        historyCount > 1
+                            ? `${historyRatio} · ${historyResolution} · ${historyCount}张`
+                            : `${historyRatio} · ${historyResolution}`;
+                    const historyParams: ImageGenSnapshot = {
+                        model: String(msg.task?.model || ""),
+                        modelName: String(msg.task?.model_name || msg.task?.model || ""),
+                        ratio: historyRatio,
+                        resolution: historyResolution,
+                        width: Number(params.width) > 0 ? Number(params.width) : bw,
+                        height: Number(params.height) > 0 ? Number(params.height) : bh,
+                        n: historyCount,
+                        sizeLabel: historySizeLabel,
+                        aspectRatio: ar,
+                    };
                     nextList.push({
                         type: 2,
                         reply: "",
+                        refImages: historyRefImages,
+                        imageParams: historyParams,
                         genPrompt: String(msg.task?.prompt || msg.content || ""),
                         workbench: {
                             kind,
                             status: urls.length ? "done" : "error",
                             urls,
                             title: title || (urls.length ? "生成完成" : msg.content || "生成完成"),
-                            count: urls.length || Number(params.n || 1) || 1,
-                            modelName: msg.task?.model_name || msg.task?.model || "",
-                            ratio: String(params.ratio || imageRatio.value),
-                            sizeLabel: imageSizeLabel.value,
+                            count: historyCount,
+                            modelName: historyParams.modelName,
+                            ratio: historyRatio,
+                            sizeLabel: historySizeLabel,
                             aspectRatio: ar,
                         },
                     });
@@ -2569,7 +2629,7 @@ const backChat = async () => {
     currModel.value = null;
     chattingRef.value?.handleAgentClear();
     chattingRef.value?.syncDefaultModel?.(true);
-    chattingRef.value?.hideKeyboard();
+    resetKeyboardHeight();
 
     if (prevTab.value !== null) {
         currTab.value = prevTab.value;
@@ -2647,6 +2707,59 @@ const agentCateLists = computed(() => {
 });
 const currAgentType = ref<any>(AgentCateType.AGENT);
 const agentList = ref<any[]>([]);
+
+// 智能体来源，与后端 kb_robot.origin 对齐
+const AgentOriginType = {
+    MANUAL: 1, // 用户手工创建
+    PERSONA: 2, // IP 人设自动开通
+} as const;
+// 人设自动开通的智能体默认收进折叠区，避免把用户手工创建的淹没
+const personaView = ref(false);
+const personaAgentCount = ref(0);
+
+/**
+ * 拉取人设自动开通的智能体数量，用于折叠区入口计数
+ */
+const loadPersonaAgentCount = async () => {
+    try {
+        const res: any = await getAgentList({ page_no: 1, page_size: 1, origin: AgentOriginType.PERSONA });
+        personaAgentCount.value = Number(res?.count ?? 0);
+    } catch (error) {
+        personaAgentCount.value = 0;
+    }
+};
+
+/**
+ * 展开态下是否需要在这条前面起一个人设分节
+ * @param {number} index - 当前条在列表中的下标
+ */
+const showPersonaSection = (index: number) => {
+    if (!personaView.value) return false;
+    if (index === 0) return true;
+    return (agentList.value[index]?.persona_id || 0) !== (agentList.value[index - 1]?.persona_id || 0);
+};
+
+/**
+ * 分节标题：取人设名，取不到就退回占位
+ * @param {any} item - 当前条数据
+ */
+const personaSectionTitle = (item: any) =>
+    item?.persona_name || (item?.persona_id ? `人设 #${item.persona_id}` : "未绑定人设");
+
+// 是否展示折叠区入口
+const showPersonaEntry = computed(
+    () => currAgentType.value === AgentCateType.AGENT && !personaView.value && personaAgentCount.value > 0,
+);
+
+/**
+ * 展开或收起人设自动开通的智能体
+ * @param {boolean} value - true 展开折叠区，false 回到手工创建的列表
+ */
+const togglePersonaView = (value: boolean) => {
+    if (personaView.value === value) return;
+    personaView.value = value;
+    pagingCozeRef.value?.reload();
+};
 
 const canUseCurrentAgent = (item: any) => canUseAgent(item, userInfo.value);
 
@@ -2769,6 +2882,7 @@ const handleRobot = (data: any) => {
  */
 const handleAgentCateClick = (item: any) => {
     currAgentType.value = item.value;
+    personaView.value = false;
     // AI助理走独立的机器人列表，不复用智能体分页
     if (item.value !== AgentCateType.ASSISTANT) pagingCozeRef.value?.reload();
 };
@@ -2896,6 +3010,7 @@ const handleDeleteAgent = (item: any) => {
                 uni.hideLoading();
                 uni.showToast({ title: "删除成功", icon: "none", duration: 3000 });
                 agentList.value = agentList.value.filter((value) => value.id != item.id);
+                if (currAgentType.value === AgentCateType.AGENT) loadPersonaAgentCount();
             } catch (error: any) {
                 uni.hideLoading();
                 uni.showToast({ title: error, icon: "none", duration: 3000 });
@@ -2929,11 +3044,15 @@ const handleMore = (item: any) => {
 const handleQueryAgentList = async (page_no: number, page_size: number) => {
     try {
         const isType1 = currAgentType.value === 1;
+        // tab 是后点开的，onLoad 那次可能还没登录；每次拉第一页时补一次计数
+        if (isType1 && page_no === 1) loadPersonaAgentCount();
         const api = isType1 ? getAgentList : getCozeAgentList;
         const params = {
             page_no,
             page_size,
-            ...(isType1 ? {} : { type: currAgentType.value === 2 ? 1 : 2 }),
+            ...(isType1
+                ? { origin: personaView.value ? AgentOriginType.PERSONA : AgentOriginType.MANUAL }
+                : { type: currAgentType.value === 2 ? 1 : 2 }),
         };
         // @ts-ignore
         const response = await api(params);
@@ -2968,6 +3087,7 @@ onLoad((options?: Record<string, any>) => {
     }
     init(options);
     watchFile();
+    loadPersonaAgentCount();
     uni.onKeyboardHeightChange?.(onStudioKeyboardHeightChange);
 });
 
@@ -2979,11 +3099,11 @@ onUnload(() => {
     uni.$off("chooseFile");
     cancelWorkbenchJobs();
     handleChatClose();
-    chattingRef.value?.hideKeyboard();
+    resetKeyboardHeight();
 });
 
 onHide(() => {
-    chattingRef.value?.hideKeyboard();
+    resetKeyboardHeight();
 });
 
 onShow(async () => {

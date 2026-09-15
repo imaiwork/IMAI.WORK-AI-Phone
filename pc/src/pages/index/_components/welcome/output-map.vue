@@ -649,6 +649,8 @@ async function startFetch(payload: { query: string; isFirst: boolean }) {
         }
     } finally {
         fetching.value = false;
+        // 拿到结果就同步一次算力,右上角实时反映本次消耗
+        userStore.refreshTokens();
     }
 }
 

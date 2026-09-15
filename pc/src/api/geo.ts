@@ -65,6 +65,8 @@ export const geoTasks = (project_id: number) => $request.get({ url: `${B}/tasks`
 // 一键诊断：批量入队 + 轮询进度（替代逐 cell 串行调 geoMonitor）
 export const geoMonitorBatch = (params: any) => $request.post({ url: `${B}/monitorBatch`, params })
 export const geoMonitorProgress = (project_id: number, since: number, batch_task_id = 0) => $request.get({ url: `${B}/monitorProgress`, params: { project_id, since, batch_task_id } })
+// 取消诊断：按当前进度收口，已完成结果保留，未执行 cell 不再执行（也从未扣费）
+export const geoMonitorCancel = (project_id: number, batch_task_id = 0) => $request.post({ url: `${B}/monitorCancel`, params: { project_id, batch_task_id } })
 
 // 文章封面图(生成侧异步出图，前端轮询取回)
 export const geoContentCover = (content_id: number) => $request.get({ url: `${B}/contentCover`, params: { content_id } })

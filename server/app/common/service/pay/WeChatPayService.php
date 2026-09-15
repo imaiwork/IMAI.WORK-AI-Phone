@@ -54,6 +54,13 @@ class WeChatPayService extends BasePayService
 
 
     /**
+     * 本次下单使用的微信应用 appid
+     * @var string
+     */
+    protected string $appId = '';
+
+
+    /**
      * 初始化微信支付配置
      * @param $terminal //用户终端
      * @param null $userId //用户id(获取授权openid)
@@ -62,9 +69,13 @@ class WeChatPayService extends BasePayService
     {
         $this->terminal = $terminal;
         $this->config   = WeChatConfigService::getPayConfigByTerminal($terminal);
+        $this->appId    = WeChatConfigService::getPayAppIdByTerminal($terminal);
         $this->app      = new Application($this->config);
         if ($userId !== null) {
-            $this->auth = UserAuth::where(['user_id' => $userId, 'terminal' => $terminal])->findOrEmpty();
+            // 必须取「本次下单 appid 名下」的 openid:同一用户在 OEM 独立小程序与主站小程序
+            // 是两个 openid,按 user_id+terminal 盲取会命中 OEM 那条,
+            // 导致主站 appid + OEM openid 下单,微信报 PARAM_ERROR-appid和openid不匹配
+            $this->auth = UserAuth::findByAppId((int)$userId, (int)$terminal, $this->appId);
         }
     }
 
@@ -80,27 +91,21 @@ class WeChatPayService extends BasePayService
     public function pay($from, $order)
     {
         try {
+            // appid 统一取自构造函数(与 openid 取号同源),避免两处各查一次配置后不一致
             switch ($this->terminal) {
                 case UserTerminalEnum::WECHAT_MMP:
-                    $config = WeChatConfigService::getMnpConfig();
-                    $result = $this->jsapiPay($from, $order, $config['app_id']);
-                    break;
                 case UserTerminalEnum::WECHAT_OA:
-                    $config = WeChatConfigService::getOaConfig();
-                    $result = $this->jsapiPay($from, $order, $config['app_id']);
+                    $result = $this->jsapiPay($from, $order, $this->appId);
                     break;
                 case UserTerminalEnum::IOS:
                 case UserTerminalEnum::ANDROID:
-                    $config = WeChatConfigService::getOpConfig();
-                    $result = $this->appPay($from, $order, $config['app_id']);
+                    $result = $this->appPay($from, $order, $this->appId);
                     break;
                 case UserTerminalEnum::H5:
-                    $config = WeChatConfigService::getOaConfig();
-                    $result = $this->mwebPay($from, $order, $config['app_id']);
+                    $result = $this->mwebPay($from, $order, $this->appId);
                     break;
                 case UserTerminalEnum::PC:
-                    $config = WeChatConfigService::getOaConfig();
-                    $result = $this->nativePay($from, $order, $config['app_id']);
+                    $result = $this->nativePay($from, $order, $this->appId);
                     break;
                 default:
                     throw new \Exception('支付方式错误');
@@ -130,6 +135,13 @@ class WeChatPayService extends BasePayService
      */
     public function jsapiPay($from, $order, $appId)
     {
+        $openid = (string)($this->auth['openid'] ?? '');
+        if ($openid === '') {
+            // 只在别处授权过(如 OEM 独立小程序)、或从未微信授权的账号:
+            // 与其把不匹配的 appid/openid 丢给微信换一句看不懂的 PARAM_ERROR,不如直接引导重新授权
+            throw new \Exception('当前微信账号未在本站授权，请用微信登录后再支付');
+        }
+
         $response = $this->app->getClient()->postJson("v3/pay/transactions/jsapi", [
             "appid"        => $appId,
             "mchid"        => $this->config['mch_id'],
@@ -140,7 +152,7 @@ class WeChatPayService extends BasePayService
                 "total" => intval($order['order_amount'] * 100),
             ],
             "payer"        => [
-                "openid" => $this->auth['openid']
+                "openid" => $openid
             ],
             'attach'       => $from
         ]);

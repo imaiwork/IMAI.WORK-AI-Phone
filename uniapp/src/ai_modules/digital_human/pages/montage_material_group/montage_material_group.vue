@@ -56,7 +56,7 @@
 
 <script setup lang="ts">
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
-import { montageConfig } from "@/ai_modules/digital_human/config";
+import { montageConfig } from "@/enums/montageEnums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import UploadRulePop from "@/ai_modules/digital_human/components/upload-rule-pop/upload-rule-pop.vue";
 import MaterialDurationBar from "@/ai_modules/digital_human/components/material-duration-bar/material-duration-bar.vue";

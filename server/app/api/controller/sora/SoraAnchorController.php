@@ -9,6 +9,7 @@ use app\api\logic\sora\SoraAnchorLogic;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
+use app\common\service\CallbackTokenService;
 
 class SoraAnchorController extends BaseApiController
 {
@@ -85,7 +86,12 @@ class SoraAnchorController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('sora')->write('接收Sora形象合成参数' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('sora')->write('接收Sora形象合成参数' . json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('sora', 'Sora形象', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val) {
@@ -108,7 +114,12 @@ class SoraAnchorController extends BaseApiController
     {
         try {
             $data = $this->request->all();
-            Log::channel('sora')->write('接收Sora角色转绘视频回调参数' . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            Log::channel('sora')->write('接收Sora角色转绘视频回调参数' . json_encode(CallbackTokenService::maskForLog($data), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            if (!CallbackTokenService::guard('sora', 'Sora角色转绘', (string)$this->request->get('token', ''))) {
+                return $this->fail('unauthorized');
+            }
+            // 令牌只用于鉴权，不能跟着 $data 流进业务层落库或写日志
+            unset($data['token']);
             $key = md5(json_encode($data));
             $val = cache($key);
             if ($val) {

@@ -32,7 +32,7 @@ class UserLogic extends BaseLogic
     public static function center(array $userInfo): array
     {
         $user = User::where(['id' => $userInfo['user_id']])
-            ->field('id,sn,sex,account,nickname,real_name,avatar,mobile,create_time,is_new_user,user_money,tokens,password,level_id,team_id,team_role')
+            ->field('id,sn,sex,account,nickname,real_name,avatar,mobile,create_time,is_new_user,user_money,tokens,password,level_id,team_id,team_role,store_name,certificate_image')
             ->findOrEmpty();
 
         if (in_array($userInfo['terminal'], [UserTerminalEnum::WECHAT_MMP, UserTerminalEnum::WECHAT_OA])) {
@@ -41,6 +41,8 @@ class UserLogic extends BaseLogic
         }
 
         $user['has_password'] = !empty($user['password']);
+        // sex 经获取器返回的是「男/女/未知」文案,完善资料弹窗回显要的是原值
+        $user['sex_value'] = $user->isEmpty() ? 0 : (int)$user->getData('sex');
         $user->hidden(['password']);
 
         $user = $user->toArray();
@@ -84,9 +86,10 @@ class UserLogic extends BaseLogic
     public static function info(int $userId)
     {
         $user = User::where(['id' => $userId])
-            ->field('id,sn,sex,account,password,nickname,real_name,avatar,mobile,create_time,user_money,tokens,level_id')
+            ->field('id,sn,sex,account,password,nickname,real_name,avatar,mobile,create_time,user_money,tokens,level_id,store_name,certificate_image')
             ->findOrEmpty();
         $user['has_password'] = !empty($user['password']);
+        $user['sex_value'] = $user->isEmpty() ? 0 : (int)$user->getData('sex');
         $user['has_auth'] = self::hasWechatAuth($userId);
         $user['version'] = config('project.version');
         $user['level_name'] = intval($user['level_id'] ?? -1) > 0
@@ -108,7 +111,7 @@ class UserLogic extends BaseLogic
     public static function setInfo(int $userId, array $params)
     {
         try {
-            if ($params['field'] == "avatar") {
+            if (in_array($params['field'], ['avatar', 'certificate_image'])) {
                 $params['value'] = FileService::setFileUrl($params['value']);
             }
 
