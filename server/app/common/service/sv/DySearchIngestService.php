@@ -259,7 +259,7 @@ class DySearchIngestService
                 'works' => (int)($content['works'] ?? 0),
                 'is_enterprise' => (int)($content['is_enterprise'] ?? 0),
                 'scan_source' => $scanSource,
-                'ocr_text' => $ocrText,
+                'ocr_text' => $ocrText !== '' ? $ocrText : $bio,
                 'enterprise_text' => trim((string)($content['enterprise_text'] ?? '')),
                 'reg_content' => $result === self::RESULT_STORED ? $regContent : ($keepStored ? $regContent : ''),
                 'clue_type' => $ack['clue_type'],
@@ -282,6 +282,8 @@ class DySearchIngestService
                     $row['result'] = self::RESULT_STORED;
                     $row['hash'] = (string)$existing->hash;
                     $row['tokens'] = (int)$existing->tokens;
+                    $stored = $existing->getData();
+                    $row = self::preserveStoredScanFields($row, is_array($stored) ? $stored : []);
                 }
                 $existing->save($row);
             } else {
@@ -300,6 +302,15 @@ class DySearchIngestService
                         throw $e;
                     }
                     $dup->delete_time = null;
+                    if ((int)($dup->result ?? 0) === self::RESULT_STORED || (int)($dup->tokens ?? 0) > 0) {
+                        $row['reg_content'] = (string)$dup->reg_content;
+                        $row['clue_type'] = (int)$dup->clue_type;
+                        $row['result'] = self::RESULT_STORED;
+                        $row['hash'] = (string)$dup->hash;
+                        $row['tokens'] = (int)$dup->tokens;
+                        $stored = $dup->getData();
+                        $row = self::preserveStoredScanFields($row, is_array($stored) ? $stored : []);
+                    }
                     $dup->save($row);
                     $isUpdate = true;
                 }
@@ -1087,15 +1098,45 @@ class DySearchIngestService
     }
 
     /**
+     * 已入库行被重复上报时，空值不得覆盖识别原文与扫描字段。
+     *
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $stored
+     * @return array<string, mixed>
+     */
+    public static function preserveStoredScanFields(array $row, array $stored): array
+    {
+        foreach (['ocr_text', 'scan_source', 'nickname', 'avatar', 'enterprise_text', 'stitch_url', 'dy_id'] as $field) {
+            $new = trim((string)($row[$field] ?? ''));
+            $old = trim((string)($stored[$field] ?? ''));
+            if ($new === '' && $old !== '') {
+                $row[$field] = $old;
+            }
+        }
+        $newCovers = $row['cover_urls'] ?? [];
+        $oldCovers = $stored['cover_urls'] ?? [];
+        if (is_string($oldCovers) && $oldCovers !== '') {
+            $decoded = json_decode($oldCovers, true);
+            $oldCovers = is_array($decoded) ? $decoded : [];
+        }
+        if ((!is_array($newCovers) || $newCovers === []) && is_array($oldCovers) && $oldCovers !== []) {
+            $row['cover_urls'] = $oldCovers;
+        }
+        return $row;
+    }
+
+    /**
+     * 简介/封面已有手机或微信时，抖音号只当账号标识，不并进联系方式。
+     *
      * @param array{phones?:list<string>,wechats?:list<string>,qqs?:list<string>,raw?:list<string>} $extracted
      * @param array{contact_phone?:bool,contact_wechat?:bool,contact_qq?:bool} $contactOpts
      */
-    private static function shouldMergeDyId(
+    public static function shouldMergeDyId(
         array $extracted,
         string $dyId,
-        array $contactOpts,
-        string $addRule,
-        bool $scanDyid
+        array $contactOpts = [],
+        string $addRule = 'all',
+        bool $scanDyid = true
     ): bool {
         $addRule = self::normalizeAddRule($addRule);
         $wantPhone = (bool)($contactOpts['contact_phone'] ?? true);

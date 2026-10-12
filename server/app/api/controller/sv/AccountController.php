@@ -8,6 +8,7 @@ use app\api\logic\sv\SvAccountLogic;
 use app\api\validate\sv\SvAccountValidate;
 use app\api\lists\sv\SvAccountLists;
 use app\api\lists\sv\AllAccountLists;
+use app\api\lists\sv\WechatLists;
 
 use think\exception\HttpResponseException;
 
@@ -30,7 +31,8 @@ class AccountController extends BaseApiController
 
     public function allLists()
     {
-        return $this->dataLists(new AllAccountLists());
+        $listsClass = (int)$this->request->get('mode', 0) === 2 ? WechatLists::class : AllAccountLists::class;
+        return $this->dataLists(new $listsClass());
     }
 
     /**

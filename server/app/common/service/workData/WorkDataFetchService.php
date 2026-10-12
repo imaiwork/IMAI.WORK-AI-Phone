@@ -185,8 +185,9 @@ class WorkDataFetchService
             ));
             return $payload;
         } catch (WorkDataException $e) {
-            if (self::isNegative($e->getMessage())) {
-                WorkDataCache::setNegative($platform, $account, $e->getMessage(), $negTtl);
+            $failureTtl = self::negativeTtl($e->getMessage(), $negTtl);
+            if ($failureTtl > 0) {
+                WorkDataCache::setNegative($platform, $account, $e->getMessage(), $failureTtl);
             }
             throw $e;
         } finally {
@@ -199,6 +200,25 @@ class WorkDataFetchService
         return str_contains($msg, '没找到抖音号')
             || str_contains($msg, '没找到小红书号')
             || str_contains($msg, '没有 sec_uid');
+    }
+
+    /**
+     * 这条失败该记多久负缓存（秒），0 表示不记。
+     *
+     * 「账号不存在 / 资料缺 sec_uid」是永久性失败：账号压根不存在，两分钟后重查毫无意义。
+     * 而定时同步会不停重来，中台每次都要向 TikHub 付一次搜索的钱——上游对返 200 的
+     * 「查无结果」照样计费，站长这边还一分钱收不到。生产上单个绑错的账号一天能重查 450 次，
+     * 所以这类失败要记长 TTL；手动刷新（$refresh=true）本来就绕过负缓存，改绑后能立刻生效。
+     *
+     * 其余失败（上游临时故障等）沿用原来的口径：不记，等它自愈。
+     */
+    private static function negativeTtl(string $msg, int $defaultTtl): int
+    {
+        if (!self::isNegative($msg)) {
+            return 0;
+        }
+        $permanent = (int)config('work_data.negative_cache_ttl_permanent', 21600);
+        return $permanent > 0 ? $permanent : $defaultTtl;
     }
 
     private static function canAutoSync($persona): bool

@@ -119,7 +119,7 @@ const { optionsData } = useDictOptions<{ categoryLists: any[] }>({
     categoryLists: {
         api: getAssistantCategoryList,
         params: {
-            pageSize: 99999,
+            page_size: 25000,
         },
         transformData: (data) => data.lists,
     },

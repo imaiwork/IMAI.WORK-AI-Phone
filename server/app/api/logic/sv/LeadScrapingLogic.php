@@ -41,17 +41,20 @@ class LeadScrapingLogic extends SvBaseLogic
             ];
 
             $is_overlap = $params['task_exec_type'] ?? 0;
+            $immediateWindow = null;
             if ((int)$is_overlap === 1) {
                 \app\api\logic\device\TaskLogic::updateTaskStatusByIds($params['task_ids']);
+                $now = time();
+                // 时长可以超过 24 小时，结束时间必须用时间戳累加，不能从 H:i 反推
+                $immediateWindow = self::buildImmediateWindow($now, (int)($params['minutes'] ?? 0));
                 $params['time_config'] = [
-                    date('H:i', time()) . '-' . date('H:i', (time() + (60 * (int)$params['minutes']))),
+                    date('H:i', $immediateWindow['start_time']) . '-' . date('H:i', $immediateWindow['end_time']),
                 ];
                 $params['task_date'] = [
-                    date('Y-m-d', time())
+                    date('Y-m-d', $immediateWindow['start_time']),
                 ];
 
                 $params['task_frep'] = 1;
-                
             }
             unset($params['task_ids']);
 
@@ -155,19 +158,9 @@ class LeadScrapingLogic extends SvBaseLogic
                         'user_id' => self::$uid,
                     ]);
                 }
-                $times = [];
-                foreach ($dateList as $date) {
-                    $date = date('Y-m-d', strtotime((string)$date));
-                    foreach ($timeList as $time) {
-                        $time      = explode('-', (string)$time);
-                        $startTime = $date . ' ' . $time[0] . ':00';
-                        $endTime   = $date . ' ' . $time[1] . ':00';
-                        $times[]   = [
-                            'start_time' => strtotime($startTime),
-                            'end_time'   => strtotime($endTime),
-                        ];
-                    }
-                }
+                $times = $immediateWindow !== null
+                    ? [$immediateWindow]
+                    : self::buildScheduleWindows($dateList, $timeList);
 
                 $allTaskInstall = [];
                 foreach ($accountList as $account) {
@@ -250,6 +243,43 @@ class LeadScrapingLogic extends SvBaseLogic
         Db::rollback();
         self::setError($message);
         return false;
+    }
+
+    /**
+     * 立即执行：从当前时间戳直接加上分钟数，保留超过 24 小时的整天
+     * @return array{start_time:int,end_time:int}
+     */
+    private static function buildImmediateWindow(int $now, int $minutes): array
+    {
+        return [
+            'start_time' => $now,
+            'end_time'   => $now + (60 * $minutes),
+        ];
+    }
+
+    /**
+     * 定时执行：按日期和钟点展开。结束钟点早于开始钟点时，结束时间落到次日
+     * @return list<array{start_time:int,end_time:int}>
+     */
+    private static function buildScheduleWindows(array $dateList, array $timeList): array
+    {
+        $times = [];
+        foreach ($dateList as $date) {
+            $date = date('Y-m-d', strtotime((string)$date));
+            foreach ($timeList as $time) {
+                $time      = explode('-', (string)$time);
+                $startTime = strtotime($date . ' ' . $time[0] . ':00');
+                $endTime   = strtotime($date . ' ' . $time[1] . ':00');
+                if ($endTime < $startTime) {
+                    $endTime += 86400;
+                }
+                $times[] = [
+                    'start_time' => $startTime,
+                    'end_time'   => $endTime,
+                ];
+            }
+        }
+        return $times;
     }
 
     /**

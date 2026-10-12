@@ -17,7 +17,11 @@
                         <u-icon name="close" color="#8B9199" :size="20"></u-icon>
                     </view>
                 </view>
-                <scroll-view v-if="tabs.length" scroll-x class="mt-[16rpx] whitespace-nowrap" show-scrollbar="false">
+                <scroll-view
+                    v-if="tabs.length"
+                    scroll-x
+                    class="mt-[16rpx] whitespace-nowrap"
+                    show-scrollbar="false">
                     <view class="inline-flex gap-[16rpx]">
                         <view
                             v-for="tab in tabs"
@@ -44,8 +48,8 @@
                             class="w-[88rpx] h-[88rpx] rounded-full bg-[#f3f4f6] flex items-center justify-center text-[40rpx] text-[#9ca3af]">
                             ▣
                         </text>
-                        <text class="text-sm font-bold text-[#374151]">今日暂无发布计划</text>
-                        <text class="text-xs text-[#9ca3af]">该平台今日暂无内容安排</text>
+                        <text class="text-sm font-bold text-[#374151]">{{ emptyTitle }}</text>
+                        <text class="text-xs text-[#9ca3af]">{{ emptyDesc }}</text>
                     </view>
                     <view v-for="item in items" v-else :key="item.id" class="bg-white rounded-[32rpx] overflow-hidden">
                         <view
@@ -77,10 +81,10 @@
                                 v-if="shanjianTag(item)"
                                 class="absolute top-[20rpx] left-[20rpx] px-[18rpx] py-[6rpx] rounded-full text-[20rpx] font-bold"
                                 :style="{
-                                    background: shanjianTag(item).bg,
-                                    color: shanjianTag(item).color,
+                                    background: shanjianTag(item)?.bg,
+                                    color: shanjianTag(item)?.color,
                                 }">
-                                {{ shanjianTag(item).label }}
+                                {{ shanjianTag(item)?.label }}
                             </view>
                             <view
                                 v-if="durationText(item)"
@@ -91,6 +95,29 @@
                                 <view
                                     class="w-[88rpx] h-[88rpx] rounded-full bg-[rgba(255,255,255,0.25)] flex items-center justify-center border-[2rpx] border-[rgba(255,255,255,0.5)]">
                                     <u-icon name="play-right-fill" color="#ffffff" :size="36"></u-icon>
+                                </view>
+                            </view>
+                        </view>
+                        <view
+                            v-else-if="isVideoFailed(item)"
+                            class="relative h-[340rpx] overflow-hidden bg-[#fff5f5]">
+                            <image
+                                v-if="item.cover_url"
+                                :src="item.cover_url"
+                                mode="aspectFill"
+                                class="absolute inset-0 w-full h-full" />
+                            <view class="absolute inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.45)]">
+                                <view
+                                    class="flex flex-col items-center gap-[12rpx] px-[32rpx] py-[24rpx] rounded-[20rpx] max-w-[86%]">
+                                    <view
+                                        class="w-[88rpx] h-[88rpx] rounded-full bg-[#fee2e2] flex items-center justify-center">
+                                        <u-icon name="close-circle-fill" color="#EF4444" :size="44"></u-icon>
+                                    </view>
+                                    <text class="text-sm font-bold text-white">{{ VIDEO_FAILED_TITLE }}</text>
+                                    <text
+                                        class="text-xs text-[rgba(255,255,255,0.85)] text-center leading-[36rpx] line-clamp-3 break-all">
+                                        {{ failReason(item) }}
+                                    </text>
                                 </view>
                             </view>
                         </view>
@@ -133,12 +160,19 @@
 
                         <view class="p-[28rpx] flex flex-col gap-[24rpx]">
                             <view
-                                v-if="canRegenerate(item)"
+                                v-if="canRegenerate(item) || canManualPublish(item)"
                                 class="flex gap-[16rpx] pb-[20rpx] border-[0] border-b-[2rpx] border-[#f9fafb]">
                                 <view
+                                    v-if="canRegenerate(item)"
                                     class="flex-1 flex items-center justify-center rounded-[24rpx] px-[24rpx] py-[20rpx] text-xs font-semibold text-primary bg-primary-light-9"
                                     @click="handleRegenerate(item)">
                                     重新生成
+                                </view>
+                                <view
+                                    v-if="canManualPublish(item)"
+                                    class="flex-1 flex items-center justify-center rounded-[24rpx] px-[24rpx] py-[20rpx] text-xs font-semibold text-white bg-primary"
+                                    @click="handleManualPublish(item)">
+                                    一键手动发布
                                 </view>
                             </view>
                             <editable-field
@@ -177,8 +211,16 @@ import EditableField from "../editable-field.vue";
 import EditableTags from "../editable-tags.vue";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import { getPublishContentList, updatePublishContent, regeneratePublishContentVideo } from "@/api/person";
-import { PublishSourceEnum } from "@/enums/publishEnums";
+import { ManualPublishSourceEnum, PublishSourceEnum } from "@/enums/publishEnums";
 import { formatAudioTime } from "@/utils/util";
+
+/** 闪剪视频任务状态，与后端 ShanjianVideoTask::STATUS_* 对齐 */
+enum ShanjianVideoStatus {
+    PENDING = 0,
+    PROCESSING = 1,
+    FAILED = 2,
+    SUCCESS = 3,
+}
 
 interface PublishContentTab {
     platform: string | number;
@@ -208,6 +250,7 @@ interface PublishContentItem {
     cover_url?: string;
     shanjian_status?: number;
     shanjian_status_text?: string;
+    shanjian_remark?: string;
     shanjian_video_url?: string;
     can_regenerate?: boolean;
 }
@@ -215,6 +258,7 @@ interface PublishContentItem {
 const props = defineProps<{
     modelValue: boolean;
     personaId?: string | number;
+    runMode?: number;
     asset?: (name: string) => string;
 }>();
 
@@ -237,8 +281,21 @@ const loading = ref(false);
 
 const VIDEO_MEDIA_TYPE = 1;
 const IMAGE_GRID_LIMIT = 9;
+const CLOUD_EMPTY_TITLE = "今日暂无云端成片";
+const CLOUD_EMPTY_DESC = "云端成片完成后会出现在这里";
+const PHONE_EMPTY_TITLE = "今日暂无发布计划";
+const PHONE_EMPTY_DESC = "该平台今日暂无内容安排";
+const MANUAL_PUBLISH_PATH = "/ai_modules/device/pages/create_task/create_task";
+const MANUAL_PUBLISH_VIDEO_TYPE = 1;
+const VIDEO_FAILED_TITLE = "视频生成失败";
+const VIDEO_FAILED_REASON_FALLBACK = "暂无失败原因";
 
-const isSocial = (item: PublishContentItem) => item.source === PublishSourceEnum.SOCIAL;
+const isCloudTab = computed(() => activeSource.value === PublishSourceEnum.CLOUD);
+const emptyTitle = computed(() => (isCloudTab.value ? CLOUD_EMPTY_TITLE : PHONE_EMPTY_TITLE));
+const emptyDesc = computed(() => (isCloudTab.value ? CLOUD_EMPTY_DESC : PHONE_EMPTY_DESC));
+const isCloudItem = (item: PublishContentItem) => item.source === PublishSourceEnum.CLOUD;
+const isSocial = (item: PublishContentItem) =>
+    item.source === PublishSourceEnum.SOCIAL || isCloudItem(item);
 const hasVideo = (item: PublishContentItem) =>
     item.media_type === VIDEO_MEDIA_TYPE && Array.isArray(item.media_urls) && item.media_urls.length > 0;
 const hasImages = (item: PublishContentItem) =>
@@ -246,10 +303,17 @@ const hasImages = (item: PublishContentItem) =>
 /** 超过 9 张时，最后一格显示「+N」蒙版 */
 const showImageMoreMask = (item: PublishContentItem, index: number) =>
     index === IMAGE_GRID_LIMIT - 1 && (item.media_urls?.length || 0) > IMAGE_GRID_LIMIT;
-// 视频类内容但暂无可播放视频（重新生成中/待处理）：展示生成状态占位
-const isVideoGenerating = (item: PublishContentItem) => item.media_type === VIDEO_MEDIA_TYPE && !hasVideo(item);
+const isVideoFailed = (item: PublishContentItem) =>
+    item.media_type === VIDEO_MEDIA_TYPE && Number(item.shanjian_status) === ShanjianVideoStatus.FAILED;
+const failReason = (item: PublishContentItem) =>
+    String(item.shanjian_remark || "").trim() || VIDEO_FAILED_REASON_FALLBACK;
+// 视频类内容但暂无可播放视频（重新生成中/待处理）：展示生成状态占位，失败态走独立封面
+const isVideoGenerating = (item: PublishContentItem) =>
+    item.media_type === VIDEO_MEDIA_TYPE && !hasVideo(item) && !isVideoFailed(item);
 // 是否允许重新生成：后端给了 can_regenerate 以其为准，缺省时退回「有视频才可重新生成」
-const canRegenerate = (item: PublishContentItem) => item.can_regenerate ?? hasVideo(item);
+const canRegenerate = (item: PublishContentItem) =>
+    isCloudItem(item) ? false : (item.can_regenerate ?? hasVideo(item));
+const canManualPublish = (item: PublishContentItem) => isCloudItem(item) && hasVideo(item);
 
 // publish_time 形如 2026-06-17 07:52:00，仅展示时分
 const formatPublishTime = (time: string) => {
@@ -341,18 +405,37 @@ const switchTab = (tab: PublishContentTab) => {
 
 const handleSave = async (item: PublishContentItem) => {
     try {
+        const withTitleTopic = isSocial(item);
         await updatePublishContent({
             id: item.id,
             source: item.source,
-            title: item.source === PublishSourceEnum.SOCIAL ? item.title : undefined,
+            persona_id: props.personaId,
+            title: withTitleTopic ? item.title : undefined,
             content: item.content,
-            topic: item.source === PublishSourceEnum.SOCIAL ? tagsToTopic(item._topicTags) : undefined,
+            topic: withTitleTopic ? tagsToTopic(item._topicTags) : undefined,
         });
         emit("toast", "已保存");
     } catch (error) {
         console.warn("updatePublishContent failed", error);
         emit("toast", "保存失败");
     }
+};
+
+const handleManualPublish = (item: PublishContentItem) => {
+    const video = item.media_urls?.[0] || item.shanjian_video_url || "";
+    if (!video) {
+        emit("toast", "视频还未生成");
+        return;
+    }
+    emit("update:modelValue", false);
+    uni.$u.route({
+        url: MANUAL_PUBLISH_PATH,
+        params: {
+            type: MANUAL_PUBLISH_VIDEO_TYPE,
+            source: ManualPublishSourceEnum.CLOUD_VIDEO,
+            data: JSON.stringify({ id: item.id }),
+        },
+    });
 };
 
 const ONE_HOUR = 60 * 60 * 1000;
@@ -415,9 +498,9 @@ const handleRegenerate = async (item: PublishContentItem) => {
 };
 
 watch(
-    () => props.modelValue,
-    (v) => {
-        if (v) loadList();
+    () => [props.modelValue, props.personaId],
+    ([visible]) => {
+        if (visible) loadList();
     },
 );
 </script>

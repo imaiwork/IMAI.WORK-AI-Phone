@@ -28,6 +28,26 @@ class AutoTaskSceneConfigService
     private static ?array $configMapOverride = null;
 
     /**
+     * 工作流可配置场景：1~15 加抖音搜寻获客(18)，不含 16/17
+     *
+     * @return int[]
+     */
+    public static function getWorkflowScenes(): array
+    {
+        $scenes = [];
+        for ($scene = self::SCENE_MIN; $scene <= self::SCENE_MAX; $scene++) {
+            $scenes[] = $scene;
+        }
+        $scenes[] = DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH; // 18
+        return $scenes;
+    }
+
+    public static function isWorkflowScene(int $scene): bool
+    {
+        return in_array($scene, self::getWorkflowScenes(), true);
+    }
+
+    /**
      * 默认场景名称（与业务展示文案一致）
      *
      * @return array<int, string>
@@ -50,6 +70,7 @@ class AutoTaskSceneConfigService
             13 => '同城截流',
             14 => '团购截流',
             15 => '评论点赞',
+            DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH => '抖音搜寻获客',
         ];
     }
 
@@ -76,6 +97,7 @@ class AutoTaskSceneConfigService
             13 => [DeviceEnum::ACCOUNT_TYPE_DY],
             14 => [DeviceEnum::ACCOUNT_TYPE_DY],
             15 => [DeviceEnum::ACCOUNT_TYPE_SPH],
+            DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH => [DeviceEnum::ACCOUNT_TYPE_DY],
         ];
     }
 
@@ -116,7 +138,7 @@ class AutoTaskSceneConfigService
 
     /**
      * 获取全部配置项（含 name、allow_platforms）
-     * 无记录或表不存在时返回默认全开 15 项
+     * 无记录或表不存在时返回默认全开工作流场景
      *
      * @return array
      */
@@ -139,7 +161,7 @@ class AutoTaskSceneConfigService
         }
 
         $items = [];
-        for ($scene = self::SCENE_MIN; $scene <= self::SCENE_MAX; $scene++) {
+        foreach (self::getWorkflowScenes() as $scene) {
             $row = $map[$scene] ?? null;
             $name = '';
             if ($row && isset($row['name']) && (string)$row['name'] !== '') {
@@ -203,7 +225,7 @@ class AutoTaskSceneConfigService
             $inputMap = [];
             foreach ($items as $item) {
                 $scene = (int)($item['scene'] ?? 0);
-                if ($scene >= self::SCENE_MIN && $scene <= self::SCENE_MAX) {
+                if (self::isWorkflowScene($scene)) {
                     $hasPlatforms = array_key_exists('allow_platforms', $item);
                     $inputMap[$scene] = [
                         'allow_add'       => (int)($item['allow_add'] ?? 1),
@@ -302,7 +324,7 @@ class AutoTaskSceneConfigService
             $platform = (int)$platformOrConfigMap;
         }
 
-        if ($scene < self::SCENE_MIN || $scene > self::SCENE_MAX) {
+        if (!self::isWorkflowScene($scene)) {
             // 16/17 不在开关范围：带平台时不拦截；旧工作流无平台调用仍视为不可添加
             return $platform > 0;
         }
@@ -359,7 +381,7 @@ class AutoTaskSceneConfigService
         string $taskLabel = '任务',
         ?array $configMap = null
     ): bool {
-        if ($scene < self::SCENE_MIN || $scene > self::SCENE_MAX) {
+        if (!self::isWorkflowScene($scene)) {
             return false;
         }
         if (self::canAdd($scene, $platform, $configMap)) {
@@ -596,7 +618,7 @@ class AutoTaskSceneConfigService
     {
         $defaults = self::getDefaultSceneNames();
         $items = [];
-        for ($scene = self::SCENE_MIN; $scene <= self::SCENE_MAX; $scene++) {
+        foreach (self::getWorkflowScenes() as $scene) {
             $items[] = [
                 'scene'           => $scene,
                 'name'            => $defaults[$scene] ?? '',

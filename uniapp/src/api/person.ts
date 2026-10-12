@@ -468,7 +468,7 @@ export const getClueCustomer = (data: { persona_id: string | number; page_no?: n
     return request.get({ url: "/aiPersona.task/clueCustomer", data });
 };
 
-// AI 帮我做内容 - 列表（platform=sv 社媒 / circle 朋友圈）
+// AI 帮我做内容 - 列表（platform=sv 社媒 / circle 朋友圈 / cloud 无手机成片）
 export const getPublishContentList = (data: {
     persona_id?: string | number;
     platform?: PublishSourceEnum | string;
@@ -479,10 +479,11 @@ export const getPublishContentList = (data: {
     return request.get({ url: "/sv.publish_content/lists", data });
 };
 
-// AI 帮我做内容 - 保存编辑（title/content/topic；source=sv|circle）
+// AI 帮我做内容 - 保存编辑（title/content/topic；source=sv|circle|cloud）
 export const updatePublishContent = (data: {
     id: number | string;
     source: PublishSourceEnum;
+    persona_id?: string | number;
     title?: string;
     content?: string;
     topic?: string;

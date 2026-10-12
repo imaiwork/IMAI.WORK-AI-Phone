@@ -309,8 +309,10 @@ import {
     HotspotTaskStatus,
     type HotspotOptionsData,
 } from "@/ai_modules/hotspot/enums";
+import { applyLocalAnalyzedMarks, normalizeHotTitle } from "@/ai_modules/hotspot/utils/flowCache";
 import QueueTaskCard from "./components/queue-task-card.vue";
 import FlowPopup from "./components/flow-popup.vue";
+import { ManualPublishSourceEnum } from "@/enums/publishEnums";
 import CalendarGray from "@/ai_modules/hotspot/static/icons/calendar_gray.svg";
 import CalendarWhite from "@/ai_modules/hotspot/static/icons/calendar_white.svg";
 import TrendingGray from "@/ai_modules/hotspot/static/icons/trending_gray.svg";
@@ -388,7 +390,8 @@ const loadHot = async (expand = false) => {
             ...(currentDay.value ? { day: currentDay.value } : {}),
         });
         if (token !== hotToken) return;
-        topics.value = Array.isArray(data?.topics) ? data.topics : [];
+        const list = Array.isArray(data?.topics) ? data.topics : [];
+        topics.value = applyLocalAnalyzedMarks(list, currentPlatform.value);
         if (currentPeriod.value === HotspotPeriod.RISE) {
             hotMeta.value = "实时飙升 · 按排名上升幅度排序，适合抢在冲顶前进场" + (data?.cached ? " · 缓存" : "");
         } else if (currentPeriod.value === HotspotPeriod.WEEK) {
@@ -465,18 +468,21 @@ const videoTypeLabelMap = computed(() =>
 const openFlow = (topic: Record<string, any>) => {
     currentTopic.value = {
         ...topic,
-        // 后端 topic 校验上限 120 字
-        title: String(topic.title || "").slice(0, 120),
+        title: normalizeHotTitle(topic.title),
         platform: topic.platform || currentPlatform.value,
     };
     showFlow.value = true;
 };
 
-/** 面板内完成结合分析、或创建了视频任务后，点亮热榜对应条目的「已分析」标记（无需整榜刷新） */
+/** 面板内完成结合分析、入库、还原上次记录或创建视频任务后，点亮热榜对应条目的「已分析」标记 */
 const onTopicAnalyzed = (topic: Record<string, any>) => {
-    const hit = topics.value.find(
-        (t) => t.title === topic?.title && (t.platform || currentPlatform.value) === topic?.platform,
-    );
+    const title = normalizeHotTitle(topic?.title);
+    const platform = topic?.platform || currentPlatform.value;
+    const hit = topics.value.find((t) => {
+        const sameTitle = normalizeHotTitle(t.title) === title;
+        const samePlatform = (t.platform || currentPlatform.value) === platform;
+        return sameTitle && samePlatform;
+    });
     if (hit) hit.analyzed = true;
 };
 
@@ -608,7 +614,7 @@ const onPublish = (task: Record<string, any>) => {
         url: "/ai_modules/device/pages/create_task/create_task",
         params: {
             type: 1,
-            source: "hotspot",
+            source: ManualPublishSourceEnum.HOTSPOT,
             data: JSON.stringify({ id: task.id }),
         },
     });

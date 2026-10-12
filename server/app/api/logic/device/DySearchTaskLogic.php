@@ -3,14 +3,21 @@
 namespace app\api\logic\device;
 
 use app\api\logic\ApiLogic;
+use app\api\logic\aiPersona\BasePersonaLogic;
 use app\common\enum\DeviceEnum;
+use app\common\model\aiPersona\AiPersona;
+use app\common\model\aiPersona\AiPersonaTrafficConfig;
 use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvDySearchRecord;
 use app\common\model\sv\SvDySearchTask;
 use app\common\model\sv\SvDySearchTaskDevice;
+use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\sv\DySearchAccountNormalizer;
 use app\common\service\sv\DySearchFilterHistoryService;
+use app\common\service\sv\SvDeviceTaskExistenceService;
 use app\common\traits\DySearchTaskTrait;
 use think\facade\Db;
 use think\facade\Log;
@@ -210,7 +217,8 @@ class DySearchTaskLogic extends ApiLogic
                     'day_cap'            => $dayCap,
                     'status'             => 0,
                     'ocr_type'           => (int)($params['ocr_type'] ?? 1),
-                    'source'             => 1,
+                    'source'             => SvDySearchTask::SOURCE_MANUAL,
+                    'auto_type'          => SvDySearchTask::AUTO_TYPE_MANUAL,
                     'persona_id'         => (int)($params['persona_id'] ?? 0),
                     'remark'             => $params['remark'] ?? '',
                 ]);
@@ -575,6 +583,84 @@ class DySearchTaskLogic extends ApiLogic
         }
     }
 
+    /**
+     * 立即执行下发前把主任务、本设备绑定、当次日历任务改回执行中。
+     * 演示包不写库。不开启事务，由调用方在下发失败时回滚。
+     *
+     * @param array<string, mixed> $content 1007 报文
+     */
+    public static function reopenForImmediateExec(array $content, int $userId, string $deviceCode): void
+    {
+        if ((int)($content['isDemoData'] ?? 1) === 1) {
+            return;
+        }
+        $taskId = (int)($content['task_id'] ?? 0);
+        if ($taskId < 1) {
+            return;
+        }
+
+        $deviceCode = trim($deviceCode);
+        $startTime = (int)($content['start_time'] ?? 0);
+        $endTime = (int)($content['end_time'] ?? 0);
+        if ($userId < 1 || $deviceCode === '' || $startTime < 1 || $endTime <= $startTime) {
+            throw new \Exception('即时执行时段无效');
+        }
+
+        $task = SvDySearchTask::where('id', $taskId)->where('user_id', $userId)->findOrEmpty();
+        if ($task->isEmpty()) {
+            throw new \Exception('获客任务不存在');
+        }
+
+        $bindId = (int)($content['id'] ?? 0);
+        if ($bindId > 0) {
+            $bind = SvDySearchTaskDevice::where('id', $bindId)
+                ->where('task_id', $taskId)
+                ->where('device_code', $deviceCode)
+                ->where('user_id', $userId)
+                ->findOrEmpty();
+            if ($bind->isEmpty()) {
+                throw new \Exception('设备未绑定该获客任务');
+            }
+        }
+
+        $deviceTaskId = (int)($content['device_task_id'] ?? 0);
+        $deviceTask = SvDeviceTask::where('id', $deviceTaskId)
+            ->where('user_id', $userId)
+            ->where('device_code', $deviceCode)
+            ->where('sub_task_id', $taskId)
+            ->where('task_type', DeviceEnum::TASK_TYPE_DY_SEARCH)
+            ->findOrEmpty();
+        if ($deviceTask->isEmpty()) {
+            throw new \Exception('获客日历任务不存在');
+        }
+
+        $now = time();
+        SvDySearchTask::where('id', $taskId)->where('user_id', $userId)->update([
+            'status' => 1,
+            'update_time' => $now,
+        ]);
+        if ($bindId > 0) {
+            SvDySearchTaskDevice::where('id', $bindId)
+                ->where('task_id', $taskId)
+                ->where('device_code', $deviceCode)
+                ->where('user_id', $userId)
+                ->update([
+                    'status' => 1,
+                    'update_time' => $now,
+                ]);
+        }
+        SvDeviceTask::where('id', $deviceTaskId)
+            ->where('user_id', $userId)
+            ->where('device_code', $deviceCode)
+            ->where('sub_task_id', $taskId)
+            ->where('task_type', DeviceEnum::TASK_TYPE_DY_SEARCH)
+            ->update([
+                'status' => DeviceEnum::TASK_STATUS_RUNNING,
+                'remark' => '立即执行',
+                'update_time' => $now,
+            ]);
+    }
+
     public static function keywordsCount(array $params)
     {
         try {
@@ -642,12 +728,251 @@ class DySearchTaskLogic extends ApiLogic
         }
     }
 
+    /**
+     * 24h / 初次创建：按工作流场景 18 生成抖音搜寻获客任务。不收口执行中任务，不创建场景 19。
+     */
+    public static function autoDySearchTaskCron(SvDevice $device): array
+    {
+        print_r("\n{$device->device_code} 自动创建抖音搜寻获客任务\n");
+        Log::channel('auto')->write($device->device_code . ' 自动创建抖音搜寻获客任务', 'create');
+        try {
+            if (empty($device->persona_id)) {
+                Log::channel('auto')->write($device->device_code . ' 人设ID为空，跳过抖音搜寻获客', 'create');
+                return SvDeviceTaskExistenceService::emptySlotResult();
+            }
+
+            $persona = AiPersona::where('id', $device->persona_id)->findOrEmpty();
+            if ($persona->isEmpty()) {
+                Log::channel('auto')->write($device->device_code . ' 未找到人设数据 ' . Db::getLastSql(), 'create');
+                return SvDeviceTaskExistenceService::emptySlotResult();
+            }
+
+            if (!AiPersonaOptionService::isEnabledForPersonaId((int)$persona->id, 'auto_clues.options.dy_search')) {
+                Log::channel('auto')->write($device->device_code . ' global_option.auto_clues.options.dy_search=0，跳过抖音搜寻获客任务', 'create');
+                return SvDeviceTaskExistenceService::emptySlotResult();
+            }
+
+            return self::createAutoDySearchTask($device, $persona);
+        } catch (\Throwable $th) {
+            Log::channel('auto')->write($device->device_code . ' 自动创建抖音搜寻获客任务失败 ' . $th->__toString(), 'create');
+            return SvDeviceTaskExistenceService::emptySlotResult();
+        }
+    }
+
+    /**
+     * @return array{created:int,skipped_existing:int,skipped_no_account:int,skipped_empty_schedule:int}
+     */
+    private static function createAutoDySearchTask(SvDevice $device, AiPersona $persona): array
+    {
+        $result = SvDeviceTaskExistenceService::emptySlotResult();
+        $schedules = BasePersonaLogic::getAutoSchedule($persona, DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH);
+        if ($schedules->isEmpty()) {
+            SvDeviceTaskExistenceService::bumpEmptySchedule($result, (string)$device->device_code, '抖音搜寻获客任务');
+            return $result;
+        }
+
+        $date = date('Y-m-d');
+        $keywords = self::loadAutoDySearchKeywords($device, $persona);
+        if ($keywords === null) {
+            return $result;
+        }
+
+        $scripts = DySearchFilterHistoryService::getHistory((int)$persona->user_id)['miss_scripts'] ?? [];
+        if (!is_array($scripts)) {
+            $scripts = [];
+        }
+        $missAction = $scripts !== [] ? 'dm' : 'skip';
+        $scanConfig = DySearchAccountNormalizer::buildScanConfig([
+            'miss_scripts' => $scripts,
+            'miss_action'  => $missAction,
+        ], 'keyword');
+
+        Db::startTrans();
+        try {
+            foreach ($schedules as $schedule) {
+                $platforms = $schedule->platform;
+                if (empty($platforms) || !is_array($platforms)) {
+                    continue;
+                }
+
+                $hasDy = false;
+                foreach ($platforms as $platform) {
+                    if ((int)($platform['account_type'] ?? 0) === DeviceEnum::ACCOUNT_TYPE_DY) {
+                        $hasDy = true;
+                        break;
+                    }
+                }
+                if (!$hasDy) {
+                    continue;
+                }
+
+                if (AutoTaskSceneConfigService::shouldSkipDailyCreate(
+                    DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH,
+                    DeviceEnum::ACCOUNT_TYPE_DY,
+                    (string)$device->device_code,
+                    '抖音搜寻获客任务'
+                )) {
+                    continue;
+                }
+
+                $startTime = strtotime($date . ' ' . $schedule->start_time . ':00');
+                $endTime = strtotime($date . ' ' . $schedule->end_time . ':00');
+                $execTime = date('H:i', (int)$startTime) . '-' . date('H:i', (int)$endTime);
+
+                $account = SvAccount::where('type', DeviceEnum::ACCOUNT_TYPE_DY)
+                    ->where('user_id', $device->user_id)
+                    ->where('device_code', $device->device_code)
+                    ->findOrEmpty();
+                if ($account->isEmpty()) {
+                    SvDeviceTaskExistenceService::bumpMissingAccount(
+                        $result,
+                        (string)$device->device_code,
+                        DeviceEnum::ACCOUNT_TYPE_DY,
+                        '抖音搜寻获客任务'
+                    );
+                    continue;
+                }
+
+                if (SvDeviceTaskExistenceService::shouldSkipExistingSlot(
+                    (int)$device->user_id,
+                    (string)$device->device_code,
+                    (int)$persona->id,
+                    DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH,
+                    DeviceEnum::ACCOUNT_TYPE_DY,
+                    (int)$startTime,
+                    (int)$endTime,
+                    '抖音搜寻获客任务'
+                )) {
+                    $result['skipped_existing']++;
+                    continue;
+                }
+
+                if ($endTime < time()) {
+                    Log::channel('auto')->write(
+                        $device->device_code . '该账号类型[' . $account->type . ']时间[' . $execTime . ']已过期',
+                        'create'
+                    );
+                }
+
+                $taskName = '自动化抖音搜寻获客' . date('mdHis');
+                $task = SvDySearchTask::create([
+                    'user_id'            => $device->user_id,
+                    'name'               => $taskName,
+                    'device_codes'       => [$device->device_code],
+                    'search_mode'        => 'keyword',
+                    'keywords'           => $keywords,
+                    'per_kw'             => 30,
+                    'day_cap'            => 50,
+                    'scan_config'        => $scanConfig,
+                    'exclude_default_id' => 1,
+                    'add_type'           => 1,
+                    'wechat_id'          => '',
+                    'add_rule'           => 'all',
+                    'add_number'         => 15,
+                    'add_interval_time'  => 10,
+                    'add_remark_enable'  => 0,
+                    'remarks'            => [],
+                    'task_exec_type'     => 0,
+                    'minutes'            => 0,
+                    'task_frep'          => '1',
+                    'time_config'        => [$execTime],
+                    'custom_date'        => [$date],
+                    'start_time'         => $startTime,
+                    'end_time'           => $endTime,
+                    'status'             => 0,
+                    'ocr_type'           => 1,
+                    'source'             => SvDySearchTask::SOURCE_AUTO,
+                    'auto_type'          => SvDySearchTask::AUTO_TYPE_AUTO,
+                    'persona_id'         => $persona->id,
+                    'remark'             => '',
+                ]);
+
+                SvDySearchTaskDevice::create([
+                    'user_id'     => $device->user_id,
+                    'task_id'     => $task->id,
+                    'device_code' => $device->device_code,
+                    'keywords'    => $keywords,
+                    'status'      => 1,
+                ]);
+
+                SvDeviceTask::create([
+                    'user_id'      => $device->user_id,
+                    'device_code'  => $device->device_code,
+                    'task_type'    => DeviceEnum::TASK_TYPE_DY_SEARCH,
+                    'account'      => $account->account ?? '',
+                    'account_type' => DeviceEnum::ACCOUNT_TYPE_DY,
+                    'nickname'     => $account->nickname ?? '',
+                    'avatar'       => $account->avatar ?? '',
+                    'auto_type'    => 1,
+                    'task_name'    => $taskName,
+                    'time_config'  => json_encode([$execTime], JSON_UNESCAPED_UNICODE),
+                    'start_time'   => $startTime,
+                    'end_time'     => $endTime,
+                    'day'          => date('Y-m-d', (int)$startTime),
+                    'sub_task_id'  => $task->id,
+                    'persona_id'   => $persona->id,
+                    'task_scene'   => DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH,
+                    'source'       => DeviceEnum::TASK_SOURCE_DY_SEARCH,
+                    'status'       => 0,
+                    'create_time'  => time(),
+                ]);
+                $result['created']++;
+            }
+
+            Db::commit();
+            return $result;
+        } catch (\Throwable $th) {
+            Db::rollback();
+            Log::channel('auto')->write(
+                '自动创建抖音搜寻获客任务失败 ' . $device->device_code . ' ' . $th->__toString(),
+                'create'
+            );
+            return SvDeviceTaskExistenceService::emptySlotResult();
+        }
+    }
+
+    /**
+     * 每台设备只取一次线索词。空词返回 null（调用方直接 return，不记 skipped_empty_schedule）。
+     *
+     * @return list<string>|null
+     */
+    private static function loadAutoDySearchKeywords(SvDevice $device, AiPersona $persona): ?array
+    {
+        $config = AiPersonaTrafficConfig::where('user_id', $persona->user_id)
+            ->where('persona_id', $persona->id)
+            ->findOrEmpty();
+
+        $rawKeywords = [];
+        if (!$config->isEmpty()) {
+            $rawKeywords = $config->clue_keywords;
+            if (is_string($rawKeywords)) {
+                $decoded = json_decode($rawKeywords, true);
+                $rawKeywords = is_array($decoded) ? $decoded : [];
+            }
+            if (!is_array($rawKeywords)) {
+                $rawKeywords = [];
+            }
+        }
+
+        $keywords = DySearchAccountNormalizer::normalizeKeywords($rawKeywords);
+        if ($keywords === []) {
+            Log::channel('auto')->write($device->device_code . ' 线索词为空，跳过', 'create');
+            return null;
+        }
+        if (count($keywords) > 200) {
+            $keywords = array_slice($keywords, 0, 200);
+            Log::channel('auto')->write($device->device_code . ' 线索词超过200条已截断', 'create');
+        }
+
+        return $keywords;
+    }
 
     /**
      * 新建后收口本用户其它执行中任务。exclude 为空则跳过。
+     * 仅收口 source=1 的手动任务，自动任务不受手动新建影响。
      *
      * @param list<int> $excludeTaskIds
-     * @return array{user_id: int, status: int, exclude_ids: list<int>, set_status: int}|null
+     * @return array{user_id: int, status: int, exclude_ids: list<int>, set_status: int, source: int}|null
      */
     public static function closeRunningHistorySpec(int $userId, array $excludeTaskIds): ?array
     {
@@ -665,6 +990,7 @@ class DySearchTaskLogic extends ApiLogic
         return [
             'user_id'     => $userId,
             'status'      => 1,
+            'source'      => SvDySearchTask::SOURCE_MANUAL,
             'exclude_ids' => $excludeIds,
             'set_status'  => 4,
         ];
@@ -682,6 +1008,7 @@ class DySearchTaskLogic extends ApiLogic
         }
         $ids = SvDySearchTask::where('user_id', $spec['user_id'])
             ->where('status', $spec['status'])
+            ->where('source', $spec['source'])
             ->where('id', 'not in', $spec['exclude_ids'])
             ->column('id');
         $out = [];

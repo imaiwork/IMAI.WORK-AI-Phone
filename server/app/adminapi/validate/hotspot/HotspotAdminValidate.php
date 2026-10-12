@@ -13,6 +13,7 @@ class HotspotAdminValidate extends BaseValidate
         'limit' => 'integer|between:1,100',
         'status' => 'in:script,video',
         'id' => 'require',
+        'persona_id' => 'require|integer|gt:0',
         'keyword' => 'max:64',
         'user' => 'max:64',
         'start_time' => 'date',
@@ -27,6 +28,9 @@ class HotspotAdminValidate extends BaseValidate
         'limit.between' => 'limit 必须在 1 到 100 之间',
         'status.in' => '状态值不正确',
         'id.require' => 'id参数缺失',
+        'persona_id.require' => '人设不能为空',
+        'persona_id.integer' => '人设ID必须是整数',
+        'persona_id.gt' => '人设不能为空',
         'keyword.max' => '关键词不能超过 64 字',
         'user.max' => '用户搜索不能超过 64 字',
     ];
@@ -59,5 +63,15 @@ class HotspotAdminValidate extends BaseValidate
     public function sceneId()
     {
         return $this->only(['id']);
+    }
+
+    public function sceneStockLists()
+    {
+        return $this->only(['persona_id']);
+    }
+
+    public function sceneStockDelete()
+    {
+        return $this->only(['id', 'persona_id'])->append('id', 'integer|gt:0');
     }
 }

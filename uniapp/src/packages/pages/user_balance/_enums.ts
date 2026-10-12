@@ -86,6 +86,7 @@ export const PRICE_GROUPS: PriceGroup[] = [
             'human_video_chanjing',
             'human_avatar_shanjian',
             'human_voice_shanjian',
+            'human_voice_shanjian_s3',
             'human_video_shanjian',
             'shanjian_realman_broadcast',
             'shanjian_broadcast_mixcut',

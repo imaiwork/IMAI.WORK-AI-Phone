@@ -25,17 +25,8 @@ class PlayVideoTemplateSyncService
 
     /** 参与「内容是否变化」比对的字段 */
     private const CONTENT_FIELDS = [
-        'play',
-        'name',
-        'category',
-        'heat',
-        'duration_sec',
-        'video_url',
-        'cover_url',
-        'face_count',
-        'allow_bg_replace',
-        'script',
-        'sort',
+        'play', 'name', 'category', 'heat', 'duration_sec',
+        'video_url', 'cover_url', 'face_count', 'allow_bg_replace', 'script', 'sort',
     ];
 
     public static function syncFromTemplateCenter(): array
@@ -43,17 +34,9 @@ class PlayVideoTemplateSyncService
         $templates = TemplateCenterClient::playTemplates();
 
         $stats = [
-            'created' => 0,
-            'updated' => 0,
-            'unchanged' => 0,
-            'deleted' => 0,
-            'downloaded' => 0,
-            'uploaded' => 0,
-            'reused' => 0,
-            'skipped' => 0,
-            'failed' => 0,
-            'failed_items' => [],
-            'total' => 0,
+            'created' => 0, 'updated' => 0, 'unchanged' => 0, 'deleted' => 0,
+            'downloaded' => 0, 'uploaded' => 0, 'reused' => 0, 'skipped' => 0,
+            'failed' => 0, 'failed_items' => [], 'total' => 0,
         ];
 
         $rows = [];

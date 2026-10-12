@@ -356,6 +356,7 @@
 import { getHotWriteList, createHotWrite, createHotWriteImageText, deleteHotWrite } from "@/api/hot_write";
 import { checkViralAssets, getPersonDetail } from "@/api/person";
 import { TokensSceneEnum } from "@/enums/appEnums";
+import { ManualPublishSourceEnum } from "@/enums/publishEnums";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import usePolling from "@/hooks/usePolling";
@@ -820,7 +821,7 @@ const onPrePublish = (task: any) => {
         url: "/ai_modules/digital_human/pages/montage_publish/montage_publish",
         params: {
             task_id: JSON.stringify([task.id]),
-            source: "hot_write",
+            source: ManualPublishSourceEnum.HOT_WRITE,
         },
     });
 };
@@ -845,7 +846,7 @@ const onPublish = (task: any) => {
         params: {
             // TaskType：1 视频 2 图文，与 HotWriteMediaType 一致
             type: isImageTextTask(task) ? 2 : 1,
-            source: "hot_write",
+            source: ManualPublishSourceEnum.HOT_WRITE,
             data: JSON.stringify({ id: task.id }),
         },
     });

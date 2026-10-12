@@ -29,7 +29,7 @@ import {
     MusicSourceEnum,
     SpeechEngineTypeEnum,
 } from "../../../_enums";
-import { toPackagingParams } from "../../../_config/advanced-setting";
+import { toPackagingParams, withResolvedSystemMusicUrl } from "../../../_config/advanced-setting";
 
 const DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE = 5;
 const VIDEO_NAME_SUFFIX = "数字人口播";
@@ -130,7 +130,7 @@ const getContentParams = () => {
  * type5 无包装：engine=1 闪剪 / engine=2 蝉镜
  * 蝉镜视频原音传空 voice，由服务端从形象视频克隆原音
  */
-const createSpeechTaskByEngine = (engineType: SpeechEngineTypeEnum) => {
+const createSpeechTaskByEngine = async (engineType: SpeechEngineTypeEnum) => {
     const isOriginal = isChanjingOriginalVoice(props.formData.voice_id);
     const voiceId = isOriginal ? "" : props.formData.voice_id;
     const extra: Record<string, any> = {
@@ -141,12 +141,15 @@ const createSpeechTaskByEngine = (engineType: SpeechEngineTypeEnum) => {
         extra.width = props.formData.width;
         extra.height = props.formData.height;
     }
+    const packaging = isPackagingEnabled()
+        ? toPackagingParams(await withResolvedSystemMusicUrl(props.formData.packaging))
+        : null;
     return createShanjianTask({
         name: resolveVideoName(props.formData.name),
         shanjian_type: DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE,
         engine_type: engineType,
         ai_clip_enabled: props.formData.ai_clip_enabled,
-        ...(isPackagingEnabled() ? { packaging: toPackagingParams(props.formData.packaging) } : {}),
+        ...(packaging ? { packaging } : {}),
         pic: props.formData.pic,
         ...getContentParams(),
         anchor: [

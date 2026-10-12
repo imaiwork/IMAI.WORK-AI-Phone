@@ -64,10 +64,11 @@ export const HOT_WRITE_COPY_LENGTH_OPTIONS = [
     { val: 600, label: "超长", desc: "约600字 · 3分钟" },
 ] as const;
 
-/** 洗稿背景音乐来源：1 系统音乐随机（默认） 2 用户自传 */
+/** 洗稿背景音乐来源：1 系统随机（默认） 2 用户自传 3 指定系统音乐 */
 export enum WashMusicSource {
     SYSTEM = 1,
     UPLOAD = 2,
+    PICK = 3,
 }
 
 export const HOT_WRITE_COPY_LENGTH_DEFAULT = 200;

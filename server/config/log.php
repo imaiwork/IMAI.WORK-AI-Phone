@@ -58,7 +58,6 @@ return [
         ],
         'socket' => [
             'type'           => 'File',
-            'max_files'      => 30,
             'path'           => app()->getRootPath() . '/runtime/log/socket/',
             'json'           => false,
             'single'         => false,
@@ -181,7 +180,6 @@ return [
         ],
         'auto' => [
             'type'           => 'File',
-            'max_files'      => 30,
             'path'           => app()->getRootPath() . '/runtime/log/auto/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
@@ -311,7 +309,6 @@ return [
         ],
         'ipVideoSynthesis' => [ //ip人设视频合成日志
             'type'           => 'File',
-            'max_files'      => 30,
             'path'           => app()->getRootPath() . '/runtime/log/ipVideoSynthesis/',
             'json'           => false,
             'format'         => '[%s][%s] %s',
@@ -353,7 +350,6 @@ return [
         ],
         'explosionVideoSynthesis' => [ //爆款仿写文案视频合成日志
             'type'           => 'File',
-            'max_files'      => 30,
             'path'           => app()->getRootPath() . '/runtime/log/explosionVideoSynthesis/',
             'json'           => false,
             'format'         => '[%s][%s] %s',

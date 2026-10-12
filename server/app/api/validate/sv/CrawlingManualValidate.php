@@ -11,9 +11,10 @@ use app\common\validate\BaseValidate;
 class CrawlingManualValidate extends BaseValidate
 {
     protected $rule = [
-        'source'                         => 'require|in:1,2,3',
+        'source'                         => 'require|in:1,2,3,4',
         'fileurl'                        => 'requireIf:source,1',
         'crawling_task_ids'              => 'requireIf:source,2|requireIf:source,3|checkCrawlingTaskIds',
+        'add_friend_type'                => 'in:1,2',
         'add_type'                       => 'require|in:0,1',
         'status'                         => 'require|in:0,1,2,3,4',
         'add_number'                     => 'require',
@@ -30,6 +31,7 @@ class CrawlingManualValidate extends BaseValidate
         'fileurl.requireIf'                      => '请上传表格文件',
         'crawling_task_ids.requireIf'            => '请选择获客任务',
         'crawling_task_ids.checkCrawlingTaskIds' => '请选择获客任务',
+        'add_friend_type.in'                     => '加我方式值不正确',
         'add_type.require'                     => '请选择自动加好友类型',
         'status.require'                         => '请输入状态',
         'add_number.require'                       => '添加数量不能为空',
@@ -51,6 +53,7 @@ class CrawlingManualValidate extends BaseValidate
             'source',
             'fileurl',
             'crawling_task_ids',
+            'add_friend_type',
             'add_type',
             'add_number',
             'add_interval_time',

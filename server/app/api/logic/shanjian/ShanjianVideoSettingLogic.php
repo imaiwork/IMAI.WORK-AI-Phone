@@ -220,7 +220,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
      * 高级设置：包装开关 / 音乐来源 / 音量 / 语速。
      * speech_volume 仅落库，闪剪 speakerExtra 无人声音量字段。
      *
-     * @param array $options require_speech=type1/3；news=type4 固定音乐音量 0.3
+     * @param array $options require_speech=type1/3；news=type4 背景音乐音量用前端传入值
      */
     public static function normalizeAdvancedSettings(array &$extra, array $musicData, array $options = []): void
     {
@@ -246,15 +246,31 @@ class ShanjianVideoSettingLogic extends ApiLogic
             throw new \Exception('自定义背景音乐不能为空');
         }
 
+        $pinned = trim((string)($extra['system_music_id'] ?? ''));
+        if ($pinned !== '' && (int)$extra['music_source'] !== self::MUSIC_SOURCE_CUSTOM) {
+            $extra['music_source'] = self::MUSIC_SOURCE_SYSTEM;
+        }
+        if ((int)$extra['music_source'] !== self::MUSIC_SOURCE_SYSTEM) {
+            $extra['system_music_id'] = '';
+        } elseif ($pinned !== '') {
+            if (!\app\common\service\SystemMusicService::isEnabled($pinned)) {
+                throw new \Exception('这首系统音乐已下架，请重选或改回随机');
+            }
+            $extra['system_music_id'] = $pinned;
+        } else {
+            $extra['system_music_id'] = '';
+        }
+
         foreach (['header_switch', 'material_switch', 'subtitle_switch', 'keyword_switch'] as $key) {
             if (array_key_exists($key, $extra)) {
                 $extra[$key] = self::normalizePackSwitch($extra[$key]);
             }
         }
 
-        if (!empty($options['news'])) {
-            $extra['music_volume'] = 0.3;
-        } elseif (array_key_exists('music_volume', $extra)) {
+        if (!empty($options['news']) && !array_key_exists('music_volume', $extra) && array_key_exists('volume', $extra)) {
+            $extra['music_volume'] = $extra['volume'];
+        }
+        if (array_key_exists('music_volume', $extra)) {
             $extra['music_volume'] = self::normalizeVolumeValue($extra['music_volume'], '背景音乐音量');
         }
 
@@ -300,7 +316,30 @@ class ShanjianVideoSettingLogic extends ApiLogic
             $packaging['music_url'] = $existing;
             return;
         }
-        $packaging['music_url'] = self::resolveMusicUrlBySource($musicData, $packaging, 0);
+        $resolved = self::resolveMusicUrlBySource($musicData, $packaging, 0);
+        $resolvedIsLegacy = \app\common\service\SystemMusicService::isLegacyPoolUrl($resolved);
+        $existingIsCatalog = $existing !== '' && !\app\common\service\SystemMusicService::isLegacyPoolUrl($existing);
+        if ($resolved === '' || ($resolvedIsLegacy && $existingIsCatalog)) {
+            $packaging['music_url'] = $existing;
+            return;
+        }
+        $packaging['music_url'] = $resolved;
+    }
+
+    /**
+     * 纯口播的曲子在 packaging 里，不在口播 extra。
+     * 口播 extra 没有 music_source，按它解析会得到空地址，包装下发就没有 audioUrl。
+     */
+    public static function resolveType5MusicUrl(array $packaging, array $musicData, array $extraData, int $index): string
+    {
+        if ($packaging !== []) {
+            $packMusic = is_array($packaging['music'] ?? null) ? $packaging['music'] : $musicData;
+            $url = self::resolveMusicUrlBySource($packMusic, $packaging, $index);
+            if ($url !== '') {
+                return $url;
+            }
+        }
+        return self::resolveMusicUrlBySource($musicData, $extraData, $index);
     }
 
     public static function resolveMusicUrlBySource(array $musicData, array $extra, int $index): string
@@ -319,7 +358,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
             return '';
         }
         if ($source === self::MUSIC_SOURCE_SYSTEM) {
-            return self::randomSystemMusicUrl();
+            $pinned = trim((string)($extra['system_music_id'] ?? ''));
+            return \app\common\service\SystemMusicService::resolve($pinned, $pinned !== '');
         }
         return self::pickCustomMusicUrl($musicData, $extra, $index);
     }
@@ -374,7 +414,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
     public static function randomSystemMusicUrl(): string
     {
-        return rtrim((string)config('app.app_host'), '/') . '/static/audio/music/' . random_int(1, 20) . '.mp3';
+        return \app\common\service\SystemMusicService::randomUrl();
     }
 
     public static function normalizePackSwitch($value): bool
@@ -452,7 +492,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
             }
         }
-        if (in_array($shanjianType, [3, 4], true) && $videoCount <= 0) {
+        if (self::originalModeRequiresVideo($shanjianType) && $videoCount <= 0) {
             self::setError('原图模式必须选择原图模式视频');
             return false;
         }
@@ -557,6 +597,15 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $type = (string)($item['type'] ?? '');
         $materialType = (int)($item['material_type'] ?? 0);
         return $type === 'video' || $materialType === Material::MATERIAL_TYPE_VIDEO;
+    }
+
+    /**
+     * 原图模式是否必须有视频：素材混剪(3)/新闻体(4)没有画面视频出不了片；
+     * 数字人口播(1)的素材是穿插画面，只选图片照样能合成。
+     */
+    public static function originalModeRequiresVideo(int $shanjianType): bool
+    {
+        return in_array($shanjianType, [3, 4], true);
     }
 
     /**
@@ -896,12 +945,21 @@ class ShanjianVideoSettingLogic extends ApiLogic
         return false;
     }
 
+    /** 每条视频累加时补偿的截断误差：素材库 duration 是整秒，真实时长最多多出不到 1s */
+    public const SAFETY_PER_VIDEO = 1.0;
+
     /**
-     * 闪剪素材时长门禁（仅自动化任务使用；手动任务前端已限制总时长，不做过滤）
+     * 闪剪素材时长门禁
      * - 图片按 2s
      * - 视频按实际 duration，≤0 过滤；单条 >59s 过滤
      * - 累计总时长 >290s 时过滤当前素材
      * 兼容 material_type(1视频/其它图片) 与 type(video|image)
+     *
+     * ⚠️ 素材库 duration 列是 int，存的是被截断的整秒（真实 3.6s 存成 3）。
+     * 按存储值累加会系统性低估，素材条数越多误差越大：2026-09-16 znt 有一单
+     * 90 条视频按存储值合计 275s 过了本地 290s 闸门，闪剪按真实时长判超过 5 分钟
+     * （InvalidFile.Duration）整单打回。因此每条视频按 SAFETY_PER_VIDEO 补偿截断误差，
+     * 保证 sum(真实) < sum(存储) + 条数 ≤ maxTotal，宁可少放一条也不让上游整单失败。
      */
     public static function trimMaterialsByDuration(array $materials, float $maxTotal = 290, float $maxSingle = 59): array
     {
@@ -924,11 +982,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 $isImage = !$isVideo;
             }
 
+            $budget = 0.0;
             if ($isVideo) {
                 $duration = (float)($material['duration'] ?? 0);
                 if ($duration <= 0 || $duration > $maxSingle) {
                     continue;
                 }
+                // 单条上限仍按存储值判（59s 是闪剪单素材硬限制），只有累加时补截断误差
+                $budget = $duration + self::SAFETY_PER_VIDEO;
             } else {
                 $duration = 2.0;
                 $material['duration'] = 2;
@@ -937,11 +998,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
             }
 
-            if (($total + $duration) > $maxTotal) {
+            if ($budget <= 0.0) {
+                $budget = $duration;
+            }
+            if (($total + $budget) > $maxTotal) {
                 continue;
             }
 
-            $total += $duration;
+            $total += $budget;
             $kept[] = $material;
         }
 
@@ -1904,8 +1968,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
         if ($voiceId === '') {
             return false;
         }
-        // 闪剪音色库: HumanVoice model_version=8, 已生成(status=1)
-        $voiceQuery = HumanVoice::where('model_version', 8)
+        // 闪剪音色库: HumanVoice V3/S3, 已生成(status=1)
+        $voiceQuery = HumanVoice::whereIn('model_version', HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS)
             ->where('status', 1)
             ->where('voice_id', $voiceId);
         if ($userId !== null && $userId > 0) {
@@ -2614,7 +2678,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'msg' => $taskContent['content'] ?? '',
                     'audio_url' => $isMinimaxPending ? '' : ($taskContent['audio_url'] ?? ''),
                     'material' => '[]',
-                    'music_url' => '',
+                    'music_url' => self::resolveType5MusicUrl($packaging, [], $extraData, $globalTaskIndex),
                     'thumb_status' => ($pic !== '' || !empty($humanTask->pic)) ? 2 : 4,
                     'duration' => (int)ceil($taskDuration),
                     'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -2704,7 +2768,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                         : ['voice_id' => ''];
                 }
 
-                $music_url = self::resolveMusicUrlBySource($musicData, $extraData, $globalTaskIndex);
+                $music_url = self::resolveType5MusicUrl($packaging, $musicData, $extraData, $globalTaskIndex);
 
                 $material = json_encode(is_array($materialData) ? array_values($materialData) : [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 

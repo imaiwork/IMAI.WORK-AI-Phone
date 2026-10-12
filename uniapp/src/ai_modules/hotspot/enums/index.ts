@@ -62,11 +62,13 @@ export const HOTSPOT_ORIGIN_VOICE_ID = -1;
 export enum HotspotMusicSource {
     SYSTEM = 1,
     UPLOAD = 2,
+    PICK = 3,
 }
 
 export const HOTSPOT_MUSIC_SOURCE_OPTIONS = [
-    { val: HotspotMusicSource.SYSTEM, label: "系统音乐随机" },
-    { val: HotspotMusicSource.UPLOAD, label: "上传我的音乐" },
+    { val: HotspotMusicSource.SYSTEM, label: "系统随机" },
+    { val: HotspotMusicSource.PICK, label: "指定系统音乐" },
+    { val: HotspotMusicSource.UPLOAD, label: "自己上传" },
 ];
 
 export const HOTSPOT_PLATFORM_OPTIONS = [
@@ -180,3 +182,9 @@ export const HOTSPOT_DEFAULT_OPTIONS = {
 };
 
 export type HotspotOptionsData = typeof HOTSPOT_DEFAULT_OPTIONS;
+
+/** 热点库条目是否已带文案，对齐 /hotspot.hotspot/stock 的 has_script */
+export enum HotspotStockHasScript {
+    TitleOnly = 0,
+    WithScript = 1,
+}

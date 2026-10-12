@@ -77,6 +77,7 @@ class StoryboardVideoSettingLogic extends ApiLogic
                 }
             }
         }
+        $params['BackgroundMusicArray'] = self::resolveBackgroundMusic($params);
         //InputConfig 参数
         $inputConfig = [
             'MediaGroupArray'      => $params['MediaGroupArray'],
@@ -614,5 +615,32 @@ class StoryboardVideoSettingLogic extends ApiLogic
             $result = '阿里云oss拒绝访问，请检查oss设置';
         }
         return $result;
+    }
+
+    /**
+     * 指定曲目优先；没指定且勾了系统随机、又没传用户音乐时，从曲库随机一首。
+     * 已经写进任务的地址不会再变。
+     */
+    private static function resolveBackgroundMusic(array $params): array
+    {
+        $list = [];
+        foreach ((array)($params['BackgroundMusicArray'] ?? []) as $url) {
+            $url = trim((string)$url);
+            if ($url !== '') {
+                $list[] = $url;
+            }
+        }
+        $pinned = trim((string)($params['system_music_id'] ?? ''));
+        if ($pinned !== '') {
+            return [\app\common\service\SystemMusicService::resolve($pinned, true)];
+        }
+        if ($list !== []) {
+            return $list;
+        }
+        if (!empty($params['ai_music']) || !empty($params['system_random'])) {
+            $url = \app\common\service\SystemMusicService::randomUrl();
+            return $url === '' ? [] : [$url];
+        }
+        return [];
     }
 }

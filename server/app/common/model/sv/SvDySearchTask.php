@@ -9,6 +9,11 @@ class SvDySearchTask extends BaseModel
 {
     use SoftDelete;
 
+    public const SOURCE_MANUAL = 1;
+    public const SOURCE_AUTO = 2;
+    public const AUTO_TYPE_MANUAL = 0;
+    public const AUTO_TYPE_AUTO = 1;
+
     protected $deleteTime = 'delete_time';
 
     public function setScanConfigAttr($value)

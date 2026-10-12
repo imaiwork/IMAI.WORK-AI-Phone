@@ -212,7 +212,7 @@ export interface AccountSearchFormData {
     miss_once: number
     // ── 第 3 步：识别到之后 ──
     add_type: number
-    /** 加微客服微信，多选，存 account(wxid) 逗号分隔 —— data-select 的契约 */
+    /** 加微客服微信，存 account(wxid) 逗号分隔；选择组件的数组由页面转换 */
     wechat_id: string
     add_rule: AddRuleEnum
     add_number: number

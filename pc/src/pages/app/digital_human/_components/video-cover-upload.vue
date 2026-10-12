@@ -24,15 +24,12 @@
                     :data="{
                         ffmpeg: 1,
                     }"
-                    :image-resolution="[
-                        [0, 2000],
-                        [0, 2000],
-                    ]"
+                    :image-resolution="montageUploadConfig.imageResolution"
                     :limit="1"
                     :max-size="maxSize"
                     :show-file-list="false"
                     show-progress
-                    accept="image/jpeg,image/jpg,image/png"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     drag
                     @success="handleUpload">
                     <div
@@ -101,6 +98,8 @@
 </template>
 
 <script setup lang="ts">
+import { montageUploadConfig } from "@/pages/app/digital_human/_config";
+
 interface Props {
     modelValue?: string;
     maxSize?: number;

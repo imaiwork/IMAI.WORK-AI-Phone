@@ -18,6 +18,7 @@ class CrawlingManualLists extends BaseApiDataLists implements ListsSearchInterfa
         1 => '表格导入',
         2 => '获客任务引用',
         3 => '抖音获客任务引用',
+        4 => '客资线索动态获取',
     ];
 
     public function setSearch(): array
@@ -34,30 +35,34 @@ class CrawlingManualLists extends BaseApiDataLists implements ListsSearchInterfa
             ->limit($this->limitOffset, $this->limitLength)
             ->select()->each(function ($item) {
                 if ($item->status == 1) {
-                    $item->completed_add_count = SvCrawlingManualTaskRecord::where('task_id', $item->id)->where('status', 1)->count();
-                    if ($item->completed_add_count >= $item->exec_add_count) {
-                        $item->status = 3;
-                        $item->update_time = time();
+                    if ((int)$item->add_friend_type === 2) {
+                        if ((int)$item->add_number > 0 && (int)$item->completed_add_count >= (int)$item->add_number) {
+                            $item->status = 3;
+                            $item->update_time = time();
+                            $item->save();
+                        }
+                    } else {
+                        $item->completed_add_count = SvCrawlingManualTaskRecord::where('task_id', $item->id)->where('status', 1)->count();
+                        if ($item->completed_add_count >= $item->exec_add_count) {
+                            $item->status = 3;
+                            $item->update_time = time();
+                        }
+                        $item->save();
                     }
-                    // if (!isset($item['start_time']) || is_null($item->start_time)) {
-                    //     $item->start_time = strtotime($item->create_time);
-                    // }
-                    // $item->end_time = SvCrawlingManualTaskRecord::where('task_id', $item->id)->max('update_time');
-                    // if (!isset($item->end_time) || is_null($item->end_time) || $item->end_time == 0) {
-                    //     $item->end_time = time();
-                    // }
-                    $item->save();
                 } elseif ($item->status == 3) {
                     // $item->end_time = time();
                     // $item->save();
                 } elseif ($item->status == 0) {
-                    $count = SvCrawlingManualTaskRecord::where('task_id', $item->id)->count();
-                    if ($count == 0) {
-                        $item->status = 3;
-                        $item->update_time = time();
-                        // $item->start_time = strtotime($item->create_time);
-                        // $item->end_time = time();
-                        $item->save();
+                    // source=4 记录由 cron 从客资池领取，建任务时为 0 属正常，不能判完成
+                    if ((int)$item->source !== 4) {
+                        $count = SvCrawlingManualTaskRecord::where('task_id', $item->id)->count();
+                        if ($count == 0) {
+                            $item->status = 3;
+                            $item->update_time = time();
+                            // $item->start_time = strtotime($item->create_time);
+                            // $item->end_time = time();
+                            $item->save();
+                        }
                     }
                 }
                 $item->exec_day = ceil(($item->end_time - $item->start_time) / 86400);

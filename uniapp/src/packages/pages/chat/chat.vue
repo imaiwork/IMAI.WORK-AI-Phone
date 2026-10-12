@@ -511,7 +511,7 @@ import {
 import { parseChatStreamErrorPayload, resolveChatErrorMessage } from "@/utils/chatStream";
 import { RequestCodeEnum } from "@/enums/requestEnums";
 import usePolling from "@/hooks/usePolling";
-import { resetKeyboardHeight } from "@/hooks/useKeyboardHeight";
+import { ensureKeyboardHeightListener, resetKeyboardHeight } from "@/hooks/useKeyboardHeight";
 import EmptyContent from "./components/empty-content.vue";
 import HistoryPopup from "./components/history-popup.vue";
 import KnowledgeList from "./components/knowledge-list.vue";
@@ -3107,6 +3107,8 @@ onHide(() => {
 });
 
 onShow(async () => {
+    // 切走再回来时，上一页注册的键盘监听已经失效，要在当前页重新挂上
+    ensureKeyboardHeightListener();
     await Promise.all([
         appStore.getConfig(), // 拉取 draw_model（生图模型列表，对齐 PC）
         appStore.getChatConfig(),

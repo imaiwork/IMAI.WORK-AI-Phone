@@ -1,3 +1,4 @@
+import { getSystemMusicList } from "@/api/digital_human";
 import { MusicSourceEnum } from "@/ai_modules/digital_human/enums";
 
 /** 四项视频包装开关：混剪写进 extra，数字人纯口播写进 packaging */
@@ -14,6 +15,11 @@ export interface AdvancedSetting extends PackSwitchSetting {
     music_url: string;
     /** 只用于本地回显，不提交 */
     music_name: string;
+    /** 系统推荐时指定一首，空=每次随机 */
+    system_music_id: string;
+    system_music_name: string;
+    /** 指定或随机抽到的系统曲地址，提交时写入 packaging.music_url */
+    system_music_url: string;
     music_volume: number;
 }
 
@@ -35,15 +41,42 @@ export const createAdvancedSetting = (): AdvancedSetting => ({
     music_source: MusicSourceEnum.SYSTEM,
     music_url: "",
     music_name: "",
+    system_music_id: "",
+    system_music_name: "",
+    system_music_url: "",
     music_volume: ADVANCED_MUSIC_VOLUME_DEFAULT,
 });
 
 /**
- * 转成 packaging 提交参数：自定义音乐走 music 数组，music_url 留空由后端归一化后回填；
- * 系统推荐来源不带音乐，后端随机挑曲
+ * 系统推荐在提交前补上具体音频地址。
+ * 指定曲用已选地址；随机则从曲库抽一首写进 music_url。只开 music_source、地址留空时，包装下发没有 audioUrl。
+ */
+export const withResolvedSystemMusicUrl = async (setting: AdvancedSetting): Promise<AdvancedSetting> => {
+    if (setting.music_source !== MusicSourceEnum.SYSTEM) return setting;
+    if (setting.system_music_url) return setting;
+    const res = await getSystemMusicList();
+    const tracks = (Array.isArray(res) ? res : []).filter((item) => item?.audio_url);
+    if (!tracks.length) return setting;
+    const pinnedId = String(setting.system_music_id || "");
+    if (pinnedId) {
+        const pinned = tracks.find((item) => String(item.id) === pinnedId);
+        if (!pinned) return setting;
+        return { ...setting, system_music_url: String(pinned.audio_url) };
+    }
+    const hit = tracks[Math.floor(Math.random() * tracks.length)];
+    return {
+        ...setting,
+        system_music_url: String(hit.audio_url),
+    };
+};
+
+/**
+ * 转成 packaging 提交参数：自定义音乐走 music 数组；
+ * 系统推荐带上曲目 id，并把具体音频地址放进 music_url
  */
 export const toPackagingParams = (setting: AdvancedSetting): Record<string, any> => {
     const isCustom = setting.music_source === MusicSourceEnum.CUSTOM;
+    const isSystem = setting.music_source === MusicSourceEnum.SYSTEM;
     const musicUrl = isCustom ? setting.music_url : "";
     return {
         header_switch: setting.header_switch,
@@ -52,7 +85,8 @@ export const toPackagingParams = (setting: AdvancedSetting): Record<string, any>
         keyword_switch: setting.keyword_switch,
         music_source: setting.music_source,
         music: musicUrl ? [musicUrl] : [],
-        music_url: "",
+        music_url: isSystem ? setting.system_music_url || "" : "",
+        system_music_id: isSystem ? setting.system_music_id || "" : "",
         music_volume: setting.music_volume,
     };
 };

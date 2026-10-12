@@ -55,80 +55,77 @@
                     </div>
                 </upload>
 
-                <div
-                    class="flex items-center justify-between p-4 rounded-2xl border border-slate-100 transition-all text-left"
-                    :class="isAiMusic ? 'bg-[#0065fb]/5 border-[#0065fb]/20' : 'bg-[#f8fafc]/30 border-[transparent]'">
-                    <div class="flex items-center gap-3">
+                <ElScrollbar max-height="420px" :distance="20" @end-reached="load">
+                    <div class="flex flex-col gap-2.5 pb-2 text-left">
                         <div
-                            class="w-10 h-10 rounded-full bg-white flex items-center justify-center"
-                            :class="isAiMusic ? 'text-primary' : 'text-slate-400'">
-                            <Icon name="el-icon-Cpu" :size="20" />
-                        </div>
-                        <div>
-                            <div class="text-sm font-[1000] text-slate-800">AI 智能配乐模式</div>
-                            <div class="text-[11px] text-slate-400 font-bold">开启后将根据文案意境自动生成配乐</div>
-                        </div>
-                    </div>
-                    <ElSwitch v-model="isAiMusic" />
-                </div>
-
-                <div class="flex-1 min-h-0 flex flex-col overflow-hidden text-left" v-if="!isAiMusic">
-                    <div class="flex items-center justify-between mb-3 px-1">
-                        <span class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">音乐库</span>
-                        <span class="text-[11px] text-slate-300 font-bold tracking-tight"
-                            >{{ pager.count }} 首可用</span
-                        >
-                    </div>
-
-                    <ElScrollbar class="flex-1 pr-2" max-height="400px" :distance="20" @end-reached="load">
-                        <div class="flex flex-col gap-2.5 pb-4">
+                            class="music-row cursor-pointer"
+                            :class="isAiMusic ? 'border-primary bg-[#0065fb]/5' : 'border-slate-100'"
+                            @click="pickRandom">
                             <div
-                                v-for="item in pager.lists"
-                                :key="item.id"
-                                @click="handleSelect(item)"
-                                :class="[
-                                    'group flex items-center gap-4 p-3 rounded-xl border-2 transition-all cursor-pointer relative overflow-hidden',
-                                    isSelected(item.id)
-                                        ? 'bg-[#0065fb]/5 border-primary'
-                                        : 'bg-white border-slate-50 hover:border-slate-200',
-                                ]">
-                                <div
-                                    class="relative w-12 h-12 shrink-0 overflow-hidden rounded-lg flex items-center justify-center group"
-                                    style="
-                                        background: linear-gradient(
-                                            180deg,
-                                            rgb(162, 227, 223) 0%,
-                                            rgb(120, 201, 196) 100%
-                                        );
-                                    ">
-                                    <span
-                                        class="text-white transition-opacity leading-[0]"
-                                        v-if="currPlayingId !== item.id || isPaused">
-                                        <Icon name="el-icon-Microphone" :size="22" />
-                                    </span>
+                                class="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0"
+                                :class="isAiMusic ? 'text-primary' : 'text-slate-400'">
+                                <Icon name="el-icon-Cpu" :size="18" />
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-[1000] text-slate-800">系统随机</div>
+                                <div class="text-[11px] text-slate-400 font-bold">每次从系统曲库随机一首</div>
+                            </div>
+                            <Icon v-if="isAiMusic" name="el-icon-Check" color="var(--el-color-primary)" :size="16" />
+                        </div>
 
-                                    <div v-if="currPlayingId === item.id && !isPaused" class="playing-bars">
-                                        <span></span><span></span><span></span>
-                                    </div>
+                        <div v-if="systemMusics.length" class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] px-1 pt-1">
+                            系统音乐
+                        </div>
+                        <div
+                            v-for="item in systemMusics"
+                            :key="item.id"
+                            class="music-row cursor-pointer"
+                            :class="systemMusicId === item.id ? 'border-primary bg-[#0065fb]/5' : 'border-slate-100'"
+                            @click="pickSystem(item)">
+                            <button
+                                type="button"
+                                class="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center text-white"
+                                style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                                @click.stop="playSystem(item)">
+                                <Icon
+                                    :name="isTrackPlaying(systemPlayId(item.id)) ? 'el-icon-VideoPause' : 'el-icon-VideoPlay'"
+                                    color="#fff"
+                                    :size="18" />
+                            </button>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-medium text-slate-800 truncate">{{ item.name }}</div>
+                                <div class="text-[11px] text-slate-400">{{ formatDuration(item.duration_sec) }}</div>
+                            </div>
+                            <Icon
+                                v-if="systemMusicId === item.id"
+                                name="el-icon-Check"
+                                color="var(--el-color-primary)"
+                                :size="16" />
+                        </div>
+                        <div v-if="systemMusicLoaded && !systemMusics.length" class="text-[12px] text-slate-400 text-center py-3">
+                            暂无上架曲目，将使用系统随机
+                        </div>
 
-                                    <div
-                                        class="absolute inset-0 bg-[#000000]/40 flex items-center justify-center transition-opacity cursor-pointer"
-                                        :class="
-                                            currPlayingId === item.id
-                                                ? 'opacity-100'
-                                                : 'opacity-0 group-hover:opacity-100'
-                                        "
-                                        @click.stop="playMusic(item)">
-                                        <Icon
-                                            :name="
-                                                currPlayingId === item.id && !isPaused
-                                                    ? 'el-icon-VideoPause'
-                                                    : 'el-icon-VideoPlay'
-                                            "
-                                            color="#fff"
-                                            :size="22" />
-                                    </div>
-                                </div>
+                        <div class="flex items-center justify-between px-1 pt-1">
+                            <span class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">我上传的</span>
+                            <span class="text-[11px] text-slate-300 font-bold tracking-tight">{{ userMusicCount }} 首可用</span>
+                        </div>
+                        <div
+                            v-for="item in pager.lists"
+                            :key="item.id"
+                            class="music-row cursor-pointer"
+                            :class="isSelected(item.id) ? 'border-primary bg-[#0065fb]/5' : 'border-slate-100'"
+                            @click="handleSelect(item)">
+                                <button
+                                    type="button"
+                                    class="relative w-10 h-10 shrink-0 overflow-hidden rounded-lg flex items-center justify-center"
+                                    style="background: linear-gradient(180deg, rgb(162, 227, 223) 0%, rgb(120, 201, 196) 100%)"
+                                    @click.stop="playMusic(item)">
+                                    <Icon
+                                        :name="isTrackPlaying(userPlayId(item.id)) ? 'el-icon-VideoPause' : 'el-icon-VideoPlay'"
+                                        color="#fff"
+                                        :size="18" />
+                                </button>
 
                                 <div class="flex-1 min-w-0">
                                     <div
@@ -138,31 +135,26 @@
                                     </div>
                                 </div>
 
-                                <div
-                                    class="w-6 h-6 rounded-full flex items-center justify-center transition-all border shrink-0"
-                                    :class="
-                                        isSelected(item.id)
-                                            ? 'bg-primary border-primary scale-100'
-                                            : 'bg-white border-slate-100 opacity-0 group-hover:opacity-100 scale-90'
-                                    ">
-                                    <Icon name="el-icon-Check" color="#fff" :size="12" />
-                                </div>
+                                <Icon
+                                    v-if="isSelected(item.id)"
+                                    name="el-icon-Check"
+                                    color="var(--el-color-primary)"
+                                    :size="16" />
                             </div>
-                        </div>
                         <load-text :is-load="pager.isLoad"></load-text>
-                    </ElScrollbar>
-                </div>
+                    </div>
+                </ElScrollbar>
             </div>
 
             <div
                 class="px-8 py-6 border-t border-slate-50 flex items-center justify-between shrink-0 bg-white shadow-[0_-10px_20px_rgba(0,0,0,0.01)]">
-                <div class="text-[12px] font-black text-slate-400">
-                    <span v-if="!isAiMusic">
-                        已选 <span class="text-primary">{{ chooseList.length }}</span> 首内容
+                <div class="text-[12px] font-black text-slate-400 min-w-0 truncate">
+                    <span v-if="systemMusicId" class="text-primary">{{ systemMusicName || "已指定" }}</span>
+                    <span v-else-if="isAiMusic" class="text-primary">系统随机</span>
+                    <span v-else-if="chooseList.length">
+                        已选 <span class="text-primary">{{ chooseList.length }}</span> 首
                     </span>
-                    <span v-else class="text-primary flex items-center gap-1.5 font-[1000]">
-                        <Icon name="el-icon-MagicStick" /> 智能模式已激活
-                    </span>
+                    <span v-else>未选择</span>
                 </div>
                 <div class="flex items-center gap-3">
                     <button
@@ -183,6 +175,7 @@
 
 <script setup lang="ts">
 import { getMaterialLibraryList, addMaterialLibrary } from "@/api/material";
+import { getSystemMusicList } from "@/api/digital_human";
 import { getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
 
 const props = defineProps({
@@ -192,13 +185,17 @@ const props = defineProps({
     },
 });
 const emit = defineEmits<{
-    (e: "confirm", data: { music: any[]; ai_music: boolean }): void;
+    (e: "confirm", data: { music: any[]; ai_music: boolean; system_music_id: string; system_music_name: string }): void;
     (e: "close"): void;
 }>();
 
 const popupRef = shallowRef();
 const isAiMusic = ref(true);
 const chooseList = ref<any[]>([]);
+const systemMusics = ref<any[]>([]);
+const systemMusicLoaded = ref(false);
+const systemMusicId = ref("");
+const systemMusicName = ref("");
 
 const audioInstance = new Audio();
 const currPlayingId = ref<string | number | null>(null);
@@ -208,16 +205,25 @@ const queryParams = reactive({
     page_no: 1,
     m_type: 6,
 });
+const isM4a = (item: any) => String(item?.content || "").toLowerCase().includes(".m4a");
+
 const { getLists, pager, resetPage } = usePaging({
     fetchFun: getMaterialLibraryList,
     params: queryParams,
     isScroll: true,
 });
 
+const stripM4a = () => {
+    pager.lists = pager.lists.filter((item: any) => !isM4a(item));
+};
+
+const userMusicCount = computed(() => pager.count || 0);
+
 const load = async (e: string) => {
     if (e == "bottom" && pager.isLoad && !pager.loading) {
         queryParams.page_no++;
         await getLists();
+        stripM4a();
     }
 };
 
@@ -228,6 +234,8 @@ const handleSelect = (item: any) => {
     if (isAiMusic.value) {
         isAiMusic.value = false;
     }
+    systemMusicId.value = "";
+    systemMusicName.value = "";
     const index = chooseList.value.findIndex((i) => i.id === item.id);
     if (props.multiple) {
         // 多选：已选则取消，未选则追加
@@ -246,8 +254,19 @@ const handleSelect = (item: any) => {
     }
 };
 
-const playMusic = (item: any) => {
-    if (currPlayingId.value === item.id) {
+const systemPlayId = (id: string | number) => `sys-${id}`;
+const userPlayId = (id: string | number) => `user-${id}`;
+
+const formatDuration = (sec: number) => {
+    const total = Math.max(0, Math.floor(Number(sec) || 0));
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+};
+
+const isTrackPlaying = (id: string) => currPlayingId.value === id && !isPaused.value;
+
+const togglePlay = (id: string, url: string) => {
+    if (!url) return;
+    if (currPlayingId.value === id) {
         if (audioInstance.paused) {
             audioInstance.play();
             isPaused.value = false;
@@ -255,12 +274,31 @@ const playMusic = (item: any) => {
             audioInstance.pause();
             isPaused.value = true;
         }
-    } else {
-        currPlayingId.value = item.id;
-        audioInstance.src = item.content;
-        audioInstance.play();
-        isPaused.value = false;
+        return;
     }
+    currPlayingId.value = id;
+    audioInstance.src = url;
+    audioInstance.play();
+    isPaused.value = false;
+};
+
+const playMusic = (item: any) => {
+    togglePlay(userPlayId(item.id), item.content);
+};
+
+const playSystem = (item: any) => {
+    togglePlay(systemPlayId(item.id), item.audio_url);
+};
+
+const pickRandom = () => {
+    if (isAiMusic.value) {
+        isAiMusic.value = false;
+        return;
+    }
+    isAiMusic.value = true;
+    chooseList.value = [];
+    systemMusicId.value = "";
+    systemMusicName.value = "";
 };
 
 audioInstance.onended = () => {
@@ -284,15 +322,38 @@ const handleUploadSuccess = async (res: any) => {
             sort: 0,
             type: 3,
         });
-        resetPage();
+        await resetPage();
+        stripM4a();
     } catch (error) {
         feedback.msgError(error);
     }
 };
 
-const open = () => {
+const pickSystem = (item: any) => {
+    if (systemMusicId.value === item.id) {
+        systemMusicId.value = "";
+        systemMusicName.value = "";
+        isAiMusic.value = true;
+        return;
+    }
+    systemMusicId.value = item.id;
+    systemMusicName.value = item.name || "";
+    isAiMusic.value = false;
+    chooseList.value = [];
+};
+
+const open = async () => {
     popupRef.value?.open();
-    getLists();
+    getLists().then(stripM4a);
+    if (systemMusicLoaded.value) return;
+    try {
+        const res = await getSystemMusicList();
+        systemMusics.value = Array.isArray(res) ? res : [];
+    } catch {
+        systemMusics.value = [];
+    } finally {
+        systemMusicLoaded.value = true;
+    }
 };
 
 const close = () => {
@@ -304,8 +365,10 @@ const close = () => {
 const handleConfirm = () => {
     // 允许不选择音乐直接确定（与小程序一致）：可清空已选，或切回 AI 配乐
     emit("confirm", {
-        music: isAiMusic.value ? [] : chooseList.value,
-        ai_music: isAiMusic.value,
+        music: isAiMusic.value || systemMusicId.value ? [] : chooseList.value,
+        ai_music: isAiMusic.value && !systemMusicId.value,
+        system_music_id: systemMusicId.value,
+        system_music_name: systemMusicName.value,
     });
     close();
 };
@@ -315,44 +378,21 @@ onUnmounted(() => {
     audioInstance.src = "";
 });
 
-// 开启 AI 配乐时清空已选手动音乐（与小程序互斥）
-watch(isAiMusic, (val) => {
-    if (val) chooseList.value = [];
-});
-
 defineExpose({
     open,
     close,
-    setSelected: (val: any[], aiMusic?: boolean) => {
+    setSelected: (val: any[], aiMusic?: boolean, pinnedId = "", pinnedName = "") => {
         const list = [...(val ?? [])];
-        chooseList.value = list;
-        // 显式传入 ai_music 时优先使用；否则空列表视为 AI 配乐（兼容旧调用）
-        isAiMusic.value = typeof aiMusic === "boolean" ? aiMusic : list.length === 0;
+        chooseList.value = pinnedId ? [] : list;
+        systemMusicId.value = pinnedId;
+        systemMusicName.value = pinnedName;
+        isAiMusic.value = pinnedId ? false : typeof aiMusic === "boolean" ? aiMusic : list.length === 0;
     },
 });
 </script>
 
 <style scoped lang="scss">
-.playing-bars {
-    @apply flex items-end gap-[2px] h-[14px];
-    span {
-        @apply w-[3px] h-1 bg-primary rounded-[1px];
-        animation: music-bar 0.6s infinite alternate;
-        &:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        &:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-    }
-}
-
-@keyframes music-bar {
-    0% {
-        height: 4px;
-    }
-    100% {
-        height: 14px;
-    }
+.music-row {
+    @apply h-14 shrink-0 rounded-xl border px-3 flex items-center gap-3;
 }
 </style>

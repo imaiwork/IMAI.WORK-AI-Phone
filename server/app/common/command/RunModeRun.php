@@ -435,6 +435,7 @@ class RunModeRun extends Command
             SynthesisConfig::COPYWRITING_SOURCE_AI => 'AI 直接生成',
             SynthesisConfig::COPYWRITING_SOURCE_NONE => '无需文案',
             SynthesisConfig::COPYWRITING_SOURCE_LIBRARY => '文案库',
+            SynthesisConfig::COPYWRITING_SOURCE_HOTSPOT => '热点生成',
         ][$source] ?? "未知({$source})";
     }
 

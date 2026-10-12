@@ -4,20 +4,20 @@ namespace app\api\logic\auto;
 
 use app\api\logic\ApiLogic;
 use app\api\logic\service\TokenLogService;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\enum\DeviceEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
-use app\common\model\auto\AutoDeviceSetting;
 use app\common\model\auto\AutoDeviceConfig;
+use app\common\model\auto\AutoDeviceSetting;
 use app\common\model\auto\AutoNeedsAnalysis;
 use app\common\model\hd\HdPuzzle;
 use app\common\model\hd\HdPuzzleSetting;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
-use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvVideoSetting;
@@ -1063,8 +1063,7 @@ class AutoDeviceSettingLogic extends ApiLogic
                             $shanjianVideoSettingData['pic'] = $pic;
                             // 1. 插入到山涧视频设置表
                             $shanjianVideoSetting = ShanjianVideoSetting::create($shanjianVideoSettingData);
-                            $number = random_int(1, 20);
-                            $music_url = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
+                            $music_url = \app\common\service\SystemMusicService::resolveForDevice((string)($task->device_code ?? ''), (int)($task->persona_id ?? 0));
                             $taskTitle = $titlecozemsg;
                             $taskMsg = $copywritingResult['content']['0'] ?? '';
                             if ($type == 4) {

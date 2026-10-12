@@ -12,6 +12,7 @@ class PublishRemarkGuard
     public const WAIT_OFFLINE_REMARK = '设备不在线，等待重试';
     public const RUNNING_REMARK = '任务执行中';
     public const SUCCESS_REMARK = 'RPA执行：发布成功';
+    public const DISCONNECT_REMARK = '执行过程中设备断网导致任务中断';
 
     public static function isBillingLocked(string $remark): bool
     {
@@ -50,6 +51,24 @@ class PublishRemarkGuard
         }
 
         return $remark === '发布成功' || $remark === self::SUCCESS_REMARK;
+    }
+
+    /**
+     * 仍在发布中时的失败备注。成功日志保持原句，交给收口决策升级为成功，不得改写成断网。
+     */
+    public static function failInflightRemark(string $lastLogMessage, string $taskRemark = ''): string
+    {
+        $taskRemark = trim($taskRemark);
+        if (self::isBillingLocked($taskRemark)) {
+            return $taskRemark;
+        }
+
+        $message = trim($lastLogMessage);
+        if ($message === '') {
+            return self::DISCONNECT_REMARK;
+        }
+
+        return $message;
     }
 
     /**

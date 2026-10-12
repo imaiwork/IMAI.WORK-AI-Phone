@@ -9,6 +9,7 @@ return [
     'gpt-image-3',
     'doubao-seedance-1-0-pro-250528',
     'doubao-seedance-2-0-260128',
+    'doubao-seedance-2-5-260628',
     'Pro/deepseek-ai/DeepSeek-V3',
     'seedream-4-0-250828',
     'doubao-seedream-4-0-250828',

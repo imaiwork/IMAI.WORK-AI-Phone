@@ -6,8 +6,10 @@ import {
     importCopywritingLibrary,
     updateCopywritingLibrary,
 } from "@/api/person";
+import { refreshPublicCopy } from "@/api/publicCopy";
 import { uploadFile } from "@/api/app";
 import { chooseFile } from "@/components/file-upload/choose-file";
+import { useCopy } from "@/hooks/useCopy";
 
 // 文案库类型：1 视频驱动文案 / 2 发布文案
 export enum CopyLibraryTypeEnum {
@@ -33,6 +35,12 @@ export interface CopyItem {
     content: string;
     topic: string;
     source?: number;
+    source_id?: number;
+    source_version?: number;
+    edited?: number;
+    from_public?: number;
+    source_alive?: number;
+    has_update?: number;
     sort: number;
     status: number;
     use_count?: number;
@@ -112,7 +120,10 @@ const COPY_AGENT_SYSTEM_IDS: Record<CopyDriverTypeEnum, number[]> = {
     [CopyDriverTypeEnum.PUBLISH]: [0, 1, 3, 4, 5, 6],
 };
 
+export const isPublicCopy = (item: CopyItem): boolean => Number(item.from_public || item.source_id || 0) > 0;
+
 export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) => {
+    const { copy } = useCopy();
     const copyTab = ref<CopyLibraryTypeEnum>(CopyLibraryTypeEnum.DRIVE);
     const copyDriveType = ref<CopyDriverTypeEnum>(CopyDriverTypeEnum.NEWS);
     const copyList = ref<CopyItem[]>([]);
@@ -260,6 +271,56 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
         } finally {
             uni.hideLoading();
         }
+    };
+
+    const handleCopyText = (item: CopyItem): void => {
+        const text = [item.title, item.content, item.topic].filter(Boolean).join("\n");
+        if (!text) {
+            uni.showToast({ title: "没有可复制的内容", icon: "none", duration: 2000 });
+            return;
+        }
+        copy(text);
+    };
+
+    const doRefreshCopy = async (id: number, force = 0): Promise<void> => {
+        uni.showLoading({ title: "更新中...", mask: true });
+        try {
+            const res: any = await refreshPublicCopy({ id, force });
+            if (res?.data?.need_confirm) {
+                uni.hideLoading();
+                uni.showModal({
+                    title: "这条你手动改过",
+                    content: res?.msg || "确定按公共模板覆盖吗？覆盖后改动找不回来。",
+                    confirmText: "覆盖",
+                    success: async ({ confirm }) => {
+                        if (!confirm) {
+                            uni.showToast({ title: "已取消，保留你的改动", icon: "none", duration: 2000 });
+                            return;
+                        }
+                        await doRefreshCopy(id, 1);
+                    },
+                });
+                return;
+            }
+            if (res?.code === 0) {
+                uni.showToast({ title: res?.msg || "更新失败", icon: "none", duration: 2500 });
+                return;
+            }
+            uni.showToast({ title: res?.msg || "已更新", icon: "none", duration: 2000 });
+            queryCopyList();
+        } catch (error: any) {
+            uni.showToast({ title: error || "更新失败", icon: "none", duration: 2500 });
+        } finally {
+            uni.hideLoading();
+        }
+    };
+
+    const handleRefreshCopy = (item: CopyItem): void => {
+        if (!item.source_alive) {
+            uni.showToast({ title: "原模板不可用，无法更新", icon: "none", duration: 2500 });
+            return;
+        }
+        doRefreshCopy(item.id, 0);
     };
 
     const handleRemoveCopy = (item: CopyItem): void => {
@@ -444,6 +505,8 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
         handleOpenAddCopy,
         handleOpenEditCopy,
         handleSubmitCopy,
+        handleCopyText,
+        handleRefreshCopy,
         handleRemoveCopy,
         copyBatchMode,
         selectedCopyCount,

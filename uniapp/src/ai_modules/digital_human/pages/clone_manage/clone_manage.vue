@@ -245,7 +245,7 @@ const { isPlaying, play, pause, pauseAll, destroy } = useAudio();
 const pagingRef = shallowRef();
 const queryList = async (page_no: number, page_size: number) => {
     try {
-        const model_version = `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.MINIMAX_HD},${DigitalHumanModelVersionEnum.MINIMAX_TURBO},${DigitalHumanModelVersionEnum.SHANJIAN}`;
+        const model_version = `${DigitalHumanModelVersionEnum.CHANJING},${DigitalHumanModelVersionEnum.MINIMAX_HD},${DigitalHumanModelVersionEnum.MINIMAX_TURBO},${DigitalHumanModelVersionEnum.SHANJIAN},${DigitalHumanModelVersionEnum.SHANJIAN_S3}`;
         const { lists, count } =
             currentTab.value == 0
                 ? await getPublicAnchorList({ page_no, page_size })

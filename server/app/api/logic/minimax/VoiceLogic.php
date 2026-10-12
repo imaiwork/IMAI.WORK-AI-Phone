@@ -15,7 +15,6 @@ use app\common\model\minimax\MinimaxUploadFile;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\user\User;
-use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use app\common\service\UploadService;
 use think\Exception;
@@ -29,6 +28,9 @@ class VoiceLogic extends ApiLogic
     const MINIMAX_VOICE_TURBO = 'minimaxVoiceTurbo';
     const MINIMAX_AUDIO_HD = 'minimaxAudioHd';
     const MINIMAX_AUDIO_TURBO = 'minimaxAudioTurbo';
+
+    /** 对齐中台 human_audio_minimax_turbo 的 min_quantity=100 */
+    const AUDIO_TURBO_MIN_BILL_CHARS = 100;
 
     public static function upload($params)
     {
@@ -1213,9 +1215,10 @@ class VoiceLogic extends ApiLogic
         };
 
         if (in_array($scene, [self::MINIMAX_AUDIO_HD, self::MINIMAX_AUDIO_TURBO])){
-            $textNum = mb_strlen($request['text']) ?? 0;
+            $textNum = mb_strlen((string)($request['text'] ?? ''));
+            $billableNum = self::billableAudioTextNum($scene, $textNum);
             $request['text_num'] = $textNum;
-            $unit = TokenLogService::checkToken($userId, $tokenScene, $textNum);
+            $unit = TokenLogService::checkToken($userId, $tokenScene, $billableNum);
         }else{
             $unit = TokenLogService::checkToken($userId, $tokenScene);
         }
@@ -1242,7 +1245,7 @@ class VoiceLogic extends ApiLogic
         if (isset($response['code']) && $response['code'] == 10000) {
 
             $points = match ($scene) {
-                self::MINIMAX_AUDIO_TURBO, self::MINIMAX_AUDIO_HD => round( ($textNum ?? 0) * $unit,2),
+                self::MINIMAX_AUDIO_TURBO, self::MINIMAX_AUDIO_HD => round(($billableNum ?? $textNum ?? 0) * $unit, 2),
                 default                                           => $unit,
             };
 
@@ -1256,7 +1259,11 @@ class VoiceLogic extends ApiLogic
                         break;
                     case self::MINIMAX_AUDIO_TURBO:
                     case self::MINIMAX_AUDIO_HD:
-                        $extra = ['算力单价' => $unit.'算力/字', '实际消耗算力' => $points];
+                        $extra = [
+                            '算力单价' => $unit.'算力/字',
+                            '计费字数' => self::audioBillCharsExtra($scene, (int)($textNum ?? 0), (int)($billableNum ?? $textNum ?? 0)),
+                            '实际消耗算力' => $points,
+                        ];
                         break;
                     default:
                 }
@@ -1269,6 +1276,26 @@ class VoiceLogic extends ApiLogic
         }
 
         return $response;
+    }
+
+    /**
+     * Turbo 音频计费字数：不足 100 字按 100 字，与中台 scene_pricings.min_quantity 对齐。
+     */
+    public static function billableAudioTextNum(string $scene, int $textNum): int
+    {
+        $textNum = max($textNum, 0);
+        if ($scene === self::MINIMAX_AUDIO_TURBO && $textNum > 0) {
+            return max($textNum, self::AUDIO_TURBO_MIN_BILL_CHARS);
+        }
+        return $textNum;
+    }
+
+    private static function audioBillCharsExtra(string $scene, int $textNum, int $billableNum): string
+    {
+        if ($scene === self::MINIMAX_AUDIO_TURBO && $billableNum > $textNum) {
+            return $billableNum . '字(不足' . self::AUDIO_TURBO_MIN_BILL_CHARS . '字按' . self::AUDIO_TURBO_MIN_BILL_CHARS . '字计)';
+        }
+        return $billableNum . '字';
     }
 
     public static function refundTokens(int $userId, string $result_id, string $taskId, string $type): bool
@@ -1301,10 +1328,7 @@ class VoiceLogic extends ApiLogic
 
     public static function musicLists()
     {
-        for ($i = 1; $i <= 20; $i++) {
-            $music[] = config('app.app_host') . '/static/audio/music/' . $i . '.mp3';
-        }
-        self::$returnData = $music;
+        self::$returnData = \app\common\service\SystemMusicService::publicList();
         return true;
     }
 }

@@ -277,7 +277,7 @@ class AiModelsLogic extends BaseLogic
                 throw new Exception('该模型不可关闭!');
             }
             $models = $model->where(['type' => $mainModel['type'], 'is_enable' => 1])->column('id');
-            if ($mainModel['type'] != 1 && count($models) == 2 && in_array($mainModel['id'], $models) && $post['is_enable'] == 0) {
+            if ($mainModel['type'] != 1 && count($models) <= 1 && in_array($mainModel['id'], $models) && $post['is_enable'] == 0) {
                 throw new Exception('请至少保留一个模型!');
             }
             if ($mainModel['type'] == 1 && count($models) == 1 && in_array($mainModel['id'], $models) && $post['is_enable'] == 0) {

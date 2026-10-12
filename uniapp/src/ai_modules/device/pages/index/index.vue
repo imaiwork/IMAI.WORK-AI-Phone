@@ -840,8 +840,14 @@ watch(showDeviceQrcodePopup, (visible) => {
     if (!visible) stopDeviceQrcodePolling();
 });
 
+// 添加设备弹窗关闭后释放 WS，避免占用小程序并发连接名额
+watch(showAddPhonePopup, (visible) => {
+    if (!visible) deviceStore.closeWebSocket();
+});
+
 onUnmounted(() => {
     stopDeviceQrcodePolling();
+    deviceStore.closeWebSocket();
 });
 </script>
 

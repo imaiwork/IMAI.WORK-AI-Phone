@@ -3,12 +3,13 @@
 namespace app\api\logic\aiPersona;
 
 use app\api\logic\ApiLogic;
-use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\api\logic\service\TokenLogService;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaAgentConfig;
+use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\AiPersonaDigitalVoice;
 use app\common\model\aiPersona\AiPersonaEnterprise;
@@ -17,12 +18,14 @@ use app\common\model\aiPersona\AiPersonaLocal;
 use app\common\model\aiPersona\AiPersonaReport;
 use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\aiPersona\AiPersonaTrafficConfig;
-use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
 use app\common\model\aiPersona\AiPersonaWorkflowScheduleUser;
+use app\common\model\aiPersona\Material;
 use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\shanjian\ShanjianVideoTask;
-use app\common\model\aiPersona\Material;
+use app\common\model\square\SquareAsset;
+use app\common\model\square\SquareAssetGroup;
+use app\common\model\square\SquareAssetRef;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDevice;
 use app\common\model\user\User;
@@ -1202,7 +1205,8 @@ class AiPersonaLogic extends ApiLogic
                 // 原图模式的列表额外带 source_type=original，切片不在这个库里露面
                 $composeQuery->where('source_type', Material::SOURCE_TYPE_ORIGINAL);
             }
-            $materialCount = Material::applyDefaultVisible($composeQuery)->count();
+            $materialCount = Material::applyDefaultVisible($composeQuery)->count()
+                + self::usableSquareRefCount($userId, $personaId);
             $directMaterialCount = Material::applyDefaultVisible(
                 Material::where([
                     ['persona_id', '=', $personaId],
@@ -1346,6 +1350,29 @@ class AiPersonaLogic extends ApiLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 已加入当前人设、且素材和分组都还在上架的广场素材。
+     * 和下架引用分开：下架的不能拿去剪，不计入「还差几段」。
+     */
+    private static function usableSquareRefCount(int $userId, int $personaId): int
+    {
+        $assetIds = SquareAssetRef::where('user_id', $userId)
+            ->where('persona_id', $personaId)
+            ->column('asset_id');
+        if (!$assetIds) {
+            return 0;
+        }
+        $liveGroupIds = SquareAssetGroup::where('enabled', 1)->column('id');
+        if (!$liveGroupIds) {
+            return 0;
+        }
+        return (int)SquareAsset::whereIn('id', $assetIds)
+            ->where('enabled', 1)
+            ->whereIn('group_id', $liveGroupIds)
+            ->whereIn('kind', [SquareAsset::KIND_VIDEO, SquareAsset::KIND_IMAGE])
+            ->count();
     }
 
     /**

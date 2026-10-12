@@ -29,6 +29,7 @@ use think\facade\Log;
  *         - 2 AI直接生成 -> CopywritingAiGenerationLogic::videoSynthesis
  *         - 3 无需文案   -> CopywritingAiGenerationLogic::processNoCopywritingSynthesis
  *         - 4 文案库     -> CopywritingAiGenerationLogic::librarySynthesis
+ *         - 5 热点生成   -> CopywritingAiGenerationLogic::hotspotSynthesis
  * @author dagouzi
  */
 class AutoVideoSynthesis extends Command
@@ -67,7 +68,7 @@ class AutoVideoSynthesis extends Command
     {
         try {
             if (!$this->isInExecTimeWindow()) {
-                print_r("\n 0:30-07:30内，任务跳过\n");
+                print_r("\n 不在 0:30-12:00 内，任务跳过\n");
                 return true;
             }
 
@@ -81,7 +82,7 @@ class AutoVideoSynthesis extends Command
             set_time_limit(0);
             ini_set('memory_limit', '-1');
 
-            // 统一设备维度：仿写(1) / AI直接生成(2) / 无需文案(3) / 文案库(4)
+            // 统一设备维度：仿写(1) / AI直接生成(2) / 无需文案(3) / 文案库(4) / 热点生成(5)
             $this->handleDeviceLevel();
             // 无手机模式人设：不依赖设备行，按人设维度走同一套合成逻辑
             $this->handlePersonaLevel();
@@ -199,6 +200,11 @@ class AutoVideoSynthesis extends Command
                         CopywritingAiGenerationLogic::librarySynthesis($device->device_code);
                         break;
 
+                    case AiPersonaSynthesisConfig::COPYWRITING_SOURCE_HOTSPOT:
+                        Log::channel('ipVideoSynthesis')->write('设备视频合成-热点生成：' . $device->device_code);
+                        CopywritingAiGenerationLogic::hotspotSynthesis($device->device_code);
+                        break;
+
                     default:
                         Log::channel('ipVideoSynthesis')->write(
                             '设备视频合成-未知文案来源(' . $source . ')，跳过：' . $device->device_code
@@ -313,6 +319,11 @@ class AutoVideoSynthesis extends Command
                     case AiPersonaSynthesisConfig::COPYWRITING_SOURCE_LIBRARY:
                         Log::channel('ipVideoSynthesis')->write('人设视频合成-文案库：' . $deviceCode);
                         CopywritingAiGenerationLogic::librarySynthesis($deviceCode);
+                        break;
+
+                    case AiPersonaSynthesisConfig::COPYWRITING_SOURCE_HOTSPOT:
+                        Log::channel('ipVideoSynthesis')->write('人设视频合成-热点生成：' . $deviceCode);
+                        CopywritingAiGenerationLogic::hotspotSynthesis($deviceCode);
                         break;
 
                     default:
@@ -799,12 +810,19 @@ class AutoVideoSynthesis extends Command
     }
 
     /**
-     * 是否处于允许执行的时段
+     * 是否处于允许执行的时段（0:30 含，12:00 不含）
      */
+    public static function isTimeInWindow(?float $currentTime = null): bool
+    {
+        if ($currentTime === null) {
+            $currentTime = floatval(date('H')) + floatval(date('i')) / 60;
+        }
+        return $currentTime >= self::EXEC_START_TIME && $currentTime < self::EXEC_END_TIME;
+    }
+
     private function isInExecTimeWindow(): bool
     {
-        $currentTime = floatval(date('H')) + floatval(date('i')) / 60;
-        return $currentTime >= self::EXEC_START_TIME && $currentTime < self::EXEC_END_TIME;
+        return self::isTimeInWindow();
     }
 
     private function hasNewsMixcutType(AiPersonaSynthesisConfig $config): bool

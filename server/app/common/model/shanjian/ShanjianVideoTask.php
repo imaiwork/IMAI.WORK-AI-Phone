@@ -29,6 +29,11 @@ class ShanjianVideoTask extends BaseModel
     const DOWNLOAD_DOWNLOADING = 1;  // 下载中
     const DOWNLOAD_SUCCESS = 2;      // 下载成功
     const DOWNLOAD_FAILED = 3;       // 下载失败
+
+    /** 无手机模式成片写在 extra 里的发布文案，供首页内容弹窗 / 手动发布回填 */
+    const EXTRA_PUBLISH_TITLE = 'publish_title';
+    const EXTRA_PUBLISH_CONTENT = 'publish_content';
+    const EXTRA_PUBLISH_TOPIC = 'publish_topic';
     
     // 音频类型常量
     const AUDIO_TYPE_SCRIPT = 1;     // 文案驱动
@@ -300,5 +305,46 @@ class ShanjianVideoTask extends BaseModel
             return $value;
         }
         return FileService::setFileUrl($value);
+    }
+
+    public static function stringifyTopic(mixed $topic): string
+    {
+        if (is_array($topic)) {
+            $parts = [];
+            foreach ($topic as $item) {
+                $text = trim((string)(is_array($item)
+                    ? ($item['name'] ?? $item['tag'] ?? $item['label'] ?? $item['text'] ?? '')
+                    : $item));
+                if ($text !== '') {
+                    $parts[] = $text;
+                }
+            }
+            return implode(' ', $parts);
+        }
+
+        return trim((string)$topic);
+    }
+
+    public static function mergePublishCopy(array $extra, string $title, string $content, string $topic = ''): array
+    {
+        $extra[self::EXTRA_PUBLISH_TITLE] = $title;
+        $extra[self::EXTRA_PUBLISH_CONTENT] = $content;
+        $extra[self::EXTRA_PUBLISH_TOPIC] = self::stringifyTopic($topic);
+        return $extra;
+    }
+
+    /**
+     * @return array{title:string,content:string,topic:string}
+     */
+    public static function readPublishCopy(array $extra, string $titleFallback = '', string $contentFallback = ''): array
+    {
+        $title = trim((string)($extra[self::EXTRA_PUBLISH_TITLE] ?? ''));
+        $content = trim((string)($extra[self::EXTRA_PUBLISH_CONTENT] ?? ''));
+        $topic = self::stringifyTopic($extra[self::EXTRA_PUBLISH_TOPIC] ?? '');
+        return [
+            'title' => $title !== '' ? $title : $titleFallback,
+            'content' => $content !== '' ? $content : $contentFallback,
+            'topic' => $topic,
+        ];
     }
 }

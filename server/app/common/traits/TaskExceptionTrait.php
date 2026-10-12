@@ -27,14 +27,9 @@ trait TaskExceptionTrait
             ->order('id', 'desc')
             ->limit(1)
             ->findOrEmpty();
-        if ($lastMsg->isEmpty()) {
-            return '执行过程中设备断网导致任务中断';
-        }
-        $message = trim((string)$lastMsg->message);
-        if (PublishRemarkGuard::isPublishSuccessText($message)) {
-            return '执行过程中设备断网导致任务中断';
-        }
-        return $message;
+        $message = $lastMsg->isEmpty() ? '' : trim((string)$lastMsg->message);
+
+        return PublishRemarkGuard::failInflightRemark($message, $existing);
     }
 
 

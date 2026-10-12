@@ -13,7 +13,7 @@ class ShanjianVideoTaskLists extends BaseApiDataLists implements ListsSearchInte
     public function setSearch(): array
     {
         return [
-            '=' => ['video_setting_id', 'shanjian_type','persona_id','is_final','auto_type'],
+            '=' => ['id', 'video_setting_id', 'shanjian_type','persona_id','is_final','auto_type'],
             'in' => ['status'],
         ];
     }

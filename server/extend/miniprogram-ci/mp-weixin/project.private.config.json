@@ -1,43 +1,23 @@
 {
-  "condition": {
-    "miniprogram": {
-      "list": [
-        {
-          "name": "packages/pages/webview/webview",
-          "pathName": "packages/pages/webview/webview",
-          "query": "url=%2Fhttps%3A%2F%2Fdemo.imai.work&title=%25E7%25BD%2591%25E7%25AB%2599",
-          "scene": null,
-          "launchMode": "default"
-        },
-        {
-          "name": "ai_modules/device/pages/index/index",
-          "pathName": "ai_modules/device/pages/index/index",
-          "query": "",
-          "launchMode": "default",
-          "scene": null
-        },
-        {
-          "name": "packages/pages/user/user",
-          "pathName": "ai_modules/person/pages/index/index",
-          "query": "",
-          "launchMode": "default",
-          "scene": null
-        },
-        {
-          "name": "clo",
-          "pathName": "ai_modules/digital_human/pages/clone_manage/clone_manage",
-          "query": "",
-          "launchMode": "default",
-          "scene": null
-        },
-        {
-          "name": "packages/pages/recharge/recharge",
-          "pathName": "packages/pages/recharge/recharge",
-          "query": "",
-          "launchMode": "default",
-          "scene": null
-        }
-      ]
+    "libVersion": "3.15.1",
+    "projectname": "mp-weixin",
+    "condition": {},
+    "setting": {
+        "urlCheck": false,
+        "coverView": false,
+        "lazyloadPlaceholderEnable": false,
+        "skylineRenderEnable": false,
+        "preloadBackgroundData": false,
+        "autoAudits": false,
+        "useApiHook": true,
+        "showShadowRootInWxmlPanel": false,
+        "useStaticServer": false,
+        "useLanDebug": false,
+        "showES6CompileOption": false,
+        "compileHotReLoad": true,
+        "checkInvalidKey": true,
+        "ignoreDevUnusedFiles": false,
+        "bigPackageSizeSupport": true,
+        "ignoreUploadUnusedFiles": false
     }
-  }
 }

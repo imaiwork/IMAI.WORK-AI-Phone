@@ -42,7 +42,7 @@ class AutoTaskSceneValidate extends BaseValidate
                 return '配置项格式错误';
             }
             $scene = filter_var($item['scene'] ?? null, FILTER_VALIDATE_INT);
-            if (false === $scene || $scene < 1 || $scene > 15) {
+            if (false === $scene || $scene < 1 || $scene > 18) {
                 return '任务场景不合法';
             }
             if (in_array($scene, $scenes, true)) {

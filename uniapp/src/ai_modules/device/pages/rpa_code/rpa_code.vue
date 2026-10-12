@@ -79,6 +79,7 @@ onMounted(() => {
 
 onUnload(() => {
     end();
+    deviceStore.closeWebSocket();
 });
 </script>
 

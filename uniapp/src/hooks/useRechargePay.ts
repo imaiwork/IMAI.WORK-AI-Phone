@@ -133,6 +133,23 @@ export function useRechargePay() {
         }
     }
 
+    const confirmVirtualPaymentSettled = async (orderId: number | string): Promise<boolean> => {
+        for (let i = 0; i < 3; i++) {
+            try {
+                const confirmRes = await mnpVirtualConfirm({ order_id: orderId })
+                if (Number(confirmRes?.pay_status) === 1) {
+                    return true
+                }
+            } catch {
+                // 继续重试
+            }
+            if (i < 2) {
+                await new Promise((r) => setTimeout(r, 1200))
+            }
+        }
+        return false
+    }
+
     /** 小程序虚拟支付：login → mnpVirtualPrepay → requestVirtualPayment → confirm */
     const runVirtualPayment = async (pkg: RechargePackage): Promise<PayStatusEnum> => {
         // #ifndef MP-WEIXIN
@@ -157,19 +174,9 @@ export function useRechargePay() {
 
             const status = await requestMnpVirtualPayment(prepay.config)
             if (status === PayStatusEnum.SUCCESS) {
-                // 到账依赖服务端 query_order；微信侧偶发延迟，失败时短重试
-                for (let i = 0; i < 3; i++) {
-                    try {
-                        const confirmRes = await mnpVirtualConfirm({ order_id: orderId })
-                        if (Number(confirmRes?.pay_status) === 1) {
-                            break
-                        }
-                    } catch {
-                        // 继续重试
-                    }
-                    if (i < 2) {
-                        await new Promise((r) => setTimeout(r, 1200))
-                    }
+                const settled = await confirmVirtualPaymentSettled(orderId)
+                if (!settled) {
+                    throw '支付已提交，到账确认中，请稍后在账单明细中查看'
                 }
                 await refreshUserInfo()
             }

@@ -707,10 +707,12 @@
 
 <script setup lang="ts">
 import { getVideoCreationRecord } from "@/api/app";
+import { getGenerateRecordList } from "@/api/person";
 import { getHotWriteDetail } from "@/api/hot_write";
 import { getHotspotTaskDetail } from "@/api/hotspot";
 import { getPuzzleTaskResultList } from "@/api/drawing";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
+import { ManualPublishSourceEnum } from "@/enums/publishEnums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { isJson } from "@/utils/util";
 import { UploadCategoryEnum, UploadAlbumTypeEnum } from "@/enums/appEnums";
@@ -834,6 +836,28 @@ const {
 // ─── EventBus：统一分发所有子页面回调 ─────────────────────────────────────────
 const { on } = useEventBusManager();
 
+const CLOUD_PUBLISH_TITLE_KEY = "publish_title";
+const CLOUD_PUBLISH_CONTENT_KEY = "publish_content";
+const CLOUD_PUBLISH_TOPIC_KEY = "publish_topic";
+
+const readCloudPublishCopy = (detail: Record<string, any>) => {
+    let extra = detail?.extra;
+    if (typeof extra === "string") {
+        try {
+            extra = JSON.parse(extra || "{}");
+        } catch {
+            extra = {};
+        }
+    }
+    if (!extra || typeof extra !== "object") extra = {};
+    const title = String(extra[CLOUD_PUBLISH_TITLE_KEY] || detail.title || "").trim();
+    const content = String(extra[CLOUD_PUBLISH_CONTENT_KEY] || detail.msg || "").trim();
+    const topic = String(extra[CLOUD_PUBLISH_TOPIC_KEY] || "")
+        .split(/[#\s]+/)
+        .filter(Boolean);
+    return { title, content, topic };
+};
+
 onLoad(async (options: any) => {
     // 初始化类型与默认名称
     if (options?.type) {
@@ -845,7 +869,7 @@ onLoad(async (options: any) => {
     }
 
     // 来源：视频创作
-    if (options?.source === "creation_video") {
+    if (options?.source === ManualPublishSourceEnum.CREATION_VIDEO) {
         const videoIds = JSON.parse(options.ids || "[]");
         const { lists } = await getVideoCreationRecord({ page_size: 99999 });
         lists
@@ -857,7 +881,7 @@ onLoad(async (options: any) => {
             });
     }
     // 来源：拼图
-    else if (options?.source === "puzzle") {
+    else if (options?.source === ManualPublishSourceEnum.PUZZLE) {
         const { id, count } = options;
         const { lists } = await getPuzzleTaskResultList({ puzzle_setting_id: id, page_size: 999 });
         if (lists?.length) {
@@ -866,7 +890,7 @@ onLoad(async (options: any) => {
         }
     }
     // 来源：爆款复刻（视频 / 图文按 media_type 分流）
-    else if (options?.source === "hot_write") {
+    else if (options?.source === ManualPublishSourceEnum.HOT_WRITE) {
         const data = JSON.parse(options.data);
         const detail = await getHotWriteDetail({ id: data.id });
         const isImageText = Number(detail?.media_type) === TaskType.IMAGE;
@@ -895,7 +919,7 @@ onLoad(async (options: any) => {
         });
     }
     // 来源：热点追踪（成片 + 标题/口播文案/话题标签）
-    else if (options?.source === "hotspot") {
+    else if (options?.source === ManualPublishSourceEnum.HOTSPOT) {
         const data = JSON.parse(options.data);
         const detail = await getHotspotTaskDetail({ id: data.id });
         if (detail?.video_url) {
@@ -907,6 +931,33 @@ onLoad(async (options: any) => {
             content: detail?.publish_content || "",
             topic: Array.isArray(detail?.options?.hashtags) ? detail.options.hashtags : [detail.topic],
         });
+    }
+    // 来源：无手机模式云端成片（首页内容弹窗一键手动发布）
+    else if (options?.source === ManualPublishSourceEnum.CLOUD_VIDEO) {
+        const data = JSON.parse(options.data || "{}");
+        const taskId = Number(data.id) || 0;
+        if (!taskId) {
+            uni.$u.toast("成片不存在");
+        } else {
+            const { lists } = await getGenerateRecordList({ id: taskId, page_size: 1 });
+            const detail = Array.isArray(lists) ? lists[0] : null;
+            if (!detail || Number(detail.id) !== taskId) {
+                uni.$u.toast("成片不存在");
+            } else {
+                const copy = readCloudPublishCopy(detail);
+                const cover = String(detail.pic || "").trim();
+                const video = String(detail.clip_result_url || detail.video_result_url || "").trim();
+                if (video) {
+                    formData.materialList.push({ url: [cover, video] });
+                }
+                formData.copywriterList.push({
+                    is_title_show: 1,
+                    title: copy.title,
+                    content: copy.content,
+                    topic: copy.topic,
+                });
+            }
+        }
     }
 
     // EventBus 监听

@@ -23,6 +23,7 @@ use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\model\wechat\AiWechatCircleTask;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
+use app\common\service\aiPersona\CloudPublishCopyService;
 use app\common\service\FileService;
 use app\common\service\hotspot\VideoService;
 use app\common\service\MaterialReadinessService;
@@ -986,7 +987,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
         // 素材/音乐：优先 packaging；包装阶段不继承第一步口播 volume
         $material = $packaging['material'] ?? $type5Task->material; // getter 返回数组
-        $musicUrl = trim((string)($packaging['music_url'] ?? $type5Task->getData('music_url')));
+        // packaging.music_url 提交时是空串，?? 不会落到任务列上的已解析地址
+        $fromPack = trim((string)($packaging['music_url'] ?? ''));
+        $fromColumn = trim((string)$type5Task->getData('music_url'));
+        $musicUrl = $fromPack !== '' ? $fromPack : $fromColumn;
         $packMusic = is_array($packaging['music'] ?? null) ? $packaging['music'] : [];
         if (isset($packaging['music_source']) || isset($packaging['header_switch']) || isset($packaging['music_volume']) || $packMusic !== []) {
             try {
@@ -994,7 +998,22 @@ class ShanjianVideoTaskLogic extends ApiLogic
             } catch (\Throwable $e) {
                 Log::channel('shanjiannotice')->warning('type5包装高级设置归一化失败: ' . $e->getMessage());
             }
-            $musicUrl = trim((string)($packaging['music_url'] ?? $musicUrl));
+            $resolvedPack = trim((string)($packaging['music_url'] ?? ''));
+            if ($resolvedPack !== '') {
+                $musicUrl = $resolvedPack;
+            }
+        }
+        $packSource = (int)($packaging['music_source'] ?? 0);
+        if ($packSource === ShanjianVideoSettingLogic::MUSIC_SOURCE_SYSTEM
+            && ($musicUrl === '' || \app\common\service\SystemMusicService::isLegacyPoolUrl($musicUrl))
+        ) {
+            $musicUrl = \app\common\service\SystemMusicService::resolve(
+                trim((string)($packaging['system_music_id'] ?? '')),
+                false
+            );
+        }
+        if ($packSource === ShanjianVideoSettingLogic::MUSIC_SOURCE_CUSTOM && $musicUrl === '') {
+            $musicUrl = ShanjianVideoSettingLogic::pickCustomMusicUrl($packMusic, $packaging, 0);
         }
         $pic = (string)$type5Task->getData('pic');
         $packagingName = mb_substr(($type5Task->name ?: '数字人口播') . '-智剪包装', 0, 50, 'UTF-8');
@@ -1027,7 +1046,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             'origin_task_id' => (int)$type5Task->id,
             'billing_team_id' => $billingTeamId,
         ];
-        foreach (['header_switch', 'material_switch', 'subtitle_switch', 'keyword_switch', 'music_source', 'music_volume'] as $packKey) {
+        foreach (['header_switch', 'material_switch', 'subtitle_switch', 'keyword_switch', 'music_source', 'music_volume', 'system_music_id'] as $packKey) {
             if (array_key_exists($packKey, $packaging)) {
                 $newExtra[$packKey] = $packaging[$packKey];
             }
@@ -1404,6 +1423,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
             $doneTask = ShanjianVideoTask::where('task_id', $data['task_id'])->find();
             if ($doneTask) {
                 self::syncHotspotFromNotify($doneTask);
+                CloudPublishCopyService::ensureAfterSuccess($doneTask);
             }
             return true;
         }
@@ -1435,6 +1455,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     ->find();
                 if (!$task) {
                     Db::commit();
+                    $doneTask = ShanjianVideoTask::where('task_id', $data['task_id'])->find();
+                    if ($doneTask) {
+                        self::syncHotspotFromNotify($doneTask);
+                        CloudPublishCopyService::ensureAfterSuccess($doneTask);
+                    }
                     return true;
                 }
 
@@ -1599,6 +1624,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 }
                 Db::commit();
                 self::syncHotspotFromNotify($task);
+                CloudPublishCopyService::ensureAfterSuccess($task);
 
                 if ($notice) {
                     ApiLogic::sendNotice([
@@ -1632,6 +1658,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         ShanjianVideoTask::STATUS_FAILED,
                         ShanjianVideoTask::STATUS_SUCCESS,
                     ], true)) {
+                        $doneTask = ShanjianVideoTask::where('task_id', $data['task_id'])->find();
+                        if ($doneTask) {
+                            self::syncHotspotFromNotify($doneTask);
+                            CloudPublishCopyService::ensureAfterSuccess($doneTask);
+                        }
                         return true;
                     }
                     usleep(400000 * $attempt);
@@ -2279,7 +2310,12 @@ class ShanjianVideoTaskLogic extends ApiLogic
         $source = self::resolveTaskMusicSource($extraArr, $musicUrl);
         $volume = self::resolveTaskMusicVolume($extraArr, $shanjianType);
         $packRules = [
-            'backgroundMusic' => self::buildBackgroundMusicBySource($source, $musicUrl, $volume),
+            'backgroundMusic' => self::buildBackgroundMusicBySource(
+                $source,
+                $musicUrl,
+                $volume,
+                trim((string)($extraArr['system_music_id'] ?? ''))
+            ),
         ];
         if (self::hasPackSwitch($extraArr)) {
             $packRules['headerSwitch'] = ShanjianVideoSettingLogic::normalizePackSwitch($extraArr['header_switch'] ?? true);
@@ -2302,7 +2338,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
         );
     }
 
-    private static function buildBackgroundMusicBySource(int $source, string $musicUrl, float $volume): array
+    /**
+     * 系统曲库的地址在建任务时已经解析进 music_url。
+     * 下发时必须带上 audioUrl，只开 audioSwitch 闪剪不会自己配乐。
+     */
+    private static function buildBackgroundMusicBySource(int $source, string $musicUrl, float $volume, string $systemMusicId = ''): array
     {
         $volume = max(0.0, min(1.0, round($volume, 1)));
         if ($source === ShanjianVideoSettingLogic::MUSIC_SOURCE_NONE || $volume <= 0) {
@@ -2311,13 +2351,18 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 'volume' => $volume,
             ];
         }
-        if ($source === ShanjianVideoSettingLogic::MUSIC_SOURCE_SYSTEM) {
-            return [
-                'audioSwitch' => true,
-                'volume' => $volume,
-            ];
-        }
         $musicUrl = trim($musicUrl);
+        if ($source === ShanjianVideoSettingLogic::MUSIC_SOURCE_SYSTEM
+            && ($musicUrl === '' || \app\common\service\SystemMusicService::isLegacyPoolUrl($musicUrl))
+        ) {
+            // 指定一首用曲目 id，随机才从曲库里抽。不要在地址已空时改去抽另一首。
+            $fresh = \app\common\service\SystemMusicService::resolve($systemMusicId, false);
+            if ($fresh !== '' && !\app\common\service\SystemMusicService::isLegacyPoolUrl($fresh)) {
+                $musicUrl = $fresh;
+            } elseif ($musicUrl === '') {
+                $musicUrl = $fresh;
+            }
+        }
         if ($musicUrl === '') {
             return [
                 'audioSwitch' => false,
@@ -2340,6 +2385,9 @@ class ShanjianVideoTaskLogic extends ApiLogic
         ], true)) {
             return (int)$extra['music_source'];
         }
+        if (!empty($extra['ai_music']) || !empty($extra['aimusic'])) {
+            return ShanjianVideoSettingLogic::MUSIC_SOURCE_SYSTEM;
+        }
         return trim($musicUrl) === ''
             ? ShanjianVideoSettingLogic::MUSIC_SOURCE_NONE
             : ShanjianVideoSettingLogic::MUSIC_SOURCE_CUSTOM;
@@ -2347,9 +2395,6 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
     private static function resolveTaskMusicVolume(array $extra, int $shanjianType): float
     {
-        if ($shanjianType === 4) {
-            return 0.3;
-        }
         $default = $shanjianType === 1 ? 0.4 : 0.3;
         $raw = $extra['music_volume'] ?? $extra['volume'] ?? $default;
         if (!is_numeric($raw)) {
@@ -2626,17 +2671,17 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     }
                     if (!empty($submitMaterialArr)) {
                         $beforeCount = count($submitMaterialArr);
-                        // 切片模式手动任务前端已限制总时长，不做过滤；原片模式手动单也做 59/290
-                        $shouldTrim = ((int)$task->auto_type === 1)
-                            || $useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
+                        // 时长门禁对所有任务生效：原来只在 auto_type=1 或原片模式才过滤，
+                        // 理由是「手动任务前端已限制总时长」。但前端与这里算的都是素材库
+                        // 存的整秒 duration（int 列，真实 3.6s 存成 3），条数一多就整体低估，
+                        // 闪剪按真实时长判 >5 分钟整单打回（2026-09-16 znt 90 条素材那两单）。
+                        // 这道闸门只丢超预算的素材、不改其它行为，手动单一起兜住更安全。
                         $submitMaterialArr = ShanjianVideoSettingLogic::fillMaterialDurationsFromStore(
                             array_values($submitMaterialArr),
                             $taskUserId
                         );
                         $beforeTrim = $submitMaterialArr;
-                        $submitMaterials = $shouldTrim
-                            ? ShanjianVideoSettingLogic::trimMaterialsByDuration($submitMaterialArr)
-                            : $submitMaterialArr;
+                        $submitMaterials = ShanjianVideoSettingLogic::trimMaterialsByDuration($submitMaterialArr);
                         // 无 fileUrl 的项不参与下发
                         $submitMaterials = array_values(array_filter($submitMaterials, static function ($m) {
                             return is_array($m) && !empty($m['fileUrl']);
@@ -2655,7 +2700,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     // 只有图片照样出片，不能因为「原图模式没有视频」把整条判失败。
                     // 真的一条素材都不剩时，下面 $requiresMaterials 那道空素材门禁会接住。
                     if ($useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
-                        && $requiresMaterials
+                        && ShanjianVideoSettingLogic::originalModeRequiresVideo((int)$task->shanjian_type)
                         && !empty($submitMaterialArr)
                     ) {
                         $emptyVideoError = ShanjianVideoSettingLogic::originalModeEmptyVideoError(

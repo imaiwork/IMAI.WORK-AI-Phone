@@ -3,6 +3,8 @@
 namespace app\api\logic\hotspot;
 
 use app\common\logic\BaseLogic;
+use app\common\model\hotspot\HotspotPool;
+use app\common\model\hotspot\HotspotTask;
 use app\common\service\hotspot\AnalyzeService;
 use app\common\service\hotspot\HistoryService;
 use app\common\service\hotspot\HotListService;
@@ -11,6 +13,7 @@ use app\common\service\hotspot\HotspotUpstreamException;
 use app\common\service\hotspot\InsightService;
 use app\common\service\hotspot\ManualAssetService;
 use app\common\service\hotspot\PersonaService;
+use app\common\service\hotspot\PoolService;
 use app\common\service\hotspot\RecordService;
 use app\common\service\hotspot\ResearchService;
 use app\common\service\hotspot\ScriptService;
@@ -55,7 +58,12 @@ class HotspotLogic extends BaseLogic
         try {
             $result = HotListService::getHot($platform, $period, $day, $limit);
             $topics = is_array($result['topics'] ?? null) ? $result['topics'] : [];
-            $result['topics'] = RecordService::attachAnalyzed($topics, $userId, $platform);
+            $result['topics'] = RecordService::attachAnalyzed(
+                $topics,
+                $userId,
+                $platform,
+                (int)($params['persona_id'] ?? 0)
+            );
             HotspotLog::write(sprintf(
                 '热榜成功：平台=%s 周期=%s 日期=%s 条数=%d 缓存=%s 实时=%s 不扣算力',
                 $result['platform'] ?? $platform,
@@ -437,32 +445,73 @@ class HotspotLogic extends BaseLogic
      */
     public static function lastFlow(array $params, int $userId): array
     {
-        $topic = (string)($params['topic'] ?? '');
+        $topic = RecordService::normalizeTopic($params['topic'] ?? '');
         $platform = (string)($params['platform'] ?? 'douyin');
-        HotspotLog::write(sprintf('上次现场请求：用户=%d 话题=%s 平台=%s', $userId, $topic, $platform));
+        if ($platform === '') {
+            $platform = 'douyin';
+        }
+        $personaId = (int)($params['persona_id'] ?? 0);
+        HotspotLog::write(sprintf(
+            '上次现场请求：用户=%d 人设id=%d 话题=%s 平台=%s',
+            $userId,
+            $personaId,
+            $topic,
+            $platform
+        ));
         if ($userId <= 0 || $topic === '') {
             return ['found' => false];
         }
-        $row = \app\common\model\hotspot\HotspotTask::where('user_id', $userId)
+        $candidates = HotspotTask::where('user_id', $userId)
             ->where('topic', $topic)
             ->where('platform', $platform)
             ->order('id', 'desc')
-            ->findOrEmpty();
-        if ($row->isEmpty()) {
-            HotspotLog::write('上次现场未命中：话题=' . $topic);
-            return ['found' => false];
+            ->limit(50)
+            ->select();
+        $hit = null;
+        foreach ($candidates as $candidate) {
+            $pid = RecordService::personaIdFromJson($candidate->persona_json ?? []);
+            // 热榜入口不传人设：取该话题最近一次任务即可，否则清缓存后会漏还原、重新扣搜索费
+            if ($personaId <= 0 || $pid === $personaId) {
+                $hit = $candidate;
+                break;
+            }
         }
-        $task = TaskService::detail((string)$row->task_no, $userId);
-        if ($task === null) {
-            return ['found' => false];
+        if ($hit !== null) {
+            $task = TaskService::detail((string)$hit->task_no, $userId);
+            if ($task !== null) {
+                $task['options'] = self::pruneRestoredMaterials(
+                    is_array($task['options'] ?? null) ? $task['options'] : [],
+                    is_array($task['persona'] ?? null) ? $task['persona'] : [],
+                    $userId
+                );
+                HotspotLog::write(sprintf('上次现场命中任务：话题=%s 任务号=%s', $topic, $task['id'] ?? ''));
+                return ['found' => true] + $task;
+            }
         }
-        $task['options'] = self::pruneRestoredMaterials(
-            is_array($task['options'] ?? null) ? $task['options'] : [],
-            is_array($task['persona'] ?? null) ? $task['persona'] : [],
-            $userId
-        );
-        HotspotLog::write(sprintf('上次现场命中：话题=%s 任务号=%s', $topic, $task['id'] ?? ''));
-        return ['found' => true] + $task;
+
+        $poolQuery = HotspotPool::where('user_id', $userId)
+            ->where('topic', $topic)
+            ->where('platform', $platform)
+            ->order('id', 'desc');
+        if ($personaId > 0) {
+            $poolQuery->where('persona_id', $personaId);
+        }
+        $pool = $poolQuery->findOrEmpty();
+        if (!$pool->isEmpty()) {
+            $flow = PoolService::toLastFlow($pool);
+            if (($flow['core_points'] ?? []) !== [] || trim((string)($flow['script'] ?? '')) !== ''
+                || trim((string)($flow['summary'] ?? '')) !== '') {
+                HotspotLog::write(sprintf('上次现场命中入库：话题=%s 编号=%d', $topic, (int)$pool->id));
+                return $flow;
+            }
+        }
+
+        HotspotLog::write(sprintf(
+            '上次现场未命中：话题=%s 人设id=%d',
+            $topic,
+            $personaId
+        ));
+        return ['found' => false];
     }
 
     /**
@@ -526,6 +575,107 @@ class HotspotLogic extends BaseLogic
         }
         HotspotLog::write('任务删除成功：任务号=' . $taskNo);
         return true;
+    }
+
+    public static function stock(array $params, int $userId): array|false
+    {
+        $encoded = json_encode(HotspotLog::safe($params), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        HotspotLog::write('热点库入库请求：用户=' . $userId . ' 参数=' . ($encoded === false ? '' : $encoded));
+        if ($userId <= 0) {
+            HotspotLog::write('热点库入库失败：未登录');
+            return self::fail('请先登录后再入库');
+        }
+        try {
+            $result = PoolService::stock($userId, $params);
+            HotspotLog::write(sprintf(
+                '热点库入库成功：用户=%d 编号=%d 仅标题=%s',
+                $userId,
+                (int)($result['id'] ?? 0),
+                empty($result['has_script']) ? '是' : '否'
+            ));
+            return $result;
+        } catch (HotspotUpstreamException $e) {
+            $msg = $e->getMessage();
+            HotspotLog::write('热点库入库失败：' . $msg);
+            return self::fail($msg);
+        } catch (\Throwable $e) {
+            return self::failChargeOrGeneric('热点库入库异常', $e);
+        }
+    }
+
+    public static function stockDetail(array $params, int $userId): array|false
+    {
+        HotspotLog::write(sprintf(
+            '热点库详情请求：用户=%d 人设id=%d 话题=%s 平台=%s',
+            $userId,
+            (int)($params['persona_id'] ?? 0),
+            (string)($params['topic'] ?? ''),
+            (string)($params['platform'] ?? '')
+        ));
+        if ($userId <= 0) {
+            HotspotLog::write('热点库详情失败：未登录');
+            return self::fail('请先登录后再查看热点库');
+        }
+        try {
+            $result = PoolService::stockDetail($userId, $params);
+            HotspotLog::write(sprintf(
+                '热点库详情成功：用户=%d 命中=%s 编号=%d',
+                $userId,
+                empty($result['found']) ? '否' : '是',
+                (int)($result['id'] ?? 0)
+            ));
+            return $result;
+        } catch (HotspotUpstreamException $e) {
+            HotspotLog::write('热点库详情失败：' . $e->getMessage());
+            return self::fail($e->getMessage());
+        } catch (\Throwable $e) {
+            return self::failChargeOrGeneric('热点库详情异常', $e);
+        }
+    }
+
+    public static function stockLists(array $params, int $userId): array|false
+    {
+        $personaId = (int)($params['persona_id'] ?? 0);
+        HotspotLog::write(sprintf('热点库列表请求：用户=%d 人设id=%d', $userId, $personaId));
+        if ($userId <= 0) {
+            HotspotLog::write('热点库列表失败：未登录');
+            return self::fail('请先登录后再查看热点库');
+        }
+        try {
+            $result = PoolService::lists($userId, $personaId);
+            HotspotLog::write(sprintf(
+                '热点库列表成功：用户=%d 人设id=%d 待使用=%d 已使用=%d',
+                $userId,
+                $personaId,
+                (int)($result['pending_count'] ?? 0),
+                (int)($result['used_count'] ?? 0)
+            ));
+            return $result;
+        } catch (HotspotUpstreamException $e) {
+            HotspotLog::write('热点库列表失败：' . $e->getMessage());
+            return self::fail($e->getMessage());
+        } catch (\Throwable $e) {
+            return self::failChargeOrGeneric('热点库列表异常', $e);
+        }
+    }
+
+    public static function stockDelete(array $params, int $userId): bool
+    {
+        $id = (int)($params['pool_id'] ?? $params['id'] ?? 0);
+        HotspotLog::write(sprintf('热点库移出请求：用户=%d 编号=%d', $userId, $id));
+        if ($userId <= 0) {
+            HotspotLog::write('热点库移出失败：未登录');
+            return self::fail('请先登录后再移出热点库');
+        }
+        try {
+            PoolService::delete($userId, $id);
+            return true;
+        } catch (HotspotUpstreamException $e) {
+            HotspotLog::write('热点库移出失败：' . $e->getMessage());
+            return self::fail($e->getMessage());
+        } catch (\Throwable $e) {
+            return self::failChargeOrGeneric('热点库移出异常', $e);
+        }
     }
 
     public static function retry(array $params, int $userId): array|false

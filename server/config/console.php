@@ -152,6 +152,8 @@ return [
         'member_expire_check' => 'app\common\command\MemberExpireCheckCron',
         // 同步中台闪剪剪辑模板
         'sync_shanjian_clip_templates' => 'app\common\command\SyncShanjianClipTemplatesCron',
+        // 同步系统曲库
+        'sync_system_music' => 'app\common\command\SyncSystemMusicCron',
         // 团队OEM 计费/退费自检(仅人工验证,不进 cron)
         'team:oem-selfcheck' => 'app\common\command\TeamOemSelfCheck',
         // 团队扣费主体诊断(个人 vs 企业钱包)

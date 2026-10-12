@@ -8,6 +8,7 @@ use app\common\model\BaseModel;
 use app\common\model\chat\Models;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
+use app\common\service\UserDisplaySanitizer;
 use think\model\concern\SoftDelete;
 
 /**
@@ -20,6 +21,45 @@ class HumanVoice extends BaseModel
     use SoftDelete;
 
     protected $deleteTime = 'delete_time';
+
+    /** 闪剪 V3 音色 */
+    public const MODEL_VERSION_SHANJIAN = 8;
+    /** 闪剪 S3 音色 */
+    public const MODEL_VERSION_SHANJIAN_S3 = 15;
+    /** 闪剪音色（V3 / S3）共用下游口径 */
+    public const SHANJIAN_VOICE_MODEL_VERSIONS = [
+        self::MODEL_VERSION_SHANJIAN,
+        self::MODEL_VERSION_SHANJIAN_S3,
+    ];
+
+    public static function isShanjianVoiceModelVersion(int|string $version): bool
+    {
+        return in_array((int)$version, self::SHANJIAN_VOICE_MODEL_VERSIONS, true);
+    }
+
+    public static function shanjianTrainModel(int|string $version): string
+    {
+        return (int)$version === self::MODEL_VERSION_SHANJIAN_S3 ? 's3' : 'v3';
+    }
+
+    /**
+     * 音色列表：带了 V3(8) 就带上 s3(15)，旧端只传 7,1,8,10,11 也能看到 s3。
+     */
+    public static function expandListModelVersions(string $modelVersion): string
+    {
+        $versions = [];
+        foreach (explode(',', $modelVersion) as $item) {
+            $item = trim($item);
+            if ($item === '') {
+                continue;
+            }
+            $versions[] = $item;
+            if ((int)$item === self::MODEL_VERSION_SHANJIAN) {
+                $versions[] = (string)self::MODEL_VERSION_SHANJIAN_S3;
+            }
+        }
+        return implode(',', array_values(array_unique($versions)));
+    }
 
     public static function getStatus($status)
     {
@@ -230,9 +270,10 @@ class HumanVoice extends BaseModel
                 continue;
             }
 
+            $displayName = UserDisplaySanitizer::digitalHumanModelNameByVersion($modelVersion);
             $channels[] = [
                 'id' => (string)$modelVersion,
-                'name' => (string)($model['name'] ?? ''),
+                'name' => $displayName !== '' ? $displayName : (string)($model['name'] ?? ''),
                 'described' => '',
                 'icon' => FileService::getFileUrl((string)($model['logo'] ?? '')),
                 'status' => (string)($model['is_enable'] ?? 0),

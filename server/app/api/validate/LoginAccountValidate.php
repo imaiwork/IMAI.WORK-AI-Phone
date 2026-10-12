@@ -50,7 +50,7 @@ class LoginAccountValidate extends BaseValidate
      * @author 段誉
      * @date 2022/9/15 14:37
      */
-    public function checkConfig($scene, $rule, $data)
+    public function checkConfig(mixed $scene, mixed $rule, mixed $data)
     {
         $config = ConfigService::get('login', 'login_way');
         if (!in_array($scene, $config)) {
@@ -86,7 +86,7 @@ class LoginAccountValidate extends BaseValidate
      * @author 段誉
      * @date 2022/9/15 14:39
      */
-    public function checkPassword($password, $other, $data)
+    public function checkPassword(mixed $password, mixed $other, mixed $data)
     {
         //账号安全机制，连续输错后锁定，防止账号密码暴力破解
         $userAccountSafeCache = new UserAccountSafeCache();
@@ -138,7 +138,7 @@ class LoginAccountValidate extends BaseValidate
      * @author Tab
      * @date 2021/8/25 15:43
      */
-    public function checkCode($code, $rule, $data)
+    public function checkCode(mixed $code, mixed $rule, mixed $data)
     {
         $smsDriver = new SmsDriver();
         $result = $smsDriver->verify($data['account'], $code, NoticeEnum::LOGIN_CAPTCHA);

@@ -131,6 +131,7 @@ export enum TokensSceneEnum {
     HUMAN_AVATAR_SHANJIAN_PRO = "human_avatar_shanjian_pro",
     HUMAN_VIDEO_SHANJIAN = "human_video_shanjian",
     HUMAN_VOICE_SHANJIAN = "human_voice_shanjian",
+    HUMAN_VOICE_SHANJIAN_S3 = "human_voice_shanjian_s3",
     HUMAN_COPYWRITING_CREATE = "human_copywriting",
     HUMAN_VOICE_MINIMAX_HD = "human_voice_minimax_hd",
     HUMAN_VOICE_MINIMAX_TURBO = "human_voice_minimax_turbo",

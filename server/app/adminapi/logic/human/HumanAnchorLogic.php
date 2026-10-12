@@ -5,6 +5,7 @@ namespace app\adminapi\logic\human;
 use app\api\logic\DigitalHumanLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\human\HumanAnchor;
+use app\common\service\digitalHuman\PendingAnchorTaskService;
 
 
 /**
@@ -24,6 +25,23 @@ class HumanAnchorLogic extends BaseLogic
     public static function delete(array $data): bool
     {
         try {
+            $raw = $data['id'] ?? null;
+            $ids = is_array($raw) ? $raw : [$raw];
+            $remain = [];
+            foreach ($ids as $id) {
+                $publicId = PendingAnchorTaskService::publicIdFromVirtual((int)$id);
+                if ($publicId > 0) {
+                    if (!DigitalHumanLogic::deletePublicAnchor(['id' => $publicId])) {
+                        throw new \Exception(DigitalHumanLogic::getError() ?: '数据不存在');
+                    }
+                    continue;
+                }
+                $remain[] = $id;
+            }
+            if ($remain === []) {
+                return true;
+            }
+            $data['id'] = is_array($raw) ? $remain : $remain[0];
 
             if (is_string($data['id'])) {
                 $humanAnchor = HumanAnchor::findOrEmpty($data['id']);

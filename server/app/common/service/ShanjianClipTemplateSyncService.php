@@ -47,16 +47,34 @@ class ShanjianClipTemplateSyncService
             'uploaded' => 0,
             'reused' => 0,
             'skipped' => 0,
+            'failed' => 0,
+            'failed_items' => [],
             'total' => 0,
         ];
 
+        // 单条资源下载失败只跳过这一条，不能让整批回滚（2026-09-24：俏皮字幕演示视频约 28MB，站上下载 22s，超过 20s 超时，virtualman 被一起挡住）
+        $failedIds = [];
         foreach ($templates as $item) {
             if (!is_array($item)) {
                 $stats['skipped']++;
                 continue;
             }
 
-            $row = self::normalizeTemplate($item, $stats);
+            try {
+                $row = self::normalizeTemplate($item, $stats);
+            } catch (\Throwable $e) {
+                $failedId = trim((string)($item['id'] ?? ''));
+                if ($failedId !== '') {
+                    $failedIds[] = $failedId;
+                }
+                $stats['failed']++;
+                $stats['failed_items'][] = [
+                    'id' => $failedId,
+                    'name' => trim((string)($item['name'] ?? '')),
+                    'error' => $e->getMessage(),
+                ];
+                continue;
+            }
             if ($row === null) {
                 $stats['skipped']++;
                 continue;
@@ -66,12 +84,16 @@ class ShanjianClipTemplateSyncService
         }
 
         if (empty($rows)) {
-            throw new Exception('剪辑模板为空，已跳过清洗，避免误删本地数据');
+            $reason = $stats['failed'] > 0
+                ? '剪辑模板资源全部转存失败(' . $stats['failed'] . '条)，首条: ' . $stats['failed_items'][0]['error']
+                : '剪辑模板为空';
+            throw new Exception($reason . '，已跳过清洗，避免误删本地数据');
         }
 
         Db::startTrans();
         try {
             $remoteIds = array_keys($rows);
+            $keepIds = array_values(array_unique(array_merge($remoteIds, $failedIds)));
             // 走 Db 门面取原始值：模型的 create_time/update_time 读取器会把时间戳格式化成字符串，不能用于比对
             $existingRows = Db::name('shanjian_clip_template')
                 ->whereIn('id', $remoteIds)
@@ -115,7 +137,7 @@ class ShanjianClipTemplateSyncService
                 $stats['updated']++;
             }
 
-            $stats['deleted'] = ShanjianClipTemplate::whereNotIn('id', $remoteIds)->delete();
+            $stats['deleted'] = ShanjianClipTemplate::whereNotIn('id', $keepIds)->delete();
             $stats['total'] = count($rows);
 
             Db::commit();
@@ -301,7 +323,7 @@ class ShanjianClipTemplateSyncService
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 500);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);

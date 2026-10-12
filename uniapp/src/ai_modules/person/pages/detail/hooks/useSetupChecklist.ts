@@ -217,11 +217,14 @@ const toCount = (value: unknown): number => Number(value) || 0;
 const joinEvidence = (...parts: (string | undefined | false)[]): string =>
     parts.filter((item): item is string => Boolean(item)).join(" · ");
 
-export const useSetupChecklist = (summary: Ref<PersonaSetupSummary | null | undefined>) => {
+export const useSetupChecklist = (
+    summary: Ref<PersonaSetupSummary | null | undefined>,
+) => {
     const steps = computed<SetupStep[]>(() => {
         const data = summary.value;
         const keywordCount = toCount(data?.keyword_count);
-        // 成品直发的人设看成品库，剪辑合成的看剪辑原片库
+        // 成品直发的人设看成品库，剪辑合成的看剪辑原片库。
+        // 已加入且仍上架的广场素材已算进 material_count，这里不再加一次。
         const isDirectSend = toCount(data?.publish_mode) === 2;
         const materialCount = isDirectSend
             ? toCount(data?.direct_material_count)

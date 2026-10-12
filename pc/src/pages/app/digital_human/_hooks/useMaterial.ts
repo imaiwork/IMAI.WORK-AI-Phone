@@ -40,7 +40,7 @@ const getImageFileSize = (url: string): Promise<number> => {
 const validateImage = async (
     item: any,
     urlField: string,
-    maxResolution: { width: number; height: number },
+    maxResolution: { width: number; height: number } | undefined,
     maxImageSize: number,
 ): Promise<boolean> => {
     const url: string = item[urlField];
@@ -52,7 +52,12 @@ const validateImage = async (
             return false;
         }
 
-        // ---- 分辨率校验 ----
+        if (!maxResolution?.width || !maxResolution.height) {
+            return true;
+        }
+        const resolutionLimit = maxResolution;
+
+        // ---- 分辨率校验（仅调用方显式传入上限时启用）----
         let width: number = item.width ?? 0;
         let height: number = item.height ?? 0;
         if (!width || !height) {
@@ -62,7 +67,7 @@ const validateImage = async (
             item.width = width;
             item.height = height;
         }
-        if (width > maxResolution.width || height > maxResolution.height) {
+        if (width > resolutionLimit.width || height > resolutionLimit.height) {
             return false;
         }
 
@@ -79,7 +84,7 @@ export const useMaterial = (materialListRef: any) => {
             rawList,
             urlField,
             maxDuration = 60,
-            maxResolution = { width: 2000, height: 2000 },
+            maxResolution,
             maxImageSize = 50 * 1024 * 1024, // 50MB
             onSuccess,
         } = options;
@@ -121,7 +126,7 @@ export const useMaterial = (materialListRef: any) => {
             return;
         }
 
-        // ---- Step 3: 校验图片分辨率 & 大小 ----
+        // ---- Step 3: 校验图片大小；调用方显式传 maxResolution 时再校验分辨率 ----
         let formatted: any[];
         const imageItems = afterVideoFilter.filter((item) => item.type === "image");
         if (imageItems.length > 0) {

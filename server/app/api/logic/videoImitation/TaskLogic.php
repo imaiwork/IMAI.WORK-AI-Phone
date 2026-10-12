@@ -27,17 +27,18 @@ use app\common\model\sv\SvMediaMaterial;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\model\videoImitation\VideoImitationTask;
-use app\common\service\FileService;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
-use app\common\service\MaterialReadinessService;
 use app\common\service\draw\MediaModelsService;
+use app\common\service\FileService;
+use app\common\service\MaterialReadinessService;
 use app\common\service\ShanjianQueueService;
+use app\common\service\square\SquareAssetService;
 use app\common\service\ToolsService;
 use app\common\service\UploadService;
-use app\common\service\VideoInfoService;
+use app\common\service\videoImitation\ManualGenerationAssetService;
 use app\common\service\videoImitation\VideoImitationImageLifecycle;
 use app\common\service\videoImitation\VideoImitationImageRewriteService;
-use app\common\service\videoImitation\ManualGenerationAssetService;
+use app\common\service\VideoInfoService;
 use think\exception\HttpResponseException;
 use think\facade\Db;
 use think\facade\Log;
@@ -253,7 +254,8 @@ class TaskLogic extends BaseLogic
         ?float $musicVolume = null,
         ?float $speechRate = null,
         ?string $clipTemplateId = null,
-        ?string $musicUrl = null
+        ?string $musicUrl = null,
+        ?string $systemMusicId = null
     ) {
         $task = VideoImitationTask::where('id', $id)->where('user_id', $userId)->find();
         if (!$task) {
@@ -295,7 +297,8 @@ class TaskLogic extends BaseLogic
                 $musicVolume,
                 $speechRate,
                 $clipTemplateId,
-                $musicUrl
+                $musicUrl,
+                $systemMusicId
             );
             $task->save($selection);
         } catch (\Throwable $e) {
@@ -1243,7 +1246,7 @@ class TaskLogic extends BaseLogic
         // 注：AI 抓来的素材进的是 SV 素材库，不归人设素材模式管，仍照旧转码后使用。
         $materialUseMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$task->persona_id);
         $isOriginalMaterialMode = $materialUseMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
-        if ($visualMaterialSource == 2 || $visualMaterialSource == 3) {
+        if (in_array((int)$visualMaterialSource, [2, 3, 4], true)) {
             $allMaterials = Material::where('persona_id', $task->persona_id)
                 ->where('user_id', $userId)
                 ->where('use_status', 1)
@@ -1255,6 +1258,12 @@ class TaskLogic extends BaseLogic
                     $isOriginalMaterialMode ? Material::KEEP_ORIGINAL_YES : Material::KEEP_ORIGINAL_NO
                 )
                 ->select()->toArray();
+            if (in_array((int)$visualMaterialSource, [2, 3], true)) {
+                $allMaterials = array_merge(
+                    $allMaterials,
+                    SquareAssetService::libraryRows((int)$userId, (int)$task->persona_id, null, true)
+                );
+            }
             $materialCheck = MaterialReadinessService::checkFileUrlsForSubmit(array_column($allMaterials, 'file_url'));
             $blockedUris = array_fill_keys(array_merge(
                 $materialCheck['pending_uris'] ?? [],
@@ -2242,7 +2251,38 @@ class TaskLogic extends BaseLogic
         shuffle($localVideos);
         shuffle($localImages);
 
-        if ($sourceMode == 3) {
+        if ($sourceMode == 4) {
+            $config = AiPersonaSynthesisConfig::where('persona_id', $personaId)
+                ->where('user_id', $userId)
+                ->findOrEmpty();
+            $square = SquareAssetService::publicGrouped(
+                $userId,
+                $personaId,
+                SquareAssetService::normalizeGroupIds($config->square_group_ids ?? [])
+            );
+            $squareVideos = [];
+            $squareImages = [];
+            foreach ($square['videos'] as $row) {
+                $duration = (int)($row['duration'] ?? 0);
+                if ($duration <= 0) {
+                    continue;
+                }
+                $squareVideos[] = [
+                    'fileUrl' => FileService::getFileUrl((string)$row['file_url']),
+                    'type' => 'video',
+                    'duration' => $duration,
+                ];
+            }
+            foreach ($square['images'] as $row) {
+                $squareImages[] = [
+                    'fileUrl' => FileService::getFileUrl((string)$row['file_url']),
+                    'type' => 'image',
+                    'duration' => 2,
+                ];
+            }
+            $finalVideos = SquareAssetService::pickHalfAndFill($localVideos, $squareVideos, $targetVideoCount);
+            $finalImages = SquareAssetService::pickHalfAndFill($localImages, $squareImages, $targetImageCount);
+        } elseif ($sourceMode == 3) {
             $finalVideos = array_slice($localVideos, 0, $targetVideoCount);
             $finalImages = array_slice($localImages, 0, $targetImageCount);
         } else {
@@ -3961,7 +4001,14 @@ class TaskLogic extends BaseLogic
                 }
                 // 用户自传的曲子优先，没传才用系统音乐随机
                 $washMusic = trim((string)$task->wash_music_url);
-                $audioUrl = $washMusic !== '' ? FileService::getFileUrl($washMusic) : $default['audioUrl'];
+                $washSystemMusicId = trim((string)($task->wash_system_music_id ?? ''));
+                if ($washMusic !== '') {
+                    $audioUrl = FileService::getFileUrl($washMusic);
+                } elseif ($washSystemMusicId !== '') {
+                    $audioUrl = \app\common\service\SystemMusicService::resolve($washSystemMusicId, false);
+                } else {
+                    $audioUrl = $default['audioUrl'];
+                }
 
                 return ['audioSwitch' => true, 'volume' => $washVolume, 'audioUrl' => $audioUrl];
             }

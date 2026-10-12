@@ -125,7 +125,12 @@ export function useGenerateSetting({ formData, copywriterTypeIndex, rechargePopu
             TitleArray: formData.topTitleList,
             SpeechTextArray: formData.copywriterList,
             MediaGroupArray: mediaGroupArray,
-            BackgroundMusicArray: formData.music.map((item: any) => item.content),
+            BackgroundMusicArray:
+                formData.extra.system_music_id || formData.extra.ai_music
+                    ? []
+                    : formData.music.map((item: any) => item.content),
+            system_music_id: formData.extra.system_music_id || "",
+            ai_music: !!formData.extra.ai_music && !formData.extra.system_music_id,
             BackgroundMusicVolume: formData.extra.volume,
         };
 

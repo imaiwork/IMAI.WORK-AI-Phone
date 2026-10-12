@@ -31,6 +31,7 @@ use app\common\model\user\User;
 use app\common\service\aiPersona\AiPersonaTextService;
 use app\common\service\device\RpaDeviceDispatchService;
 use app\common\service\MemberService;
+use app\common\service\square\SquareAssetService;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 use think\facade\Cache;
@@ -154,7 +155,7 @@ class DeviceLogic extends BasePersonaLogic
             }
             $find['persona_info'] = AiPersona::where('id', $find->persona_id)->findOrEmpty();
             $find['auth_start_time'] = !empty($find['auth_start_time']) && $find['auth_start_time'] > 0 ? date('Y-m-d H:i:s', $find['auth_start_time']) : '';
-            $find['auth_expire_time'] = !empty($find['auth_expire_time']) && $find['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $find['auth_expire_time']) : (!empty($find['auth_start_time']) && $find['auth_start_time'] > 0 ? '永久' : $find['create_time']);
+            $find['auth_expire_time'] = !empty($find['auth_expire_time']) && $find['auth_expire_time'] > 0 ? date('Y-m-d H:i:s', $find['auth_expire_time']) : ((!empty($find['auth_start_time']) && $find['auth_start_time'] > 0) || $find['auth_status'] == 1 ? '永久' : $find['create_time']);
             $find['is_used'] = SvDeviceUsed::where('user_id', $find->user_id)->where('device_code', $find['device_code'])->value('is_used');
             self::$returnData = $find->toArray();
             return true;
@@ -724,7 +725,7 @@ class DeviceLogic extends BasePersonaLogic
                 ->where('copywriting_source', 2)
                 ->findOrEmpty();    
             if ($config->isEmpty()) {
-                $copywritingSourceMap = [1 => '仿写', 2 => 'AI生成', 3 => '无需', 4 => '文案库'];
+                $copywritingSourceMap = [1 => '仿写', 2 => 'AI生成', 3 => '无需', 4 => '文案库', 5 => '热点生成'];
                 $copywritingSourceText = $copywritingSourceMap[$config->copywriting_source] ?? '未知';
                 $msg = '-绑定的人设ai合成规则，文案来源模式是：' . $copywritingSourceText;
                 throw new \Exception($msg);
@@ -771,6 +772,11 @@ class DeviceLogic extends BasePersonaLogic
                     $groupedData['images'][] = $item;
                 }
             }
+            $groupedData = SquareAssetService::appendLibraryMaterials(
+                $groupedData,
+                (int)$device->user_id,
+                (int)$device->persona_id
+            );
             $allVideoTypes = $config->generation_types ?? [];
             if (empty($allVideoTypes)) {
                 $msg = '-绑定的人设ai合成规则，生成视频类型为空';
@@ -811,7 +817,14 @@ class DeviceLogic extends BasePersonaLogic
             }
 
             $visualMaterialSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($config);
+            $squareReady = $visualMaterialSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
+                && SquareAssetService::publicLibraryRows(
+                    (int)$device->user_id,
+                    (int)$device->persona_id,
+                    SquareAssetService::normalizeGroupIds($config->square_group_ids ?? [])
+                ) !== [];
             if (empty($groupedData['videos']) && empty($groupedData['images'])
+                && !$squareReady
                 && !ShanjianVideoSettingLogic::hasAiMaterialType($selectedTypesForToday, $visualMaterialSource)) {
                 $msg = '-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的素材';
                 throw new \Exception($msg);
@@ -1021,12 +1034,9 @@ class DeviceLogic extends BasePersonaLogic
                             $shanjianType = 3;
                             $shanjianVideoSettingData['shanjian_type'] = 3;
                         } else {
-                            $avatar_total = count($avatarInfoList) - 1;
-                            if ($avatar_total == 1) {
-                                $avatarInfo = 0;
-                            } else {
-                                $avatarInfo = random_int(0, $avatar_total);
-                            }
+                            // 下标上限是 count-1。恰好 2 个形象时上限为 1，不能再写死成 0，
+                            // 否则每次都取系统默认形象以及它绑定的音色。
+                            $avatarInfo = random_int(0, count($avatarInfoList) - 1);
                             $voice_id =  $avatarInfoList[$avatarInfo]['third_voice_id'] ?? '';
                             $anchorId =  $avatarInfoList[$avatarInfo]['third_avatar_id'] ?? '';
                             $pic = $avatarInfoList[$avatarInfo]['cover_url'] ?? '';
@@ -1128,10 +1138,18 @@ class DeviceLogic extends BasePersonaLogic
                 }
 
                 // 数字人口播混剪 + 纯AI/AI+素材库：复用统一的 AI 抓素材逻辑，素材库为空也能合成
-                $selectedMaterials = ShanjianVideoSettingLogic::canUseAiMaterials(
-                    (int)$shanjianType,
-                    ShanjianVideoSettingLogic::resolveVisualMaterialSource($config)
-                )
+                $visualSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($config);
+                $selectedMaterials = $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
+                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                        CopywritingImitationLogic::selectMaterialsForLibraryAndSquare(
+                            $videos,
+                            $images,
+                            (int)$shanjianType,
+                            $deviceCode,
+                            $config
+                        )
+                    )
+                    : (ShanjianVideoSettingLogic::canUseAiMaterials((int)$shanjianType, $visualSource)
                     ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
                         CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
                             $videos,
@@ -1142,7 +1160,7 @@ class DeviceLogic extends BasePersonaLogic
                             (string)($copywritingResult['content']['0'] ?? '')
                         )
                     )
-                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode);
+                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode));
 
                 if (empty($selectedMaterials)) {
                     $msg = '设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType . '，素材为空';
@@ -1204,8 +1222,10 @@ class DeviceLogic extends BasePersonaLogic
                 $clip_template_total = count($clip_template_id) - 1;
                 $clip = random_int(0, $clip_template_total);
                 $clip_id =  $clip_template_id[$clip];
-                $number = random_int(1, 20);
-                $music_url = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
+                $music_url = CopywritingImitationLogic::resolveMusicUrlByConfig(
+                    $config->isEmpty() ? [] : $config,
+                    (int)$persona->id
+                );
                 $shanjianVideoSettingData['material'] = json_encode($selectedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 // $shanjianVideoSettingData['copywriting'] = json_encode($copywritingContent, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 $shanjianVideoSettingData['voice'] = $voice_id;

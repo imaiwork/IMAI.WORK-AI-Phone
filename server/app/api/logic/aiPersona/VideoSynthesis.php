@@ -3,9 +3,10 @@
 
 namespace app\api\logic\aiPersona;
 
-use app\api\logic\ApiLogic;
 use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\api\logic\videoSynthesis\CopywritingImitationLogic;
+use app\common\exception\MaterialNotReadyException;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\AiPersonaDigitalVoice;
@@ -15,21 +16,14 @@ use app\common\model\aiPersona\AiPersonaLocal;
 use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\aiPersona\Material as MaterialModel;
 use app\common\model\aiPersona\MaterialUseLog;
-use app\api\logic\videoSynthesis\CopywritingImitationLogic;
-use app\common\exception\MaterialNotReadyException;
-use app\common\service\MaterialReadinessService;
+use app\common\model\marketing\MarketingTemplateSchedule;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
-use app\common\model\marketing\MarketingTemplateSchedule;
-use app\common\model\sv\SvAccount;
-use app\common\model\sv\SvAccountContact;
 use app\common\model\sv\SvDevice;
-use app\common\model\sv\SvDeviceRpa;
-use app\common\model\sv\SvDeviceTask;
-use app\common\model\sv\SvSetting;
-use app\common\model\user\User;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\MaterialReadinessService;
+use app\common\service\square\SquareAssetService;
 use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Log;
@@ -230,10 +224,15 @@ class VideoSynthesis extends BasePersonaLogic
             $synthesisConfig = AiPersonaSynthesisConfig::where('persona_id', $device->persona_id)
                 ->where('user_id', $device->user_id)
                 ->findOrEmpty();
-            $allowEmptyLibrary = ShanjianVideoSettingLogic::hasAiMaterialType(
-                $videoTypes,
-                ShanjianVideoSettingLogic::resolveVisualMaterialSource($synthesisConfig)
-            );
+            $visualMaterialSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($synthesisConfig);
+            $squareGroupIds = $visualMaterialSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
+                ? SquareAssetService::normalizeGroupIds($synthesisConfig->square_group_ids ?? [])
+                : [];
+            $squareGrouped = $visualMaterialSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
+                ? SquareAssetService::publicGrouped((int)$device->user_id, (int)$device->persona_id, $squareGroupIds)
+                : ['videos' => [], 'images' => []];
+            $allowEmptyLibrary = ShanjianVideoSettingLogic::hasAiMaterialType($videoTypes, $visualMaterialSource)
+                || ($squareGrouped['videos'] !== [] || $squareGrouped['images'] !== []);
 
             // 素材模式与主链路同口径：原图只取原片，自动适配只取转码/切片素材
             $materialUseMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode((int)$device->persona_id);
@@ -531,10 +530,18 @@ class VideoSynthesis extends BasePersonaLogic
                 }
 
                 // 数字人口播混剪 + 纯AI/AI+素材库：复用统一的 AI 抓素材逻辑，素材库为空也能合成
-                $selectedMaterials = ShanjianVideoSettingLogic::canUseAiMaterials(
-                    (int)$shanjianType,
-                    ShanjianVideoSettingLogic::resolveVisualMaterialSource($synthesisConfig)
-                )
+                $visualSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($synthesisConfig);
+                $selectedMaterials = $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
+                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                        CopywritingImitationLogic::selectMaterialsForLibraryAndSquare(
+                            $videos,
+                            $images,
+                            (int)$shanjianType,
+                            $deviceCode,
+                            $synthesisConfig
+                        )
+                    )
+                    : (ShanjianVideoSettingLogic::canUseAiMaterials((int)$shanjianType, $visualSource)
                     ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
                         CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
                             $videos,
@@ -545,7 +552,7 @@ class VideoSynthesis extends BasePersonaLogic
                             (string)($copywritingResult['content']['0'] ?? '')
                         )
                     )
-                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode);
+                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode));
 
                 if (empty($selectedMaterials)) {
                     $msg = '设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType . '，素材为空';

@@ -20,6 +20,7 @@ class AiPersonaOptionService
                 'status' => 1,
                 'options' => [
                     'sph_clues' => 1,
+                    'dy_search' => 1,
                     'video_shutoff' => 1,
                     'group_clues' => 1,
                     'city_clues' => 1,

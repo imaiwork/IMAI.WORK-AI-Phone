@@ -245,7 +245,7 @@
 
 <script setup lang="ts">
 import { getDeviceDetail, unbindDevice, fetchDeviceAccount, updateDevice } from "@/api/device";
-import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum } from "@/enums/appEnums";
+import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum, DeviceWsMessage } from "@/enums/appEnums";
 import { DeviceEventAction } from "@/ai_modules/device/enums";
 import { useCopy } from "@/hooks/useCopy";
 import { useDevice } from "@/ai_modules/device/hooks/useDevice";
@@ -305,7 +305,7 @@ const deviceCode = ref<string>("");
 
 const { copy } = useCopy();
 const { sortedPlatform, initializePlatform } = useDevice();
-const { onEvent, close } = useDeviceWs();
+const { onEvent, close, ensureConnected } = useDeviceWs();
 
 // ─── 任务模式 ─────────────────────────────────────────────────────
 
@@ -532,6 +532,8 @@ const handleAccountConfirm = async (): Promise<void> => {
     }
     updateAccountSteps.value[0].status = StepStatus.RUNNING;
     try {
+        // 进度全靠 WS 推送，先确保连接可用再下发指令
+        if (!(await ensureConnected())) throw DeviceWsMessage[DeviceCmdCodeEnum.CONNECT_ERROR];
         await fetchDeviceAccount({
             device_code: deviceCode.value,
             type: currentPlatform.value,

@@ -10,20 +10,26 @@ class AiPersonaSynthesisConfig extends BaseModel
     protected $name = 'ai_persona_synthesis_config';
     use SoftDelete;
     protected $deleteTime = 'delete_time';
-    //画面素材: 1-纯AI, 2-AI+素材库, 3-纯素材库
+    //画面素材: 1-纯AI, 2-AI+素材库, 3-纯素材库, 4-素材库+广场
     const VISUAL_MATERIAL_SOURCE_AI = 1;
     const VISUAL_MATERIAL_SOURCE_AI_MATERIAL = 2;
     const VISUAL_MATERIAL_SOURCE_MATERIAL = 3;
+    const VISUAL_MATERIAL_SOURCE_SQUARE = 4;
 
     //闪剪素材使用方式: 1-自动适配(切片) 2-原图
     const MATERIAL_USE_MODE_SLICE = 1;
     const MATERIAL_USE_MODE_ORIGINAL = 2;
 
-    //文案来源: 1-仿写, 2-AI生成, 3-无需, 4-文案库
+    //文案来源: 1-仿写, 2-AI生成, 3-无需, 4-文案库, 5-热点生成
     const COPYWRITING_SOURCE_IMITATE = 1;
     const COPYWRITING_SOURCE_AI = 2;
     const COPYWRITING_SOURCE_NONE = 3;
     const COPYWRITING_SOURCE_LIBRARY = 4;
+    const COPYWRITING_SOURCE_HOTSPOT = 5;
+
+    // 热点取用: 1-最新入库优先（id 降序，同设备不重复，其他设备可同拿） 2-每条只用一次（全局，按入库顺序 id 升序）
+    const HOTSPOT_PICK_MODE_LATEST = 1;
+    const HOTSPOT_PICK_MODE_ONCE_DEVICE = 2;
 
     /**
      * 校验文案来源取值，与 AiPersona::requireValidRunMode 同款：脏值一律抛错，不静默兜底
@@ -39,11 +45,37 @@ class AiPersonaSynthesisConfig extends BaseModel
             self::COPYWRITING_SOURCE_AI,
             self::COPYWRITING_SOURCE_NONE,
             self::COPYWRITING_SOURCE_LIBRARY,
+            self::COPYWRITING_SOURCE_HOTSPOT,
         ];
         if (!in_array($source, $allowed, true)) {
-            throw new \Exception('文案来源不正确，1=找爆款仿写 2=AI直接生成 3=不使用 4=文案库');
+            throw new \Exception('文案来源不正确，1=找爆款仿写 2=AI直接生成 3=不使用 4=文案库 5=热点生成');
         }
         return $source;
+    }
+
+    /**
+     * 热点取用规则：缺省/0 视为 1；脏值抛错
+     * @throws \Exception
+     */
+    public static function requireValidHotspotPickMode($value): int
+    {
+        if ($value === null || $value === '' || $value === false) {
+            return self::HOTSPOT_PICK_MODE_LATEST;
+        }
+        $invalid = is_bool($value) || is_array($value) || is_object($value)
+            || (is_string($value) && !is_numeric(trim($value)));
+        $mode = $invalid ? -1 : (int)$value;
+        if ($mode === 0) {
+            return self::HOTSPOT_PICK_MODE_LATEST;
+        }
+        $allowed = [
+            self::HOTSPOT_PICK_MODE_LATEST,
+            self::HOTSPOT_PICK_MODE_ONCE_DEVICE,
+        ];
+        if (!in_array($mode, $allowed, true)) {
+            throw new \Exception('热点取用规则不正确，1=最新入库优先 2=每条只用一次');
+        }
+        return $mode;
     }
 
     //文案库使用方式: 1-随机, 2-顺序
@@ -93,7 +125,7 @@ class AiPersonaSynthesisConfig extends BaseModel
     const COPYWRITING_GENERATION_TYPE_CUSTOM = 7;
     const COPYWRITING_GENERATION_CUSTOM_MAX = 500;
 
-    protected $json = ['generation_types', 'template_config'];
+    protected $json = ['generation_types', 'template_config', 'square_group_ids'];
     protected $jsonAssoc = true;
 
     /** 每日出片条数：0=未配置。仅无手机模式消费，手机模式仍按发布时段数出片 */

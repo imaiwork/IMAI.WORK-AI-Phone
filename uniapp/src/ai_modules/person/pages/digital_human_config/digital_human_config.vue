@@ -237,7 +237,7 @@
             ref="avatarVoicePickerRef"
             :show-free-tone="false"
             :show-original-tone="true"
-            :model-version="DigitalHumanModelVersionEnum.SHANJIAN"
+            :model-version="SHANJIAN_VOICE_MODEL_VERSIONS.join(',')"
             @select="handleAvatarVoiceSelect" />
     </view>
 </template>
@@ -253,7 +253,7 @@ import {
     bindAvatarVoice,
 } from "@/api/person";
 import { useAudio } from "@/hooks/useAudio";
-import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { SHANJIAN_VOICE_MODEL_VERSIONS } from "@/enums/appEnums";
 import { PERSONA_MATERIAL_VOICE_MODEL_VERSIONS } from "@/ai_modules/person/enums";
 import ChooseAnchor from "@/ai_modules/person/components/choose-anchor/choose-anchor.vue";
 import ChooseVoice from "@/ai_modules/person/components/choose-voice/choose-voice.vue";

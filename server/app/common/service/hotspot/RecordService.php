@@ -4,6 +4,7 @@ namespace app\common\service\hotspot;
 
 use app\common\model\hotspot\HotspotAnalysis;
 use app\common\model\hotspot\HotspotCreation;
+use app\common\model\hotspot\HotspotPool;
 use app\common\model\hotspot\HotspotTask;
 
 class RecordService
@@ -62,6 +63,7 @@ class RecordService
             $topic = (string)($result['topic'] ?? $params['topic'] ?? '');
             $platform = (string)($params['platform'] ?? 'douyin');
             $personaName = (string)($persona['name'] ?? '');
+            $personaId = self::resolvePersonaId($persona);
             $now = time();
 
             $data = [
@@ -77,15 +79,13 @@ class RecordService
                 'est_duration_sec' => (int)($result['est_duration_sec'] ?? 0),
                 'hashtags_json' => self::asStringList($result['hashtags'] ?? []),
                 'shots_json' => self::asStringList($result['shots'] ?? []),
+                'persona_id' => $personaId,
                 'update_time' => $now,
             ];
 
             // 同一流程内反复「重新生成文案」更新同一条台账（仅文案且未关联任务的最新记录），
             // 避免后台创作记录膨胀出大量重复行，与小程序侧的创作感知保持一致
-            $existing = HotspotCreation::where('user_id', $userId)
-                ->where('topic', $topic)
-                ->where('platform', $platform)
-                ->where('persona_name', $personaName)
+            $existing = HotspotCreation::where(self::creationLookupWhere($userId, $personaId, $topic, $platform))
                 ->where('status', 'script')
                 ->where('task_no', '')
                 ->order('id', 'desc')
@@ -93,8 +93,9 @@ class RecordService
             if (!$existing->isEmpty()) {
                 $existing->save($data);
                 HotspotLog::write(sprintf(
-                    '创作记录更新成功：用户=%d 话题=%s 标题=%s 编号=%s',
+                    '创作记录更新成功：用户=%d 人设id=%d 话题=%s 标题=%s 编号=%s',
                     $userId,
+                    $personaId,
                     $topic,
                     $data['title'],
                     (string)$existing->record_no
@@ -107,6 +108,7 @@ class RecordService
                 'user_id' => $userId,
                 'topic' => $topic,
                 'platform' => $platform,
+                'persona_id' => $personaId,
                 'persona_name' => $personaName,
                 'task_no' => '',
                 'status' => 'script',
@@ -123,7 +125,7 @@ class RecordService
         }
     }
 
-    public static function attachAnalyzed(array $topics, int $userId, string $platform): array
+    public static function attachAnalyzed(array $topics, int $userId, string $platform, int $personaId = 0): array
     {
         if ($topics === []) {
             return [];
@@ -131,7 +133,7 @@ class RecordService
 
         $marks = self::emptyAnalyzedMap();
         try {
-            $marks = self::loadAnalyzedMap($userId, $platform, $topics);
+            $marks = self::loadAnalyzedMap($userId, $platform, $topics, $personaId);
         } catch (\Throwable $e) {
             HotspotLog::exception('热榜回填已分析失败', $e);
             $marks = self::emptyAnalyzedMap();
@@ -144,10 +146,13 @@ class RecordService
             }
             $title = self::normalizeTopic($topic['title'] ?? '');
             $analysisId = (int)($marks['analysis'][$title] ?? 0);
-            // 不选人设走「搜索→文案→合成」，不产生人设契合记录：有任务同样代表这条热点做过，
-            // 且 lastFlow 能还原上次现场，不一起标记就会漏标、还原也进不去（白重跑一次收费搜索）
-            $topic['analyzed'] = $analysisId > 0 || !empty($marks['task'][$title]);
-            $topic['analysis_id'] = $analysisId;
+            // 不选人设走「搜索→文案→合成」，不产生人设契合记录：有任务同样代表这条热点做过。
+            // 入库（热点库）也算做过：全局热榜不传人设，只看分析台账会漏标。
+            $topic['analyzed'] = $analysisId > 0
+                || !empty($marks['task'][$title])
+                || !empty($marks['pool'][$title]);
+            // 全局热榜不传人设：analysis_id 不能填别人设的台账，否则更新入库会误报不匹配
+            $topic['analysis_id'] = self::resolveHotListAnalysisId($personaId, $analysisId);
             $out[] = $topic;
         }
         return $out;
@@ -155,7 +160,119 @@ class RecordService
 
     public static function resolvePersonaId(array $persona): int
     {
-        return max(0, (int)($persona['id'] ?? 0));
+        return max(0, (int)($persona['id'] ?? $persona['persona_id'] ?? 0));
+    }
+
+    /** 全局热榜（persona_id<=0）只点亮已分析，不把跨人设 analysis_id 回填到列表 */
+    public static function resolveHotListAnalysisId(int $personaId, int $analysisId): int
+    {
+        return $personaId > 0 ? max(0, $analysisId) : 0;
+    }
+
+    /**
+     * 创作台账查找键：同用户、人设、话题、平台。同名不同人设互不覆盖。
+     *
+     * @return array{user_id:int,persona_id:int,topic:string,platform:string}
+     */
+    public static function creationLookupKey(int $userId, int $personaId, string $topic, string $platform): array
+    {
+        return [
+            'user_id' => $userId,
+            'persona_id' => max(0, $personaId),
+            'topic' => self::normalizeTopic($topic),
+            'platform' => $platform === '' ? 'douyin' : $platform,
+        ];
+    }
+
+    /**
+     * @return array<int, array{0:string,1:string,2:int|string}>
+     */
+    public static function creationLookupWhere(int $userId, int $personaId, string $topic, string $platform): array
+    {
+        $key = self::creationLookupKey($userId, $personaId, $topic, $platform);
+        return [
+            ['user_id', '=', $key['user_id']],
+            ['persona_id', '=', $key['persona_id']],
+            ['topic', '=', $key['topic']],
+            ['platform', '=', $key['platform']],
+        ];
+    }
+
+    public static function personaIdFromJson(mixed $personaJson): int
+    {
+        $persona = is_array($personaJson) ? $personaJson : [];
+        return max(0, (int)($persona['id'] ?? $persona['persona_id'] ?? 0));
+    }
+
+    /**
+     * 同话题任务按人设取最新一条（tasks 须已按 id desc）。
+     *
+     * @param list<array<string, mixed>> $tasks
+     * @return array<string, mixed>|null
+     */
+    public static function pickLastFlowTask(array $tasks, int $personaId): ?array
+    {
+        foreach ($tasks as $row) {
+            $pid = array_key_exists('persona_id', $row)
+                ? (int)$row['persona_id']
+                : self::personaIdFromJson($row['persona_json'] ?? []);
+            if ($pid === $personaId) {
+                return $row;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * $personaId<=0 视为全局热榜：任意人设的分析/任务/入库都点亮「已分析」。
+     * $personaId>0 仍按人设隔离。
+     *
+     * @param list<array<string, mixed>> $analysisRows 须已按 id desc，同话题只取第一条
+     * @param list<array<string, mixed>> $taskRows
+     * @param list<array<string, mixed>> $poolRows
+     * @return array{analysis: array<string,int>, task: array<string,bool>, pool: array<string,bool>}
+     */
+    public static function pickAnalyzedMaps(
+        array $analysisRows,
+        array $taskRows,
+        int $personaId,
+        array $poolRows = []
+    ): array {
+        $map = [];
+        foreach ($analysisRows as $row) {
+            if ($personaId > 0 && (int)($row['persona_id'] ?? 0) !== $personaId) {
+                continue;
+            }
+            $topic = self::normalizeTopic($row['topic'] ?? '');
+            if ($topic === '' || isset($map[$topic])) {
+                continue;
+            }
+            $map[$topic] = (int)($row['id'] ?? 0);
+        }
+        $taskMap = [];
+        foreach ($taskRows as $row) {
+            $pid = array_key_exists('persona_id', $row)
+                ? (int)$row['persona_id']
+                : self::personaIdFromJson($row['persona_json'] ?? []);
+            if ($personaId > 0 && $pid !== $personaId) {
+                continue;
+            }
+            $taskTopic = self::normalizeTopic($row['topic'] ?? '');
+            if ($taskTopic !== '') {
+                $taskMap[$taskTopic] = true;
+            }
+        }
+        $poolMap = [];
+        foreach ($poolRows as $row) {
+            if ($personaId > 0 && (int)($row['persona_id'] ?? 0) !== $personaId) {
+                continue;
+            }
+            $poolTopic = self::normalizeTopic($row['topic'] ?? '');
+            if ($poolTopic !== '') {
+                $poolMap[$poolTopic] = true;
+            }
+        }
+        return ['analysis' => $map, 'task' => $taskMap, 'pool' => $poolMap];
     }
 
     public static function normalizeTopic(mixed $topic): string
@@ -184,19 +301,18 @@ class RecordService
             $platform = (string)($taskApi['platform'] ?? '');
             $persona = self::asArray($taskApi['persona'] ?? []);
             $personaName = (string)($persona['name'] ?? '');
+            $personaId = self::resolvePersonaId($persona);
             $options = self::asArray($taskApi['options'] ?? []);
             $now = time();
 
             $row = HotspotCreation::where('task_no', '')
-                ->where('user_id', $userId)
-                ->where('topic', $topic)
-                ->where('platform', $platform)
-                ->where('persona_name', $personaName)
+                ->where(self::creationLookupWhere($userId, $personaId, $topic, $platform))
                 ->order('id', 'desc')
                 ->findOrEmpty();
             if (!$row->isEmpty()) {
                 $row->task_no = $taskNo;
                 $row->status = 'video';
+                $row->persona_id = $personaId;
                 $row->update_time = $now;
                 $row->save();
                 HotspotLog::write('创作记录已挂任务：任务号=' . $taskNo . ' 记录号=' . (string)$row->record_no);
@@ -209,6 +325,7 @@ class RecordService
                 'user_id' => $userId,
                 'topic' => $topic,
                 'platform' => $platform,
+                'persona_id' => $personaId,
                 'persona_name' => $personaName,
                 'goal' => (string)($options['goal'] ?? ''),
                 'direction' => (string)($options['direction'] ?? ''),
@@ -267,13 +384,13 @@ class RecordService
         return $label !== '' ? $label : '—';
     }
 
-    /** 「已分析」两个来源：选人设的人设契合记录、以及任务（不选人设只会留下任务） */
+    /** 「已分析」三个来源：人设契合记录、视频任务、热点库入库 */
     private static function emptyAnalyzedMap(): array
     {
-        return ['analysis' => [], 'task' => []];
+        return ['analysis' => [], 'task' => [], 'pool' => []];
     }
 
-    private static function loadAnalyzedMap(int $userId, string $platform, array $topics): array
+    private static function loadAnalyzedMap(int $userId, string $platform, array $topics, int $personaId = 0): array
     {
         if ($userId <= 0) {
             return self::emptyAnalyzedMap();
@@ -294,44 +411,66 @@ class RecordService
         }
 
         $titleList = array_keys($titles);
-        $rows = HotspotAnalysis::where('user_id', $userId)
+        // 全局热榜（persona_id=0）不按人设过滤：小程序热榜不传人设，分析/入库都绑真实人设
+        $analysisQuery = HotspotAnalysis::where('user_id', $userId)
             ->where('platform', $platform)
             ->whereIn('topic', $titleList)
-            ->field(['id', 'topic'])
-            ->order('id', 'desc')
-            ->select();
+            ->field(['id', 'topic', 'persona_id'])
+            ->order('id', 'desc');
+        if ($personaId > 0) {
+            $analysisQuery->where('persona_id', $personaId);
+        }
+        $rows = $analysisQuery->select();
 
-        $map = [];
+        $analysisRows = [];
         foreach ($rows as $row) {
-            $topic = self::normalizeTopic($row->topic ?? '');
-            if ($topic === '' || isset($map[$topic])) {
-                continue;
-            }
-            $map[$topic] = (int)$row->id;
+            $analysisRows[] = [
+                'id' => (int)$row->id,
+                'topic' => (string)($row->topic ?? ''),
+                'persona_id' => (int)($row->persona_id ?? 0),
+            ];
         }
 
-        $taskMap = [];
-        $taskRows = HotspotTask::where('user_id', $userId)
+        $taskRows = [];
+        $taskModels = HotspotTask::where('user_id', $userId)
             ->where('platform', $platform)
             ->whereIn('topic', $titleList)
-            ->field(['topic'])
+            ->field(['topic', 'persona_json'])
             ->select();
-        foreach ($taskRows as $taskRow) {
-            $taskTopic = self::normalizeTopic($taskRow->topic ?? '');
-            if ($taskTopic !== '') {
-                $taskMap[$taskTopic] = true;
-            }
+        foreach ($taskModels as $taskRow) {
+            $taskRows[] = [
+                'topic' => (string)($taskRow->topic ?? ''),
+                'persona_id' => self::personaIdFromJson($taskRow->persona_json ?? []),
+            ];
         }
 
+        $poolQuery = HotspotPool::where('user_id', $userId)
+            ->where('platform', $platform)
+            ->whereIn('topic', $titleList)
+            ->field(['topic', 'persona_id']);
+        if ($personaId > 0) {
+            $poolQuery->where('persona_id', $personaId);
+        }
+        $poolRows = [];
+        foreach ($poolQuery->select() as $poolRow) {
+            $poolRows[] = [
+                'topic' => (string)($poolRow->topic ?? ''),
+                'persona_id' => (int)($poolRow->persona_id ?? 0),
+            ];
+        }
+
+        $marks = self::pickAnalyzedMaps($analysisRows, $taskRows, $personaId, $poolRows);
         HotspotLog::write(sprintf(
-            '热榜回填已分析：用户=%d 平台=%s 话题数=%d 分析命中=%d 任务命中=%d',
+            '热榜回填已分析：用户=%d 人设id=%d 平台=%s 话题数=%d 分析命中=%d 任务命中=%d 入库命中=%d',
             $userId,
+            $personaId,
             $platform,
             count($titles),
-            count($map),
-            count($taskMap)
+            count($marks['analysis']),
+            count($marks['task']),
+            count($marks['pool'])
         ));
-        return ['analysis' => $map, 'task' => $taskMap];
+        return $marks;
     }
 
     private static function newRecordNo(string $prefix, string $table): string

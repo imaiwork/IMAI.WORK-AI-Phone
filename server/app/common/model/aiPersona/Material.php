@@ -112,4 +112,34 @@ class Material extends BaseModel
             });
         });
     }
+
+    /**
+     * 成品库直发必须有真实文件地址：空串、空白、NULL 都不能建单。
+     */
+    public static function rawFileUrl(mixed $material): string
+    {
+        if (is_array($material)) {
+            return trim((string)($material['file_url'] ?? ''));
+        }
+        if ($material instanceof self) {
+            return trim((string)$material->getData('file_url'));
+        }
+        if (is_object($material) && isset($material->file_url)) {
+            return trim((string)$material->file_url);
+        }
+        return '';
+    }
+
+    public static function hasUsableFileUrl(mixed $material): bool
+    {
+        return self::rawFileUrl($material) !== '';
+    }
+
+    /**
+     * @param \think\db\Query|\think\Model $query
+     */
+    public static function applyUsableFileUrl($query)
+    {
+        return $query->whereRaw("TRIM(IFNULL(file_url, '')) <> ''");
+    }
 }

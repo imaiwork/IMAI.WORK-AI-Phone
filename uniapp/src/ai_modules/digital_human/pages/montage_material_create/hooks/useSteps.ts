@@ -1,5 +1,5 @@
-import { montageConfig } from "@/enums/montageEnums";
-import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { montageConfig, calcMaterialDurationBudget } from "@/enums/montageEnums";
+import { isShanjianVoiceModelVersion } from "@/enums/appEnums";
 
 const COPYWRITER_LIMIT = 600;
 
@@ -36,9 +36,16 @@ export function useSteps({
 
     // ─── 步骤校验 ────────────────────────────────────────────────
 
+    // 校验口径含截断误差补偿，见 calcMaterialDurationBudget
     const getMaterialGroupDuration = computed(() => {
         return formData.materialList.reduce(
-            (acc: number, item: any) => acc + item.reduce((acc: number, item: any) => acc + parseInt(item.duration), 0),
+            (acc: number, group: any) =>
+                acc +
+                group.reduce(
+                    (sum: number, item: any) =>
+                        sum + calcMaterialDurationBudget(item.type === "image", item.duration),
+                    0,
+                ),
             0,
         );
     });
@@ -84,13 +91,13 @@ export function useSteps({
     // ─── 步骤2 → 步骤3 时的音色联动处理 ────────────────────────
     /**
      * 当文案模式为「上传音频」时，进入步骤3前检查已选音色：
-     * - 若音色的 model_version 不是 SHANJIAN，则清空音色
-     * - 若是 SHANJIAN 或未选音色，则保留
+     * - 若音色的 model_version 不是闪剪 V3/S3，则清空音色
+     * - 若是闪剪音色或未选音色，则保留
      */
     const syncVoiceOnEnterStep3 = (): void => {
         if (copywriterTypeIndex.value !== CopywriterTab.AUDIO) return;
         const currentModelVersion = voiceValue.value?.model_version;
-        if (currentModelVersion && currentModelVersion !== DigitalHumanModelVersionEnum.SHANJIAN) {
+        if (currentModelVersion && !isShanjianVoiceModelVersion(currentModelVersion)) {
             onClearVoice();
         }
     };

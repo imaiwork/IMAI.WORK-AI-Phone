@@ -77,6 +77,7 @@
 <script setup lang="ts">
 import { getCreditSet, setCreditSet } from "@/api/marketing/creditset";
 import { useLockFn } from "@/hooks/useLockFn";
+import { isAiPersonBillingItem } from "@/enums/creditSceneEnums";
 import ConfigTable from "./config-table.vue";
 
 const formData = reactive<any>({});
@@ -89,36 +90,7 @@ const getCommonConfig = computed(() =>
     tableData.value.filter((item) => ["coze_agent_chat", "coze_workflow"].includes(item.scene)),
 );
 
-const getAiPersonConfig = computed(() =>
-    tableData.value.filter((item) =>
-        [
-            "human_avatar_chanjing",
-            "human_voice_chanjing",
-            "human_video_chanjing",
-            "human_avatar_shanjian",
-            "human_voice_shanjian",
-            "human_video_shanjian",
-            "shanjian_realman_broadcast",
-            "shanjian_broadcast_mixcut",
-            "shanjian_news_mixcut",
-            "ai_shanjian_authorized_video",
-            "storyboard_video_create",
-            "seedance2_480p_image2video_create",
-            "seedance2_720p_image2video_create",
-            "seedance2_480p_video2video_create",
-            "seedance2_720p_video2video_create",
-            "human_voice_minimax_hd",
-            "human_voice_minimax_turbo",
-            "human_audio_minimax_hd",
-            "human_audio_minimax_turbo",
-            "shanjian_ai_cover",
-            "human_avatar_shanjian_pro",
-            "play_face",
-            "play_dance",
-            "play_splice",
-        ].includes(item.scene),
-    ),
-);
+const getAiPersonConfig = computed(() => tableData.value.filter((item) => isAiPersonBillingItem(item)));
 
 const getAiDrawConfig = computed(() =>
     tableData.value.filter((item) =>

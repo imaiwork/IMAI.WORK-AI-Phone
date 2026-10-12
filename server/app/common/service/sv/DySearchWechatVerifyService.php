@@ -257,27 +257,32 @@ class DySearchWechatVerifyService
             'contact_wechat' => (bool)($scanConfig['contact_wechat'] ?? true),
             'contact_qq' => (bool)($scanConfig['contact_qq'] ?? false),
         ];
+        $scanDyid = (bool)($scanConfig['scan_dyid'] ?? true);
+        $addRule = (string)($task->add_rule ?? 'all');
         $extracted = DySearchIngestService::buildExtracted(
             '',
-            (string)$record->dy_id,
+            '',
             (string)$record->ocr_text,
             $contactOpts,
-            (string)($task->add_rule ?? 'all'),
-            (bool)($scanConfig['scan_dyid'] ?? true)
+            $addRule,
+            $scanDyid
         );
         return self::mergePendingWechats(
             $extracted,
             (string)$record->reg_content,
             (bool)($scanConfig['phone_as_wechat'] ?? true),
             (string)$record->dy_id,
-            (string)($task->add_rule ?? 'all')
+            $addRule,
+            $contactOpts,
+            $scanDyid
         );
     }
 
     /**
-     * 待校验微信号，按 add_rule 收口。
+     * 待校验微信号：先合并识别原文与已入库号，再按入库同一套规则决定要不要把抖音号当微信。
      *
      * @param array{phones?:list<string>,wechats?:list<string>,qqs?:list<string>,raw?:list<string>} $extracted
+     * @param array{contact_phone?:bool,contact_wechat?:bool,contact_qq?:bool} $contactOpts
      * @return list<string>
      */
     public static function mergePendingWechats(
@@ -285,7 +290,9 @@ class DySearchWechatVerifyService
         string $regContent,
         bool $phoneAsWechat = true,
         string $dyId = '',
-        string $addRule = 'all'
+        string $addRule = 'all',
+        array $contactOpts = [],
+        bool $scanDyid = true
     ): array {
         $fromReg = self::extractedFromRegContent($regContent);
         $mergedExtracted = [
@@ -294,14 +301,34 @@ class DySearchWechatVerifyService
             'qqs' => array_values(array_unique(array_merge($extracted['qqs'] ?? [], $fromReg['qqs']))),
             'raw' => array_values(array_unique(array_merge($extracted['raw'] ?? [], $fromReg['raw']))),
         ];
-        $contacts = DySearchIngestService::pickAddWechatContacts($mergedExtracted, $addRule, $phoneAsWechat);
-        $merged = DySearchIngestService::splitAddWechatContacts($contacts)['wechats'];
-        $hasPhones = ($mergedExtracted['phones'] ?? []) !== [];
         $dyId = trim($dyId);
-        if ($hasPhones && $dyId !== '') {
-            $merged = array_values(array_filter($merged, static fn(string $wechat): bool => $wechat !== $dyId));
+        if ($dyId !== '') {
+            $mergedExtracted = self::withoutContact($mergedExtracted, $dyId);
+            $mergedExtracted = DySearchIngestService::mergeAcceptableDyId(
+                $mergedExtracted,
+                $dyId,
+                $contactOpts,
+                $addRule,
+                $scanDyid
+            );
         }
-        return $merged;
+        $contacts = DySearchIngestService::pickAddWechatContacts($mergedExtracted, $addRule, $phoneAsWechat);
+        return DySearchIngestService::splitAddWechatContacts($contacts)['wechats'];
+    }
+
+    /**
+     * @param array{phones?:list<string>,wechats?:list<string>,qqs?:list<string>,raw?:list<string>} $extracted
+     * @return array{phones: list<string>, wechats: list<string>, qqs: list<string>, raw: list<string>}
+     */
+    private static function withoutContact(array $extracted, string $contact): array
+    {
+        $drop = static fn(string $item): bool => $item !== $contact;
+        return [
+            'phones' => array_values(array_filter($extracted['phones'] ?? [], $drop)),
+            'wechats' => array_values(array_filter($extracted['wechats'] ?? [], $drop)),
+            'qqs' => array_values($extracted['qqs'] ?? []),
+            'raw' => array_values(array_filter($extracted['raw'] ?? [], $drop)),
+        ];
     }
 
     /**

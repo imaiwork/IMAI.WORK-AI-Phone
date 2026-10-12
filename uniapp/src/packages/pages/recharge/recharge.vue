@@ -264,7 +264,7 @@ import { useRechargePay } from "@/hooks/useRechargePay";
 import { PayStatusEnum } from "@/enums/appEnums";
 import { MnpPayType } from "@/enums/payEnums";
 import { useUserStore } from "@/stores/user";
-import { isAndroid, isIOS } from "@/utils/client";
+import { isIOS } from "@/utils/client";
 import { useAppStore } from "@/stores/app";
 import OemRechargePanel from "@/components/oem-recharge-panel/oem-recharge-panel.vue";
 
@@ -291,9 +291,7 @@ const getRechargeData = computed(() => {
 });
 
 const rechargeClosed = computed(() => {
-    return (
-        (isIOS() && rechargeConfig.value?.is_ios_open == 0) || (isAndroid() && rechargeConfig.value?.is_and_open == 0)
-    );
+    return isIOS() ? rechargeConfig.value?.is_ios_open == 0 : rechargeConfig.value?.is_and_open == 0;
 });
 
 const selectedPayText = computed(() => {

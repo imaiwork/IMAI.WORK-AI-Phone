@@ -55,6 +55,17 @@
                         </view>
                     </view>
 
+                    <view
+                        v-if="musicSource === MusicSourceEnum.SYSTEM"
+                        class="mt-[18rpx] flex items-center gap-[12rpx] px-[16rpx] py-[14rpx] rounded-[16rpx] bg-[#F4F6FA]">
+                        <text class="flex-1 min-w-0 text-[24rpx] text-[#374151] line-clamp-1">
+                            {{ modelValue.system_music_name || "当前：系统随机" }}
+                        </text>
+                        <text class="flex-shrink-0 text-[24rpx] text-primary font-bold" @click="showSystemMusic = true">
+                            换一首
+                        </text>
+                    </view>
+
                     <view v-if="musicSource === MusicSourceEnum.CUSTOM" class="mt-[18rpx]">
                         <view class="adv-upload" @click="handleChooseMusic">
                             <u-icon name="attach" color="#9CA3AF" size="18" />
@@ -88,11 +99,16 @@
         </view>
 
         <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
+        <system-music-sheet
+            v-model="showSystemMusic"
+            :selected-id="modelValue.system_music_id"
+            @confirm="onSystemMusic" />
     </view>
 </template>
 
 <script setup lang="ts">
 import useUpload from "@/hooks/useUpload";
+import SystemMusicSheet from "@/components/system-music-sheet/system-music-sheet.vue";
 import { MusicSourceEnum } from "@/ai_modules/digital_human/enums";
 import {
     ADVANCED_MUSIC_ACCEPT,
@@ -177,7 +193,7 @@ const MUSIC_SOURCE_OPTIONS = [
 ];
 
 const MUSIC_SOURCE_TIPS: Record<MusicSourceEnum, string> = {
-    [MusicSourceEnum.SYSTEM]: "按文案内容自动匹配曲风",
+    [MusicSourceEnum.SYSTEM]: "每次从系统曲库随机一首",
     [MusicSourceEnum.CUSTOM]: "上传一首自己的音乐",
     [MusicSourceEnum.NONE]: "成片只有口播，没有背景音乐",
 };
@@ -192,9 +208,14 @@ const musicVolumePercent = computed(() =>
     Math.round((props.modelValue.music_volume ?? ADVANCED_MUSIC_VOLUME_DEFAULT) * 100),
 );
 
+const showSystemMusic = ref(false);
+
 const musicTip = computed(() => {
     if (musicSource.value === MusicSourceEnum.CUSTOM && props.modelValue.music_name) {
         return `已选：${props.modelValue.music_name}`;
+    }
+    if (musicSource.value === MusicSourceEnum.SYSTEM && props.modelValue.system_music_name) {
+        return `已指定：${props.modelValue.system_music_name}`;
     }
     return MUSIC_SOURCE_TIPS[musicSource.value];
 });
@@ -214,6 +235,8 @@ const summary = computed(() => {
     const musicText =
         musicSource.value === MusicSourceEnum.CUSTOM
             ? props.modelValue.music_name || "自己上传"
+            : musicSource.value === MusicSourceEnum.SYSTEM && props.modelValue.system_music_name
+            ? props.modelValue.system_music_name
             : MUSIC_SOURCE_OPTIONS.find((item) => item.value === musicSource.value)?.label;
     return `${packText} · 背景音乐：${musicText}`;
 });
@@ -228,7 +251,21 @@ const handleSwitch = (key: PackSwitchKey, value: boolean): void => {
 
 const handleMusicSource = (value: MusicSourceEnum): void => {
     if (musicSource.value === value) return;
-    patch({ music_source: value });
+    patch({
+        music_source: value,
+        ...(value === MusicSourceEnum.SYSTEM
+            ? {}
+            : { system_music_id: "", system_music_name: "", system_music_url: "" }),
+    });
+};
+
+const onSystemMusic = (value: { id: string; name: string; audio_url?: string }): void => {
+    patch({
+        music_source: MusicSourceEnum.SYSTEM,
+        system_music_id: value.id,
+        system_music_name: value.name,
+        system_music_url: value.id ? value.audio_url || "" : "",
+    });
 };
 
 const handleMusicVolume = (e: any): void => {

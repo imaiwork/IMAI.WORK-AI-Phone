@@ -17,7 +17,7 @@ use think\exception\HttpResponseException;
 class DeviceController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['bind', 'accountLists'];
+    public array $notNeedLogin = ['bind'];
 
     /**
      * @desc 获取列表

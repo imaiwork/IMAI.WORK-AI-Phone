@@ -556,6 +556,7 @@ import AdvancedSetting from "@/ai_modules/digital_human/components/advanced-sett
 import {
     createAdvancedSetting,
     toPackagingParams,
+    withResolvedSystemMusicUrl,
 } from "@/ai_modules/digital_human/config/advanced-setting";
 
 const DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE = 5;
@@ -736,6 +737,9 @@ const toneListModelVersion = computed(() => {
     if (!formData.model_version) return "";
     return [
         formData.model_version,
+        ...(formData.model_version === DigitalHumanModelVersionEnum.SHANJIAN
+            ? [DigitalHumanModelVersionEnum.SHANJIAN_S3]
+            : []),
         DigitalHumanModelVersionEnum.MINIMAX_HD,
         DigitalHumanModelVersionEnum.MINIMAX_TURBO,
     ].join(",");
@@ -1222,13 +1226,16 @@ const createShanjianSpeechTask = async (engineType: SpeechEngineTypeEnum = Speec
         extra.width = width || formData.width;
         extra.height = height || formData.height;
     }
+    const packaging = showAdvancedSetting.value
+        ? toPackagingParams(await withResolvedSystemMusicUrl(formData.packaging))
+        : null;
     await createShanjianTask({
         name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "数字人口播",
         shanjian_type: DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE,
         engine_type: engineType,
         ai_clip_enabled: clipConfig.is_open ? formData.ai_clip_enabled : 0,
         // 关掉包装时 packaging 无意义，不提交
-        ...(showAdvancedSetting.value ? { packaging: toPackagingParams(formData.packaging) } : {}),
+        ...(packaging ? { packaging } : {}),
         pic: pic || formData.pic,
         ...contentParams,
         anchor: [

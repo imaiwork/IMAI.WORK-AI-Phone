@@ -18,6 +18,18 @@ class MaterialLogic extends ApiLogic
     public static function add(array $params): bool
     {
         try {
+            $params['publish_mode'] = (int)($params['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO);
+            $fileUrl = Material::rawFileUrl($params);
+            if ($fileUrl === '') {
+                self::setError(
+                    $params['publish_mode'] === Material::PUBLISH_MODE_DIRECT_SEND
+                        ? '成品库直发素材文件地址不能为空'
+                        : '文件URL是必填项'
+                );
+                return false;
+            }
+            $params['file_url'] = $fileUrl;
+
             $persona = AiPersona::where('user_id', self::$uid)->where('id', $params['persona_id'])->findOrEmpty();
             if ($persona->isEmpty()) {
                 self::setError('IP人设不存在');
@@ -25,7 +37,6 @@ class MaterialLogic extends ApiLogic
             }
             $params['user_id'] = self::$uid;
             $params['use_status'] = $params['use_status'] ?? 1;
-            $params['publish_mode'] = $params['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO;
             $params['material_type'] = (int)($params['material_type'] ?? 1);
             if (OriginalMaterialSpec::wantsOriginal($params)) {
                 $guard = self::evaluateOriginalIngestGuard($params);
@@ -79,22 +90,32 @@ class MaterialLogic extends ApiLogic
     public static function addBatch(array $params): bool
     {
         try {
+            $items = $params['items'] ?? [];
+            if (empty($items)) {
+                self::setError('批量数据不能为空');
+                return false;
+            }
+            foreach ($items as $item) {
+                $file_url = Material::rawFileUrl($item);
+                $publishMode = (int)($item['publish_mode'] ?? $params['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO);
+                if ($file_url === '' && $publishMode === Material::PUBLISH_MODE_DIRECT_SEND) {
+                    $name = trim((string)($item['material_name'] ?? ''));
+                    self::setError('成品库直发素材文件地址不能为空' . ($name !== '' ? '：' . $name : ''));
+                    return false;
+                }
+            }
+
             $persona = AiPersona::where('user_id', self::$uid)->where('id', $params['persona_id'])->findOrEmpty();
             if ($persona->isEmpty()) {
                 self::setError('IP人设不存在');
                 return false;
             }
 
-            $items = $params['items'] ?? [];
-            if (empty($items)) {
-                self::setError('批量数据不能为空');
-                return false;
-            }
-
             $insertData = [];
             foreach ($items as $key => $item) {
-                $file_url = $item['file_url'] ?? '';
-                if (empty($file_url)) {
+                $file_url = Material::rawFileUrl($item);
+                $publishMode = (int)($item['publish_mode'] ?? $params['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO);
+                if ($file_url === '') {
                     continue;
                 }
                 $materialType = (int)($item['material_type'] ?? 1);
@@ -103,14 +124,14 @@ class MaterialLogic extends ApiLogic
                     'user_id' => self::$uid,
                     'material_name' => $item['material_name'] ?? '',
                     'material_type' => $materialType,
-                    'file_url' => $item['file_url'] ?? '',
+                    'file_url' => $file_url,
                     'thumbnail_url' => $item['thumbnail_url'] ?? '',
                     'duration' => $item['duration'] ?? 0,
                     'width' => $item['width'] ?? 0,
                     'is_wechat' => $item['is_wechat'] ?? 0,
                     'height' => $item['height'] ?? 0,
                     'use_status' => $item['use_status'] ?? 1,
-                    'publish_mode' => (int)($item['publish_mode'] ?? $params['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO),
+                    'publish_mode' => $publishMode,
                     'create_time' => time(),
                     'update_time' => time(),
                 ];

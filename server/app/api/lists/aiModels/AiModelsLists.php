@@ -7,6 +7,7 @@ use app\common\model\chat\Models;
 use app\common\model\chat\ModelsCost;
 use app\common\service\chat\ChatModelsService;
 use app\common\service\FileService;
+use app\common\service\UserDisplaySanitizer;
 
 /**
  * AI模型配置 (API端)
@@ -72,6 +73,10 @@ class AiModelsLists
             $item['logo']  = FileService::getFileUrl($item['logo']);
             $item['alias'] = $item['modelsLists'][0]['alias'] ?? '';
             unset($item['modelsLists']);
+            $displayName = UserDisplaySanitizer::digitalHumanModelNameByVersion((int)($item['model_version'] ?? 0));
+            if ($displayName !== '') {
+                $item['name'] = $displayName;
+            }
             $this->appendSellPrice($item, $priceMap);
         }
 

@@ -3,6 +3,7 @@ import { AppTypeEnum, DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 /** 人设素材库「添加音色」可选模型：闪剪 + MiniMax */
 export const PERSONA_MATERIAL_VOICE_MODEL_VERSIONS = [
     DigitalHumanModelVersionEnum.SHANJIAN,
+    DigitalHumanModelVersionEnum.SHANJIAN_S3,
     DigitalHumanModelVersionEnum.MINIMAX_HD,
     DigitalHumanModelVersionEnum.MINIMAX_TURBO,
 ].join(",");
@@ -227,4 +228,5 @@ export enum CopywritingSourceEnum {
     AI = 2,
     NONE = 3,
     LIBRARY = 4,
+    HOTSPOT = 5,
 }

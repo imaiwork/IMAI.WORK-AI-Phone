@@ -51,6 +51,21 @@
 
                         <div v-if="type === 1" class="flex items-center justify-between h-14 border-b border-slate-100">
                             <div class="flex items-center gap-2.5">
+                                <div class="w-2 h-2 rounded-full bg-[#0284C7] flex-shrink-0" />
+                                <span class="text-sm text-slate-600">{{ shanjianS3VoiceCostLabel }}</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-base font-extrabold text-primary">
+                                    {{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN_S3).score }}
+                                </span>
+                                <span class="text-xs text-slate-400">
+                                    {{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN_S3).unit }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div v-if="type === 1" class="flex items-center justify-between h-14 border-b border-slate-100">
+                            <div class="flex items-center gap-2.5">
                                 <div class="w-2 h-2 rounded-full bg-[#8B5CF6] flex-shrink-0" />
                                 <span class="text-sm text-slate-600">形象克隆费用</span>
                             </div>
@@ -124,8 +139,9 @@
 
 <script setup lang="ts">
 import { useUserStore } from "@/stores/user";
+import { useAppStore } from "@/stores/app";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import { MontageTypeEnum } from "@/pages/app/digital_human/_enums";
+import { DigitalHumanModelVersionEnum, MontageTypeEnum } from "@/pages/app/digital_human/_enums";
 
 const props = withDefaults(
     defineProps<{
@@ -200,7 +216,16 @@ const getScene = computed(() => {
 });
 
 const userStore = useUserStore();
+const appStore = useAppStore();
 const getTokenByScene = (key: string) => userStore.getTokenByScene(key);
+const shanjianS3VoiceCostLabel = computed(() => {
+    const models = appStore.getAiModels?.humanModels || [];
+    const found = models.find(
+        (item: { model_version?: number | string; name?: string }) =>
+            Number(item.model_version) === DigitalHumanModelVersionEnum.SHANJIAN_S3,
+    );
+    return found?.name ? `${found.name}声音克隆费用` : "数字人s3声音克隆费用";
+});
 
 const open = () => popupRef.value?.open();
 

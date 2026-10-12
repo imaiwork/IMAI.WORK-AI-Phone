@@ -12,6 +12,8 @@ export enum DigitalHumanModelVersionEnum {
     CHANJING = 7,
     // 闪剪
     SHANJIAN = 8,
+    // 闪剪S3
+    SHANJIAN_S3 = 15,
     // minimax-hd
     MINIMAX_HD = 10,
     // minimax-turbo
@@ -22,6 +24,25 @@ export enum DigitalHumanModelVersionEnum {
 export const DIGITAL_HUMAN_DRIVE_MODEL_VERSIONS: number[] = [
     DigitalHumanModelVersionEnum.CHANJING,
     DigitalHumanModelVersionEnum.SHANJIAN,
+];
+
+/** 闪剪音色（V3 / S3）共用下游口径 */
+export const SHANJIAN_VOICE_MODEL_VERSIONS: DigitalHumanModelVersionEnum[] = [
+    DigitalHumanModelVersionEnum.SHANJIAN,
+    DigitalHumanModelVersionEnum.SHANJIAN_S3,
+];
+
+export const isShanjianVoiceModelVersion = (version: number | string): boolean =>
+    SHANJIAN_VOICE_MODEL_VERSIONS.includes(Number(version) as DigitalHumanModelVersionEnum);
+
+/** PC 音色库列表要查的模型版本（含数字人s3） */
+export const VOICE_LIBRARY_MODEL_VERSIONS: DigitalHumanModelVersionEnum[] = [
+    DigitalHumanModelVersionEnum.CHANJING,
+    DigitalHumanModelVersionEnum.STANDARD,
+    DigitalHumanModelVersionEnum.SHANJIAN,
+    DigitalHumanModelVersionEnum.SHANJIAN_S3,
+    DigitalHumanModelVersionEnum.MINIMAX_HD,
+    DigitalHumanModelVersionEnum.MINIMAX_TURBO,
 ];
 
 /** 蝉镜「视频原音」占位 voice_id，提交时不传 voice_id，由服务端从形象视频克隆原音 */
@@ -59,6 +80,7 @@ export const DigitalHumanModelVersionEnumMap = {
     [DigitalHumanModelVersionEnum.ELITE]: "尊享",
     [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜",
     [DigitalHumanModelVersionEnum.SHANJIAN]: "闪剪",
+    [DigitalHumanModelVersionEnum.SHANJIAN_S3]: "数字人s3",
 };
 
 // 形象克隆模式：2 一克二(极速/标准) / 3 一克三(专业/优质)

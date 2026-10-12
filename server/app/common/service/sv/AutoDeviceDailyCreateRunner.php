@@ -444,6 +444,16 @@ class AutoDeviceDailyCreateRunner
             Log::channel('auto')->write($device->device_code . ' global_option.auto_clues.options.sph_clues=0，跳过精准线索任务', 'create');
         }
 
+        if (AiPersonaOptionService::isEnabled($options, 'auto_clues.options.dy_search')) {
+            $slotResult = $this->runDailyTaskScenes($device, '抖音搜寻获客任务', function () use ($device) {
+                return \app\api\logic\device\DySearchTaskLogic::autoDySearchTaskCron($device);
+            });
+            $deviceSlotResult = self::mergeSlotSummary($deviceSlotResult, $slotResult);
+            $dailyTaskExecuted = self::hasSlotActivity($slotResult) || $dailyTaskExecuted;
+        } else {
+            Log::channel('auto')->write($device->device_code . ' global_option.auto_clues.options.dy_search=0，跳过抖音搜寻获客任务', 'create');
+        }
+
         $slotResult = $this->runDailyTaskScenes($device, '养号任务', function () use ($device) {
             return \app\api\logic\aiPersona\ActiveLogic::autoActiveTaskCron($device);
         });

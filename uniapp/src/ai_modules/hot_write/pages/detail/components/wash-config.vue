@@ -103,16 +103,32 @@
 
             <!-- 视频模板：与热点追踪同款大卡，封面看配色、播放键看样片 -->
             <view class="mt-[28rpx]">
-                <view class="flex items-center gap-[10rpx] mb-[14rpx]">
-                    <text class="text-[24rpx] font-bold text-[#111827]">视频模板</text>
-                    <text class="text-[20rpx] text-[#D1D5DB]">选填 · 点播放键看样片</text>
+                <view class="flex items-center justify-between gap-[10rpx] mb-[14rpx]">
+                    <view class="min-w-0">
+                        <text class="text-[24rpx] font-bold text-[#111827]">视频模板</text>
+                        <text class="block text-[20rpx] text-[#9CA3AF]">选填 · 点播放键看样片</text>
+                    </view>
+                    <view
+                        v-if="currentTemplates.length"
+                        class="flex items-center gap-[8rpx] flex-shrink-0 py-[16rpx] text-primary"
+                        role="button"
+                        :aria-label="showAllTemplates ? '收起模板' : '展开全部模板'"
+                        @click="showAllTemplates = !showAllTemplates">
+                        <text class="text-[22rpx]">{{ showAllTemplates ? "收起模板" : "展开全部" }}</text>
+                        <u-icon :name="showAllTemplates ? 'arrow-up' : 'arrow-down'" color="#0065fb" size="20"></u-icon>
+                    </view>
                 </view>
-                <view class="pick-strip">
-                    <view class="flex gap-[16rpx] pr-[8rpx]" style="width: max-content">
+                <scroll-view :key="generationType" :scroll-x="!showAllTemplates" class="w-full">
+                    <view
+                        :class="showAllTemplates ? 'grid grid-cols-2 gap-[16rpx]' : 'flex gap-[16rpx] pr-[8rpx]'"
+                        :style="showAllTemplates ? '' : 'width: max-content'">
                         <!-- 自动随机放首位，等价于不指定模板 -->
                         <view
-                            class="w-[228rpx] flex-shrink-0 rounded-[16rpx] overflow-hidden bg-white border-[3rpx] border-solid"
-                            :class="clipTemplateId ? 'border-[#EDEFF3]' : 'border-primary'"
+                            class="min-w-0 box-border flex-shrink-0 rounded-[16rpx] overflow-hidden bg-white border-[3rpx] border-solid"
+                            :class="[
+                                showAllTemplates ? 'w-full' : 'w-[228rpx]',
+                                clipTemplateId ? 'border-[#EDEFF3]' : 'border-primary',
+                            ]"
                             @click="clipTemplateId = ''">
                             <view class="w-full h-[304rpx] bg-[#F3F4F6] flex flex-col items-center justify-center">
                                 <u-icon name="reload" :color="clipTemplateId ? '#9CA3AF' : '#0065fb'" size="44"></u-icon>
@@ -127,8 +143,11 @@
                         <view
                             v-for="t in currentTemplates"
                             :key="t.id"
-                            class="w-[228rpx] flex-shrink-0 rounded-[16rpx] overflow-hidden bg-white border-[3rpx] border-solid"
-                            :class="clipTemplateId === t.id ? 'border-primary' : 'border-[#EDEFF3]'"
+                            class="min-w-0 box-border flex-shrink-0 rounded-[16rpx] overflow-hidden bg-white border-[3rpx] border-solid"
+                            :class="[
+                                showAllTemplates ? 'w-full' : 'w-[228rpx]',
+                                clipTemplateId === t.id ? 'border-primary' : 'border-[#EDEFF3]',
+                            ]"
                             @click="pickClipTemplate(t.id)">
                             <view class="relative w-full h-[304rpx] bg-[#F3F4F6]">
                                 <image
@@ -161,7 +180,7 @@
                             </text>
                         </view>
                     </view>
-                </view>
+                </scroll-view>
                 <text v-if="!currentTemplates.length" class="text-[21rpx] text-[#9CA3AF] block mt-[8rpx]">
                     当前视频类型暂无可选模板，将自动随机
                 </text>
@@ -187,6 +206,16 @@
                             {{ opt.label }}
                         </text>
                     </view>
+                </view>
+                <view
+                    v-if="musicSource === WashMusicSource.PICK"
+                    class="flex items-center gap-[14rpx] mt-[14rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] bg-[#F9FAFB]">
+                    <text class="flex-1 text-[22rpx] truncate" :class="systemMusicId ? 'text-[#374151]' : 'text-[#9CA3AF]'">
+                        {{ systemMusicName || "还没有选择系统音乐" }}
+                    </text>
+                    <text class="text-[22rpx] text-primary font-medium" @click="showSystemMusic = true">
+                        {{ systemMusicId ? "重选" : "选择" }}
+                    </text>
                 </view>
                 <view
                     v-if="musicSource === WashMusicSource.UPLOAD"
@@ -274,11 +303,13 @@
             :poster="previewTemplate?.cover_url || ''"
             @confirm="pickPreviewedTemplate" />
         <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
+        <system-music-sheet v-model="showSystemMusic" :selected-id="systemMusicId" @confirm="onSystemMusic" />
     </view>
 </template>
 
 <script setup lang="ts">
 import { getGenerationOptions } from "@/api/hot_write";
+import SystemMusicSheet from "@/components/system-music-sheet/system-music-sheet.vue";
 import { WashGenerationType, WashMusicSource, WASH_ORIGIN_VOICE_ID } from "@/ai_modules/hot_write/enums";
 import useUpload from "@/hooks/useUpload";
 import IconVtypeDigital from "@/ai_modules/hot_write/static/icons/vtype_digital.svg";
@@ -343,6 +374,7 @@ const voiceId = ref(0);
 // ── 视频模板：空串 = 自动随机，与后端 wash_clip_template_id 同一约定 ──
 const clipTemplates = ref<Record<string, any[]>>({});
 const clipTemplateId = ref("");
+const showAllTemplates = ref(false);
 const currentTemplates = computed<any[]>(() => clipTemplates.value?.[String(generationType.value)] || []);
 // 再点一次已选模板即取消，回到自动随机
 const pickClipTemplate = (id: string) => {
@@ -367,12 +399,16 @@ const pickPreviewedTemplate = () => {
 
 // ── 背景音乐：系统随机 / 自传 ──
 const MUSIC_SOURCE_OPTIONS = [
-    { val: WashMusicSource.SYSTEM, label: "系统音乐随机" },
-    { val: WashMusicSource.UPLOAD, label: "上传我的音乐" },
+    { val: WashMusicSource.SYSTEM, label: "系统随机" },
+    { val: WashMusicSource.PICK, label: "指定系统音乐" },
+    { val: WashMusicSource.UPLOAD, label: "自己上传" },
 ];
 const musicSource = ref<number>(WashMusicSource.SYSTEM);
 const musicUrl = ref("");
 const musicName = ref("");
+const systemMusicId = ref("");
+const systemMusicName = ref("");
+const showSystemMusic = ref(false);
 const { uploadMaterialList, showUploadProgress, uploadAndProcessFiles } = useUpload({
     count: 1,
     fileAccept: ["mp3", "wav", "m4a", "aac"],
@@ -386,11 +422,32 @@ const { uploadMaterialList, showUploadProgress, uploadAndProcessFiles } = useUpl
 });
 const pickMusicSource = (val: number) => {
     musicSource.value = val;
-    // 切回系统随机就丢弃已传的曲子，避免提交时两个状态打架
     if (val === WashMusicSource.SYSTEM) {
         musicUrl.value = "";
         musicName.value = "";
+        systemMusicId.value = "";
+        systemMusicName.value = "";
+    } else if (val === WashMusicSource.UPLOAD) {
+        systemMusicId.value = "";
+        systemMusicName.value = "";
+    } else if (val === WashMusicSource.PICK) {
+        musicUrl.value = "";
+        musicName.value = "";
+        showSystemMusic.value = true;
     }
+};
+const onSystemMusic = (value: { id: string; name: string }) => {
+    if (!value.id) {
+        musicSource.value = WashMusicSource.SYSTEM;
+        systemMusicId.value = "";
+        systemMusicName.value = "";
+        return;
+    }
+    musicSource.value = WashMusicSource.PICK;
+    systemMusicId.value = value.id;
+    systemMusicName.value = value.name;
+    musicUrl.value = "";
+    musicName.value = "";
 };
 const handleUploadMusic = async () => {
     await uploadAndProcessFiles("file");
@@ -499,9 +556,15 @@ const loadOptions = async () => {
         clipTemplateId.value = String(res?.selected_clip_template_id || "");
         musicUrl.value = String(res?.selected_music_url || "");
         musicName.value = musicUrl.value ? "已上传音乐" : "";
-        musicSource.value = Number(res?.music_source) === WashMusicSource.UPLOAD
+        systemMusicId.value = String(res?.selected_system_music_id || "");
+        const catalog = Array.isArray(res?.system_musics) ? res.system_musics : [];
+        systemMusicName.value = catalog.find((item: any) => item.id == systemMusicId.value)?.name || "";
+        const savedSource = Number(res?.music_source);
+        musicSource.value = savedSource === WashMusicSource.UPLOAD
             ? WashMusicSource.UPLOAD
-            : WashMusicSource.SYSTEM;
+            : savedSource === WashMusicSource.PICK || systemMusicId.value
+              ? WashMusicSource.PICK
+              : WashMusicSource.SYSTEM;
         // -1 = 后端未设置，用默认值作为滑块初始位置
         const savedVolume = Number(res?.music_volume);
         musicVolumeStep.value = Math.round(
@@ -574,12 +637,17 @@ const handleConfirm = () => {
         uni.$u.toast("请先上传背景音乐，或改回系统音乐随机");
         return;
     }
+    if (musicSource.value === WashMusicSource.PICK && !systemMusicId.value) {
+        uni.$u.toast("请先选择一首系统音乐，或改回系统随机");
+        return;
+    }
     emit("confirm", {
         generation_type: generationType.value,
         avatar_id: needAvatar.value ? avatarId.value : 0,
         voice_id: needVoice.value ? voiceId.value : 0,
         clip_template_id: clipTemplateId.value,
         music_url: musicSource.value === WashMusicSource.UPLOAD ? musicUrl.value : "",
+        system_music_id: musicSource.value === WashMusicSource.PICK ? systemMusicId.value : "",
         music_volume: Number((musicVolumeStep.value / 10).toFixed(1)),
         // 语速不可调时不提交，避免落一个不会生效的值
         ...(speechRateEnabled.value ? { speech_rate: Number((speechRateStep.value / 10).toFixed(1)) } : {}),

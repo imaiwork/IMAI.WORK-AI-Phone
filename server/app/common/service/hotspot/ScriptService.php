@@ -34,6 +34,8 @@ class ScriptService
 
     public const MIN_TITLE_STRIP_CHARS = 6;
 
+    public const ERROR_SCRIPT_MISS_TOPIC = '口播未点到热点话题';
+
     /**
      * 测试钩子：仅 tests/ 注入，生产勿用。
      * @var array{
@@ -107,19 +109,34 @@ class ScriptService
             $opt['duration_sec']
         ));
         $params = self::buildCopywritingParams($topic, $platform, $corePoints, $summary, $persona, $analysis, $opt, $userId);
+        if (trim((string)($params['keywords'] ?? '')) === '') {
+            HotspotLog::write('口播文案生成失败：热点主题材料为空，已跳过现写');
+            throw new HotspotUpstreamException('生成失败');
+        }
         $data = self::requestCopywriting($params);
         $result = self::adaptCopywritingResult($topic, $data);
 
-        // 不再按时长卡字数；仅 title2 照抄话题时重试
+        $skipTopicGuard = !empty($opt['skip_topic_guard']);
+        // 不再按时长卡字数；title2 照抄话题时免费重试一次。剪辑现写可跳过点题校验。
         $titleEcho = self::isTitle2Echo($result, $topic);
-        if ($titleEcho) {
+        $missTopic = !$skipTopicGuard && !self::scriptTouchesTopic($topic, (string)($result['script'] ?? ''));
+        if ($titleEcho || $missTopic) {
             HotspotLog::write(sprintf(
-                '口播文案不合格触发重试：话题=%s 字数=%d 标题照抄=是',
+                '口播文案不合格触发重试：话题=%s 字数=%d 标题照抄=%s 未点到话题=%s',
                 $topic,
-                (int)$result['word_count']
+                (int)$result['word_count'],
+                $titleEcho ? '是' : '否',
+                $missTopic ? '是' : '否'
             ));
+            $fix = [];
+            if ($titleEcho) {
+                $fix[] = "title2 必须是原创短视频标题，禁止整句照抄热点话题原文「{$topic}」";
+            }
+            if ($missTopic) {
+                $fix[] = "上一次口播没有点到热点话题原文「{$topic}」，本次 script 必须完整出现该原文；title2 仍禁止整句照抄";
+            }
             $params['keywords'] .= "\n【重要】上一次生成不合格，本次必须严格满足："
-                . "title2 必须是原创短视频标题，禁止直接使用热点话题原文「{$topic}」。";
+                . implode('；', $fix) . '。';
             // 系统纠错重试不重复扣费（首次已足额扣）；重试失败时保留首次结果，不毁掉整单
             $params['skip_charge'] = 1;
             try {
@@ -128,6 +145,19 @@ class ScriptService
                 $result = self::preferCopywritingResult($result, $retryResult, $titleEcho, $topic);
             } catch (\Throwable $e) {
                 HotspotLog::write('口播文案重试失败，沿用首次结果：' . $e->getMessage());
+            }
+        }
+
+        $script = trim((string)($result['script'] ?? ''));
+        if (!$skipTopicGuard && $script !== '' && !self::scriptTouchesTopic($topic, $script)) {
+            $patched = self::ensureTopicMentioned($topic, $script);
+            if ($patched !== $script) {
+                HotspotLog::write(sprintf(
+                    '口播未点到热点话题，已在正文补入话题原文：话题=%s',
+                    $topic
+                ));
+                $result['script'] = $patched;
+                $result = self::recountScriptResult($result);
             }
         }
 
@@ -198,6 +228,54 @@ class ScriptService
 
         $rest = self::trimLeadingTitlePunct(trim(self::stripNormalizedPrefix($script, $normTitle)));
         return $rest !== '' ? $rest : $script;
+    }
+
+    /**
+     * 现写口播必须点到话题：topic 有效长度≥4 时，去掉空白与常见标点后，正文须包含话题（或去掉书名号/引号后的核心片段）。
+     */
+    public static function scriptTouchesTopic(string $topic, string $script): bool
+    {
+        $normTopic = self::normalizeForTopicGuard($topic);
+        if (mb_strlen($normTopic) < 4) {
+            return true;
+        }
+        $normScript = self::normalizeForTopicGuard($script);
+        if ($normScript === '') {
+            return false;
+        }
+        if (mb_strpos($normScript, $normTopic) !== false) {
+            return true;
+        }
+        $core = self::normalizeForTopicGuard((string)preg_replace('/[《》〈〉「」『』【】\[\]“”‘’"\']+/u', '', $topic));
+        if (mb_strlen($core) >= 4 && $core !== $normTopic && mb_strpos($normScript, $core) !== false) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 现写仍未点题时，在口播开头补一句带话题原文的开场，避免整单作废。
+     */
+    public static function ensureTopicMentioned(string $topic, string $script): string
+    {
+        $topic = trim($topic);
+        $script = trim($script);
+        if ($topic === '' || self::scriptTouchesTopic($topic, $script)) {
+            return $script;
+        }
+        $lead = '最近大家都在聊' . $topic . '。';
+        return $script === '' ? $lead : $lead . $script;
+    }
+
+    public static function normalizeForTopicGuard(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return '';
+        }
+        $text = preg_replace('/\s+/u', '', $text) ?? $text;
+        $text = preg_replace('/[[:punct:]，。！？、；：…—·（）()【】《》〈〉「」『』“”‘’]/u', '', $text) ?? $text;
+        return $text;
     }
 
     public static function applyCtaToScriptResult(array $result, string $cta): array
@@ -356,6 +434,14 @@ class ScriptService
         bool $titleEcho,
         string $topic
     ): array {
+        $currentTouches = self::scriptTouchesTopic($topic, (string)($current['script'] ?? ''));
+        $retryTouches = self::scriptTouchesTopic($topic, (string)($retry['script'] ?? ''));
+        if (!$retryTouches) {
+            return $current;
+        }
+        if (!$currentTouches) {
+            return $retry;
+        }
         $retryEcho = self::isTitle2Echo($retry, $topic);
         if ($titleEcho && !$retryEcho) {
             return $retry;
@@ -429,7 +515,7 @@ class ScriptService
         return [
             'model' => 1,
             'persona' => self::resolvePersonaClue($persona, $userId),
-            'original' => $summary,
+            'original' => self::composeOriginal($topic, $summary, !empty($opt['include_topic_in_original'])),
             'voice' => $opt['direction'] ?? '',
             'hook' => self::composeCopywritingHook($opt),
             'channelVersion' => self::CHANNEL_VERSION,
@@ -440,8 +526,29 @@ class ScriptService
             'persona_id' => max(0, (int)($persona['id'] ?? 0)),
             'user_id' => $userId,
             'keywords' => self::buildCopywritingKeywords($topic, $platform, $corePoints, $summary, $persona, $analysis, $opt),
+            'keyword_priority' => 'theme',
             
         ];
+    }
+
+    /**
+     * 热点生成把话题写在 original 最前，摘要接在后面。摘要里已有完整话题则不重复。
+     */
+    public static function composeOriginal(string $topic, string $summary, bool $includeTopic): string
+    {
+        if (!$includeTopic) {
+            return $summary;
+        }
+        $topic = trim($topic);
+        $summary = trim($summary);
+        if ($topic === '') {
+            return $summary;
+        }
+        if ($summary !== '' && str_contains($summary, $topic)) {
+            return $summary;
+        }
+        $line = '热点话题：' . $topic;
+        return $summary === '' ? $line : $line . "\n" . $summary;
     }
 
     public static function composeCopywritingHook(array $opt): string
@@ -644,6 +751,7 @@ class ScriptService
         // 光看 music_url 分不清是「要系统随机」还是「还没传」，回到页面会显示成系统随机
         $musicSource = ManualAssetService::MUSIC_SOURCE_SYSTEM;
         $musicName = '';
+        $systemMusicId = '';
         if ($personaMode === self::PERSONA_MODE_MANUAL) {
             $musicVolume = AiPersonaSynthesisConfig::normalizeMusicVolume(
                 $options['music_volume'] ?? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT
@@ -654,15 +762,23 @@ class ScriptService
             $clipTemplateId = mb_substr(trim((string)($options['clip_template_id'] ?? '')), 0, 64);
             $musicUrl = mb_substr(trim((string)($options['music_url'] ?? '')), 0, 512);
             $musicName = mb_substr(trim((string)($options['music_name'] ?? '')), 0, 128);
-            $musicSource = (int)($options['music_source'] ?? ManualAssetService::MUSIC_SOURCE_SYSTEM)
-                === ManualAssetService::MUSIC_SOURCE_UPLOAD
-                ? ManualAssetService::MUSIC_SOURCE_UPLOAD
-                : ManualAssetService::MUSIC_SOURCE_SYSTEM;
+            $rawSource = (int)($options['music_source'] ?? ManualAssetService::MUSIC_SOURCE_SYSTEM);
+            $musicSource = in_array($rawSource, [
+                ManualAssetService::MUSIC_SOURCE_UPLOAD,
+                ManualAssetService::MUSIC_SOURCE_PICK,
+            ], true) ? $rawSource : ManualAssetService::MUSIC_SOURCE_SYSTEM;
+            $systemMusicId = mb_substr(trim((string)($options['system_music_id'] ?? '')), 0, 32);
             // 传了曲子就一定是自传，来源没传或传错也按实际情况纠正
             if ($musicUrl !== '') {
                 $musicSource = ManualAssetService::MUSIC_SOURCE_UPLOAD;
+                $systemMusicId = '';
+            } elseif ($musicSource === ManualAssetService::MUSIC_SOURCE_PICK) {
+                if ($systemMusicId === '') {
+                    $musicSource = ManualAssetService::MUSIC_SOURCE_SYSTEM;
+                }
             } elseif ($musicSource === ManualAssetService::MUSIC_SOURCE_SYSTEM) {
                 $musicName = '';
+                $systemMusicId = '';
             }
         }
         $cta = trim((string)($options['cta'] ?? ''));
@@ -691,9 +807,12 @@ class ScriptService
             'music_url' => $musicUrl,
             'music_source' => $musicSource,
             'music_name' => $musicName,
+            'system_music_id' => $systemMusicId,
             'materials' => self::normalizeClipMaterials($options['materials'] ?? []),
             'hashtags' => self::normalizeHashtags($options['hashtags'] ?? []),
             'shots' => self::normalizeShots($options['shots'] ?? []),
+            'skip_topic_guard' => !empty($options['skip_topic_guard']),
+            'include_topic_in_original' => !empty($options['include_topic_in_original']),
         ];
         if (self::hasFrozenMaterialUseMode($options)) {
             $out['material_use_mode'] = ShanjianVideoSettingLogic::normalizeMaterialUseMode(
@@ -837,6 +956,10 @@ class ScriptService
             // 选了自传音乐却没传成功：默默回落系统音乐等于把用户的选择吞了，直接拦下来
             if ($opt['music_source'] === ManualAssetService::MUSIC_SOURCE_UPLOAD && $opt['music_url'] === '') {
                 throw new HotspotUpstreamException('请先上传背景音乐，或把背景音乐改回「系统音乐随机」');
+            }
+            if ($opt['music_source'] === ManualAssetService::MUSIC_SOURCE_PICK
+                && !\app\common\service\SystemMusicService::isEnabled((string)($opt['system_music_id'] ?? ''))) {
+                throw new HotspotUpstreamException('请先选择一首系统音乐，或把背景音乐改回「系统音乐随机」');
             }
             return;
         }
@@ -1006,8 +1129,9 @@ class ScriptService
         }
 
         $parts[] = '【输出硬性要求】'
-            . "1) title2 必须是原创的短视频标题，禁止直接使用热点话题原文「{$topic}」或其简单复述，要有吸引点击的表达；"
-            . '2) script 只写口播正文，禁止把 title 原文写在开头。';
+            . "1) title2 必须是原创短视频标题，禁止整句照抄热点话题原文「{$topic}」，可借热点做钩子但标题要重新组织；"
+            . '2) script 只写口播正文，禁止把 title2 原文写在开头；'
+            . "3) script 正文必须自然点到热点话题原文「{$topic}」（出现完整话题，可加口语连接或书名号），不得只写人设主营、完全不提该热点。";
 
         return implode("\n", $parts);
     }
@@ -1022,9 +1146,9 @@ class ScriptService
         return false;
     }
 
-    private static function pickStructuredScript(array $content): string
+    public static function pickStructuredScript(array $content): string
     {
-        foreach (['rewritten_text1', 'rewritten_text', 'script', 'content', 'text'] as $key) {
+        foreach (['script', 'rewritten_text1', 'rewritten_text', 'content', 'text'] as $key) {
             if (isset($content[$key]) && is_scalar($content[$key]) && trim((string)$content[$key]) !== '') {
                 return trim((string)$content[$key]);
             }

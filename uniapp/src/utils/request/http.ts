@@ -12,6 +12,7 @@ import requestCancel from './cancel'
 import { objectToQuery } from '../util'
 import { isObject } from 'mathjs'
 import { parse } from 'jsonc-parser'
+import appConfig from '@/config'
 /**
  * @description 将流转换为utf-8
  */
@@ -285,6 +286,7 @@ export default class HttpRequest {
         return new Promise((resolve, reject) => {
             this.requestTask = uni.uploadFile({
                 ...mergeOptions,
+                timeout: appConfig.uploadTimeout,
                 header: {
                     ...mergeOptions.header
                 },
@@ -310,7 +312,7 @@ export default class HttpRequest {
                         reject(response.errMsg)
                     }
                 },
-                fail(err) {
+                async fail(err) {
                     if (err.errMsg == RequestErrMsgEnum.UPLOAD_ABORT) {
                         return reject(err.errMsg)
                     }
@@ -318,7 +320,7 @@ export default class HttpRequest {
                         responseInterceptorsCatchHook &&
                         isFunction(responseInterceptorsCatchHook)
                     ) {
-                        reject(responseInterceptorsCatchHook(mergeOptions, err))
+                        reject(await responseInterceptorsCatchHook(mergeOptions, err))
                         return
                     }
                     reject(err.errMsg || err)

@@ -22,8 +22,8 @@ class ManualAssetService
     public const PROVIDER_SHANJIAN = 'shanjian';
     public const PROVIDER_MINIMAX = 'minimax';
 
-    /** 与爆款洗稿一致：仅这三档模型的克隆音色可下发 */
-    public const VOICE_MODEL_VERSIONS = [8, 10, 11];
+    /** 与爆款洗稿一致：闪剪 V3/S3 + MiniMax 克隆音色可下发 */
+    public const VOICE_MODEL_VERSIONS = [8, 10, 11, 15];
 
     /**
      * 「形象原音」音色哨兵：音色库里没有对应记录，下发时取所选形象克隆出的闪剪 speakerId。
@@ -35,6 +35,8 @@ class ManualAssetService
     public const MUSIC_SOURCE_SYSTEM = 1;
     /** 背景音乐来源：用户自传 */
     public const MUSIC_SOURCE_UPLOAD = 2;
+    /** 背景音乐来源：指定一首系统曲目 */
+    public const MUSIC_SOURCE_PICK = 3;
 
     /** 热点视频类型 → 闪剪剪辑模板场景（与 SynthesisTemplateConfigService 的生成类型一一对应） */
     private const VIDEO_TYPE_GENERATION = [
@@ -197,13 +199,21 @@ class ManualAssetService
         return (string)$hit->id;
     }
 
-    /** 不选人设的背景音乐：用户传了自己的曲子就用它，否则系统音乐随机一首 */
-    public static function resolveMusicUrl(string $musicUrl): string
+    /**
+     * 不选人设的背景音乐。
+     * 指定系统曲目在提交时必须仍上架；自传优先；否则系统随机。
+     */
+    public static function resolveMusicUrl(string $musicUrl, string $systemMusicId = '', int $musicSource = self::MUSIC_SOURCE_SYSTEM): string
     {
         $musicUrl = trim($musicUrl);
-        return $musicUrl === ''
-            ? CopywritingImitationLogic::resolveSystemMusicUrl()
-            : self::fileUrl($musicUrl);
+        if ($musicUrl !== '') {
+            return self::fileUrl($musicUrl);
+        }
+        $systemMusicId = trim($systemMusicId);
+        if ($musicSource === self::MUSIC_SOURCE_PICK || $systemMusicId !== '') {
+            return \app\common\service\SystemMusicService::resolve($systemMusicId, true);
+        }
+        return CopywritingImitationLogic::resolveSystemMusicUrl();
     }
 
     /**

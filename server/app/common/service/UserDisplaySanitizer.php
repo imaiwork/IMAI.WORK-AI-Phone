@@ -2,6 +2,7 @@
 
 namespace app\common\service;
 
+use app\common\enum\ChatEnum;
 use app\common\model\chat\Models;
 use Throwable;
 
@@ -9,6 +10,8 @@ class UserDisplaySanitizer
 {
     private const HUMAN_MODEL_ID_V1 = 7;
     private const HUMAN_MODEL_ID_V2 = 9;
+    private const MODEL_VERSION_SHANJIAN = 8;
+    private const MODEL_VERSION_SHANJIAN_S3 = 15;
     private const MODEL_ALIAS_CONFIG_KEY = 'display_aliases';
     private const FALLBACK_SOURCE_TYPE_MAP = [
         'shanjian_anchor' => 'provider_anchor',
@@ -71,13 +74,11 @@ class UserDisplaySanitizer
 
     public static function digitalHumanModelNameByVersion(int $modelVersion, bool $refresh = false): string
     {
-        foreach (self::humanDisplayModels($refresh) as $model) {
-            if ((int)($model['model_version'] ?? 0) === $modelVersion) {
-                return trim((string)($model['name'] ?? ''));
-            }
+        if ($modelVersion === self::MODEL_VERSION_SHANJIAN_S3) {
+            return '数字人s3';
         }
 
-        return '';
+        return self::humanModelNameByVersion($modelVersion, $refresh);
     }
 
     public static function digitalHumanAnchorItem(array $item): array
@@ -270,6 +271,29 @@ class UserDisplaySanitizer
     {
         $model = self::humanDisplayModels()[$modelId] ?? [];
         return trim((string)($model['name'] ?? ''));
+    }
+
+    private static function humanModelNameByVersion(int $modelVersion, bool $refresh = false): string
+    {
+        foreach (self::humanDisplayModels($refresh) as $model) {
+            if ((int)($model['model_version'] ?? 0) === $modelVersion) {
+                $name = trim((string)($model['name'] ?? ''));
+                if ($name !== '') {
+                    return $name;
+                }
+            }
+        }
+
+        try {
+            $name = Models::where([
+                'type' => ChatEnum::MODEL_TYPE_HUMAN,
+                'model_version' => $modelVersion,
+            ])->value('name');
+        } catch (Throwable) {
+            return '';
+        }
+
+        return trim((string)$name);
     }
 
     private static function humanDisplayModels(bool $refresh = false): array

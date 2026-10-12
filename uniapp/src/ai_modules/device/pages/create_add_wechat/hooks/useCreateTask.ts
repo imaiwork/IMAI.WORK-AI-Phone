@@ -28,7 +28,9 @@ export function useCreateTask(options: UseCreateTaskOptions) {
             await createManualAddWechat({
                 ...formData,
                 crawling_task_ids:
-                    formData.source === ClueSourceEnum.FILE ? [] : taskList.value.map((item) => item.id),
+                    formData.source === ClueSourceEnum.FILE || formData.source === ClueSourceEnum.CUSTOMER_LEADS
+                        ? []
+                        : taskList.value.map((item) => item.id),
                 fileurl: formData.source === ClueSourceEnum.FILE ? taskList.value[0].url : "",
                 time_config: [`${formData.time_config[0]}-${formData.time_config[1]}`],
                 add_interval_time: timeIntervalIndex.value === 4 ? timeInterval.value : formData.add_interval_time,

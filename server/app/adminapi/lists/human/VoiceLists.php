@@ -125,6 +125,7 @@ class VoiceLists extends BaseAdminDataLists implements ListsSearchInterface
             6       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_YMT,
             7       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CHANJING,
             8       => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN,
+            15      => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3,
             10      => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CLONE_MINIMAX_HD,
             11      => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_CLONE_MINIMAX_TURBO,
             default => null,

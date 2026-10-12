@@ -228,7 +228,7 @@
 </template>
 
 <script setup lang="ts">
-import { montageUploadConfig } from "@/pages/app/digital_human/_config";
+import { montageUploadConfig, calcMaterialDurationBudget } from "@/pages/app/digital_human/_config";
 import { useMaterial } from "@/pages/app/digital_human/_hooks/useMaterial";
 import { getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
 import ChooseHistory from "@/pages/app/digital_human/_components/choose-history.vue";
@@ -470,7 +470,7 @@ const appendMaterials = async (list: MaterialItem[], skipProcess = false) => {
         let skippedCount = 0;
         let currentDuration = calcTotalDuration();
         filteredList = list.filter((item) => {
-            const itemDuration = item.type === "image" ? montageUploadConfig.imageDuration : item.duration ?? 0;
+            const itemDuration = calcMaterialDurationBudget(item.type === "image", item.duration);
             if (currentDuration + itemDuration > maxSeconds) {
                 skippedCount++;
                 return false;

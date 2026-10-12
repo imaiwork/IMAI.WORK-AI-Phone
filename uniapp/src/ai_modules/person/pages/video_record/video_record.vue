@@ -213,11 +213,13 @@ const MATERIAL_SOURCE_MAP: Record<number, TagConfig> = {
     3: { label: "素材库", bg: "rgba(16,185,129,0.75)", color: "#ffffff" },
 };
 
-// copywriting_source：1=爆款仿写  2=纯AI  3=无文案
+// copywriting_source：1=爆款仿写  2=纯AI  3=无文案  4=文案库  5=热点生成
 const COPYWRITING_SOURCE_MAP: Record<number, TagConfig> = {
     1: { label: "爆款仿写", bg: "rgba(239,68,68,0.75)", color: "#ffffff" },
     2: { label: "纯AI文案", bg: "rgba(99,102,241,0.75)", color: "#ffffff" },
     3: { label: "无文案", bg: "rgba(107,114,128,0.7)", color: "#ffffff" },
+    4: { label: "文案库", bg: "rgba(16,185,129,0.75)", color: "#ffffff" },
+    5: { label: "热点生成", bg: "rgba(245,158,11,0.75)", color: "#ffffff" },
 };
 
 // is_downgrade === 1 时显示的降级标签

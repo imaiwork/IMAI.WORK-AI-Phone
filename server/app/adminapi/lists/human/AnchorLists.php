@@ -36,6 +36,8 @@ class AnchorLists extends BaseAdminDataLists implements ListsSearchInterface
      */
     public function lists(): array
     {
+        // 未分发的公共形象先落成渠道表真实行，列表 id 用自增主键
+        PendingAnchorTaskService::materialize('human');
         // 模型列表（以 id 为键）
         $modelMap = $this->getModelMap();
 
@@ -62,75 +64,6 @@ class AnchorLists extends BaseAdminDataLists implements ListsSearchInterface
             })
             ->toArray();
 
-        // 公共形象任务提交后到分发前的排队记录，前置到第一页，避免后台几分钟内看不到刚提交的任务
-        if ($this->limitOffset === 0) {
-            $list = array_merge($this->pendingRows($modelMap), $list);
-        }
-        return $list;
-    }
-
-    /**
-     * 已提交但尚未分发到蝉镜渠道的公共形象任务虚拟行(id 为负数、status=0 前端显示"生成中")
-     */
-    protected function pendingRows(array $modelMap = []): array
-    {
-        // 筛选条件与虚拟行固定值(蝉镜/type=0)不符时不注入；参数为数组等异常形态时同样不注入
-        $modelVersion = $this->request->get('model_version', '');
-        $name         = $this->request->get('name', '');
-        $user         = $this->request->get('user', '');
-        if (is_array($modelVersion) || is_array($name) || is_array($user)) {
-            return [];
-        }
-        $modelVersion = trim((string)$modelVersion);
-        if ($modelVersion !== '' && (int)$modelVersion !== 7) {
-            return [];
-        }
-        if ($this->getType() !== 0) {
-            return [];
-        }
-
-        $name      = trim((string)$name);
-        $user      = trim((string)$user);
-        $startTime = $this->request->get('start_time');
-        $endTime   = $this->request->get('end_time');
-
-        $rows = PendingAnchorTaskService::pendingQuery('human')
-            ->when($name !== '', function ($query) use ($name) {
-                $query->where('dh.name', 'like', '%' . $name . '%');
-            })
-            ->when($user !== '', function ($query) use ($user) {
-                $query->where('u.nickname', 'like', '%' . $user . '%');
-            })
-            ->when($startTime && $endTime, function ($query) use ($startTime, $endTime) {
-                $query->whereBetween('dh.create_time', [strtotime($startTime), strtotime($endTime)]);
-            })
-            ->order('dh.id', 'desc')
-            ->select()
-            ->toArray();
-
-        $list = [];
-        foreach ($rows as $row) {
-            $list[] = [
-                'id'            => -(int)$row['id'], // 负数=排队任务虚拟行，非 human_anchor 主键
-                'name'          => $row['name'],
-                'user_id'       => $row['user_id'],
-                'model_version' => 7,
-                'task_id'       => '',
-                'gender'        => '',
-                'type'          => 0,
-                'create_time'   => $row['create_time'],
-                'update_time'   => $row['update_time'],
-                'pic'           => FileService::getFileUrl((string)$row['image']),
-                'url'           => FileService::getFileUrl((string)$row['result_url']),
-                'status'        => 0,
-                'nickname'      => $row['nickname'],
-                'avatar'        => FileService::getFileUrl((string)$row['avatar']),
-                'remark'        => PendingAnchorTaskService::REMARK,
-                'model_name'    => $modelMap[7]['name'] ?? '蝉镜',
-                'points'        => 0,
-                'is_pending'    => 1,
-            ];
-        }
         return $list;
     }
 
@@ -142,7 +75,8 @@ class AnchorLists extends BaseAdminDataLists implements ListsSearchInterface
      */
     public function count(): int
     {
-        return $this->buildQuery()->count() + count($this->pendingRows());
+        PendingAnchorTaskService::materialize('human');
+        return $this->buildQuery()->count();
     }
 
     /**

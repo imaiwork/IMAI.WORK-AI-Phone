@@ -32,6 +32,12 @@ const parentSource = read(resolve(root, 'src', page, 'detail.vue'))
 const childSource = read(resolve(root, 'src', page, 'components/materials-tab.vue'))
 assert.doesNotMatch(parentSource, /@popup-change=/)
 assert.doesNotMatch(childSource, /emit\(['"]popup-change['"]|defineEmits/)
+assert.match(parentSource, /<square-picker-popup/)
+assert.doesNotMatch(childSource, /<square-picker-popup/)
+assert.doesNotMatch(
+    read(resolve(root, 'src/ai_modules/person/pages/material_library/components/copy-hotspot-panel.vue')),
+    /from ['"]@\/ai_modules\/hotspot/
+)
 
 const parentAst = ast(sourceScript(resolve(root, 'src', page, 'detail.vue')))
 const getVariable = (name) =>
@@ -119,7 +125,10 @@ vm.runInContext(
     }).outputText,
     callbackContext
 )
-const actions = { popupChange: callbackContext.callback }
+const actions = {
+    popupChange: callbackContext.callback,
+    closeSquarePicker: () => undefined
+}
 const pointer = sandbox.renderProps({ actions, __vInternal: true })
 const cachedProps = sandbox.findComponentPropsData(pointer)
 assert.equal(cachedProps.actions.popupChange, actions.popupChange)
@@ -128,6 +137,13 @@ assert.equal(cachedProps.actions.popupChange, actions.popupChange)
 const compiledChild = read(resolve(output, page, 'components/materials-tab.js'))
 const compiledParent = read(resolve(output, page, 'detail.js'))
 const markup = read(resolve(output, page, 'detail.wxml'))
+const detailJson = JSON.parse(read(resolve(output, page, 'detail.json')))
+assert.ok(
+    String(detailJson.usingComponents?.['square-picker-popup'] || '').includes(
+        'components/square-picker-popup/square-picker-popup'
+    ),
+    'detail.json must register square-picker-popup from person/components'
+)
 assert.doesNotMatch(markup, /bindpopupChange/)
 assert.doesNotMatch(compiledChild, /["']popup-change["']/)
 assert.match(compiledParent, /popupChange:/)

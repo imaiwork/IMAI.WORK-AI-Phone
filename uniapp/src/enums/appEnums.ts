@@ -112,6 +112,7 @@ export enum TokensSceneEnum {
     HUMAN_AVATAR_SHANJIAN_PRO = "human_avatar_shanjian_pro",
     HUMAN_VIDEO_SHANJIAN = "human_video_shanjian",
     HUMAN_VOICE_SHANJIAN = "human_voice_shanjian",
+    HUMAN_VOICE_SHANJIAN_S3 = "human_voice_shanjian_s3",
     HUMAN_COPYWRITING_CREATE = "human_copywriting",
     HUMAN_VOICE_MINIMAX_HD = "human_voice_minimax_hd",
     HUMAN_VOICE_MINIMAX_TURBO = "human_voice_minimax_turbo",
@@ -262,6 +263,8 @@ export enum DigitalHumanModelVersionEnum {
     CHANJING = 7,
     // 闪剪
     SHANJIAN = 8,
+    // 闪剪S3
+    SHANJIAN_S3 = 15,
     // minimax HD版
     MINIMAX_HD = 10,
     // minimax版
@@ -271,7 +274,17 @@ export enum DigitalHumanModelVersionEnum {
 export const DigitalHumanModelVersionEnumMap = {
     [DigitalHumanModelVersionEnum.CHANJING]: "蝉镜",
     [DigitalHumanModelVersionEnum.SHANJIAN]: "闪剪",
+    [DigitalHumanModelVersionEnum.SHANJIAN_S3]: "数字人s3",
 };
+
+/** 闪剪音色（V3 / S3）共用下游口径 */
+export const SHANJIAN_VOICE_MODEL_VERSIONS: DigitalHumanModelVersionEnum[] = [
+    DigitalHumanModelVersionEnum.SHANJIAN,
+    DigitalHumanModelVersionEnum.SHANJIAN_S3,
+];
+
+export const isShanjianVoiceModelVersion = (version: number | string): boolean =>
+    SHANJIAN_VOICE_MODEL_VERSIONS.includes(Number(version) as DigitalHumanModelVersionEnum);
 
 export enum PersonTypeEnum {
     PERSONAL_IP = 1,

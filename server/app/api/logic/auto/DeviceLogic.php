@@ -4,6 +4,7 @@
 namespace app\api\logic\auto;
 
 use app\api\logic\ApiLogic;
+use app\api\logic\device\DySearchTaskLogic;
 use app\common\enum\DeviceEnum;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaTrafficConfig;
@@ -11,9 +12,14 @@ use app\common\model\auto\AutoDeviceConfig;
 use app\common\model\auto\AutoNeedsAnalysis;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDeviceTask;
+use app\common\model\sv\SvDySearchTask;
+use app\common\model\sv\SvDySearchTaskDevice;
 use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\FileService;
+use app\common\service\sv\DySearchAccountNormalizer;
+use app\common\service\sv\DySearchFilterHistoryService;
 use app\common\service\UserDisplaySanitizer;
+use app\common\workerman\rpa\WorkerEnum;
 
 
 /**
@@ -284,7 +290,7 @@ class DeviceLogic extends ApiLogic
             self::$returnData['task_status'] = $task_status;
             self::$returnData['is_config'] = $is_config;
             self::$returnData['accounts'] = SvAccount::field('id,account,type')->where('user_id', self::$uid)->where('device_code', $params['device_code'])->select();
-            self::$returnData['persona_type'] = AiPersona::where('user_id', self::$uid)->where('id', '=', function ($query) use ($params) {
+            self::$returnData['persona_type'] = AiPersona::where('user_id', self::$uid)->where('id', function ($query) use ($params) {
                 $query->name('sv_device')->where('device_code', $params['device_code'])->field('persona_id');
             })->value('persona_type') ?? 0;
             return true;
@@ -340,13 +346,54 @@ class DeviceLogic extends ApiLogic
                 throw new \Exception('模型数据生成异常');
             }
             $payload = self::withOptMessageId($payload, self::buildOptMessageId());
-            self::publishOptPayload((string)$params['device_code'], $payload);
+            if ((int)$params['source'] === DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH) {
+                self::publishDySearchImmediate((string)$params['device_code'], $payload);
+            } else {
+                self::publishOptPayload((string)$params['device_code'], $payload);
+            }
             self::$returnData = $payload;
             return true;
         } catch (\Throwable $th) {
             self::setError($th->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 抖音获客立即执行：真实任务先改回执行中再下发，下发失败回滚。演示包只下发。
+     */
+    private static function publishDySearchImmediate(string $deviceCode, array $payload): void
+    {
+        $content = json_decode((string)($payload['content'] ?? ''), true);
+        if (!is_array($content)) {
+            throw new \Exception('模型数据生成异常');
+        }
+
+        $isReal = (int)($content['isDemoData'] ?? 1) !== 1 && (int)($content['task_id'] ?? 0) > 0;
+        if (!$isReal) {
+            self::publishOptPayload($deviceCode, $payload);
+            return;
+        }
+
+        \think\facade\Db::startTrans();
+        try {
+            DySearchTaskLogic::reopenForImmediateExec($content, (int)self::$uid, $deviceCode);
+            self::publishOptPayload($deviceCode, $payload);
+            \think\facade\Db::commit();
+        } catch (\Throwable $e) {
+            \think\facade\Db::rollback();
+            throw $e;
+        }
+
+        \think\facade\Log::channel('device')->write(sprintf(
+            '立即执行已重置任务状态 task_id=%d bind_id=%d device_task_id=%d device=%s start=%d end=%d',
+            (int)($content['task_id'] ?? 0),
+            (int)($content['id'] ?? 0),
+            (int)($content['device_task_id'] ?? 0),
+            $deviceCode,
+            (int)($content['start_time'] ?? 0),
+            (int)($content['end_time'] ?? 0)
+        ));
     }
 
     public static function buildPreciseCluesPayloadForTest(array $params): array
@@ -542,7 +589,6 @@ class DeviceLogic extends ApiLogic
             ->where('end_time', '>=', strtotime($st))
             ->order('id', 'desc')
             ->findOrEmpty();
-            //print_r(\think\facade\Db::getLastSql());die;
         $payload = [];
         switch ((int)$params['source']) {
             case DeviceEnum::AUTO_TASK_SCENE_CONTENT_PUBLISH:
@@ -1093,6 +1139,38 @@ class DeviceLogic extends ApiLogic
                     'messageId' => 0,
                 );
                 break;
+            case DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH:
+                $find = self::getDySearchTask($params, $account, $task);
+                $startTime = time();
+                $endTime = $startTime + 60 * 30;
+                $content = DySearchTaskLogic::buildSendContent([
+                    'id' => (int)($find['id'] ?? 0),
+                    'task_id' => (int)($find['task_id'] ?? 0),
+                    'device_task_id' => (int)($find['device_task_id'] ?? ($task->id ?? 0)),
+                    'device_code' => (string)$params['device_code'],
+                    'account' => (string)($find['account'] ?? $account->account ?? ''),
+                    'search_mode' => (string)($find['search_mode'] ?? 'keyword'),
+                    'keywords' => $find['keywords'] ?? [],
+                    'per_kw' => (int)($find['per_kw'] ?? 30),
+                    'scan_config' => $find['scan_config'] ?? [],
+                    'add_type' => (int)($find['add_type'] ?? 1),
+                    'add_rule' => (string)($find['add_rule'] ?? 'all'),
+                    'ocr_type' => (int)($find['ocr_type'] ?? 1),
+                    'day_cap' => (int)($find['day_cap'] ?? 50),
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                ]);
+                $content['isSend'] = 0;
+                $content['isDemoData'] = (int)($find['is_demo_data'] ?? 1);
+                $payload = [
+                    'type' => WorkerEnum::RPA_DY_SEARCH_TASK_SEND,
+                    'appType' => DeviceEnum::ACCOUNT_TYPE_DY,
+                    'content' => json_encode($content, JSON_UNESCAPED_UNICODE),
+                    'deviceId' => $params['device_code'],
+                    'appVersion' => DeviceEnum::APP_VERSION,
+                    'messageId' => 0,
+                ];
+                break;
             default:
                 throw new \Exception('任务类型不存在');
         }
@@ -1163,6 +1241,107 @@ class DeviceLogic extends ApiLogic
         return $find->toArray();
     }
 
+    /**
+     * 立即执行 / 预览：有当日日历任务则用真实搜寻配置，否则用流量配置词 + 历史话术做演示包。
+     *
+     * @return array<string, mixed>
+     */
+    private static function getDySearchTask(array $params, SvAccount $account, SvDeviceTask $task): array
+    {
+        $demo = self::buildDySearchDemoTask($params, $account);
+
+        if ($task->isEmpty() || (int)($task->sub_task_id ?? 0) < 1) {
+            return $demo;
+        }
+
+        $domain = SvDySearchTask::where('id', (int)$task->sub_task_id)
+            ->where('user_id', self::$uid)
+            ->findOrEmpty();
+        if ($domain->isEmpty()) {
+            return $demo;
+        }
+
+        $bind = SvDySearchTaskDevice::where('task_id', (int)$domain->id)
+            ->where('device_code', (string)$params['device_code'])
+            ->findOrEmpty();
+
+        $keywords = [];
+        if (!$bind->isEmpty() && is_array($bind->keywords)) {
+            $keywords = $bind->keywords;
+        } elseif (is_array($domain->keywords)) {
+            $keywords = $domain->keywords;
+        }
+        $keywords = DySearchAccountNormalizer::normalizeKeywords($keywords);
+        if ($keywords === []) {
+            return $demo;
+        }
+
+        return [
+            'id' => $bind->isEmpty() ? 0 : (int)$bind->id,
+            'task_id' => (int)$domain->id,
+            'device_task_id' => (int)$task->id,
+            'account' => (string)($task->account ?? $account->account ?? ''),
+            'search_mode' => (string)($domain->search_mode ?: 'keyword'),
+            'keywords' => $keywords,
+            'per_kw' => (int)($domain->per_kw ?: 30),
+            'scan_config' => is_array($domain->scan_config) ? $domain->scan_config : [],
+            'add_type' => (int)($domain->add_type ?? 1),
+            'add_rule' => (string)($domain->add_rule ?: 'all'),
+            'ocr_type' => (int)($domain->ocr_type ?: 1),
+            'day_cap' => (int)($domain->day_cap ?: 50),
+            'is_demo_data' => 0,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function buildDySearchDemoTask(array $params, SvAccount $account): array
+    {
+        $keywords = ['获客', '线索'];
+        $personaId = (int)\app\common\model\sv\SvDevice::where('device_code', $params['device_code'])
+            ->where('user_id', self::$uid)
+            ->value('persona_id');
+        if ($personaId > 0) {
+            $config = AiPersonaTrafficConfig::where('user_id', self::$uid)
+                ->where('persona_id', $personaId)
+                ->findOrEmpty();
+            if (!$config->isEmpty()) {
+                $fromConfig = DySearchAccountNormalizer::normalizeKeywords(
+                    is_array($config->clue_keywords) ? $config->clue_keywords : []
+                );
+                if ($fromConfig !== []) {
+                    $keywords = array_slice($fromConfig, 0, 200);
+                }
+            }
+        }
+
+        $scripts = DySearchFilterHistoryService::getHistory((int)self::$uid)['miss_scripts'] ?? [];
+        if (!is_array($scripts)) {
+            $scripts = [];
+        }
+        $scanConfig = DySearchAccountNormalizer::buildScanConfig([
+            'miss_scripts' => $scripts,
+            'miss_action' => $scripts !== [] ? 'dm' : 'skip',
+        ], 'keyword');
+
+        return [
+            'id' => 0,
+            'task_id' => 0,
+            'device_task_id' => 0,
+            'account' => (string)($account->account ?? ''),
+            'search_mode' => 'keyword',
+            'keywords' => $keywords,
+            'per_kw' => 30,
+            'scan_config' => $scanConfig,
+            'add_type' => 1,
+            'add_rule' => 'all',
+            'ocr_type' => 1,
+            'day_cap' => 50,
+            'is_demo_data' => 1,
+        ];
+    }
+
     private static function normalizePreciseClues(mixed $value): array
     {
         if (is_string($value)) {
@@ -1215,7 +1394,7 @@ class DeviceLogic extends ApiLogic
         ];
 
         if ($task->isEmpty()) {
-            $persona = AiPersona::where('id', '=', function ($query) use ($params) {
+            $persona = AiPersona::where('id', function ($query) use ($params) {
                 $query->name('sv_device')->where('device_code', $params['device_code'])->field('persona_id');
             })->findOrEmpty();
 

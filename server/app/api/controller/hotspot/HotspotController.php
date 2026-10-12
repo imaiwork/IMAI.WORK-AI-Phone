@@ -204,6 +204,68 @@ class HotspotController extends BaseApiController
         return $this->success('操作成功', $result);
     }
 
+    public function stock()
+    {
+        if ($this->request->isGet()) {
+            $personaId = $this->request->param('persona_id', 0);
+            $params = (new HotspotValidate())->get()->goCheck('stockLists', [
+                'persona_id' => ($personaId === '' || $personaId === null) ? 0 : $personaId,
+            ]);
+            $result = HotspotLogic::stockLists($params, (int)$this->userId);
+            if (false === $result) {
+                return $this->fail(HotspotLogic::getError());
+            }
+            return $this->data($result);
+        }
+        $input = $this->jsonInput();
+        if (trim((string)($input['platform'] ?? '')) === '') {
+            $input['platform'] = 'douyin';
+        }
+        if (!isset($input['persona_id']) || $input['persona_id'] === '' || $input['persona_id'] === null) {
+            $input['persona_id'] = 0;
+        }
+        $params = (new HotspotValidate())->post()->goCheck('stockAdd', $input);
+        $result = HotspotLogic::stock($params, (int)$this->userId);
+        if (false === $result) {
+            return $this->fail(HotspotLogic::getError());
+        }
+        $msg = !empty($result['updated']) ? '更新入库成功' : '入库成功';
+        return $this->success($msg, $result);
+    }
+
+    public function stockDetail()
+    {
+        $personaId = $this->request->param('persona_id', 0);
+        $platform = trim((string)$this->request->param('platform', ''));
+        $params = (new HotspotValidate())->get()->goCheck('stockDetail', [
+            'topic' => $this->request->param('topic', ''),
+            'platform' => $platform === '' ? 'douyin' : $platform,
+            'persona_id' => ($personaId === '' || $personaId === null) ? 0 : $personaId,
+        ]);
+        $result = HotspotLogic::stockDetail($params, (int)$this->userId);
+        if (false === $result) {
+            return $this->fail(HotspotLogic::getError());
+        }
+        return $this->data($result);
+    }
+
+    public function stockDelete()
+    {
+        $input = $this->jsonInput();
+        $id = (int)$this->request->param('id', 0);
+        if ($id <= 0) {
+            $id = (int)($input['id'] ?? 0);
+        }
+        $params = (new HotspotValidate())->post()->goCheck('stockDelete', [
+            'pool_id' => $id,
+        ]);
+        $result = HotspotLogic::stockDelete($params, (int)$this->userId);
+        if (false === $result) {
+            return $this->fail(HotspotLogic::getError());
+        }
+        return $this->success('操作成功');
+    }
+
     private function checkedPost(string $scene): array
     {
         return (new HotspotValidate())->post()->goCheck($scene, $this->jsonInput());

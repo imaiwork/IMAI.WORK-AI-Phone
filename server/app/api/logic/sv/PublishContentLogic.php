@@ -6,6 +6,7 @@ use app\common\enum\DeviceEnum;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\model\sv\CloudSvDevice;
 use app\common\model\sv\SvPublishSettingDetail;
 use app\common\model\wechat\AiWechatCircleTask;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
@@ -20,8 +21,11 @@ class PublishContentLogic extends SvBaseLogic
 {
     private const SOURCE_SV = 'sv';
     private const SOURCE_CIRCLE = 'circle';
+    private const SOURCE_CLOUD = 'cloud';
 
     private const PLATFORM_CIRCLE = 'circle';
+    private const PLATFORM_CLOUD = 'cloud';
+    private const PLATFORM_CLOUD_NAME = '云端';
 
     private const PLATFORMS = [
         ['platform' => 4, 'platform_name' => '抖音', 'source' => self::SOURCE_SV],
@@ -43,9 +47,25 @@ class PublishContentLogic extends SvBaseLogic
     {
         try {
             [$start, $end, $date] = self::getDateRange($params['date'] ?? '');
-            $platform = self::normalizePlatform($params['platform'] ?? self::PLATFORM_CIRCLE);
             $filter = self::getContentFilter($params);
             $tabs = self::getTabs($start, $end, $filter);
+            $requestedPlatform = (string)($params['platform'] ?? '');
+
+            if ($requestedPlatform === self::PLATFORM_CLOUD) {
+                $lists = self::getCloudLists($start, $end, $filter);
+                self::$returnData = [
+                    'date' => $date,
+                    'persona_id' => $filter['persona_id'],
+                    'platform' => self::PLATFORM_CLOUD,
+                    'platform_name' => self::PLATFORM_CLOUD_NAME,
+                    'source' => self::SOURCE_CLOUD,
+                    'tabs' => $tabs,
+                    'lists' => $lists,
+                ];
+                return true;
+            }
+
+            $platform = self::normalizePlatform($requestedPlatform !== '' ? $requestedPlatform : self::PLATFORM_CIRCLE);
             $current = self::getPlatformMeta($platform);
 
             if ($current['source'] === self::SOURCE_CIRCLE) {
@@ -79,6 +99,11 @@ class PublishContentLogic extends SvBaseLogic
             [$start, $end] = self::getDateRange($params['date'] ?? '');
             $source = (string)$params['source'];
             $filter = self::getContentFilter($params, false);
+
+            if ($source === self::SOURCE_CLOUD) {
+                self::$returnData = self::saveCloud((int)$params['id'], $params, $filter);
+                return true;
+            }
 
             if ($source === self::SOURCE_CIRCLE) {
                 self::$returnData = self::saveCircle((int)$params['id'], $params, $start, $end, $filter);
@@ -222,7 +247,138 @@ class PublishContentLogic extends SvBaseLogic
 
         return [
             'persona_id' => $personaId,
+            'run_mode' => (int)($persona->run_mode ?? AiPersona::RUN_MODE_PHONE),
         ];
+    }
+
+    private static function getCloudTaskQuery(string $start, string $end, array $filter)
+    {
+        $startTs = strtotime($start);
+        $endTs = strtotime($end);
+        $query = ShanjianVideoTask::where('user_id', self::$uid)
+            ->whereBetween('create_time', [$startTs, $endTs]);
+        self::applyCloudTaskFilter($query, $filter);
+        return $query;
+    }
+
+    private static function applyCloudTaskFilter($query, array $filter): void
+    {
+        $query->where('auto_type', 1)
+            ->where('is_final', 1)
+            ->where('wechat_type', 0);
+
+        $personaId = (int)($filter['persona_id'] ?? 0);
+        if ($personaId > 0) {
+            $query->where('persona_id', $personaId);
+            $runMode = (int)($filter['run_mode'] ?? AiPersona::RUN_MODE_PHONE);
+            if ($runMode !== AiPersona::RUN_MODE_CLOUD) {
+                $query->whereRaw('1=0');
+                return;
+            }
+            $query->where('device_code', CloudSvDevice::codeFor($personaId));
+            return;
+        }
+
+        $query->where('device_code', 'like', CloudSvDevice::CODE_PREFIX . '%');
+    }
+
+    private static function getCloudLists(string $start, string $end, array $filter): array
+    {
+        $rows = self::getCloudTaskQuery($start, $end, $filter)
+            ->order('id', 'desc')
+            ->select()
+            ->toArray();
+
+        return array_map(static function (array $row) {
+            return self::formatCloudItem($row);
+        }, $rows);
+    }
+
+    private static function formatCloudItem(array $row): array
+    {
+        $extraRaw = $row['extra'] ?? [];
+        if (is_string($extraRaw)) {
+            $decoded = json_decode($extraRaw, true);
+            $extra = is_array($decoded) ? $decoded : [];
+        } else {
+            $extra = is_array($extraRaw) ? $extraRaw : [];
+        }
+        $copy = ShanjianVideoTask::readPublishCopy(
+            $extra,
+            (string)($row['title'] ?? ''),
+            (string)($row['msg'] ?? '')
+        );
+        $status = array_key_exists('status', $row) && $row['status'] !== null ? (int)$row['status'] : null;
+        if ($status === -1) {
+            $status = ShanjianVideoTask::STATUS_PENDING;
+        }
+        $videoUrl = trim((string)($row['video_result_url'] ?? ''));
+        $taskId = (int)($row['id'] ?? 0);
+
+        return [
+            'source' => self::SOURCE_CLOUD,
+            'id' => $taskId,
+            'persona_id' => (int)($row['persona_id'] ?? 0),
+            'platform' => self::PLATFORM_CLOUD,
+            'platform_name' => self::PLATFORM_CLOUD_NAME,
+            'publish_time' => (string)($row['create_time'] ?? ''),
+            'media_type' => 1,
+            'media_label' => self::MEDIA_LABELS[1],
+            'media_urls' => $videoUrl !== '' ? self::normalizeMediaUrls($videoUrl) : [],
+            'account' => '',
+            'title' => $copy['title'],
+            'content' => $copy['content'],
+            'topic' => $copy['topic'],
+            'poi' => '',
+            'location' => '',
+            'cover_url' => self::getCoverUrl($row['pic'] ?? ''),
+            'auto_type' => (int)($row['auto_type'] ?? 1),
+            'task_type' => 0,
+            'video_setting_id' => (int)($row['video_setting_id'] ?? 0),
+            'video_task_id' => $taskId,
+            'shanjian_video_task_id' => $taskId,
+            'shanjian_type' => (int)($row['shanjian_type'] ?? 0),
+            'shanjian_status' => $status,
+            'shanjian_status_text' => self::getShanjianStatusText($status),
+            'shanjian_remark' => (string)($row['remark'] ?? ''),
+            'shanjian_video_url' => $videoUrl,
+            'duration' => (string)($row['duration'] ?? ''),
+            'can_regenerate' => false,
+        ];
+    }
+
+    private static function saveCloud(int $id, array $params, array $filter): array
+    {
+        $query = ShanjianVideoTask::where('id', $id)
+            ->where('user_id', self::$uid);
+        self::applyCloudTaskFilter($query, $filter);
+        $task = $query->findOrEmpty();
+        if ($task->isEmpty()) {
+            throw new \Exception('云端成片不存在');
+        }
+
+        $extra = is_array($task->extra) ? $task->extra : [];
+        $copy = ShanjianVideoTask::readPublishCopy(
+            $extra,
+            (string)($task->title ?? ''),
+            (string)($task->msg ?? '')
+        );
+        if (array_key_exists('title', $params)) {
+            $copy['title'] = self::stringValue($params['title']);
+            $task->title = $copy['title'];
+        }
+        if (array_key_exists('content', $params)) {
+            $copy['content'] = self::stringValue($params['content']);
+            $task->msg = $copy['content'];
+        }
+        if (array_key_exists('topic', $params)) {
+            $copy['topic'] = self::stringValue($params['topic']);
+        }
+        $task->extra = ShanjianVideoTask::mergePublishCopy($extra, $copy['title'], $copy['content'], $copy['topic']);
+        $task->update_time = time();
+        $task->save();
+
+        return self::formatCloudItem($task->refresh()->toArray());
     }
 
     private static function applySvFilter($query, array $filter): void
@@ -333,12 +489,19 @@ class PublishContentLogic extends SvBaseLogic
         self::applyWaitingCircleDeviceTaskFilter($circleQuery);
         $circleCount = $circleQuery->count();
 
-        return array_map(function (array $tab) use ($svCounts, $circleCount) {
+        $tabs = array_map(function (array $tab) use ($svCounts, $circleCount) {
             $count = $tab['source'] === self::SOURCE_CIRCLE
                 ? $circleCount
                 : ($svCounts[(int)$tab['platform']] ?? 0);
             return $tab + ['count' => $count];
         }, self::PLATFORMS);
+        $tabs[] = [
+            'platform' => self::PLATFORM_CLOUD,
+            'platform_name' => self::PLATFORM_CLOUD_NAME,
+            'source' => self::SOURCE_CLOUD,
+            'count' => (int)self::getCloudTaskQuery($start, $end, $filter)->count(),
+        ];
+        return $tabs;
     }
 
     private static function getSvLists(int $platform, string $start, string $end, array $filter): array

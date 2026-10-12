@@ -12,18 +12,18 @@ export const isWeixinClient = () => {
 
 /**
  * @description 判断是否为安卓环境
+ * 华为 Pura 80 等纯血鸿蒙不含 Android：H5 UA 为 OpenHarmony / ArkWeb，微信小程序 platform 为 ohos
  * @return { Boolean }
  */
 export function isAndroid() {
     // #ifdef H5
     const u = navigator.userAgent
-    return u.indexOf('Android') > -1 || u.indexOf('Adr') > -1
+    return /android|adr|openharmony|harmonyos|arkweb/i.test(u)
     // #endif
     // #ifdef MP-WEIXIN
-    return (
-        uni.getSystemInfoSync().osName.toLowerCase() == 'android' ||
-        uni.getSystemInfoSync().osName.toLowerCase() == 'harmonyos'
-    )
+    const systemInfo = uni.getSystemInfoSync()
+    const fingerprint = [systemInfo.osName, systemInfo.platform, systemInfo.system].filter(Boolean).join(' ')
+    return /android|harmony|openharmony|ohos/i.test(fingerprint)
     // #endif
 }
 

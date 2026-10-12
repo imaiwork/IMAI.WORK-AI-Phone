@@ -1002,7 +1002,7 @@ class MessageHandler extends BaseMessageHandler
                 $phonePattern = '/1[3-9]\d{9}/';
                 $pattern = '/(?:[a-zA-Z][a-zA-Z0-9_-]{5,19}|1[3-9]\d{9})/';
 
-                $replyContent = $payload['replyContent'];
+                $replyContent = is_array($payload['replyContent']) ? $payload['replyContent'] : explode("\n", $payload['replyContent']);
                 $blacklist = array();
 
                 $isInWechat = false;

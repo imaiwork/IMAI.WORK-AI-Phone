@@ -14,6 +14,8 @@ use app\common\service\sv\DySearchAccountNormalizer;
 use app\common\workerman\rpa\WorkerEnum;
 use Channel\Client as ChannelClient;
 use think\cache\driver\Redis;
+use think\console\Output;
+use think\facade\Db;
 use think\facade\Log;
 
 /**
@@ -175,6 +177,150 @@ trait DySearchTaskTrait
         );
         self::dySearchLog(self::dySearchMaskPayload($payload), '下发获客配置明细');
         self::dySearchSetRedis((string)$bind->device_code, '执行抖音获客');
+    }
+
+    public static function dySearchStartTask(SvDeviceTask $dtask, Output $output, callable $callback)
+    {
+        try {
+            self::$logtitle = "抖音获客任务[{$dtask->device_code}]";
+            $task = SvDySearchTask::where('id', $dtask->sub_task_id)->findOrEmpty();
+            if ($task->isEmpty()) {
+                $output->writeln('获客任务不存在或已删除');
+                self::setLog('获客任务不存在或已删除', 'dy_search');
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 2,
+                        'remark' => '获客任务不存在或已删除',
+                    ]);
+                }
+                return;
+            }
+            if ((int)$task->status === 2) {
+                $output->writeln('获客任务已暂停');
+                self::setLog('获客任务已暂停', 'dy_search');
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 0,
+                        'remark' => '任务已暂停',
+                    ]);
+                }
+                return;
+            }
+            if (in_array((int)$task->status, [3, 4], true)) {
+                if (is_callable($callback)) {
+                    return $callback([
+                        'status' => 2,
+                        'remark' => '任务已结束',
+                    ]);
+                }
+                return;
+            }
+
+            $bind = SvDySearchTaskDevice::where('task_id', $task->id)
+                ->where('device_code', $dtask->device_code)
+                ->where('status', 'in', [0, 1])
+                ->findOrEmpty();
+            if ($bind->isEmpty()) {
+                $output->writeln("暂时没有需要执行的设备：\n" . Db::getLastSql());
+                self::setLog("暂时没有需要执行的设备：\n" . Db::getLastSql(), 'dy_search');
+                throw new \Exception('暂时没有需要执行的设备');
+            }
+
+            self::checkOnline($dtask->device_code, 'ws');
+            self::pushTaskContent($task, $bind, $dtask);
+
+            SvDySearchTask::where('id', $task->id)->update(['status' => 1, 'update_time' => time()]);
+            $bind->status = 1;
+            $bind->update_time = time();
+            $bind->save();
+
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 1,
+                    'remark' => '任务执行中',
+                ]);
+            }
+        } catch (\Throwable $th) {
+            self::setLog('抖音获客任务执行失败：' . $th->getMessage() . ' device=' . $dtask->device_code . ' sub_task_id=' . $dtask->sub_task_id, 'dy_search');
+            $output->writeln('任务执行失败：' . $th->getMessage());
+            $retryable = !str_contains($th->getMessage(), '暂时没有需要执行的设备');
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => $retryable ? 0 : 3,
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
+                ]);
+            }
+            throw new \Exception($th->getMessage(), $th->getCode());
+        }
+    }
+
+    /**
+     * 搜寻任务从未启动就过了时段：收口本设备绑定，必要时把主任务标完成。
+     * 加微任务（类型 19）不要走这里，避免误收口搜寻主任务。
+     */
+    public static function dySearchCloseTimeoutUnstarted(SvDeviceTask $task): void
+    {
+        if ((int)$task->task_type !== DeviceEnum::TASK_TYPE_DY_SEARCH) {
+            return;
+        }
+        $taskId = (int)$task->sub_task_id;
+        $deviceCode = trim((string)$task->device_code);
+        if ($taskId < 1 || $deviceCode === '') {
+            return;
+        }
+        SvDySearchTaskDevice::where('task_id', $taskId)
+            ->where('device_code', $deviceCode)
+            ->where('status', '<>', 3)
+            ->update(['status' => 3, 'update_time' => time()]);
+        self::dySearchMaybeFinishMainTask($taskId);
+    }
+
+    public static function dySearchEndTask(SvDeviceTask $task, Output $output, callable $callback)
+    {
+        try {
+            self::$logtitle = "抖音获客任务[{$task->device_code}]";
+            $bind = SvDySearchTaskDevice::where('task_id', $task->sub_task_id)
+                ->where('device_code', $task->device_code)
+                ->findOrEmpty();
+
+            try {
+                //self::dySearchCancel((int)$task->sub_task_id, '时段结束', (string)$task->device_code);
+            } catch (\Throwable $e) {
+                self::setLog('抖音获客时段结束取消指令失败：' . $e->getMessage(), 'dy_search');
+            }
+            if (!$bind->isEmpty() && (int)$bind->status !== 3) {
+                $bind->status = 3;
+                $bind->update_time = time();
+                $bind->save();
+            }
+            self::dySearchMaybeFinishMainTask((int)$task->sub_task_id);
+            self::setWsSelect();
+            self::redis()->set("xhs:device:{$task->device_code}:taskStatus", json_encode([
+                'taskStatus' => 'standby',
+                'taskType' => 'setDySearch',
+                'msg' => '执行抖音获客',
+                'duration' => 0,
+                'time' => date('Y-m-d H:i:s', time()),
+                'scene' => 'dy_search',
+            ], JSON_UNESCAPED_UNICODE));
+
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 2,
+                    'remark' => '任务执行结束',
+                ]);
+            }
+        } catch (\Throwable $th) {
+            self::setLog('抖音获客时段结束失败：' . $th->getMessage() . ' device=' . $task->device_code . ' sub_task_id=' . $task->sub_task_id, 'dy_search');
+            $output->writeln('任务执行失败：' . $th->getMessage());
+            if (is_callable($callback)) {
+                return $callback([
+                    'status' => 3,
+                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
+                ]);
+            }
+            throw new \Exception($th->getMessage(), $th->getCode());
+        }
     }
 
     /**

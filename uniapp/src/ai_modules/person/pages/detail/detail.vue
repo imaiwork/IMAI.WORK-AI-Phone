@@ -189,6 +189,8 @@
 
                     <materials-tab
                         v-if="activeTab === PageTabEnum.MATERIALS"
+                        :square-picker-visible="showSquarePicker"
+                        :public-copy-picker-visible="showPublicCopyPicker"
                         :state="materialsTabState"
                         :actions="materialsTabActions" />
 
@@ -264,6 +266,17 @@
             v-model="showManualImportPopup"
             :persona-id="personId"
             @success="handleManualImportSuccess" />
+        <square-picker-popup
+            v-model="showSquarePicker"
+            :persona-id="personId"
+            :joined-ids="materialsTabState.squareJoinedIds || []"
+            @added="querySquareRefs" />
+        <public-copy-picker-popup
+            v-model="showPublicCopyPicker"
+            :persona-id="personId"
+            :library-type="copyTab"
+            :driver-type="currentDriverType"
+            @added="queryCopyList" />
         <video-detail-popup
             v-model="showVideoDetail"
             :item="currentVideoDetail"
@@ -367,6 +380,8 @@ import EnhanceSheet from "./components/popups/enhance-sheet.vue";
 import SetupChecklist from "./components/setup-checklist.vue";
 import ViralTab from "./components/viral-tab.vue";
 import ManualImportPopup from "./components/popups/manual-import-popup.vue";
+import SquarePickerPopup from "@/ai_modules/person/components/square-picker-popup/square-picker-popup.vue";
+import PublicCopyPickerPopup from "@/ai_modules/person/components/public-copy-picker-popup/public-copy-picker-popup.vue";
 import CutModePopup from "./components/popups/cut-mode-popup.vue";
 import { copyDriveTypes, copyTabs, useCopyLibrary } from "./hooks/useCopyLibrary";
 import { useDevicesTab } from "./hooks/useDevicesTab";
@@ -514,6 +529,8 @@ const runModeLabel = computed(() =>
 
 const showHotKeywordPopup = ref(false);
 const showManualImportPopup = ref(false);
+const showSquarePicker = ref(false);
+const showPublicCopyPicker = ref(false);
 const hotKeywordPopupValue = ref("");
 const hotKeywordSubmitting = ref(false);
 const hotKeywordEditingIndex = ref(-1);
@@ -934,6 +951,8 @@ const {
     materialFinished,
     materialKind,
     materialList,
+    querySquareRefs,
+    squareRefs,
     materialLoading,
     materialType,
     chooseMaterialContentType,
@@ -990,6 +1009,8 @@ const {
     handleOpenAddCopy,
     handleOpenEditCopy,
     handleSubmitCopy,
+    handleCopyText: handleCopyLibraryText,
+    handleRefreshCopy,
     handleRemoveCopy,
     copyBatchMode,
     selectedCopyCount,
@@ -1088,7 +1109,8 @@ const materialShortage = computed<number | null>(() => {
     if (!setupSummary.value) return null;
     // 人设是成品直发时不做 AI 剪辑，「剪辑素材够不够」无从谈起，不提示
     if (Number(setupSummary.value.publish_mode) === PublishModeEnum.MANUAL) return null;
-    return Math.max(0, SETUP_THRESHOLD.MATERIAL_MIN - (Number(setupSummary.value.material_count) || 0));
+    const owned = Number(setupSummary.value.material_count) || 0;
+    return Math.max(0, SETUP_THRESHOLD.MATERIAL_MIN - owned);
 });
 
 // 资源类型 chip 上挂真实数量：不用点进去就知道哪一块还没配
@@ -1098,11 +1120,9 @@ const materialTabCounts = computed<Record<string, number>>(() => {
     return {
         // 剪辑原片库 / 成品直发库是本地视图切换，chip 要跟着用户正在看的那个库走
         [MaterialTabEnum.COMPOSE]:
-            Number(
-                materialViewMode.value === PublishModeEnum.MANUAL
-                    ? data.direct_material_count
-                    : data.material_count,
-            ) || 0,
+            materialViewMode.value === PublishModeEnum.MANUAL
+                ? Number(data.direct_material_count) || 0
+                : Number(data.material_count) || 0,
         // 冻结的绑定照样列在 tab 里，chip 用绑定总数才不会出现「写 0 个、下面列 3 个」；
         // 清单和告警条判「能不能用」仍走 avatar_count / voice_count
         [MaterialTabEnum.AVATAR]: Number(data.avatar_total ?? data.avatar_count) || 0,
@@ -1144,6 +1164,7 @@ const materialsTabState = computed(() => ({
     materialFilters,
     materialFinished: materialFinished.value,
     materialList: materialList.value,
+    squareJoinedIds: squareRefs.value.map((item) => Number(item.asset_id || 0)).filter(Boolean),
     materialLoading: materialLoading.value,
     materialPublishModes,
     materialKind: materialKind.value,
@@ -1184,6 +1205,19 @@ const materialsTabActions = {
     directPublish: handleOpenDirectPublish,
     directPublishVisible: handleSetDirectPublishVisible,
     materialFilter: handleMaterialFilter,
+    refreshSquareRefs: querySquareRefs,
+    openSquarePicker: () => {
+        showSquarePicker.value = true;
+    },
+    closeSquarePicker: () => {
+        showSquarePicker.value = false;
+    },
+    openPublicCopyPicker: () => {
+        showPublicCopyPicker.value = true;
+    },
+    closePublicCopyPicker: () => {
+        showPublicCopyPicker.value = false;
+    },
     moreMaterial: handleMoreMaterial,
     openDirectUpload: handleOpenDirectUpload,
     openVoiceForAvatar: handleOpenVoiceForAvatar,
@@ -1218,6 +1252,8 @@ const materialsTabActions = {
     switchCopyDriveType: handleSwitchCopyDriveType,
     addCopy: handleOpenAddCopy,
     editCopy: handleOpenEditCopy,
+    copyText: handleCopyLibraryText,
+    refreshCopy: handleRefreshCopy,
     removeCopy: handleRemoveCopy,
     importCopy: handleOpenImport,
     aiGenerate: handleOpenAiGenerate,
@@ -1391,6 +1427,8 @@ const showSetupBar = computed(() =>
         showUploadProgress.value,
         showHotKeywordPopup.value,
         showManualImportPopup.value,
+        showSquarePicker.value,
+        showPublicCopyPicker.value,
         showVideoDetail.value,
         showImageDetail.value,
         showVideoPreview.value,

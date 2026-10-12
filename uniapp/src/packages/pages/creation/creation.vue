@@ -345,6 +345,7 @@
 
 <script setup lang="ts">
 import { getVideoCreationRecord, deleteVideoCreationRecord, updateVideoCreationRecord } from "@/api/app";
+import { ManualPublishSourceEnum } from "@/enums/publishEnums";
 import { retrySoraTask, downloadShanjianVideoTask } from "@/api/digital_human";
 import { drawingRecord, drawingDeleteRecord, getPuzzleTaskList } from "@/api/drawing";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
@@ -929,7 +930,7 @@ const toCreatePublishTask = (type: "timer" | "qrcode") => {
                 ? "/ai_modules/device/pages/create_task/create_task?type=1"
                 : "/ai_modules/digital_human/pages/platform_publish/platform_publish",
         params: {
-            source: "creation_video",
+            source: ManualPublishSourceEnum.CREATION_VIDEO,
             ids: JSON.stringify(ids),
         },
     });

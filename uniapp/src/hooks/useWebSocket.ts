@@ -19,7 +19,7 @@ export interface WebSocketOptions {
 
 export default function useWebSocket<T = unknown>(url: string, options: WebSocketOptions = {}) {
     // 状态管理
-    const socket: Ref<UniApp.SocketTask | null> = ref(null)
+    const socket = shallowRef<UniApp.SocketTask | null>(null)
     const isConnected = ref(false)
     const retryCount = ref(0)
 
@@ -39,58 +39,96 @@ export default function useWebSocket<T = unknown>(url: string, options: WebSocke
     // 定时器管理
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+    const pendingMessages: unknown[] = []
 
     // 核心连接方法
     const connect = () => {
-        if (!socket.value) {
-            socket.value = uni.connectSocket({
-                url,
-                success: () => {} // success回调没有什么用，主要靠onOpen
-            })
+        if (socket.value) return
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer)
+            reconnectTimer = null
+        }
 
-            // 连接成功
-            socket.value.onOpen(() => {
-                isConnected.value = true
-                retryCount.value = 0
-                startHeartbeat()
-                triggerEvent('open')
-            })
+        // 连接失败 / 关闭时只回收本次 task，避免误伤 close() 后新建的连接
+        let task: UniApp.SocketTask | null = null
+        let failed = false
+        const releaseTask = () => {
+            if (task && socket.value === task) socket.value = null
+        }
 
-            // 消息接收
-            socket.value.onMessage((event) => {
-                try {
-                    const data = JSON.parse(event.data as string) as T
-                    triggerEvent('message', data)
-                    resetHeartbeat() // 收到消息重置心跳
-                } catch (error) {
-                    triggerEvent('error', {
-                        error: '消息解析失败',
-                        code: DeviceCmdCodeEnum.PARSE_ERROR
-                    })
-                }
-            })
-
-            // 连接关闭
-            socket.value.onClose(() => {
+        task = uni.connectSocket({
+            url,
+            // 连接成功与否以 onOpen 为准，success 回调无业务意义
+            fail: (err) => {
+                // 小程序端 WebSocket 并发超上限等情况直接 fail，不会走 onError/onClose
+                console.warn('[ws] connectSocket fail', url, err)
+                failed = true
                 isConnected.value = false
-                cleanup()
-                // 小程序中没有 wasClean 属性, 默认非正常关闭都进行重连
-                if (retryCount.value < maxRetries) {
-                    scheduleReconnect()
-                }
-                triggerEvent('close')
-            })
-
-            // 错误处理
-            socket.value.onError(() => {
-                isConnected.value = false // onError会触发onClose, 这里也设置下
+                releaseTask()
                 triggerEvent('error', {
                     error: '连接失败',
                     code: DeviceCmdCodeEnum.CONNECT_ERROR
                 })
-                // onError 之后会自动 close
+                scheduleReconnect()
+            }
+        })
+        // fail 可能同步触发，此时不能再把已失败的 task 挂上去
+        socket.value = failed ? null : task
+
+        // 连接成功
+        task.onOpen(() => {
+            if (socket.value !== task) return
+            isConnected.value = true
+            retryCount.value = 0
+            startHeartbeat()
+            triggerEvent('open')
+            flushPendingMessages()
+        })
+
+        // 消息接收
+        task.onMessage((event) => {
+            if (socket.value !== task) return
+            try {
+                const data = JSON.parse(event.data as string) as T
+                triggerEvent('message', data)
+                resetHeartbeat() // 收到消息重置心跳
+            } catch (error) {
+                triggerEvent('error', {
+                    error: '消息解析失败',
+                    code: DeviceCmdCodeEnum.PARSE_ERROR
+                })
+            }
+        })
+
+        // 连接关闭
+        task.onClose((res) => {
+            // close() 主动关闭时 socket 已置空，这里是滞后触发的回调，不重连
+            if (socket.value !== task) return
+            console.warn('[ws] onClose', url, res)
+            isConnected.value = false
+            cleanup()
+            releaseTask()
+            // 小程序中没有 wasClean 属性, 默认非正常关闭都进行重连
+            scheduleReconnect()
+            triggerEvent('close')
+        })
+
+        // 错误处理
+        task.onError((err) => {
+            if (socket.value !== task) return
+            console.warn('[ws] onError', url, err)
+            // 部分端（尤其 iOS 握手失败）只触发 onError 不触发 onClose，
+            // 这里直接按断开处理并安排重连，否则死 task 会一直占着 socket，永远连不上
+            isConnected.value = false
+            cleanup()
+            releaseTask()
+            task?.close({})
+            triggerEvent('error', {
+                error: '连接失败',
+                code: DeviceCmdCodeEnum.CONNECT_ERROR
             })
-        }
+            scheduleReconnect()
+        })
     }
 
     // 事件触发器
@@ -101,6 +139,7 @@ export default function useWebSocket<T = unknown>(url: string, options: WebSocke
 
     // 心跳管理
     const startHeartbeat = () => {
+        if (heartbeatTimer) clearInterval(heartbeatTimer)
         heartbeatTimer = setInterval(() => {
             if (isConnected.value) {
                 if (!manualHeartbeat) {
@@ -121,13 +160,13 @@ export default function useWebSocket<T = unknown>(url: string, options: WebSocke
 
     // 重连调度 (指数退避)
     const scheduleReconnect = () => {
+        if (reconnectTimer || socket.value || retryCount.value >= maxRetries) return
         const delay = retryBaseDelay * Math.pow(2, retryCount.value)
         retryCount.value += 1
 
         reconnectTimer = setTimeout(() => {
-            if (retryCount.value <= maxRetries) {
-                connect()
-            }
+            reconnectTimer = null
+            connect()
         }, delay)
     }
 
@@ -139,24 +178,52 @@ export default function useWebSocket<T = unknown>(url: string, options: WebSocke
         reconnectTimer = null
     }
 
-    // 公开方法
-    const send = (data: unknown) => {
-        if (isConnected.value) {
-            socket.value?.send({
-                data: JSON.stringify(data)
-            })
+    const sendNow = (data: unknown) => {
+        socket.value?.send({
+            data: JSON.stringify(data)
+        })
+    }
+
+    const flushPendingMessages = () => {
+        while (isConnected.value && socket.value && pendingMessages.length > 0) {
+            const data = pendingMessages.shift()
+            sendNow(data)
         }
     }
 
-    const close = (code?: number, reason?: string) => {
-        if (socket.value) {
-            socket.value.close({
-                code,
-                reason
-            })
-            cleanup()
-            socket.value = null // 关闭后, 将socket置空, 以便下次可以重新连接
+    // 公开方法
+    const send = (data: unknown) => {
+        if (isConnected.value && socket.value) {
+            sendNow(data)
+            return true
         }
+
+        pendingMessages.push(data)
+        if (!socket.value) {
+            connect()
+        }
+        return false
+    }
+
+    const close = (code?: number, reason?: string) => {
+        cleanup()
+        pendingMessages.length = 0
+        const task = socket.value
+        // 先置空再 close：滞后触发的 onClose 会被当作过期回调忽略，不再触发重连
+        socket.value = null
+        isConnected.value = false
+        retryCount.value = 0
+        task?.close({
+            code,
+            reason
+        })
+    }
+
+    // 手动重连：重置重试计数，保证多次失败后仍可再次尝试
+    const reconnect = () => {
+        if (socket.value) return
+        retryCount.value = 0
+        connect()
     }
 
     const on = <D = unknown>(
@@ -184,6 +251,6 @@ export default function useWebSocket<T = unknown>(url: string, options: WebSocke
         send,
         close,
         on,
-        reconnect: connect
+        reconnect
     }
 }

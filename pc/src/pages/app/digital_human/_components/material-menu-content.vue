@@ -77,6 +77,10 @@ type PanelType = "image" | "video" | "all";
 type MediaType = "image" | "video";
 type Resolution = [number, number];
 type ResolutionRange = [Resolution, Resolution];
+const UNLIMITED_RESOLUTION_RANGE: ResolutionRange = [
+    [0, Number.MAX_SAFE_INTEGER],
+    [0, Number.MAX_SAFE_INTEGER],
+];
 
 type LibraryItem = {
     action: string;
@@ -201,12 +205,12 @@ const getAccept = computed<string>(() => {
 });
 
 const getImageResolution = computed(() => {
-    if (props.ffmpeg) return undefined;
+    if (props.ffmpeg) return UNLIMITED_RESOLUTION_RANGE;
     return (props.imageResolution ?? montageUploadConfig.imageResolution) as ResolutionRange;
 });
 
 const getVideoResolution = computed(() => {
-    if (props.ffmpeg) return undefined;
+    if (props.ffmpeg) return UNLIMITED_RESOLUTION_RANGE;
     return (props.videoResolution ?? montageUploadConfig.videoResolution) as ResolutionRange;
 });
 </script>

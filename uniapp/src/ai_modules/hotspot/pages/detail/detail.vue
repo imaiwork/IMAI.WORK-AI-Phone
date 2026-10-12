@@ -403,6 +403,7 @@
 
 <script setup lang="ts">
 import { getHotspotTaskDetail, retryHotspotTask } from "@/api/hotspot";
+import { ManualPublishSourceEnum } from "@/enums/publishEnums";
 import usePolling from "@/hooks/usePolling";
 import {
     HOTSPOT_STATUS_CLASS,
@@ -554,7 +555,7 @@ const onPublish = () => {
         url: "/ai_modules/device/pages/create_task/create_task",
         params: {
             type: 1,
-            source: "hotspot",
+            source: ManualPublishSourceEnum.HOTSPOT,
             data: JSON.stringify({ id: task.value!.id }),
         },
     });

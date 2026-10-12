@@ -170,10 +170,10 @@ export default defineComponent({
                     const img = new Image();
                     img.onload = () => {
                         const isResolutionValid =
-                            img.height <= imageResolution[0][1] &&
                             img.width <= imageResolution[0][1] &&
-                            img.height >= imageResolution[0][0] &&
-                            img.width >= imageResolution[0][0];
+                            img.width >= imageResolution[0][0] &&
+                            img.height <= imageResolution[1][1] &&
+                            img.height >= imageResolution[1][0];
                         // 判断图片比例是否符合要求
                         const isRatioValid = checkAspectRatio(img.width, img.height);
                         // 判断图片分辨率是否符合要求

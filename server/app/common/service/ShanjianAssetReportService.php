@@ -19,7 +19,7 @@ use think\facade\Log;
  * 上报口径（终态才报）：
  * - 形象：anchor_id 非空；极速克隆(clone_type=1) status IN (6,9)，专业克隆(clone_type=2) status IN (3,9)。
  *   9 为会员冻结态，冻结前已训练成功、资产在上游真实存在，同样绑定。
- * - 音色：model_version=8、voice_id 非空、status IN (1,9)；带重建的公网 audioUrl 供中台跨 key 重克隆。
+ * - 音色：model_version IN (8,15)、voice_id 非空、status IN (1,9)；带重建的公网 audioUrl 供中台跨 key 重克隆。
  * - 极速克隆形象自带的音色（voice_id）额外补报一条音色资产，源音频用形象的 anchor_url——
  *   中台跨 key 冲突按 speakerId 查音色行，缺行则无法重克隆。
  */
@@ -143,7 +143,7 @@ class ShanjianAssetReportService
         $maxVoiceId = $voiceCursor;
         if (count($anchors) < self::BATCH_SIZE) {
             $voices = HumanVoice::where('id', '>', $voiceCursor)
-                ->where('model_version', 8)
+                ->whereIn('model_version', HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS)
                 ->whereIn('status', [1, 9])
                 ->where('voice_id', '<>', '')
                 ->whereNotNull('voice_id')
@@ -251,6 +251,7 @@ class ShanjianAssetReportService
             'asset_type' => 'voice',
             'voice_id' => $voiceId,
             'audio_url' => $audioUrl,
+            'model' => HumanVoice::shanjianTrainModel($row['model_version'] ?? HumanVoice::MODEL_VERSION_SHANJIAN),
         ];
     }
 

@@ -12,9 +12,11 @@ use think\facade\Cache;
 use think\facade\Log;
 use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceTask;
+use app\common\model\sv\SvCrawlingManualTaskRecord;
 use app\common\enum\DeviceEnum;
 use app\common\model\sv\SvPublishSettingDetail;
 use app\common\service\sv\PublishRemarkGuard;
+use app\common\service\sv\PublishTaskCloseService;
 use app\common\service\sv\PublishTaskReconcile;
 use app\common\traits\DeviceTaskTrait;
 use app\common\traits\TaskExceptionTrait;
@@ -914,73 +916,9 @@ class DeviceTaskScheduler extends Command
      */
     private function closePublishTask(SvDeviceTask $task): void
     {
-        $publish = SvPublishSettingDetail::where('id', $task->sub_data_id)->findOrEmpty();
-        $detailStatus = $publish->isEmpty() ? null : (int)$publish->status;
-        $decision = PublishTaskReconcile::decideClose(
-            (string)$task->remark,
-            $detailStatus,
-            $this->getLastPublishLogMessage($task)
-        );
-
-        $now = time();
-        switch ($decision['action']) {
-            case PublishTaskReconcile::CLOSE_BILLING:
-                $task->status = DeviceEnum::TASK_STATUS_FAILED;
-                $task->update_time = $now;
-                $task->save();
-                if (!empty($decision['fail_inflight_detail']) && !$publish->isEmpty()) {
-                    $publish->status = 2;
-                    $publish->remark = (string)$task->remark;
-                    $publish->update_time = $now;
-                    $publish->save();
-                }
-                break;
-            case PublishTaskReconcile::CLOSE_FINISH:
-                $task->status = DeviceEnum::TASK_STATUS_FINISHED;
-                $remark = trim((string)$publish->remark);
-                $task->remark = $remark !== '' ? $remark : PublishRemarkGuard::SUCCESS_REMARK;
-                $task->update_time = $now;
-                $task->save();
-                break;
-            case PublishTaskReconcile::CLOSE_FAIL_DETAIL:
-                $task->status = DeviceEnum::TASK_STATUS_FAILED;
-                $task->remark = (string)$publish->remark;
-                $task->update_time = $now;
-                $task->save();
-                break;
-            case PublishTaskReconcile::CLOSE_SUCCESS_FROM_LOG:
-                if (!$publish->isEmpty()) {
-                    $publish->status = 1;
-                    $publish->remark = PublishRemarkGuard::SUCCESS_REMARK;
-                    $publish->update_time = $now;
-                    $publish->exec_time = $now;
-                    $publish->save();
-                }
-                $task->status = DeviceEnum::TASK_STATUS_FINISHED;
-                $task->remark = PublishRemarkGuard::SUCCESS_REMARK;
-                $task->update_time = $now;
-                $task->save();
-                break;
-            case PublishTaskReconcile::CLOSE_FAIL_INFLIGHT:
-                $remark = $this->getPublishRemark($task);
-                if (!$publish->isEmpty()) {
-                    $publish->status = 2;
-                    $publish->remark = $remark;
-                    $publish->update_time = $now;
-                    $publish->save();
-                }
-                $task->status = DeviceEnum::TASK_STATUS_FAILED;
-                $task->remark = $remark;
-                $task->update_time = $now;
-                $task->save();
-                break;
-            default:
-                $task->status = DeviceEnum::TASK_STATUS_FAILED;
-                $task->remark = $this->getTimeoutRemark($task);
-                $task->update_time = $now;
-                $task->save();
-                break;
-        }
+        PublishTaskCloseService::close($task, function (SvDeviceTask $item): string {
+            return $this->getTimeoutRemark($item);
+        });
     }
 
     private function finalizePublishAccount(SvDeviceTask $task): void
@@ -1017,21 +955,6 @@ class DeviceTaskScheduler extends Command
             'autoType' => $task->auto_type,
         ]);
     }
-
-    private function getLastPublishLogMessage(SvDeviceTask $task): string
-    {
-        $lastMsg = \app\common\model\sv\SvDeviceTaskLog::where('task_id', $task->id)
-            ->where('task_source', $task->source)
-            ->where('device_code', $task->device_code)
-            ->order('id', 'desc')
-            ->limit(1)
-            ->findOrEmpty();
-        if ($lastMsg->isEmpty()) {
-            return '';
-        }
-        return trim((string)$lastMsg->message);
-    }
-
 
     /**
      * 执行接管任务
@@ -1373,7 +1296,7 @@ class DeviceTaskScheduler extends Command
                 'autoType' => $task->auto_type,
             ]);
         });
-        $this->setTaskLog("加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
+        $this->setTaskLog("批量加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
     }
 
 
@@ -1411,21 +1334,31 @@ class DeviceTaskScheduler extends Command
                 'status' => $task->status,
                 'autoType' => $task->auto_type,
             ]);
+        } else {
+            $manualTask = \app\common\model\sv\SvCrawlingManualTask::where('id', $task->sub_task_id)->findOrEmpty();
+            // AI销售加微由 crawling_manual_cron 持续下发，设备调度窗口内不再重跑
+            if (!$manualTask->isEmpty() && (int)($manualTask->add_friend_type ?? 0) === 2) {
+                return;
+            }
+            // 客资线索(AI获客)窗口内重执行：拾取补号后新写入的待加号码
+            if (!$manualTask->isEmpty() && (int)($manualTask->source ?? 0) === 4
+                && SvCrawlingManualTaskRecord::where('task_id', $manualTask->id)->where('status', 4)->count() > 0) {
+                try {
+                    self::cluesAddWechatFriendTask($task, $output, false, function ($result) use ($task) {
+                        if ((int)$result['status'] === 3) {
+                            return;
+                        }
+                        $task->remark = $result['remark'];
+                        $task->update_time = time();
+                        $task->save();
+                        $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
+                    });
+                    $this->setTaskLog("加微任务重执行: ID={$task->id}, 设备={$task->device_code}");
+                } catch (\Throwable $e) {
+                    $this->setTaskLog("加微任务重执行失败 ID: {$task->id} - " . $e->getMessage(), 'error');
+                }
+            }
         }
-        // else {
-        //     if ($this->isDev) {
-        //         $output->writeln("执行加微任务 - 设备: {$task->device_code}");
-        //     }
-        //     // TODO: 实现具体的加好友完成逻辑
-        //     self::cluesAddWechatFriendTask($task, $output, false, function ($result) use ($task) {
-        //         $task->status = $result['status'];
-        //         $task->remark = $result['remark'];
-        //         $task->update_time = time();
-        //         $task->save();
-        //         $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_WORKING);
-        //     });
-        //     $this->setTaskLog("加微任务执行中: ID={$task->id}, 设备={$task->device_code}");
-        // }
     }
 
     /**

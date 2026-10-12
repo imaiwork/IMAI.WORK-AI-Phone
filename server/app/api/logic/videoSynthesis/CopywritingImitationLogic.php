@@ -19,21 +19,21 @@ use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
 use app\common\model\aiPersona\Material as MaterialModel;
 use app\common\model\aiPersona\MaterialUseLog;
 use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
+use app\common\model\file\File;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
-use app\common\model\file\File;
 use app\common\model\sv\CloudSvDevice;
-use app\common\model\sv\SvDevice;
 use app\common\model\sv\SvDeviceViralRecord;
 use app\common\model\sv\SvMediaMaterial;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
-use app\common\service\FileService;
-use app\common\service\OriginalMaterialSpec;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
+use app\common\service\FileService;
 use app\common\service\hotspot\HotspotLog;
 use app\common\service\hotspot\VideoService;
+use app\common\service\OriginalMaterialSpec;
+use app\common\service\square\SquareAssetService;
 use app\common\service\UploadService;
 use think\exception\HttpResponseException;
 use think\facade\Cache;
@@ -416,7 +416,10 @@ class CopywritingImitationLogic extends BasePersonaLogic
 
         if (empty($rewrittenText)) throw new \Exception('仿写文案内容为空');
 
-        $result = self::executeCoreSynthesis($copywritingRecord, $config, $rewrittenText, $title, 1, $forceTaskType);
+        $publishTopic = ShanjianVideoTask::stringifyTopic(
+            $copywritingData['analysis_tags'] ?? $copywritingData['topic_tags'] ?? $copywritingData['tags'] ?? $copywritingData['tag'] ?? ''
+        );
+        $result = self::executeCoreSynthesis($copywritingRecord, $config, $rewrittenText, $title, 1, $forceTaskType, $publishTopic);
         if ($result) {
             self::markCopywritingAsUsed((int)$copywritingRecord->id, '仿写成功');
         }
@@ -425,7 +428,17 @@ class CopywritingImitationLogic extends BasePersonaLogic
             // 素材转码未就绪:不落库失败任务、不标记已使用,让外层 cron 清缓存等下一轮重试
             throw $e;
         } catch (\Throwable $e) {
-            self::recordFailedSynthesisTaskForCopywriting($copywritingRecord, $config, $e->getMessage(), 1, $title, $rewrittenText, $forceTaskType);
+            self::recordFailedSynthesisTaskForCopywriting(
+                $copywritingRecord,
+                $config,
+                $e->getMessage(),
+                1,
+                $title,
+                $rewrittenText,
+                $forceTaskType,
+                false,
+                $publishTopic ?? ''
+            );
             throw $e;
         }
     }
@@ -826,7 +839,8 @@ class CopywritingImitationLogic extends BasePersonaLogic
         string $title = '',
         string $msg = '',
         ?int $taskType = null,
-        bool $keepCopywritingUseState = false
+        bool $keepCopywritingUseState = false,
+        string $publishTopic = ''
     ): void {
         try {
             $device = CloudSvDevice::resolve($copywritingRecord->device_code);
@@ -844,6 +858,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 'msg' => $msg,
                 'is_downgrade' => (int)($copywritingRecord->status == 1),
                 'log_channel' => 'explosionVideoSynthesis',
+                'publish_topic' => $publishTopic,
             ]);
             if (!$keepCopywritingUseState) {
                 self::markCopywritingAsUsed((int)$copywritingRecord->id, '失败任务落库后');
@@ -1012,7 +1027,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
     /**
      * 核心执行流程
      */
-    protected static function executeCoreSynthesis($copywritingRecord, $config, $text, $title, $source, $taskType = null)
+    protected static function executeCoreSynthesis($copywritingRecord, $config, $text, $title, $source, $taskType = null, string $publishTopic = '')
     {
         $deviceCode = $copywritingRecord->device_code;
         $personaId = $copywritingRecord->persona_id;
@@ -1040,13 +1055,13 @@ class CopywritingImitationLogic extends BasePersonaLogic
         // status=1 表示关键词/仿写失败，走 Coze 纯 AI 降级生成
         $isDowngrade = (int)($copywritingRecord->status == 1);
 
-        return self::createImitationVideoTask($device, $persona, $config, $materials, $text, $title, $taskType, $source, $isDowngrade);
+        return self::createImitationVideoTask($device, $persona, $config, $materials, $text, $title, $taskType, $source, $isDowngrade, null, '', $publishTopic);
     }
 
     /**
      * 创建任务逻辑
      */
-    protected static function createImitationVideoTask($device, $persona, $config, $groupedData, $rewrittenText, $title, $taskType, $source, int $isDowngrade = 0, $materialKeywords = null, $execTime = '')
+    protected static function createImitationVideoTask($device, $persona, $config, $groupedData, $rewrittenText, $title, $taskType, $source, int $isDowngrade = 0, $materialKeywords = null, $execTime = '', string $publishTopic = '')
     {
         // 注:转码就绪/分辨率门禁已下沉到 ShanjianVideoTaskLogic::compositeVideoCron 下发闪剪前统一把关。
         // 这里只负责建 task(status=0,创作记录显示"生成中"),转码完成后由 cron 自动下发。
@@ -1060,18 +1075,32 @@ class CopywritingImitationLogic extends BasePersonaLogic
 
         // AI 找素材在原图模式下照常走：抓来的素材只转存不转码，按原图硬规格判定后入库，
         // 不合格的降级给自动适配模式(见 splitGrabbedMaterialsByOriginalSpec)。
-        $willGrabByAi = ShanjianVideoSettingLogic::canUseAiMaterials(
-            (int)$taskType,
-            ShanjianVideoSettingLogic::resolveVisualMaterialSource($config)
-        );
+        $visualSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($config);
+        $willGrabByAi = ShanjianVideoSettingLogic::canUseAiMaterials((int)$taskType, $visualSource);
+        $squareGroupIds = $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
+            ? SquareAssetService::normalizeGroupIds($config->square_group_ids ?? [])
+            : [];
+        $squareGrouped = $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
+            ? SquareAssetService::publicGrouped((int)$userId, (int)($persona->id ?? 0), $squareGroupIds)
+            : ['videos' => [], 'images' => []];
         if ($useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
             && !$willGrabByAi
             && empty($groupedData['videos'])
+            && empty($squareGrouped['videos'])
+            && ShanjianVideoSettingLogic::originalModeRequiresVideo((int)$taskType)
         ) {
             throw new \Exception('人设下没有可用的原始素材');
         }
 
-        if ($willGrabByAi) {
+        if ($visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE) {
+            $selectedMaterials = self::selectMaterialsForLibraryAndSquare(
+                $groupedData['videos'] ?? [],
+                $groupedData['images'] ?? [],
+                (int)$taskType,
+                $deviceCode,
+                $config
+            );
+        } elseif ($willGrabByAi) {
             $selectedMaterials = self::selectMaterialsForTaskTypeAndVisualMaterialSource($groupedData['videos'], $groupedData['images'], $taskType, $deviceCode, $config, $keywordsForMaterial);
         } else {
             $selectedMaterials = self::selectMaterialsForTaskType($groupedData['videos'], $groupedData['images'], $taskType, $deviceCode);
@@ -1081,7 +1110,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $beforeTrim = $selectedMaterials;
         $selectedMaterials = self::trimMaterialsByDuration($selectedMaterials);
         if (empty($selectedMaterials)) throw new \Exception('人设下无可用素材');
-        if ($useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL) {
+        if ($useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+            && ShanjianVideoSettingLogic::originalModeRequiresVideo((int)$taskType)
+        ) {
             $emptyVideoError = ShanjianVideoSettingLogic::originalModeEmptyVideoError($selectedMaterials, $beforeTrim);
             if ($emptyVideoError !== '') {
                 throw new \Exception($emptyVideoError);
@@ -1121,6 +1152,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
             $extradata['material_use_mode'] = $useMode;
             if ($execTime !== '') {
                 $extradata['exec_time'] = json_encode([$execTime], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+            if ($device instanceof CloudSvDevice) {
+                $extradata = ShanjianVideoTask::mergePublishCopy($extradata, '', '', '');
             }
             if (empty($voiceId) && $taskType != 4) throw new \Exception('未绑定有效音色');
 
@@ -1454,6 +1488,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
             $extradata['material_use_mode'] = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode(
                 (int)($persona->id ?? 0)
             );
+            if ($device instanceof CloudSvDevice) {
+                $extradata = ShanjianVideoTask::mergePublishCopy($extradata, '', '', '');
+            }
 
             $settingName = $namePrefix . '-' . mb_substr($title, 0, 8) . '-' . date('YmdHis') . '-' . $typeName;
             $setting = ShanjianVideoSetting::create([
@@ -1765,7 +1802,11 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 $res['images'][] = $item;
             }
         }
-        return $res;
+        return SquareAssetService::appendLibraryMaterials(
+            $res,
+            (int)($device->user_id ?? 0),
+            (int)($device->persona_id ?? 0)
+        );
     }
 
     /**
@@ -1773,7 +1814,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
      */
     public static function resolveSystemMusicUrl(): string
     {
-        return rtrim((string)config('app.app_host'), '/') . '/static/audio/music/' . random_int(1, 20) . '.mp3';
+        return \app\common\service\SystemMusicService::randomUrl();
     }
 
     /**
@@ -1814,7 +1855,14 @@ class CopywritingImitationLogic extends BasePersonaLogic
             // 原图模式原先在这里返回空串（成片无声），但音乐是独立音轨，
             // 不涉及画面的「不压缩不适配」，为它整条静音得不偿失
         }
-        return self::resolveSystemMusicUrl();
+        $pinned = '';
+        if (is_object($config)) {
+            $pinned = (string)($config->system_music_id ?? '');
+        } elseif (is_array($config)) {
+            $pinned = (string)($config['system_music_id'] ?? '');
+        }
+        // 指定曲目下架后自动出片退回随机，不中断任务
+        return \app\common\service\SystemMusicService::resolve($pinned, false);
     }
 
     /**
@@ -1827,7 +1875,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 return true;
             }
         }
-        return in_array((int)$visualMaterialSource, [2, 3], true);
+        return in_array((int)$visualMaterialSource, [2, 3, 4], true);
     }
 
     /**
@@ -1835,10 +1883,24 @@ class CopywritingImitationLogic extends BasePersonaLogic
      */
     protected static function assertGroupedMaterialsAvailable(array $groupedData, int $personaId, array $videoTypes, int $visualMaterialSource): void
     {
-        if (self::requiresLibraryMaterials($videoTypes, $visualMaterialSource)
-            && empty($groupedData['videos']) && empty($groupedData['images'])) {
-            throw new \Exception('-绑定的人设' . AiPersona::formatLabel(null, $personaId) . '下没有可用的素材');
+        if (!self::requiresLibraryMaterials($videoTypes, $visualMaterialSource)) {
+            return;
         }
+        if (!empty($groupedData['videos']) || !empty($groupedData['images'])) {
+            return;
+        }
+        if ((int)$visualMaterialSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE) {
+            $config = AiPersonaSynthesisConfig::where('persona_id', $personaId)->findOrEmpty();
+            $public = SquareAssetService::publicLibraryRows(
+                (int)($config->user_id ?? 0),
+                $personaId,
+                SquareAssetService::normalizeGroupIds($config->square_group_ids ?? [])
+            );
+            if ($public !== []) {
+                return;
+            }
+        }
+        throw new \Exception('-绑定的人设' . AiPersona::formatLabel(null, $personaId) . '下没有可用的素材');
     }
 
     protected static function selectMaterialsForTaskType($videos, $images, $taskType, $deviceCode)
@@ -1869,6 +1931,38 @@ class CopywritingImitationLogic extends BasePersonaLogic
         }
 
         $selected = self::trimMaterialsByDuration(array_merge($selectedVideos, $selectedImages));
+        foreach ($selected as $s) {
+            if (isset($s['id'])) {
+                Cache::store('material_redis')->inc('material_' . $s['id'] . '_device_' . $deviceCode);
+            }
+        }
+        return $selected;
+    }
+
+    /**
+     * 素材库+广场：自有与广场对半取，不够再用另一边补。
+     * 广场取上架分组，不要求客户先手动加入引用。
+     */
+    public static function selectMaterialsForLibraryAndSquare($localVideos, $localImages, $taskType, $deviceCode, $config): array
+    {
+        $rules = [
+            1 => ['v_min' => 2, 'v_max' => 3, 'i_min' => 2, 'i_max' => 3],
+            3 => ['v_min' => 8, 'v_max' => 8, 'i_min' => 2, 'i_max' => 3],
+            4 => ['v_min' => 5, 'v_max' => 5, 'i_min' => 2, 'i_max' => 3],
+            2 => ['v_min' => 4, 'v_max' => 4, 'i_min' => 2, 'i_max' => 2],
+        ];
+        $rule = $rules[$taskType] ?? $rules[3];
+        $needV = rand($rule['v_min'], $rule['v_max']);
+        $needI = rand($rule['i_min'], $rule['i_max']);
+        $selected = SquareAssetService::selectLibraryAndSquare(
+            ['videos' => is_array($localVideos) ? $localVideos : [], 'images' => is_array($localImages) ? $localImages : []],
+            (int)($config->user_id ?? 0),
+            (int)($config->persona_id ?? 0),
+            SquareAssetService::normalizeGroupIds($config->square_group_ids ?? []),
+            $needV,
+            $needI
+        );
+        $selected = self::trimMaterialsByDuration($selected);
         foreach ($selected as $s) {
             if (isset($s['id'])) {
                 Cache::store('material_redis')->inc('material_' . $s['id'] . '_device_' . $deviceCode);

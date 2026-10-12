@@ -3,6 +3,7 @@
 namespace app\adminapi\controller;
 
 
+use app\common\enum\FileEnum;
 use app\common\service\UploadService;
 use Exception;
 use PhpOffice\PhpWord\Shared\ZipArchive;
@@ -25,7 +26,11 @@ class UploadController extends BaseAdminController
     {
         try {
             $cid = (int)$this->request->post('cid', 0);
-            $result = UploadService::image($cid);
+            $ffmpeg = (int)$this->request->post('ffmpeg/d', 0);
+            if (!in_array($ffmpeg, [0, 1], true)) {
+                $ffmpeg = 0;
+            }
+            $result = UploadService::image($cid, 0, FileEnum::SOURCE_ADMIN, 'uploads/images', $ffmpeg);
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());
@@ -42,7 +47,23 @@ class UploadController extends BaseAdminController
     {
         try {
             $cid = (int)$this->request->post('cid', 0);
-            $result = UploadService::video($cid);
+            $generateThumbnail = $this->request->post('generate_thumbnail/b', false);
+            $fetchVideoInfo = $this->request->post('fetch_video_info/b', true);
+            $ffmpeg = (int)$this->request->post('ffmpeg/d', 0);
+            if (!in_array($ffmpeg, [0, 1], true)) {
+                $ffmpeg = 0;
+            }
+            $result = UploadService::video(
+                $cid,
+                0,
+                FileEnum::SOURCE_ADMIN,
+                'uploads/video',
+                $ffmpeg,
+                [],
+                $generateThumbnail,
+                [],
+                $fetchVideoInfo
+            );
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
             return $this->fail($e->getMessage());

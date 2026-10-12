@@ -79,6 +79,14 @@ class AutoDeviceFristCreateCron extends Command
                 } else {
                     Log::channel('auto')->write($device->device_code . ' global_option.auto_clues.options.sph_clues=0，跳过精准线索任务', 'create');
                 }
+                if (AiPersonaOptionService::isEnabled($options, 'auto_clues.options.dy_search')) {
+                    $deviceSlotResult = SvDeviceTaskExistenceService::mergeSlotResult(
+                        $deviceSlotResult,
+                        $this->normalizeSlotResult(\app\api\logic\device\DySearchTaskLogic::autoDySearchTaskCron($device))
+                    );
+                } else {
+                    Log::channel('auto')->write($device->device_code . ' global_option.auto_clues.options.dy_search=0，跳过抖音搜寻获客任务', 'create');
+                }
                 $deviceSlotResult = SvDeviceTaskExistenceService::mergeSlotResult(
                     $deviceSlotResult,
                     $this->normalizeSlotResult(\app\api\logic\aiPersona\ActiveLogic::autoActiveTaskCron($device))

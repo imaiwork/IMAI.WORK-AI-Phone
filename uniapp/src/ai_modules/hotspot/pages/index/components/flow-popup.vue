@@ -74,7 +74,7 @@
                                             ">
                                             <view
                                                 class="w-[32rpx] h-[32rpx] rounded-[8rpx] bg-[#EFF6FF] flex items-center justify-center flex-shrink-0 mt-[2rpx]">
-                                                <text class="text-[20rpx] font-bold text-primary">{{ pi + 1 }}</text>
+                                                <text class="text-[20rpx] font-bold text-primary">{{ Number(pi) + 1 }}</text>
                                             </view>
                                             <view class="flex-1 min-w-0">
                                                 <text class="block text-[26rpx] font-semibold text-[#111827]">
@@ -215,9 +215,7 @@
                                 <view class="step-no" :class="research ? 'bg-primary' : 'bg-[#D1D5DB]'">
                                     <text class="text-white">2</text>
                                 </view>
-                                <text class="text-[29rpx] font-bold text-[#111827]">
-                                    {{ isManualMode ? "内容口吻" : "选择人设" }}
-                                </text>
+                                <text class="text-[29rpx] font-bold text-[#111827]">选择人设</text>
                             </view>
                             <view v-if="!research" class="flow-card">
                                 <text class="text-[25rpx] text-[#D1D5DB]">搜索完成后可选</text>
@@ -697,7 +695,7 @@
                                             v-if="opt.materials.length"
                                             class="text-[18rpx] font-semibold"
                                             :class="
-                                                selectedMaterialDuration > MATERIAL_DURATION_LIMIT
+                                                selectedMaterialBudget > MATERIAL_DURATION_LIMIT
                                                     ? 'text-[#EF4444]'
                                                     : 'text-primary'
                                             ">
@@ -884,6 +882,18 @@
                                             </text>
                                         </view>
                                     </view>
+                                    <view
+                                        v-if="opt.music_source === HotspotMusicSource.PICK"
+                                        class="flex items-center gap-[14rpx] mt-[14rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] bg-[#F9FAFB]">
+                                        <text
+                                            class="flex-1 min-w-0 text-[22rpx] line-clamp-1"
+                                            :class="opt.system_music_id ? 'text-[#374151]' : 'text-[#9CA3AF]'">
+                                            {{ opt.music_name || "还没有选择系统音乐" }}
+                                        </text>
+                                        <text class="flex-shrink-0 text-[22rpx] text-primary font-semibold" @click="showSystemMusic = true">
+                                            {{ opt.system_music_id ? "重选" : "选择" }}
+                                        </text>
+                                    </view>
                                     <template v-if="opt.music_source === HotspotMusicSource.UPLOAD">
                                         <view
                                             class="flex items-center gap-[14rpx] mt-[14rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] bg-[#F9FAFB]">
@@ -986,7 +996,7 @@
 
                             <!-- 步骤 4 口播文案 -->
                             <view class="flex items-center gap-[12rpx] mt-[32rpx] mb-[16rpx]">
-                                <view class="step-no" :class="script ? 'bg-primary' : 'bg-[#D1D5DB]'">
+                                <view class="step-no" :class="showScript ? 'bg-primary' : 'bg-[#D1D5DB]'">
                                     <text class="text-white">4</text>
                                 </view>
                                 <text class="text-[29rpx] font-bold text-[#111827]">口播文案</text>
@@ -1005,7 +1015,7 @@
                                     </text>
                                 </view>
                             </view>
-                            <view v-else-if="!script" class="flow-card">
+                            <view v-else-if="!showScript" class="flow-card">
                                 <text class="text-[25rpx] text-[#D1D5DB]">确认设置后点下方按钮生成</text>
                             </view>
                             <view v-else class="flow-card">
@@ -1052,7 +1062,7 @@
                                         :key="si"
                                         class="flex gap-[14rpx] py-[6rpx]">
                                         <text class="text-[20rpx] text-[#D1D5DB] font-bold flex-shrink-0 mt-[2rpx]">
-                                            {{ si + 1 }}
+                                            {{ Number(si) + 1 }}
                                         </text>
                                         <text class="flex-1 text-[24rpx] text-[#6B7280] leading-relaxed break-all">
                                             {{ shot }}
@@ -1064,26 +1074,30 @@
                     </scroll-view>
                 </view>
 
-                <!-- 底部主按钮 -->
+                <!-- 底部：搜索完成后可入库；主按钮继续走分析/文案/出片 -->
                 <view
-                    class="px-[32rpx] pt-[16rpx] pb-[calc(20rpx+env(safe-area-inset-bottom))] bg-white border-[0] border-t-[2rpx] border-solid border-[#F3F4F6]">
-                    <button
-                        class="plain-btn w-full py-[24rpx] rounded-full flex items-center justify-center gap-[16rpx]"
+                    class="px-[32rpx] pt-[12rpx] pb-[calc(16rpx+env(safe-area-inset-bottom))] bg-white border-[0] border-t-[2rpx] border-solid border-[#F3F4F6] flex items-center gap-[16rpx]">
+                    <view
+                        v-if="showStockBtn"
+                        class="shrink-0 h-[72rpx] px-[24rpx] rounded-full bg-white border-[2rpx] border-solid border-[#E5E7EB] flex items-center justify-center gap-[8rpx]"
+                        :class="stockBtnDisabled ? 'opacity-50' : 'active:opacity-80'"
+                        @click="handleStock">
+                        <image :src="ArchiveRestoreIcon" mode="aspectFit" class="w-[28rpx] h-[28rpx]" />
+                        <text class="text-[24rpx] font-bold text-[#4B5563]">{{ stockBtnText }}</text>
+                    </view>
+                    <view
+                        class="flow-cta grow min-w-0"
                         :class="mainBtn.disabled || mainBtn.gate ? 'bg-[#C3D4EE]' : 'cta-gradient'"
-                        :disabled="mainBtn.disabled"
                         @click="handleMainAction">
                         <text
-                            class="text-[30rpx] font-semibold"
+                            class="flow-cta-text"
                             :class="mainBtn.disabled || mainBtn.gate ? 'text-[#5C7299]' : 'text-white'">
                             {{ mainBtn.text }}
                         </text>
-                        <view
-                            v-if="mainBtn.cost"
-                            class="rounded-full px-[18rpx] py-[4rpx]"
-                            style="background: rgba(255, 255, 255, 0.2)">
-                            <text class="text-xs text-white">{{ mainBtn.cost }}</text>
+                        <view v-if="mainBtn.cost" class="flow-cta-cost">
+                            <text class="text-[20rpx] leading-none text-white">{{ mainBtn.cost }}</text>
                         </view>
-                    </button>
+                    </view>
                 </view>
             </view>
         </template>
@@ -1099,6 +1113,7 @@
         :video-url="previewTemplate?.demo_url || ''"
         :poster="previewTemplate?.cover_url || ''"
         @confirm="pickPreviewedTemplate" />
+    <system-music-sheet v-model="showSystemMusic" :selected-id="opt.system_music_id" @confirm="onSystemMusic" />
 </template>
 
 <script setup lang="ts">
@@ -1110,6 +1125,8 @@ import {
     hotspotResearch,
     hotspotScript,
     addHotspotTask,
+    addHotspotStock,
+    getHotspotStockDetail,
     getHotspotInsight,
     getHotspotLastFlow,
 } from "@/api/hotspot";
@@ -1126,10 +1143,19 @@ import {
     platformLabel,
     type HotspotOptionsData,
 } from "@/ai_modules/hotspot/enums";
-import { montageConfig } from "@/enums/montageEnums";
+import {
+    FLOW_CACHE_KEY,
+    FLOW_CACHE_LIMIT,
+    flowCacheKey,
+    readFlowCacheAll,
+} from "@/ai_modules/hotspot/utils/flowCache";
+import { montageConfig, calcMaterialDurationBudget } from "@/enums/montageEnums";
 import useUpload from "@/hooks/useUpload";
+import SystemMusicSheet from "@/components/system-music-sheet/system-music-sheet.vue";
+import { useLockFn } from "@/hooks/useLockFn";
 import IconDigitalBlue from "@/ai_modules/hotspot/static/icons/video_digital_blue.svg";
 import IconClipsBlue from "@/ai_modules/hotspot/static/icons/video_clips_blue.svg";
+import ArchiveRestoreIcon from "@/ai_modules/hotspot/static/icons/archive-restore-gray.svg";
 
 interface HotTopic {
     title: string;
@@ -1141,6 +1167,7 @@ interface HotTopic {
     rank_diff?: number;
     /** 后端按分析记录或已建任务标记，已分析的热点可从服务端还原上次现场 */
     analyzed?: boolean;
+    analysis_id?: number;
 }
 
 const props = defineProps<{
@@ -1157,18 +1184,13 @@ const emit = defineEmits<{
     (e: "analyzed", topic: HotTopic): void;
 }>();
 
+const emitAnalyzed = () => {
+    if (props.topic) emit("analyzed", props.topic);
+};
+
 /** 分析记录持久缓存：点开过的热点把搜索/洞察/分析/设置/文案整体存下来，
  *  再进直接还原到上次停留步骤（跨页面、跨启动有效），不重跑收费的搜索/分析 */
-const cacheKey = (topic: HotTopic | null) => (topic ? `${topic.platform}|${topic.title}` : "");
-
-const readFlowCacheAll = (): Record<string, any> => {
-    try {
-        const all = uni.getStorageSync(FLOW_CACHE_KEY);
-        return all && typeof all === "object" ? all : {};
-    } catch {
-        return {};
-    }
-};
+const cacheKey = (topic: HotTopic | null) => (topic ? flowCacheKey(topic.platform, topic.title) : "");
 
 /** 搜索完成后才值得存；各步骤成功与关闭弹窗时调用，LRU 保留最近 N 条 */
 const saveFlowSnapshot = () => {
@@ -1192,12 +1214,15 @@ const saveFlowSnapshot = () => {
     }
     try {
         uni.setStorageSync(FLOW_CACHE_KEY, all);
+        // 缓存落盘后才点亮热榜，避免当前屏已分析、刷新后又灭
+        emitAnalyzed();
     } catch {
         // 存储超限：只保留当前一条重试，再失败放弃缓存
         try {
             uni.setStorageSync(FLOW_CACHE_KEY, { [key]: all[key] });
+            emitAnalyzed();
         } catch {
-            /* 放弃缓存，不影响主流程 */
+            /* 放弃缓存，不改热榜状态 */
         }
     }
 };
@@ -1268,9 +1293,12 @@ const restoreFlowFromCache = (cached: Record<string, any>) => {
                 music_url: String(cached.opt.music_url || ""),
                 music_source: Number(cached.opt.music_source) || HotspotMusicSource.SYSTEM,
                 music_name: String(cached.opt.music_name || ""),
+                system_music_id: String(cached.opt.system_music_id || ""),
             });
         }
     });
+    // 高级设置仍置灰时，回放带回来的口播不能留着，先清再决定是否展开
+    if (!stepReady.value) clearOralScript();
     fromCache.value = true;
     cachedAt.value = Number(cached.savedAt || 0);
     // 还原到第三步（已分析、未生成文案）时同样默认展开高级设置
@@ -1281,6 +1309,8 @@ const restoreFlowFromCache = (cached: Record<string, any>) => {
     } else if (personaId.value) {
         loadPersonaAssets(personaId.value, true);
     }
+    emitAnalyzed();
+    if (!stepReady.value) saveFlowSnapshot();
 };
 
 const formatCachedAt = (ts: number) => {
@@ -1293,17 +1323,36 @@ const formatCachedAt = (ts: number) => {
 const asPlainObject = (value: any): Record<string, any> | null =>
     value && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length ? value : null;
 
-/** 本地缓存 miss 时，从服务端最近一次任务还原完整现场（不重跑收费的搜索/分析），并回写本地缓存 */
+/** 本地缓存 miss 时，从服务端最近一次任务/入库现场还原（不重跑收费的搜索/分析），并回写本地缓存 */
+const toResearchPoints = (points: unknown): { label: string; detail: string }[] => {
+    if (!Array.isArray(points)) return [];
+    return points
+        .map((item) => {
+            if (typeof item === "string") {
+                const text = item.trim();
+                return text ? { label: text, detail: "" } : null;
+            }
+            if (!item || typeof item !== "object") return null;
+            const row = item as { label?: string; detail?: string };
+            const label = String(row.label || "").trim();
+            const detail = String(row.detail || "").trim();
+            if (!label && !detail) return null;
+            return { label: label || detail, detail: label ? detail : "" };
+        })
+        .filter((item): item is { label: string; detail: string } => item !== null);
+};
+
 const restoreFlowFromServer = (data: Record<string, any>): boolean => {
-    const corePoints = Array.isArray(data.core_points) ? data.core_points : [];
+    const corePoints = toResearchPoints(data.core_points);
     const scriptText = String(data.script || "");
-    if (!corePoints.length && !scriptText) return false;
+    const summary = String(data.summary || "");
+    if (!corePoints.length && !scriptText && !summary) return false;
 
     const options = asPlainObject(data.options);
     withScriptResetSuppressed(() => {
         research.value = {
             topic: data.topic || props.topic?.title || "",
-            summary: "",
+            summary,
             core_points: corePoints,
             citations: Array.isArray(data.citations) ? data.citations : [],
         };
@@ -1322,6 +1371,7 @@ const restoreFlowFromServer = (data: Record<string, any>): boolean => {
                 music_url: String(options.music_url || ""),
                 music_source: Number(options.music_source) || HotspotMusicSource.SYSTEM,
                 music_name: String(options.music_name || ""),
+                system_music_id: String(options.system_music_id || ""),
             });
         }
         if (scriptText) {
@@ -1336,6 +1386,8 @@ const restoreFlowFromServer = (data: Record<string, any>): boolean => {
             syncedCta = String(options?.cta || "").trim();
         }
     });
+    // 搜索和分析照常还原；置灰时不把接口口播留在第 4 步，且必须赶在落缓存之前清掉
+    if (!stepReady.value) clearOralScript();
     fromCache.value = true;
     const createdTs = Date.parse(String(data.created_at || "").replace(/-/g, "/"));
     cachedAt.value = Number.isFinite(createdTs) ? createdTs : 0;
@@ -1346,6 +1398,7 @@ const restoreFlowFromServer = (data: Record<string, any>): boolean => {
         loadPersonaAssets(personaId.value, true);
     }
     saveFlowSnapshot();
+    emitAnalyzed();
     return true;
 };
 
@@ -1355,10 +1408,6 @@ const show = computed({
 });
 
 const CHARS_PER_SEC = 4.2;
-
-/** 分析记录本地缓存：点开过的热点把搜索/洞察/分析/设置/文案整体存下来，再进直接还原不重跑 */
-const FLOW_CACHE_KEY = "hotspot_flow_cache_v1";
-const FLOW_CACHE_LIMIT = 15;
 
 const research = ref<Record<string, any> | null>(null);
 const researchErr = ref("");
@@ -1376,6 +1425,7 @@ const editedScript = ref("");
 const creating = ref(false);
 const fromCache = ref(false);
 const cachedAt = ref(0);
+const stockExists = ref(false);
 
 const MATERIAL_PAGE_SIZE = 30;
 
@@ -1422,6 +1472,7 @@ const opt = reactive({
     // 两种状态回到页面时长得一模一样，曲名也会丢
     music_source: HotspotMusicSource.SYSTEM as number,
     music_name: "",
+    system_music_id: "",
     materials: [] as number[],
 });
 
@@ -1569,13 +1620,34 @@ const { uploadMaterialList, uploadAndProcessFiles } = useUpload({
         saveFlowSnapshot();
     },
 });
+const showSystemMusic = ref(false);
 const pickMusicSource = (val: number) => {
-    if (opt.music_source === val) return;
+    if (opt.music_source === val && val !== HotspotMusicSource.PICK) return;
     opt.music_source = val;
-    // 切回系统随机就丢弃已传的曲子，避免提交时两个状态打架
     if (val === HotspotMusicSource.SYSTEM) {
         opt.music_url = "";
         opt.music_name = "";
+        opt.system_music_id = "";
+    } else if (val === HotspotMusicSource.UPLOAD) {
+        opt.system_music_id = "";
+        if (!opt.music_url) opt.music_name = "";
+    } else if (val === HotspotMusicSource.PICK) {
+        opt.music_url = "";
+        if (!opt.system_music_id) opt.music_name = "";
+        showSystemMusic.value = true;
+    }
+    saveFlowSnapshot();
+};
+const onSystemMusic = (value: { id: string; name: string }) => {
+    if (!value.id) {
+        opt.music_source = HotspotMusicSource.SYSTEM;
+        opt.system_music_id = "";
+        opt.music_name = "";
+    } else {
+        opt.music_source = HotspotMusicSource.PICK;
+        opt.system_music_id = value.id;
+        opt.music_name = value.name;
+        opt.music_url = "";
     }
     saveFlowSnapshot();
 };
@@ -1592,14 +1664,28 @@ const syncMusicSourceFromOpt = () => {
         if (!opt.music_name) opt.music_name = "已上传音乐";
         return;
     }
+    if (opt.system_music_id || opt.music_source === HotspotMusicSource.PICK) {
+        opt.music_source = HotspotMusicSource.PICK;
+        opt.music_url = "";
+        return;
+    }
     if (opt.music_source !== HotspotMusicSource.UPLOAD) {
         opt.music_source = HotspotMusicSource.SYSTEM;
         opt.music_name = "";
+        opt.system_music_id = "";
     }
 };
 
 /** 契合分析只属于人设模式；不选人设时第 3 步只等搜索完成即可配置 */
 const stepReady = computed(() => (isManualMode.value ? !!research.value : !!analysis.value));
+/** 第 3 步可配置且已有文案时才展示口播；置灰时文案已被清空 */
+const showScript = computed(() => stepReady.value && !!script.value);
+/** 高级设置置灰时口播不保留。已经是空的也再赋一次，避免按「有没有字」漏清 */
+const clearOralScript = () => {
+    script.value = null;
+    editedScript.value = "";
+    syncedCta = "";
+};
 
 const videoTypeOptions = computed(() => [
     {
@@ -1740,10 +1826,12 @@ const resetFlow = () => {
         music_url: "",
         music_source: HotspotMusicSource.SYSTEM,
         music_name: "",
+        system_music_id: "",
         materials: [],
     });
     clipTemplateMap.value = {};
     syncMusicSourceFromOpt();
+    stockExists.value = false;
 };
 
 const runResearch = async () => {
@@ -1821,6 +1909,7 @@ const switchPersonaMode = (mode: number) => {
     opt.music_url = "";
     opt.music_source = HotspotMusicSource.SYSTEM;
     opt.music_name = "";
+    opt.system_music_id = "";
     opt.materials = [];
     syncMusicSourceFromOpt();
     if (mode === HotspotPersonaMode.MANUAL) {
@@ -1919,6 +2008,8 @@ const pickPersona = async (id: number) => {
     script.value = null;
     scriptErr.value = "";
     scriptBusy.value = false; // 在途的旧人设文案请求响应会被快照守卫丢弃，这里复位加载态
+    editedScript.value = "";
+    syncedCta = "";
     analyzing.value = true;
     loadPersonaAssets(id);
     try {
@@ -1937,7 +2028,7 @@ const pickPersona = async (id: number) => {
         // 分析完成即进入第三步，高级设置默认展开让用户直接配置必填项
         showAdv.value = true;
         saveFlowSnapshot();
-        if (props.topic) emit("analyzed", props.topic);
+        emitAnalyzed();
     } catch (error: any) {
         if (token !== flowToken || personaId.value !== id) return;
         analyzeErr.value = String(error?.message || error || "结合分析失败");
@@ -2065,9 +2156,20 @@ const materialSeconds = (id: number): number => {
  *  切回人设素材原样恢复：手滑切一下来源不该让用户重挑一遍素材 */
 const submittedMaterials = computed(() => (opt.material_mode === "ai" ? [] : opt.materials));
 
-/** 已选素材总时长（秒） */
+/** 已选素材总时长（秒）—— 展示用，保持素材库原值 */
 const selectedMaterialDuration = computed(() =>
     submittedMaterials.value.reduce((total, id) => total + materialSeconds(id), 0),
+);
+
+/** 校验口径：视频补一秒截断误差（素材库 duration 是整秒），与后端同一口径 */
+const materialBudgetSeconds = (id: number): number => {
+    const material = materialList.value.find((item) => item.id === id);
+    if (!material) return 0;
+    return calcMaterialDurationBudget(material.material_type !== 1, material.duration);
+};
+
+const selectedMaterialBudget = computed(() =>
+    submittedMaterials.value.reduce((total, id) => total + materialBudgetSeconds(id), 0),
 );
 
 const toggleMaterial = (id: number) => {
@@ -2076,7 +2178,7 @@ const toggleMaterial = (id: number) => {
         opt.materials.splice(index, 1);
         return;
     }
-    if (selectedMaterialDuration.value + materialSeconds(id) > MATERIAL_DURATION_LIMIT) {
+    if (selectedMaterialBudget.value + materialBudgetSeconds(id) > MATERIAL_DURATION_LIMIT) {
         uni.$u.toast(`素材总时长不能超过${montageConfig.materialTotalDuration}分钟，无法生成视频`);
         return;
     }
@@ -2100,9 +2202,11 @@ const buildOptions = () => ({
     speech_rate: opt.speech_rate,
     // 剪辑模板与自选背景音乐只在「不选人设」下有效，人设模式跟随人设合成配置
     clip_template_id: isManualMode.value ? opt.clip_template_id : "",
-    music_url: isManualMode.value ? opt.music_url : "",
+    music_url: isManualMode.value && opt.music_source === HotspotMusicSource.UPLOAD ? opt.music_url : "",
     music_source: isManualMode.value ? opt.music_source : HotspotMusicSource.SYSTEM,
     music_name: isManualMode.value ? opt.music_name : "",
+    system_music_id:
+        isManualMode.value && opt.music_source === HotspotMusicSource.PICK ? opt.system_music_id : "",
     materials: submittedMaterials.value,
 });
 
@@ -2181,6 +2285,9 @@ const videoGate = computed(() => {
         if (opt.music_source === HotspotMusicSource.UPLOAD && !opt.music_url) {
             return "请先上传背景音乐";
         }
+        if (opt.music_source === HotspotMusicSource.PICK && !opt.system_music_id) {
+            return "请先选择一首系统音乐，或改回系统随机";
+        }
         return "";
     }
     if (opt.video_type === HotspotVideoType.DIGITAL && !opt.avatar_id && !opt.avatar) {
@@ -2190,7 +2297,7 @@ const videoGate = computed(() => {
         return opt.material_mode === "ai_persona" ? "「AI+人设素材」需选择人设素材" : "纯人设素材需选择混剪素材";
     }
     // 兜底：缓存还原等路径带入的超限组合（正常选择在 toggleMaterial 已拦截）
-    if (selectedMaterialDuration.value > MATERIAL_DURATION_LIMIT) {
+    if (selectedMaterialBudget.value > MATERIAL_DURATION_LIMIT) {
         return `素材总时长不能超过${montageConfig.materialTotalDuration}分钟`;
     }
     return "";
@@ -2202,16 +2309,128 @@ const costBadge = computed(() => {
     return `消耗${Number(cost.score).toFixed(2)}${cost.unit || "算力/秒"}`;
 });
 
+const PERSONA_REQUIRED_HINT = "请先选择人设";
+const STOCK_PERSONA_REQUIRED_HINT = "请选择人设";
+const STOCK_ID_NONE = 0;
+const STOCK_ACTION_ADD = "入库";
+const STOCK_ACTION_UPDATE = "更新入库";
+const STOCK_MSG_ADD = "入库成功";
+const STOCK_MSG_UPDATE = "更新入库成功";
+
+const showStockBtn = computed(() => !isManualMode.value && !!research.value && !researchErr.value);
+let stockQueryToken = 0;
+
+const queryStockDetail = async () => {
+    const topic = props.topic;
+    if (!props.modelValue || !topic) {
+        stockExists.value = false;
+        return;
+    }
+    const token = ++stockQueryToken;
+    try {
+        const res = await getHotspotStockDetail({
+            topic: topic.title,
+            platform: topic.platform,
+            persona_id: Number(personaId.value) || STOCK_ID_NONE,
+        });
+        if (token !== stockQueryToken) return;
+        stockExists.value = Boolean(res?.found);
+    } catch {
+        if (token !== stockQueryToken) return;
+        stockExists.value = false;
+    }
+};
+
+const toCorePointTexts = (points: unknown): string[] => {
+    if (!Array.isArray(points)) return [];
+    return points
+        .map((item) => {
+            if (typeof item === "string") return item.trim();
+            if (!item || typeof item !== "object") return "";
+            const row = item as { label?: string; detail?: string };
+            const label = String(row.label || "").trim();
+            const detail = String(row.detail || "").trim();
+            if (label && detail) return `${label}：${detail}`;
+            return label || detail;
+        })
+        .filter(Boolean);
+};
+
+const buildStockAnalysis = (): Record<string, any> => {
+    const src = analysis.value;
+    if (!src) return {};
+    return {
+        fit_score: Number(src.fit_score) || 0,
+        hooks: Array.isArray(src.hooks) ? src.hooks : [],
+        risks: Array.isArray(src.risks) ? src.risks : [],
+        recommended_goal: String(src.recommended_goal || opt.goal || ""),
+        recommended_direction: String(src.recommended_direction || opt.direction || ""),
+    };
+};
+
+const buildStockPayload = () => {
+    const topic = props.topic;
+    const payload: Record<string, any> = {
+        persona_id: Number(personaId.value) || STOCK_ID_NONE,
+        topic: topic?.title || "",
+        platform: topic?.platform || "",
+        analysis_id: STOCK_ID_NONE,
+    };
+    // 口播区未展示时 editedScript 可能还是上一个人设的草稿，入库和更新入库都不提交
+    const scriptText = script.value
+        ? editedScript.value.trim() || String(script.value.script || "").trim()
+        : "";
+    if (!scriptText) {
+        payload.title = "";
+        payload.script = "";
+        payload.summary = String(research.value?.summary || "");
+        payload.core_points = toCorePointTexts(research.value?.core_points);
+        payload.analysis = buildStockAnalysis();
+        return payload;
+    }
+    payload.creation_id = STOCK_ID_NONE;
+    payload.title = String(script.value?.title || topic?.title || "");
+    payload.script = scriptText;
+    payload.summary = String(research.value?.summary || "");
+    payload.core_points = toCorePointTexts(research.value?.core_points);
+    payload.analysis = buildStockAnalysis();
+    return payload;
+};
+
+const { lockFn: handleStock, isLock: stocking } = useLockFn(async () => {
+    if (!showStockBtn.value || !props.topic || analyzing.value) return;
+    if (!Number(personaId.value)) {
+        uni.$u.toast(STOCK_PERSONA_REQUIRED_HINT);
+        return;
+    }
+    try {
+        const res = await addHotspotStock(buildStockPayload());
+        stockExists.value = true;
+        emitAnalyzed();
+        uni.$u.toast(res?.updated ? STOCK_MSG_UPDATE : STOCK_MSG_ADD);
+    } catch (error: any) {
+        uni.$u.toast(error?.message || error || "入库失败");
+    }
+});
+
+const stockBtnText = computed(() => {
+    const label = stockExists.value ? STOCK_ACTION_UPDATE : STOCK_ACTION_ADD;
+    return stocking.value ? `${label}中…` : label;
+});
+
+/** 热点分析进行中时禁止入库/更新，避免把未完成的分析结果写进热点库 */
+const stockBtnDisabled = computed(() => analyzing.value || stocking.value);
+
 const mainBtn = computed(() => {
     // gate=true：必填项未操作，按钮灰显但可点，点击展开高级设置并提示
     if (researchErr.value) return { text: "重试搜索", disabled: false, cost: "" };
     if (!research.value) return { text: "搜索中…", disabled: true, cost: "" };
     if (!isManualMode.value) {
         if (analyzing.value) return { text: "分析中…", disabled: true, cost: "" };
-        if (!personaId.value) return { text: "请先选择人设", disabled: true, cost: "" };
+        if (!personaId.value) return { text: PERSONA_REQUIRED_HINT, disabled: true, cost: "" };
         if (analyzeErr.value) return { text: "重试分析", disabled: false, cost: "" };
     }
-    if (script.value) {
+    if (showScript.value) {
         // 重新生成期间禁止用旧文案去生成视频，避免新文案回来前提交
         if (scriptBusy.value) return { text: "口播文案重新生成中…", disabled: true, cost: "" };
         if (videoGate.value) return { text: videoGate.value, disabled: false, gate: true, cost: "" };
@@ -2233,6 +2452,7 @@ const mainBtn = computed(() => {
 });
 
 const handleMainAction = () => {
+    if (mainBtn.value.disabled) return;
     if (researchErr.value) {
         runResearch();
         loadInsight();
@@ -2247,10 +2467,12 @@ const handleMainAction = () => {
         uni.$u.toast(videoGate.value);
         return;
     }
-    if (script.value) {
+    if (showScript.value) {
         startVideo();
         return;
     }
+    // 置灰时口播应已清空。再挡一层，避免漏清的回放文案被当成未生成重跑并扣费
+    if (script.value) return;
     runScript();
 };
 
@@ -2279,7 +2501,7 @@ const startVideo = async () => {
         });
         // 不选人设没有结合分析这一步，落库的「做过」标记来自任务本身，
         // 这里补一次让热榜条目立刻点亮「已分析」，不必等整榜刷新
-        if (props.topic) emit("analyzed", props.topic);
+        emitAnalyzed();
         // 用户在创建期间关掉了面板：仅刷新队列，不再强制跳转详情页
         const stillOpen = props.modelValue;
         emit("created", task || {}, stillOpen);
@@ -2316,6 +2538,13 @@ watch(
     },
 );
 
+// 从可配置变成置灰时清掉口播并落缓存。回放赋值当次若本来就是置灰，由还原函数自己先清再存
+watch(stepReady, (ready) => {
+    if (ready) return;
+    clearOralScript();
+    if (props.modelValue && research.value) saveFlowSnapshot();
+});
+
 watch(
     () => props.modelValue,
     async (visible) => {
@@ -2349,6 +2578,13 @@ watch(
         loadInsight();
     },
 );
+
+watch(
+    () => [props.modelValue, props.topic?.title, props.topic?.platform, personaId.value],
+    () => {
+        queryStockDetail();
+    },
+);
 </script>
 
 <style lang="scss" scoped>
@@ -2379,12 +2615,16 @@ watch(
     box-shadow: 0 10px 22px rgba(37, 99, 235, 0.32);
 }
 
-.plain-btn {
-    border: none;
-    line-height: 1.4;
+.flow-cta {
+    @apply h-[72rpx] px-[24rpx] rounded-full flex items-center justify-center gap-[10rpx] overflow-hidden;
+}
 
-    &::after {
-        border: none;
-    }
+.flow-cta-text {
+    @apply min-w-0 text-[24rpx] font-semibold leading-none truncate;
+}
+
+.flow-cta-cost {
+    @apply shrink-0 h-[36rpx] px-[14rpx] rounded-full flex items-center justify-center;
+    background: rgba(255, 255, 255, 0.2);
 }
 </style>

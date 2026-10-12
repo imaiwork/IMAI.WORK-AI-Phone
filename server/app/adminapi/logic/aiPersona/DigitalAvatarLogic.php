@@ -142,8 +142,8 @@ class DigitalAvatarLogic extends BaseLogic
             }
             $userId = $personaAvatar['user_id'];
             if ($params['is_original_voice'] == 0 && $params['voice_id'] > 0){
-                // 闪剪(model_version=8) + MiniMax(10=hd / 11=turbo)
-                $allowedVersions = array_merge([8], AiPersonaDigitalVoice::MINIMAX_MODEL_VERSIONS);
+                // 闪剪(V3=8 / S3=15) + MiniMax(10=hd / 11=turbo)
+                $allowedVersions = array_merge(HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS, AiPersonaDigitalVoice::MINIMAX_MODEL_VERSIONS);
                 $humanVoice = HumanVoice::where([
                     'id'      => $params['voice_id'],
                     'user_id' => $userId,

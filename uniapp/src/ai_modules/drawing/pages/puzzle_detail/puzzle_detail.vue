@@ -115,6 +115,7 @@
 
 <script setup lang="ts">
 import { getPuzzleTaskDetail, deletePuzzleTask, getPuzzleTaskResultList } from "@/api/drawing";
+import { ManualPublishSourceEnum } from "@/enums/publishEnums";
 import usePolling from "@/hooks/usePolling";
 
 const loading = ref(true);
@@ -186,7 +187,7 @@ const toPublish = () => {
         url: `/ai_modules/device/pages/create_task/create_task`,
         params: {
             type: 2,
-            source: "puzzle",
+            source: ManualPublishSourceEnum.PUZZLE,
             id: detailId.value,
             count: JSON.stringify(count),
         },

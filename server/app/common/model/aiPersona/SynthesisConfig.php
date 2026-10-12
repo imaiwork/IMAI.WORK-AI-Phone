@@ -12,19 +12,23 @@ class SynthesisConfig extends BaseModel
     use SoftDelete;
     protected $deleteTime = 'delete_time';
 
-    //'画面素材: 1-纯AI, 2-AI+素材库, 3-纯素材库
+    //'画面素材: 1-纯AI, 2-AI+素材库, 3-纯素材库, 4-素材库+广场
     const VISUAL_MATERIAL_SOURCE_AI = 1;
     const VISUAL_MATERIAL_SOURCE_AI_MATERIAL = 2;
     const VISUAL_MATERIAL_SOURCE_MATERIAL = 3;
+    const VISUAL_MATERIAL_SOURCE_SQUARE = 4;
 
     //闪剪素材使用方式: 1-切片 2-原片
     const MATERIAL_USE_MODE_SLICE = 1;
     const MATERIAL_USE_MODE_ORIGINAL = 2;
-   //'文案来源: 1-仿写, 2-AI生成, 3-无需, 4-文案库'
+   //'文案来源: 1-仿写, 2-AI生成, 3-无需, 4-文案库, 5-热点生成'
     const COPYWRITING_SOURCE_IMITATE = 1;
     const COPYWRITING_SOURCE_AI = 2;
     const COPYWRITING_SOURCE_NONE = 3;
     const COPYWRITING_SOURCE_LIBRARY = 4;
+    const COPYWRITING_SOURCE_HOTSPOT = 5;
+    const HOTSPOT_PICK_MODE_LATEST = 1; // 本设备未用过的最新优先（id 降序）
+    const HOTSPOT_PICK_MODE_ONCE_DEVICE = 2; // 全局每条只用一次，按入库顺序（id 升序）
     const LIBRARY_USE_MODE_RANDOM = 1;
     const LIBRARY_USE_MODE_SEQUENCE = 2;
     const LIBRARY_REUSE_MODE_ONCE = 1;
@@ -68,7 +72,7 @@ class SynthesisConfig extends BaseModel
     const COPYWRITING_GENERATION_TYPE_CUSTOM = 7;
     const COPYWRITING_GENERATION_CUSTOM_MAX = 500;
 
-    protected $json = ['generation_types', 'template_config'];
+    protected $json = ['generation_types', 'template_config', 'square_group_ids'];
     protected $jsonAssoc = true;
 
     /** 每日出片条数：0=未配置。仅无手机模式消费，手机模式仍按发布时段数出片 */
@@ -165,5 +169,10 @@ class SynthesisConfig extends BaseModel
     public static function buildCopywritingGenerationVoice(int $type, string $custom): string
     {
         return AiPersonaSynthesisConfig::buildCopywritingGenerationVoice($type, $custom);
+    }
+
+    public static function requireValidHotspotPickMode($value): int
+    {
+        return AiPersonaSynthesisConfig::requireValidHotspotPickMode($value);
     }
 }

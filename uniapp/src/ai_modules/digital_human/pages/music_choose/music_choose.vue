@@ -48,8 +48,8 @@
                                 class="w-[44rpx] h-[44rpx]" />
                         </view>
                         <view class="flex-1 min-w-0">
-                            <text class="text-[28rpx] font-bold text-[#0D1117] line-clamp-1">使用AI音乐库</text>
-                            <text class="text-[22rpx] text-[#9CA3AF] mt-[4rpx] block">自动匹配最佳背景音乐</text>
+                            <text class="text-[28rpx] font-bold text-[#0D1117] line-clamp-1">系统随机</text>
+                            <text class="text-[22rpx] text-[#9CA3AF] mt-[4rpx] block">每次从系统曲库随机一首</text>
                         </view>
                         <view class="flex-shrink-0">
                             <view
@@ -64,9 +64,42 @@
                         </view>
                     </view>
 
+                    <view v-if="systemMusics.length" class="flex items-center gap-[10rpx] px-[4rpx] mt-[4rpx]">
+                        <view class="w-[6rpx] h-[24rpx] bg-primary rounded-full" />
+                        <text class="text-xs font-extrabold text-[#0D1117]">系统音乐</text>
+                        <view class="flex-1 h-[1rpx] bg-[#F0F2F5]" />
+                    </view>
+                    <view
+                        v-for="item in systemMusics"
+                        :key="item.id"
+                        class="bg-white rounded-[20rpx] overflow-hidden shadow-[0_2rpx_8rpx_rgba(0,0,0,0.05),0_0_0_1rpx_rgba(0,0,0,0.04)] flex items-center gap-[20rpx] px-[20rpx] h-[112rpx]"
+                        :class="systemMusicId === item.id ? 'shadow-[0_0_0_1.5rpx_#BFDBFE,0_4rpx_16rpx_rgba(0,101,251,0.12)]' : ''"
+                        @click="handleChooseSystem(item)">
+                        <view
+                            class="w-[80rpx] h-[80rpx] rounded-[20rpx] flex items-center justify-center flex-shrink-0"
+                            style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)"
+                            @click.stop="toggleMusic({ id: item.id, content: item.audio_url })">
+                            <u-icon
+                                :name="currentMusicId == item.id && isPlaying ? 'pause' : 'play-right'"
+                                color="#ffffff"
+                                size="36" />
+                        </view>
+                        <view class="flex-1 min-w-0">
+                            <text class="text-[28rpx] font-bold text-[#0D1117] line-clamp-1">{{ item.name }}</text>
+                            <text class="text-[22rpx] text-[#9CA3AF] mt-[4rpx] block">{{ formatDuration(item.duration_sec) }}</text>
+                        </view>
+                        <view
+                            v-if="systemMusicId === item.id"
+                            class="w-[44rpx] h-[44rpx] rounded-full flex items-center justify-center"
+                            style="background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%)">
+                            <u-icon name="checkmark" color="#fff" size="22" />
+                        </view>
+                        <view v-else class="w-[44rpx] h-[44rpx] rounded-full border-2 border-solid border-[#E5E9F0] bg-[#F7F9FC]" />
+                    </view>
+
                     <view class="flex items-center gap-[10rpx] px-[4rpx] mt-[4rpx]">
                         <view class="w-[6rpx] h-[24rpx] bg-primary rounded-full" />
-                        <text class="text-xs font-extrabold text-[#0D1117]">音乐列表</text>
+                        <text class="text-xs font-extrabold text-[#0D1117]">我上传的</text>
                         <view class="flex-1 h-[1rpx] bg-[#F0F2F5]" />
                     </view>
 
@@ -153,18 +186,18 @@
             <view
                 class="w-[96rpx] h-[96rpx] rounded-[24rpx] flex flex-col items-center justify-center flex-shrink-0"
                 :class="
-                    chooseList.length > 0 || isAiMusic
+                    chooseList.length > 0 || isAiMusic || systemMusicId
                         ? 'bg-[#EBF2FF] shadow-[inset_0_0_0_1.5rpx_#BFDBFE]'
                         : 'bg-[#F0F2F5]'
                 ">
                 <text
                     class="text-[32rpx] font-extrabold"
-                    :class="chooseList.length > 0 || isAiMusic ? 'text-primary' : 'text-[#C0C4CC]'">
-                    {{ isAiMusic ? "AI" : chooseList.length }}
+                    :class="chooseList.length > 0 || isAiMusic || systemMusicId ? 'text-primary' : 'text-[#C0C4CC]'">
+                    {{ systemMusicId ? "1" : isAiMusic ? "随" : chooseList.length }}
                 </text>
                 <text
                     class="text-[20rpx] font-semibold"
-                    :class="chooseList.length > 0 || isAiMusic ? 'text-primary' : 'text-[#C0C4CC]'">
+                    :class="chooseList.length > 0 || isAiMusic || systemMusicId ? 'text-primary' : 'text-[#C0C4CC]'">
                     已选
                 </text>
             </view>
@@ -227,6 +260,7 @@
 
 <script setup lang="ts">
 import { getMaterialLibraryList, addMaterialLibrary } from "@/api/material";
+import { getSystemMusicList } from "@/api/digital_human";
 import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useUpload from "@/hooks/useUpload";
@@ -237,6 +271,9 @@ const pagingRef = ref<any>(null);
 
 const isShowAi = ref(true);
 const isAiMusic = ref(false);
+const systemMusicId = ref("");
+const systemMusicName = ref("");
+const systemMusics = ref<any[]>([]);
 const currentMusicId = ref<any>(null);
 const currentVolume = ref(0);
 const changeVolume = ref(0);
@@ -320,21 +357,40 @@ const isChoose = (data: any) => {
 // 点击 AI 音乐库：与普通音乐互斥，支持取消
 const handleChooseAi = () => {
     if (isAiMusic.value) {
-        // 已选中则取消
         isAiMusic.value = false;
     } else {
-        // 未选中则选中，同时清空普通音乐列表
         isAiMusic.value = true;
         chooseList.value = [];
+        systemMusicId.value = "";
+        systemMusicName.value = "";
     }
 };
 
-// 点击普通音乐：与 AI 音乐互斥，支持多选/取消
+const handleChooseSystem = (item: any) => {
+    if (systemMusicId.value === item.id) {
+        systemMusicId.value = "";
+        systemMusicName.value = "";
+        isAiMusic.value = true;
+        return;
+    }
+    systemMusicId.value = item.id;
+    systemMusicName.value = item.name || "";
+    isAiMusic.value = false;
+    chooseList.value = [];
+};
+
+const formatDuration = (sec: number) => {
+    const total = Math.max(0, Number(sec) || 0);
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+};
+
+// 点击普通音乐：与系统随机、指定曲目互斥，支持多选/取消
 const handleChoose = (data: any) => {
     if (isAiMusic.value) {
-        // 已选中 AI 音乐，先取消 AI 音乐再选中普通音乐
         isAiMusic.value = false;
     }
+    systemMusicId.value = "";
+    systemMusicName.value = "";
     if (isChoose(data)) {
         chooseList.value = chooseList.value.filter((item: any) => item.id != data.id);
     } else {
@@ -357,19 +413,31 @@ const handleConfirmVolume = () => {
 };
 
 const handleConfirm = () => {
-    // 允许不选择音乐直接确定，此时 music 为空数组，isAiMusic 为 false
     emit("confirm", {
         type: ListenerTypeEnum.CHOOSE_MUSIC,
         data: {
-            music: isAiMusic.value ? -1 : chooseList.value,
+            music: systemMusicId.value ? [] : isAiMusic.value ? -1 : chooseList.value,
             volume: currentVolume.value.toFixed(1),
+            system_music_id: systemMusicId.value,
+            system_music_name: systemMusicName.value,
         },
     });
     uni.navigateBack();
 };
 
+const loadSystemMusics = async () => {
+    try {
+        const res = await getSystemMusicList();
+        systemMusics.value = Array.isArray(res) ? res : [];
+        const hit = systemMusics.value.find((item) => item.id == systemMusicId.value);
+        if (hit) systemMusicName.value = hit.name || "";
+    } catch {
+        systemMusics.value = [];
+    }
+};
+
 onLoad((options: any) => {
-    const { volume, music, is_ai, ai_music } = options;
+    const { volume, music, is_ai, ai_music, system_music_id } = options;
     if (music && music.length > 0) {
         chooseList.value = JSON.parse(music);
     }
@@ -381,6 +449,11 @@ onLoad((options: any) => {
         isShowAi.value = false;
     }
     isAiMusic.value = ai_music == "true";
+    if (system_music_id) {
+        systemMusicId.value = decodeURIComponent(system_music_id);
+        isAiMusic.value = false;
+    }
+    loadSystemMusics();
 });
 
 onUnload(() => {

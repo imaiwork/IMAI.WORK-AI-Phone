@@ -17,8 +17,9 @@ export interface HotWritePayload {
      *   1 = AI 找素材
      *   2 = AI + 人设素材(默认)
      *   3 = 纯人设素材
+     *   4 = 素材库+广场
      */
-    visual_material_source?: 1 | 2 | 3;
+    visual_material_source?: 1 | 2 | 3 | 4;
 }
 
 export interface HotWriteResult {

@@ -154,7 +154,7 @@ class ClawLogic extends ApiLogic
         }
     }
 
-    public static function setAccount(array $params)
+    public static function setAccount(array $params, int $userId = 0)
     {
         $startedAt = microtime(true);
         $traceId = str_replace('.', '', uniqid('sa_', true));
@@ -181,6 +181,9 @@ class ClawLogic extends ApiLogic
             if (!isset($params['accounts']) || empty($params['accounts'])) {
                 throw new \Exception('账号不能为空');
             }
+            if ($userId <= 0) {
+                throw new \Exception('请先登录');
+            }
 
             $deviceCode = (string)$params['device_code'];
             $params['accounts'] = self::normalizeAccounts($params['accounts']);
@@ -201,7 +204,10 @@ class ClawLogic extends ApiLogic
             ]);
 
             $lockStartedAt = microtime(true);
-            $device = SvDevice::where('device_code', $deviceCode)->lock(true)->findOrEmpty();
+            $device = SvDevice::where('device_code', $deviceCode)
+                ->where('user_id', $userId)
+                ->lock(true)
+                ->findOrEmpty();
             $lockWaitMs = (int)round((microtime(true) - $lockStartedAt) * 1000);
             if ($device->isEmpty()) {
                 throw new \Exception('设备不存在');
@@ -233,7 +239,9 @@ class ClawLogic extends ApiLogic
                 throw $conflict;
             }
 
-            $existingRows = SvAccount::where('device_code', $deviceCode)->select();
+            $existingRows = SvAccount::where('device_code', $deviceCode)
+                ->where('user_id', $userId)
+                ->select();
             $existingMap = [];
             foreach ($existingRows as $row) {
                 $existingMap[self::accountKey((int)$row->type, (string)$row->account)] = $row;
@@ -316,7 +324,7 @@ class ClawLogic extends ApiLogic
                 );
             }
 
-            $deleted = self::removeOrphanAccounts($deviceCode, $keepKeys, $traceId);
+            $deleted = self::removeOrphanAccounts($deviceCode, $userId, $keepKeys, $traceId);
             $stats['deleted'] += $deleted;
 
             self::logSetAccount('set_account_diff_summary', array_merge($stats, [
@@ -602,10 +610,12 @@ class ClawLogic extends ApiLogic
         }
     }
 
-    private static function removeOrphanAccounts(string $deviceCode, array $keepKeys, string $traceId = ''): int
+    private static function removeOrphanAccounts(string $deviceCode, int $userId, array $keepKeys, string $traceId = ''): int
     {
         $deleted = 0;
-        $existingRows = SvAccount::where('device_code', $deviceCode)->select();
+        $existingRows = SvAccount::where('device_code', $deviceCode)
+            ->where('user_id', $userId)
+            ->select();
         foreach ($existingRows as $row) {
             $key = self::accountKey((int)$row->type, (string)$row->account);
             if (isset($keepKeys[$key])) {

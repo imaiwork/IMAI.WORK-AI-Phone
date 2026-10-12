@@ -115,6 +115,26 @@ export function useDeviceAuthPay() {
         }
     };
 
+    const confirmVirtualPaymentSettled = async (orderId: number | string): Promise<boolean> => {
+        for (let i = 0; i < 3; i++) {
+            try {
+                const confirmRes = await mnpVirtualConfirmDeviceAuth({
+                    order_id: orderId,
+                    from: DEVICE_AUTH_PAY_FROM,
+                });
+                if (Number(confirmRes?.pay_status) === 1) {
+                    return true;
+                }
+            } catch {
+                // 继续重试
+            }
+            if (i < 2) {
+                await new Promise((r) => setTimeout(r, 1200));
+            }
+        }
+        return false;
+    };
+
     /** 小程序虚拟支付：预下单 → 拉起支付 → confirm */
     const runVirtualPayment = async (payload: DeviceAuthVirtualPayPayload): Promise<DeviceAuthPayResult> => {
         // #ifndef MP-WEIXIN
@@ -137,21 +157,9 @@ export function useDeviceAuthPay() {
 
             const status = await requestMnpVirtualPayment(prepay.config);
             if (status === PayStatusEnum.SUCCESS) {
-                for (let i = 0; i < 3; i++) {
-                    try {
-                        const confirmRes = await mnpVirtualConfirmDeviceAuth({
-                            order_id: orderId,
-                            from: DEVICE_AUTH_PAY_FROM,
-                        });
-                        if (Number(confirmRes?.pay_status) === 1) {
-                            break;
-                        }
-                    } catch {
-                        // 继续重试
-                    }
-                    if (i < 2) {
-                        await new Promise((r) => setTimeout(r, 1200));
-                    }
+                const settled = await confirmVirtualPaymentSettled(orderId);
+                if (!settled) {
+                    throw "支付已提交，到账确认中，请稍后在订单中查看";
                 }
                 await refreshUserInfo();
             }

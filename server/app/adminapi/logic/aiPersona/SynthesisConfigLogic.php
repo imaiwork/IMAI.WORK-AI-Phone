@@ -2,9 +2,9 @@
 
 namespace app\adminapi\logic\aiPersona;
 
-use app\api\logic\ApiLogic;
 use app\api\logic\aiPersona\CopywritingLibraryLogic;
 use app\api\logic\aiPersona\SynthesisConfigLogic as ApiSynthesisConfigLogic;
+use app\api\logic\ApiLogic;
 use app\common\logic\BaseLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
@@ -155,11 +155,13 @@ class SynthesisConfigLogic extends BaseLogic
             'generation_types',
             'template_config',
             'visual_material_source',
+            'square_group_ids',
             'material_use_mode',
             'daily_video_count',
             'copywriting_source',
             'library_use_mode',
             'library_reuse_mode',
+            'hotspot_pick_mode',
             'work_mode',
             'product_use_mode',
             'product_reuse_mode',
@@ -167,6 +169,7 @@ class SynthesisConfigLogic extends BaseLogic
             'news_mixcut_duration',
             'pic',
             'music_source',
+            'system_music_id',
             'music_volume',
             'speech_rate',
             'copywriting_generation_type',
@@ -185,7 +188,10 @@ class SynthesisConfigLogic extends BaseLogic
         }
 
         if (array_key_exists('visual_material_source', $data)) {
-            $data['visual_material_source'] = self::validateEnum((int)$data['visual_material_source'], [1, 2, 3], '画面素材来源值只能是1、2或3');
+            $data['visual_material_source'] = self::validateEnum((int)$data['visual_material_source'], [1, 2, 3, 4], '画面素材来源值只能是1、2、3或4');
+        }
+        if (array_key_exists('square_group_ids', $data)) {
+            $data['square_group_ids'] = \app\common\service\square\SquareAssetService::normalizeGroupIds($data['square_group_ids']);
         }
 
         if (array_key_exists('material_use_mode', $data)) {
@@ -197,7 +203,7 @@ class SynthesisConfigLogic extends BaseLogic
         }
 
         if (array_key_exists('copywriting_source', $data)) {
-            $data['copywriting_source'] = self::validateEnum((int)$data['copywriting_source'], [1, 2, 3, 4], '文案来源值只能是1、2、3或4');
+            $data['copywriting_source'] = self::validateEnum((int)$data['copywriting_source'], [1, 2, 3, 4, 5], '文案来源值只能是1、2、3、4或5');
         }
 
         if (array_key_exists('video_cover_source', $data)) {
@@ -216,6 +222,10 @@ class SynthesisConfigLogic extends BaseLogic
             $data['library_reuse_mode'] = self::validateEnum((int)$data['library_reuse_mode'], [1, 2], '文案库重复规则值只能是1或2');
         }
 
+        if (array_key_exists('hotspot_pick_mode', $data)) {
+            $data['hotspot_pick_mode'] = self::validateEnum((int)$data['hotspot_pick_mode'], [1, 2], '热点取用规则不正确，1=最新入库优先 2=每条只用一次');
+        }
+
         if (array_key_exists('work_mode', $data)) {
             $data['work_mode'] = ApiSynthesisConfigLogic::normalizeWorkMode($data['work_mode']);
         }
@@ -230,6 +240,21 @@ class SynthesisConfigLogic extends BaseLogic
 
         if (array_key_exists('music_source', $data)) {
             $data['music_source'] = AiPersonaSynthesisConfig::normalizeMusicSource($data['music_source']);
+        }
+        if (array_key_exists('system_music_id', $data) || array_key_exists('music_source', $data)) {
+            $nextSource = array_key_exists('music_source', $data)
+                ? (int)$data['music_source']
+                : (int)($config->music_source ?? AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM);
+            $pinned = array_key_exists('system_music_id', $data)
+                ? trim((string)$data['system_music_id'])
+                : trim((string)($config->system_music_id ?? ''));
+            if ($nextSource !== AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM) {
+                $data['system_music_id'] = '';
+            } elseif ($pinned !== '' && !\app\common\service\SystemMusicService::isEnabled($pinned)) {
+                throw new Exception('这首系统音乐已下架，请重选或改回每次随机');
+            } else {
+                $data['system_music_id'] = $pinned;
+            }
         }
 
         if (array_key_exists('music_volume', $data)) {
@@ -325,6 +350,11 @@ class SynthesisConfigLogic extends BaseLogic
     private static function appendTemplateConfig(array $data): array
     {
         $data['template_config'] = SynthesisTemplateConfigService::enrich($data['template_config'] ?? []);
+        $pinned = trim((string)($data['system_music_id'] ?? ''));
+        $hit = $pinned === '' ? [] : \app\common\service\SystemMusicService::findEnabled($pinned);
+        $data['system_music_name'] = (string)($hit['name'] ?? '');
+        $data['system_music_enabled'] = $pinned === '' || $hit !== [];
+        $data['system_musics'] = \app\common\service\SystemMusicService::publicList();
         return $data;
     }
 }

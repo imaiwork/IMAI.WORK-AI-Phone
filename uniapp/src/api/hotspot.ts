@@ -99,3 +99,27 @@ export const deleteHotspotTask = (data: { id: string }) => {
 export const retryHotspotTask = (data: { id: string }) => {
     return request.post({ url: '/hotspot.hotspot/retry', data })
 }
+
+/** 视频剪辑 · 热点库列表（待使用 + 已使用） */
+export const getHotspotStock = (data: { persona_id: number | string }) => {
+    return request.get({ url: '/hotspot.hotspot/stock', data })
+}
+
+/** 热点追踪 · 热点库入库（仅标题 / 已带文案） */
+export const addHotspotStock = (data: Record<string, any>) => {
+    return request.post({ url: '/hotspot.hotspot/stock', data })
+}
+
+/** 热点追踪 · 热点库待用详情（按话题判断是否已入库） */
+export const getHotspotStockDetail = (data: {
+    topic: string
+    platform: string
+    persona_id?: number | string
+}) => {
+    return request.get({ url: '/hotspot.hotspot/stockDetail', data })
+}
+
+/** 视频剪辑 · 移出热点库待用 */
+export const deleteHotspotStock = (data: { id: number | string }) => {
+    return request.post({ url: '/hotspot.hotspot/stockDelete', data })
+}

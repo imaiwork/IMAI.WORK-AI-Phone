@@ -254,6 +254,127 @@ class PublishLogic extends BasePersonaLogic
         );
     }
 
+    /**
+     * 测试钩子：仅 tests/ 注入，生产勿用。
+     * @var array<string, mixed>
+     */
+    private static array $aiPublishTestHooks = [];
+
+    public static function setAiPublishTestHooks(array $hooks): void
+    {
+        self::$aiPublishTestHooks = $hooks;
+        self::$aiPublishTestHooks['requestCalls'] = self::$aiPublishTestHooks['requestCalls'] ?? [];
+        self::$aiPublishTestHooks['deductCalls'] = self::$aiPublishTestHooks['deductCalls'] ?? [];
+    }
+
+    public static function clearAiPublishTestHooks(): void
+    {
+        self::$aiPublishTestHooks = [];
+    }
+
+    public static function aiPublishTestHookState(): array
+    {
+        return self::$aiPublishTestHooks;
+    }
+
+    /**
+     * 无手机成片后的发布文案：固定 AI 生成。
+     * 关键词由调用方直传，不读内容发布配置（文案库/自定义/自定义方向词）。
+     * 上游成功但标题正文话题全空时不扣费。
+     */
+    public static function generatePublishContentByAi(int $userId, string $keywords, string $taskId): array
+    {
+        $keywords = trim($keywords);
+        $unit = self::aiPublishCheckToken($userId);
+        $params = [
+            'keywords' => $keywords,
+            'task_id' => $taskId,
+            'source' => 'shanjian2',
+            'user_id' => $userId,
+        ];
+        $response = self::aiPublishRequest($params);
+        if ((int)($response['code'] ?? 0) !== 10000) {
+            return $response;
+        }
+
+        $data = is_array($response['data'] ?? null) ? $response['data'] : [];
+        $title = trim((string)($data['title'] ?? ''));
+        $content = trim((string)($data['content'] ?? ''));
+        $tag = ShanjianVideoTask::stringifyTopic($data['tag'] ?? '');
+        $response['data'] = $data;
+        $response['data']['from_ai'] = 1;
+        $response['data']['title'] = $title;
+        $response['data']['content'] = $content;
+        $response['data']['tag'] = $tag;
+
+        if ($title === '' && $content === '' && $tag === '') {
+            $response['data']['empty_copy'] = 1;
+            return $response;
+        }
+
+        self::aiPublishDeduct($userId, $taskId, (float)$unit);
+        return $response;
+    }
+
+    private static function aiPublishCheckToken(int $userId): float
+    {
+        if (array_key_exists('checkToken', self::$aiPublishTestHooks)) {
+            $hook = self::$aiPublishTestHooks['checkToken'];
+            if ($hook instanceof \Throwable) {
+                throw $hook;
+            }
+            return (float)$hook;
+        }
+        return (float)\app\api\logic\service\TokenLogService::checkToken(
+            $userId,
+            'coze_publish_content_generated'
+        );
+    }
+
+    private static function aiPublishRequest(array $params): array
+    {
+        if (array_key_exists('requestCalls', self::$aiPublishTestHooks)
+            && is_array(self::$aiPublishTestHooks['requestCalls'])
+        ) {
+            self::$aiPublishTestHooks['requestCalls'][] = $params;
+        }
+        if (array_key_exists('getPublishContent', self::$aiPublishTestHooks)) {
+            $hook = self::$aiPublishTestHooks['getPublishContent'];
+            if ($hook instanceof \Throwable) {
+                throw $hook;
+            }
+            if (is_callable($hook)) {
+                $response = $hook($params);
+                return is_array($response) ? $response : ['code' => 0, 'msg' => '生成失败'];
+            }
+            if ($hook === false) {
+                return ['code' => 0, 'msg' => '生成失败'];
+            }
+            return is_array($hook) ? $hook : ['code' => 0, 'msg' => '生成失败'];
+        }
+        $raw = \app\common\service\ToolsService::Sv()->getPublishContent($params);
+        return is_array($raw) ? $raw : ['code' => 0, 'msg' => '返回值非数组'];
+    }
+
+    private static function aiPublishDeduct(int $userId, string $taskId, float $points): void
+    {
+        if (array_key_exists('deductCalls', self::$aiPublishTestHooks)
+            && is_array(self::$aiPublishTestHooks['deductCalls'])
+        ) {
+            self::$aiPublishTestHooks['deductCalls'][] = [
+                'user_id' => $userId,
+                'task_id' => $taskId,
+                'points' => $points,
+            ];
+        }
+        if (array_key_exists('getPublishContent', self::$aiPublishTestHooks)
+            || !empty(self::$aiPublishTestHooks['skipCharge'])
+        ) {
+            return;
+        }
+        self::execPublishContentDeduction($userId, $taskId, $points);
+    }
+
     private static function getPublishContentByAi(
         AiPersona $persona,
         string $defaultKeywords,
@@ -532,6 +653,7 @@ class PublishLogic extends BasePersonaLogic
             ->where('use_status', 1)
             ->where('publish_mode', 2)
             ->where('is_wechat', 0);
+        Material::applyUsableFileUrl($query);
 
         if ($useMode === AiPersonaSynthesisConfig::PRODUCT_USE_MODE_SEQUENCE) {
             // 顺序使用：按 id 升序固定队列，与随机规则无关；真正取用时按「上次 id 的下一条」轮询
@@ -549,6 +671,9 @@ class PublishLogic extends BasePersonaLogic
         $materials = $query->select();
         $result = [];
         foreach ($materials as $item) {
+            if (!Material::hasUsableFileUrl($item)) {
+                continue;
+            }
             // 仅随机 + 可重复：同设备短时间使用超过2次后跳过
             if (
                 $useMode === AiPersonaSynthesisConfig::PRODUCT_USE_MODE_RANDOM
@@ -710,6 +835,14 @@ class PublishLogic extends BasePersonaLogic
                     continue;
                 }
                 $media = $medias[$sjKey];
+                if (!Material::hasUsableFileUrl($media)) {
+                    $mediaId = (int)(is_array($media) ? ($media['id'] ?? 0) : ($media->id ?? 0));
+                    \think\facade\Log::channel('auto')->write(
+                        $device->device_code . ' 成品库直发素材file_url为空，跳过建单 material_id=' . $mediaId,
+                        'create'
+                    );
+                    continue;
+                }
                 $slotCreated = 0;
                 foreach ($slots as $slot) {
                     $platform = $slot['platform'];
@@ -778,12 +911,12 @@ class PublishLogic extends BasePersonaLogic
                             $remark = $response['data']['library_message'] ?? '发布文案库暂无可用文案';
                         }
                         $mediaId = (int)(is_array($media) ? ($media['id'] ?? 0) : ($media->id ?? 0));
-                        $mediaFileUrl = (string)(is_array($media) ? ($media['file_url'] ?? '') : ($media->file_url ?? ''));
+                        $mediaFileUrl = Material::rawFileUrl($media);
                         $mediaThumbnailUrl = (string)(is_array($media) ? ($media['thumbnail_url'] ?? '') : ($media->thumbnail_url ?? ''));
                         $mediaVideoSettingId = (int)(is_array($media) ? ($media['video_setting_id'] ?? 0) : ($media->video_setting_id ?? 0));
                         $mediaType = $materialType === 2 ? 2 : 1;
                         $publishTaskName = $mediaType === 2 ? '自动化图文发布任务' : '自动化视频发布任务';
-                        $material_url = $mediaFileUrl != '' ? FileService::getFileUrl($mediaFileUrl) : '';
+                        $material_url = FileService::getFileUrl($mediaFileUrl);
                         $pic = $mediaType === 2 ? $material_url : FileService::getFileUrl($mediaThumbnailUrl);
 
                         usleep(500000);
@@ -1060,9 +1193,10 @@ class PublishLogic extends BasePersonaLogic
             ->where('persona_id', $device->persona_id)
             ->where('use_status', Material::USE_STATUS_ENABLED)
             ->where('publish_mode', Material::PUBLISH_MODE_DIRECT_SEND)
-            ->where('is_wechat', 1)
-            ->select()
-            ->toArray();
+            ->where('is_wechat', 1);
+        Material::applyUsableFileUrl($materials);
+        $materials = $materials->select()->toArray();
+        $materials = array_values(array_filter($materials, static fn (array $item): bool => Material::hasUsableFileUrl($item)));
         \think\facade\Log::channel('auto')->write(\think\facade\Db::getLastSql(), 'create');
         return $materials;
     }
@@ -1251,13 +1385,33 @@ class PublishLogic extends BasePersonaLogic
                             $material_url = [];
                             \think\facade\Log::channel('auto')->write('素材地址：' . json_encode($media, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 'create');
                             foreach ($media as $v) {
-                                $material_url[] = $v['file_url'] != '' ? FileService::getFileUrl($v['file_url']) : '';
+                                $fileUrl = Material::rawFileUrl($v);
+                                if ($fileUrl === '') {
+                                    continue;
+                                }
+                                $material_url[] = FileService::getFileUrl($fileUrl);
                                 $material_ids[] = $v['id'];
+                            }
+                            if (empty($material_url)) {
+                                \think\facade\Log::channel('auto')->write(
+                                    $device->device_code . ' 成品库直发素材file_url为空，跳过朋友圈建单',
+                                    'create'
+                                );
+                                continue;
                             }
                             $media = [];
                             $attachment_content = $material_url;
                         } elseif ($attachment_type == 2) {
-                            $material_url = $media['file_url'] != '' ? FileService::getFileUrl($media['file_url']) : '';
+                            $fileUrl = Material::rawFileUrl($media);
+                            if ($fileUrl === '') {
+                                \think\facade\Log::channel('auto')->write(
+                                    $device->device_code . ' 成品库直发素材file_url为空，跳过朋友圈建单 material_id='
+                                    . (int)($media['id'] ?? 0),
+                                    'create'
+                                );
+                                continue;
+                            }
+                            $material_url = FileService::getFileUrl($fileUrl);
                             $material_ids[] = $media['id'];
                             $attachment_content = [$material_url];
                         }

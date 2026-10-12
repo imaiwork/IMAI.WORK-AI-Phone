@@ -10,6 +10,7 @@ export enum MaterialSourceEnum {
     PureAI = "pure_ai",
     AILib = "ai_lib",
     PureLib = "pure_lib",
+    Square = "square",
 }
 
 /** 文案来源 */
@@ -17,7 +18,47 @@ export enum CopySourceEnum {
     Rewrite = "rewrite",
     AIGen = "ai_gen",
     None = "none",
+    Hotspot = "hotspot",
 }
+
+/** 热点生成 · 取用规则，对齐 la_ai_persona_synthesis_config.hotspot_pick_mode */
+export enum HotspotTakeModeEnum {
+    Latest = 1,
+    Once = 2,
+}
+
+/** 热点库条目是否已带文案，对齐 /hotspot.hotspot/stock 的 has_script。
+ *  不从 hotspot 分包 import：微信小程序禁止跨分包 require，否则整包 pages 无法注册。 */
+export enum HotspotStockHasScript {
+    TitleOnly = 0,
+    WithScript = 1,
+}
+
+/** 热点库占用标识，对齐 /hotspot.hotspot/stock 的 use_status */
+export enum HotspotStockUseStatus {
+    Pending = 0,
+    Used = 1,
+}
+
+export const HOTSPOT_STOCK_USE_STATUS_LABEL: Record<HotspotStockUseStatus, string> = {
+    [HotspotStockUseStatus.Pending]: "待用",
+    [HotspotStockUseStatus.Used]: "已使用",
+}
+
+export const HOTSPOT_STOCK_PENDING_COUNT_SUFFIX = "条待用"
+export const HOTSPOT_STOCK_USED_COUNT_SUFFIX = "条已使用"
+
+export const HOTSPOT_PLATFORM_LABELS: Record<string, string> = {
+    douyin: "抖音",
+    kuaishou: "快手",
+    xiaohongshu: "小红书",
+    weibo: "微博",
+}
+
+export const HOTSPOT_STOCK_DELETE_CONFIRM = "确定将这条热点移出热点库吗？"
+
+export const normalizeHotspotTakeMode = (value: unknown): HotspotTakeModeEnum =>
+    Number(value) === HotspotTakeModeEnum.Once ? HotspotTakeModeEnum.Once : HotspotTakeModeEnum.Latest
 
 /** 文案风格 */
 export enum CopyStyleEnum {

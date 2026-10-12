@@ -301,7 +301,11 @@
 
         <script-popup v-model="scriptVisible" :script="currentScript" />
 
-        <create-popup v-model="createPopupVisible" :persona-id="activePersonaId" @toast="showToast" />
+        <create-popup
+            v-model="createPopupVisible"
+            :persona-id="activePersonaId"
+            :run-mode="activePersonaRunMode"
+            @toast="showToast" />
 
         <publish-popup v-model="publishPopupVisible" :persona-id="activePersonaId" />
 
@@ -488,6 +492,10 @@ const activePersonaId = computed(() => {
 const activePersonaName = computed(() => {
     const persona = personas.value.find((item) => item.key === activePersona.value);
     return persona?.name || "";
+});
+const activePersonaRunMode = computed(() => {
+    const persona = personas.value.find((item) => item.key === activePersona.value);
+    return Number(persona?.raw?.run_mode) || 0;
 });
 const activeModal = ref<HomeModalType | "">("");
 const scriptVisible = ref(false);

@@ -59,6 +59,8 @@ export enum ClueSourceEnum {
     AUTO_CLUE = 2,
     // 抖音获客任务引用（抖音账号搜寻获客抓到的手机号/微信号）
     DY_SEARCH = 3,
+    // 客资线索动态获取（任务执行时由后端从客资库实时拉取）
+    CUSTOMER_LEADS = 4,
 }
 
 // 线索卡片上显示的来源文案
@@ -66,6 +68,7 @@ export const CLUE_SOURCE_TEXT: Record<ClueSourceEnum, string> = {
     [ClueSourceEnum.FILE]: "文件表格",
     [ClueSourceEnum.AUTO_CLUE]: "获客线索",
     [ClueSourceEnum.DY_SEARCH]: "抖音获客线索",
+    [ClueSourceEnum.CUSTOMER_LEADS]: "客资线索",
 };
 
 // 抖音获客任务只有已完成/已结束才取得到号，见 CrawlingManualLogic::_getRecordByDySearchClue

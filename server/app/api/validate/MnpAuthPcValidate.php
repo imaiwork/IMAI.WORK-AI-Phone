@@ -47,7 +47,7 @@ class MnpAuthPcValidate extends BaseValidate
      * @author 段誉
      * @date 2022/9/15 14:37
      */
-    public function checkConfig($scene, $rule, $data)
+    public function checkConfig(mixed $scene, mixed $rule, mixed $data)
     {
         $config = ConfigService::get('login', 'login_way');
         if (!in_array($scene, $config)) {
@@ -57,7 +57,7 @@ class MnpAuthPcValidate extends BaseValidate
         return true;
     }
 
-    public function checkToken($token)
+    public function checkToken(mixed $token)
     {
         $where = [
             'token' => $token,

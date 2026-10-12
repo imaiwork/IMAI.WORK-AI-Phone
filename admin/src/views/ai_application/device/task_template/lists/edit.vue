@@ -404,6 +404,10 @@ const SCENE_CONFIG: Record<number, { label: string; platforms: PlatformItem[] }>
         label: "评论点赞",
         platforms: [{ type: SPH_TYPE, name: "视频号" }],
     },
+    18: {
+        label: "抖音搜寻获客",
+        platforms: [{ type: DOYIN_TYPE, name: "抖音" }],
+    },
 };
 
 interface SceneOption {

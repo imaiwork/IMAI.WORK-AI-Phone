@@ -72,15 +72,15 @@ class SoraVideoSettingLogic extends ApiLogic
         } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 0 && $params['resolution'] == '480p'){
             $model = empty($video_urls)? 3 : 4;
             $scene = $model == 3 ? self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE;
-            $name  = $title ?? '一句话视频-SD2.0(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
+            $name  = $title ?? '一句话视频-SD2.5(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
         } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 0 && $params['resolution'] == '720p'){
             $model = empty($video_urls)? 5 : 6;
             $scene = $model == 5 ? self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE;
-            $name  = $title ?? '一句话视频-SD2.0(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
+            $name  = $title ?? '一句话视频-SD2.5(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
         } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 1){
             $model = $params['resolution'] == '480p' ? 3 : 5;
             $scene = $model == 3 ? self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE;
-            $name  = $model == 3 ? ($title??'一句话视频-SD2.0(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999)) : ($title ??'一句话视频-SD2.0(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999));
+            $name  = $model == 3 ? ($title??'一句话视频-SD2.5(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999)) : ($title ??'一句话视频-SD2.5(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999));
         }else{
             message('模型参数错误');
         }
@@ -247,7 +247,7 @@ class SoraVideoSettingLogic extends ApiLogic
 
                 for ($i = 0; $i < $number; $i++) {
                     $request = [
-                        'model'          => 'doubao-seedance-2-0-260128',
+                        'model'          => 'doubao-seedance-2-5-260628',
                         'content'        => $contents,
                         'generate_audio' => True,
                         'ratio'          => $aspect_ratio,
@@ -515,16 +515,16 @@ class SoraVideoSettingLogic extends ApiLogic
                             $extra = ['扣费项目' => '一句话生成视频(pro)', '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         case self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE:
-                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，不含参考视频480p)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.5，不含参考视频480p)', '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         case self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE:
-                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，含参考视频480p)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.5，含参考视频480p)', '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         case self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE:
-                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，不含参考视频720p)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.5，不含参考视频720p)', '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         case self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE:
-                            $extra = ['扣费项目' => '一句话生成视频(seedance2.0，含参考视频720p)', '算力单价' => $unit, '实际消耗算力' => $points];
+                            $extra = ['扣费项目' => '一句话生成视频(seedance2.5，含参考视频720p)', '算力单价' => $unit, '实际消耗算力' => $points];
                             break;
                         default:
                     }

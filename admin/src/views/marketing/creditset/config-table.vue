@@ -10,12 +10,17 @@
                     <div
                         class="px-5 py-3 border-b flex justify-between items-center gap-2"
                         :class="isZeroCost(item) ? 'border-[#bbf7d0] bg-[#f0fdf4]' : 'border-[#f3f4f6] bg-[#f9fafb]'">
-                        <div class="flex items-center gap-2 min-w-0">
+                        <div class="flex items-center gap-2 min-w-0 flex-wrap">
                             <h3 class="font-bold text-[#1f2937]">{{ item.name }}</h3>
                             <span
                                 v-if="isNewScene(item)"
                                 class="shrink-0 text-xs font-bold text-[#f5222d] bg-[#fff1f0] border border-[#ffccc7] px-1.5 py-0.5 rounded">
                                 新增
+                            </span>
+                            <span
+                                v-if="isPriceAdjustScene(item)"
+                                class="shrink-0 text-xs font-bold text-[#d46b08] bg-[#fff7e6] border border-[#ffd591] px-1.5 py-0.5 rounded">
+                                {{ PRICE_ADJUST_TAG }}
                             </span>
                         </div>
                         <span class="shrink-0 text-xs bg-[#e5e7eb] text-[#4b5563] px-2 py-1 rounded">
@@ -111,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { NEW_BILLING_SCENES } from "@/enums/appEnums";
+import { NEW_BILLING_SCENES, PRICE_ADJUST_BILLING_SCENES, PRICE_ADJUST_TAG } from "@/enums/appEnums";
 
 const props = defineProps<{
     data: any[];
@@ -122,6 +127,10 @@ const globalRate = defineModel<number>("globalRate", { default: 100 });
 /** 本版新增的扣费场景，卡片打「新增」标识 */
 function isNewScene(item: any): boolean {
     return NEW_BILLING_SCENES.includes(item.scene);
+}
+
+function isPriceAdjustScene(item: any): boolean {
+    return PRICE_ADJUST_BILLING_SCENES.includes(item.scene);
 }
 
 function getBillingType(

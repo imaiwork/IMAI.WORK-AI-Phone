@@ -8,9 +8,7 @@ use app\common\enum\user\AccountLogEnum;
 use app\common\logic\AccountLogLogic;
 use app\common\model\human\HumanVoice;
 use app\common\model\user\User;
-use app\common\service\ConfigService;
 use app\common\service\FileService;
-use think\exception\HttpResponseException;
 use think\facade\Log;
 
 class VoiceLogic extends ApiLogic
@@ -22,7 +20,7 @@ class VoiceLogic extends ApiLogic
         try {
             $task_id = generate_unique_task_id();
             $params['demo_text'] = $params['demo_text'] ?? '你好，我是你的专属AI克隆声音';
-            $scene = self::SHANJIAN_VOICE;
+            [$modelVersion, $upstreamModel, $tokenScene, $tokenCode] = self::resolveTrain($params);
             $response = self::requestUrl([
                 'audioUrl' => $params['audio_url'],
                 'language' => $params['language'] ?? 'zh-CN',
@@ -30,7 +28,8 @@ class VoiceLogic extends ApiLogic
                 'task_id' => $task_id,
                 'user_id' => self::$uid,
                 'now' => time(),
-            ], $scene, self::$uid, $task_id);
+                'model' => $upstreamModel,
+            ], $tokenScene, $tokenCode, self::$uid, $task_id);
             Log::channel('shanjian')->write('闪剪音色合成参数' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
             if((int)$response['code'] !== 10000)
             {
@@ -39,7 +38,7 @@ class VoiceLogic extends ApiLogic
             }
             $data = array(
                 'user_id' => self::$uid,
-                'model_version' => 8,
+                'model_version' => $modelVersion,
                 'task_id' => $task_id,
                 'status' => 0, //生成中
                 'gender' => $params['gender'] ?? '',
@@ -59,13 +58,54 @@ class VoiceLogic extends ApiLogic
         }
     }
 
+    /**
+     * @return array{0:int,1:string,2:string,3:int}
+     */
+    private static function resolveTrain(array $params): array
+    {
+        $modelVersion = (int)($params['model_version'] ?? 0);
+        $model = strtolower(trim((string)($params['model'] ?? '')));
+        if ($model === 's3' || $modelVersion === HumanVoice::MODEL_VERSION_SHANJIAN_S3) {
+            return [
+                HumanVoice::MODEL_VERSION_SHANJIAN_S3,
+                's3',
+                'human_voice_shanjian_s3',
+                AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3,
+            ];
+        }
+        return [
+            HumanVoice::MODEL_VERSION_SHANJIAN,
+            'v3',
+            'human_voice_shanjian',
+            AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN,
+        ];
+    }
+
+    private static function tokenSceneByVersion(int $version): string
+    {
+        return $version === HumanVoice::MODEL_VERSION_SHANJIAN_S3
+            ? 'human_voice_shanjian_s3'
+            : 'human_voice_shanjian';
+    }
+
+    private static function tokenCodeByVersion(int $version): int
+    {
+        return $version === HumanVoice::MODEL_VERSION_SHANJIAN_S3
+            ? AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3
+            : AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN;
+    }
+
     public static function notify(array $payload)
     {
         try {
             $task_id = $payload['task_id'] ?? '';
             $user_id = $payload['user_id'] ?? 0;
             $result_task_id = $payload['taskId'] ?? '';
-            $find = HumanVoice::where('task_id', $task_id)->where('status', 0)->where('model_version', 8)->where('user_id', $user_id)->findOrEmpty();
+            $find = HumanVoice::where('task_id', $task_id)
+                ->where('status', 0)
+                ->whereIn('model_version', HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS)
+                ->where('user_id', $user_id)
+                ->findOrEmpty();
             if ($find->isEmpty()) {
                 self::setError('任务不存在');
                 return false;
@@ -78,7 +118,13 @@ class VoiceLogic extends ApiLogic
                 $find->result_task_id = $result_task_id;
             } else {
                 $find->status = 2; //生成失败
-                self::refundTokens($find->user_id,  $result_task_id, $find->task_id, 'human_voice_shanjian');
+                $resultTaskId = $result_task_id !== '' ? $result_task_id : (string)$find->result_task_id;
+                self::refundTokens(
+                    (int)$find->user_id,
+                    $resultTaskId,
+                    (string)$find->task_id,
+                    self::tokenSceneByVersion((int)$find->model_version)
+                );
                 $find->remark = $payload['errorMessage'] ?? '闪剪音色合成失败';
             }
             $find->update_time = time();
@@ -98,14 +144,10 @@ class VoiceLogic extends ApiLogic
         }
     }
 
-    private static function requestUrl(array $request, string $scene, int $userId, string $taskId): array
+    private static function requestUrl(array $request, string $tokenScene, int $tokenCode, int $userId, string $taskId): array
     {
 
         $requestService = \app\common\service\ToolsService::Shanjian();
-
-        [$tokenScene, $tokenCode] = match ($scene) {
-            self::SHANJIAN_VOICE => ['human_voice_shanjian', AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN],
-        };
 
         //计费
         $unit = TokenLogService::checkToken($userId, $tokenScene);
@@ -113,13 +155,7 @@ class VoiceLogic extends ApiLogic
         $request['task_id'] = $taskId;
         $request['user_id'] = $userId;
         $request['now'] = time();
-        switch ($scene) {
-            case self::SHANJIAN_VOICE:
-
-                $response = $requestService->singleVoiceTrain($request);
-                break;
-            default:
-        }
+        $response = $requestService->singleVoiceTrain($request);
         //成功响应，需要扣费
         if (isset($response['code']) && $response['code'] == 10000) {
 
@@ -127,13 +163,7 @@ class VoiceLogic extends ApiLogic
 
             if ($points > 0) {
 
-                $extra = [];
-                switch ($scene) {
-                    case self::SHANJIAN_VOICE:
-                        $extra = ['算力单价' => $unit, '实际消耗算力' => $points];
-                        break;
-                    default:
-                }
+                $extra = ['算力单价' => $unit, '实际消耗算力' => $points];
                 //token扣除
                 User::userTokensChange($userId, $points);
 
@@ -147,25 +177,30 @@ class VoiceLogic extends ApiLogic
 
     public static function refundTokens(int $userId, string $result_id, string $taskId, string $type): bool
     {
+        $typeID = match ($type) {
+            'human_voice_shanjian_s3' => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3,
+            default => AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN,
+        };
 
         try {
-            [$typeIndex, $typeID] = match ($type) {
-                'human_voice_shanjian' => [2, AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN],
-            };
-            // 请求查询接口
-            $requestParams = [
-                'taskId' => $result_id,
-                'task_id' => $taskId
-            ];
-            $response = \app\common\service\ToolsService::Shanjian()->status($requestParams);
-            if (isset($response['code']) && $response['code'] == 10000) {
-                return true;
+            if ($result_id !== '') {
+                $response = \app\common\service\ToolsService::Shanjian()->status([
+                    'taskId' => $result_id,
+                    'task_id' => $taskId,
+                ]);
+                $taskStatus = is_array($response['data'] ?? null)
+                    ? (string)($response['data']['status'] ?? '')
+                    : '';
+                // 查单成功只表示中台接口通了，不是任务成功。任务仍是 succeed 才不退。
+                if (isset($response['code']) && (int)$response['code'] === 10000 && $taskStatus === 'succeed') {
+                    return true;
+                }
             }
             self::refundOnce($userId, $taskId, $typeID);
-
             return true;
         } catch (\Throwable $e) {
             Log::channel('shanjian')->write('闪剪退费失败' . $e->getMessage());
+            self::refundOnce($userId, $taskId, $typeID);
             return false;
         }
     }
@@ -174,6 +209,35 @@ class VoiceLogic extends ApiLogic
     private static function refundOnce(int $userId, string $taskId, int $typeID): void
     {
         AccountLogLogic::refundTaskOnce($userId, $typeID, $taskId);
+    }
+
+    /**
+     * 补退：失败已落库，但旧 refundTokens 把中台查单 10000 当成成功、没退给用户。
+     * refundTaskOnce 按流水幂等，已退过的不会再退。
+     */
+    private static function refundMissedFailedVoices(): void
+    {
+        $voices = HumanVoice::whereIn('model_version', HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS)
+            ->where('status', 2)
+            ->where('update_time', '>=', strtotime('-7 days'))
+            ->order('id', 'asc')
+            ->limit(10)
+            ->select();
+
+        foreach ($voices as $voice) {
+            try {
+                $ok = AccountLogLogic::refundTaskOnce(
+                    (int)$voice->user_id,
+                    self::tokenCodeByVersion((int)$voice->model_version),
+                    (string)$voice->task_id
+                );
+                if ($ok) {
+                    Log::channel('shanjian')->write('音色失败补退费 task_id: ' . $voice->task_id);
+                }
+            } catch (\Throwable $e) {
+                Log::channel('shanjian')->write('音色失败补退费异常 task_id: ' . ($voice->task_id ?? '') . ' err: ' . $e->getMessage());
+            }
+        }
     }
 
     /**
@@ -189,7 +253,7 @@ class VoiceLogic extends ApiLogic
     public static function check(): bool
     {
         try {
-            $voices = HumanVoice::where('model_version', 8)
+            $voices = HumanVoice::whereIn('model_version', HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS)
                 ->where('status', 0)
                 ->where('create_time', '<=', strtotime('-30 minutes'))
                 ->order('id', 'asc')
@@ -244,13 +308,15 @@ class VoiceLogic extends ApiLogic
                         'update_time' => time(),
                     ]);
                     if ($closed) {
-                        self::refundOnce((int)$voice->user_id, (string)$voice->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN);
+                        self::refundOnce((int)$voice->user_id, (string)$voice->task_id, self::tokenCodeByVersion((int)$voice->model_version));
                         Log::channel('shanjian')->write('音色任务超时收口并退费 task_id: ' . $voice->task_id);
                     }
                 } catch (\Throwable $e) {
                     Log::channel('shanjian')->write('音色check处理失败 task_id: ' . ($voice->task_id ?? '') . ' err: ' . $e->getMessage());
                 }
             }
+
+            self::refundMissedFailedVoices();
 
             return true;
         } catch (\Throwable $e) {
@@ -260,10 +326,7 @@ class VoiceLogic extends ApiLogic
     }
 
     public static function musicLists(){
-        for ($i = 1; $i <= 20; $i++) {
-            $music[] = config('app.app_host') . '/static/audio/music/' . $i . '.mp3';
-        }
-        self::$returnData = $music;
+        self::$returnData = \app\common\service\SystemMusicService::publicList();
         return true;
     }
 }

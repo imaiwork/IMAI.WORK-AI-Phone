@@ -245,7 +245,7 @@ const {
 // 进页面回填上次填过的线索词 / 私信话术 / 加好友备注
 useHistory(formData)
 
-// 加微客服微信下拉：account 就是 wxid，data-select 多选后按逗号拼进 wechat_id
+// 加微客服微信下拉：account 就是 wxid，多选数组由 config-step 转换为 wechat_id 字符串
 const { optionsData } = useDictOptions<{ wechatLists: any[] }>({
     wechatLists: {
         api: getPublishAccountList,

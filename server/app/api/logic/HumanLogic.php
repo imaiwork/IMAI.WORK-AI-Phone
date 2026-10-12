@@ -842,18 +842,6 @@ class HumanLogic extends ApiLogic
                 TokenLogService::checkToken(self::$uid, self::VIDEO_TRAINING_PRO);
             }
 
-            //如果用户有任务在处理中，不允许创建任务
-            $taskCount = HumanVideoTask::where('user_id', self::$uid)
-                ->where('status', 0)
-                ->where('model_version', $model_version)
-                ->count();
-
-            if ($taskCount >= 5) {
-
-                throw new \Exception('当前您已有5个任务正在排队处理中，请等待任务完成后再创建');
-            }
-
-
             // 形象ID 已有形象
             if ($anchor_id) {
                 $anchor = HumanAnchor::where('anchor_id', $anchor_id)->where('model_version',$model_version)->where('status',1)->findOrEmpty();
@@ -1048,14 +1036,6 @@ class HumanLogic extends ApiLogic
             $taskId = generate_unique_task_id();
         }
 
-        $taskCount = HumanVideoTask::where('user_id', $userId)
-            ->where('status', 0)
-            ->where('model_version', 7)
-            ->count();
-        if ($taskCount >= 5) {
-            throw new \Exception('当前您已有5个任务正在排队处理中，请等待任务完成后再创建');
-        }
-
         $anchor = HumanAnchor::where('anchor_id', $anchorId)
             ->where('model_version', 7)
             ->where('status', 1)
@@ -1220,6 +1200,7 @@ class HumanLogic extends ApiLogic
         $dh_id         = $data['dh_id'] ?? 0;
         $digitalHuman  = null;
         $task_ids      = [];
+        $placeholder   = null;
         if (!empty($dh_id)) {
             $digitalHuman = PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$user_id);
             if (empty($digitalHuman)) {
@@ -1235,10 +1216,14 @@ class HumanLogic extends ApiLogic
                     ->order('id', 'desc')
                     ->find();
                 if (!empty($active)) {
-                    Log::channel('digital')->write(
-                        '蝉镜形象已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id . ' id=' . $active->id
-                    );
-                    return true;
+                    // anchor_id 为空是分发前占位行，继续提交并回写这一行，避免再插一条
+                    if (trim((string)$active->anchor_id) !== '') {
+                        Log::channel('digital')->write(
+                            '蝉镜形象已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id . ' id=' . $active->id
+                        );
+                        return true;
+                    }
+                    $placeholder = $active;
                 }
                 $failedRows = HumanAnchor::where('dh_id', $dh_id)
                     ->where('user_id', $user_id)
@@ -1293,7 +1278,9 @@ class HumanLogic extends ApiLogic
                 return false;
             }
         }
-        $taskId = generate_unique_task_id();
+        $taskId = ($placeholder && trim((string)$placeholder->task_id) !== '')
+            ? (string)$placeholder->task_id
+            : generate_unique_task_id();
 
         if (in_array($data['model_version'], [2, 4, 6])) {
 
@@ -1372,8 +1359,13 @@ class HumanLogic extends ApiLogic
                 'model_version' => $model_version,
                 'pic'           => $pic,
                 'dh_id'         => $dh_id,
+                'remark'        => '',
             ];
-            HumanAnchor::create($addData);
+            if (!empty($placeholder)) {
+                $placeholder->save($addData);
+            } else {
+                HumanAnchor::create($addData);
+            }
         } else {
             if (!empty($digitalHuman)) {
                 $digitalHuman->task_ids = json_encode($task_ids);
@@ -1381,6 +1373,12 @@ class HumanLogic extends ApiLogic
                 $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion((int)$model_version) ?: '数字人';
                 $digitalHuman->remark =  $modelName . '形象合成失败';
                 $digitalHuman->save();
+            }
+            if (!empty($placeholder)) {
+                $placeholder->save([
+                    'status' => 2,
+                    'remark' => !empty($digitalHuman) ? (string)$digitalHuman->remark : '形象合成失败',
+                ]);
             }
             self::setError('合成失败');
             return false;
@@ -1771,7 +1769,7 @@ class HumanLogic extends ApiLogic
         //     $modelVersion = is_array($modelVersion) ? $modelVersion : [(int)$modelVersion];
         // }
 
-        $modelVersion = $data['model_version'] ?? '';
+        $modelVersion = HumanVoice::expandListModelVersions((string)($data['model_version'] ?? ''));
 
         $status = $data['status'] ?? '';
 

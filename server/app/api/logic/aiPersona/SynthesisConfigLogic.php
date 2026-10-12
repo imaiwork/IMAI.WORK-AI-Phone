@@ -4,19 +4,13 @@ namespace app\api\logic\aiPersona;
 
 use app\api\logic\ApiLogic;
 use app\common\model\aiPersona\AiPersona;
-use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
-use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\AiPersonaDigitalVoice;
 use app\common\model\aiPersona\Material as MaterialModel;
 use app\common\model\aiPersona\MaterialUseLog;
-use app\common\model\shanjian\ShanjianClipTemplate;
-use app\common\model\shanjian\ShanjianVideoSetting;
-use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
 use app\common\service\aiPersona\PersonaRunModeSwitchService;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
-use app\common\model\sv\SvDevice;
-use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -46,6 +40,7 @@ class SynthesisConfigLogic extends ApiLogic
             $params['copywriting_source'] = $params['copywriting_source'] ?? 2;
             $params['library_use_mode'] = $params['library_use_mode'] ?? AiPersonaSynthesisConfig::LIBRARY_USE_MODE_RANDOM;
             $params['library_reuse_mode'] = $params['library_reuse_mode'] ?? AiPersonaSynthesisConfig::LIBRARY_REUSE_MODE_ONCE;
+            $params['hotspot_pick_mode'] = AiPersonaSynthesisConfig::requireValidHotspotPickMode($params['hotspot_pick_mode'] ?? AiPersonaSynthesisConfig::HOTSPOT_PICK_MODE_LATEST);
             $params['work_mode'] = self::normalizeWorkMode($params['work_mode'] ?? AiPersonaSynthesisConfig::WORK_MODE_AI_SYNTHESIS);
             $params['product_use_mode'] = self::normalizeProductUseMode($params['product_use_mode'] ?? AiPersonaSynthesisConfig::PRODUCT_USE_MODE_RANDOM);
             $params['product_reuse_mode'] = self::normalizeProductReuseMode($params['product_reuse_mode'] ?? AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_ONCE);
@@ -140,6 +135,14 @@ class SynthesisConfigLogic extends ApiLogic
                     ? (int)$params['library_reuse_mode']
                     : AiPersonaSynthesisConfig::LIBRARY_REUSE_MODE_ONCE;
             }
+            $nextCopywritingSource = array_key_exists('copywriting_source', $params)
+                ? (int)$params['copywriting_source']
+                : (int)($config['copywriting_source'] ?? 0);
+            if (array_key_exists('hotspot_pick_mode', $params) || $nextCopywritingSource === AiPersonaSynthesisConfig::COPYWRITING_SOURCE_HOTSPOT) {
+                $params['hotspot_pick_mode'] = AiPersonaSynthesisConfig::requireValidHotspotPickMode(
+                    $params['hotspot_pick_mode'] ?? ($config['hotspot_pick_mode'] ?? AiPersonaSynthesisConfig::HOTSPOT_PICK_MODE_LATEST)
+                );
+            }
             if (array_key_exists('work_mode', $params)) {
                 $params['work_mode'] = self::normalizeWorkMode($params['work_mode']);
             }
@@ -180,11 +183,29 @@ class SynthesisConfigLogic extends ApiLogic
             if (array_key_exists('music_source', $params)) {
                 $params['music_source'] = AiPersonaSynthesisConfig::normalizeMusicSource($params['music_source']);
             }
+            if (array_key_exists('system_music_id', $params) || array_key_exists('music_source', $params)) {
+                $nextSource = array_key_exists('music_source', $params)
+                    ? (int)$params['music_source']
+                    : (int)($config->music_source ?? AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM);
+                $pinned = array_key_exists('system_music_id', $params)
+                    ? trim((string)$params['system_music_id'])
+                    : trim((string)($config->system_music_id ?? ''));
+                if ($nextSource !== AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM) {
+                    $params['system_music_id'] = '';
+                } elseif ($pinned !== '' && !\app\common\service\SystemMusicService::isEnabled($pinned)) {
+                    throw new \Exception('这首系统音乐已下架，请重选或改回每次随机');
+                } else {
+                    $params['system_music_id'] = $pinned;
+                }
+            }
             if (array_key_exists('music_volume', $params)) {
                 $params['music_volume'] = AiPersonaSynthesisConfig::normalizeMusicVolume($params['music_volume']);
             }
             if (array_key_exists('speech_rate', $params)) {
                 $params['speech_rate'] = AiPersonaSynthesisConfig::normalizeSpeechRate($params['speech_rate']);
+            }
+            if (array_key_exists('square_group_ids', $params)) {
+                $params['square_group_ids'] = \app\common\service\square\SquareAssetService::normalizeGroupIds($params['square_group_ids']);
             }
             $params = self::applyCopywritingGenerationFields($params, $config);
             $params['update_time'] = time();
@@ -408,8 +429,10 @@ class SynthesisConfigLogic extends ApiLogic
             'news_mixcut_duration' => AiPersonaSynthesisConfig::NEWS_MIXCUT_DURATION_DEFAULT,
             'library_use_mode' => AiPersonaSynthesisConfig::LIBRARY_USE_MODE_RANDOM,
             'library_reuse_mode' => AiPersonaSynthesisConfig::LIBRARY_REUSE_MODE_ONCE,
+            'hotspot_pick_mode' => AiPersonaSynthesisConfig::HOTSPOT_PICK_MODE_LATEST,
             'template_config' => SynthesisTemplateConfigService::defaultConfig(),
             'music_source' => AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM,
+            'system_music_id' => '',
             'music_volume' => AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT,
             'speech_rate' => AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT,
             'copywriting_generation_type' => AiPersonaSynthesisConfig::COPYWRITING_GENERATION_TYPE_KNOWLEDGE,
@@ -572,6 +595,11 @@ class SynthesisConfigLogic extends ApiLogic
     private static function appendTemplateConfig(array $data): array
     {
         $data['template_config'] = SynthesisTemplateConfigService::enrich($data['template_config'] ?? []);
+        $pinned = trim((string)($data['system_music_id'] ?? ''));
+        $hit = $pinned === '' ? [] : \app\common\service\SystemMusicService::findEnabled($pinned);
+        $data['system_music_name'] = (string)($hit['name'] ?? '');
+        $data['system_music_enabled'] = $pinned === '' || $hit !== [];
+        $data['system_musics'] = \app\common\service\SystemMusicService::publicList();
         return $data;
     }
 

@@ -32,11 +32,38 @@ class MediaStatusHandler extends BaseMessageHandler
             $this->connection = $connection;
             $this->publishPlatform = $content['publish_platform'] ?? 0;
 
-            $mediaId = $content['material_id'] ?? 0;
+            $mediaId = (int)($content['material_id'] ?? 0);
             $status = (int)($content['status'] ?? 0);
-            $where = [];
-            if ($this->publishPlatform === DeviceEnum::PUBLISH_PLATFORM_WX) {
+            $isWechat = $this->publishPlatform === DeviceEnum::PUBLISH_PLATFORM_WX;
+            if ($isWechat) {
                 $media = AiWechatCircleTask::where('id', $mediaId)->findOrEmpty();
+                $where = [
+                    ['sub_task_id', '=', $media->task_config_id],
+                    ['sub_data_id', '=', $media->id],
+                    ['device_code', '=', $media->device_code],
+                    ['account', '=', $media->wechat_id],
+                ];
+            } else {
+                $media = SvPublishSettingDetail::where('id', $mediaId)->findOrEmpty();
+                $where = [
+                    ['sub_task_id', '=', $media->publish_account_id],
+                    ['sub_data_id', '=', $media->id],
+                    ['device_code', '=', $media->device_code],
+                    ['account', '=', $media->account],
+                ];
+            }
+
+            $task = $this->findDeviceTask($where, $payload, $mediaId);
+            if ($this->shouldForceTimeoutFail($task, $status)) {
+                $remark = $this->applyTimeoutFail($task, $media, $content, $status, $isWechat);
+                $this->writeTaskLog($task, $content, $remark);
+                $this->payload['reply'] = '发布数据状态已更新';
+                $this->recordDeviceLog($content, $media, $task);
+                $this->sendResponse($this->uid, $this->payload, $this->payload['reply']);
+                return;
+            }
+
+            if ($isWechat) {
                 $wechatCurrent = $media->isEmpty() ? 0 : ((int)$media->send_status === 2 ? 1 : ((int)$media->send_status === 3 ? 2 : 0));
                 if (!$media->isEmpty() && in_array($status, [1, 2], true)
                     && PublishRemarkGuard::shouldApplyRpaDetailStatus($status, $wechatCurrent, (string)$media->remark)) {
@@ -46,44 +73,28 @@ class MediaStatusHandler extends BaseMessageHandler
                     $media->finish_time = date('Y-m-d H:i', time());
                     $media->save();
                 }
-                $where = [
-                    ['sub_task_id', '=', $media->task_config_id],
-                    ['sub_data_id', '=', $media->id],
-                    ['device_code', '=', $media->device_code],
-                    ['account', '=', $media->wechat_id],
-                ];
-            } else {
-                $media = SvPublishSettingDetail::where('id', $mediaId)->findOrEmpty();
-                if (!$media->isEmpty()) {
-                    if (PublishRemarkGuard::shouldApplyRpaDetailStatus($status, (int)$media->status, (string)$media->remark)) {
-                        $media->status = $status;
-                        $media->remark = 'RPA执行：' . ($content['msg'] ?? '');
-                        $media->update_time = time();
-                        $media->exec_time = time();
-                        $media->save();
-                    }
-                    $find = SvPublishSettingDetail::where('publish_account_id', $media->publish_account_id)->where('status', 'in', [0, 3])->findOrEmpty();
-                    if ($find->isEmpty() && ((int)$status === 1 || (int)$status === 2)) {
-                        SvPublishSettingAccount::where('id', $media->publish_account_id)->update([
-                            'status' => 2,
-                            'update_time' => time()
-                        ]);
-                        SvPublishSetting::where('id', $media->publish_id)->update([
-                            'status' => 3,
-                            'update_time' => time()
-                        ]);
-                    }
+            } elseif (!$media->isEmpty()) {
+                if (PublishRemarkGuard::shouldApplyRpaDetailStatus($status, (int)$media->status, (string)$media->remark)) {
+                    $media->status = $status;
+                    $media->remark = 'RPA执行：' . ($content['msg'] ?? '');
+                    $media->update_time = time();
+                    $media->exec_time = time();
+                    $media->save();
                 }
-                $where = [
-                    ['sub_task_id', '=', $media->publish_account_id],
-                    ['sub_data_id', '=', $media->id],
-                    ['device_code', '=', $media->device_code],
-                    ['account', '=', $media->account],
-                ];
+                $find = SvPublishSettingDetail::where('publish_account_id', $media->publish_account_id)->where('status', 'in', [0, 3])->findOrEmpty();
+                if ($find->isEmpty() && ((int)$status === 1 || (int)$status === 2)) {
+                    SvPublishSettingAccount::where('id', $media->publish_account_id)->update([
+                        'status' => 2,
+                        'update_time' => time()
+                    ]);
+                    SvPublishSetting::where('id', $media->publish_id)->update([
+                        'status' => 3,
+                        'update_time' => time()
+                    ]);
+                }
             }
 
             // 主任务状态修改
-            $task = SvDeviceTask::where($where)->findOrEmpty();
             if (!$task->isEmpty()) {
                 $maps = [
                     1 => DeviceEnum::TASK_STATUS_FINISHED,
@@ -98,16 +109,7 @@ class MediaStatusHandler extends BaseMessageHandler
                     $task->save();
                 }
 
-                // 记录日志
-                SvDeviceTaskLog::create([
-                    'user_id' => $task->user_id,
-                    'task_id' => $task->id,
-                    'task_source' => $task->source,
-                    'device_code' => $task->device_code,
-                    'message' => $content['msg'] ?? '',
-                    'image' => $content['imageUrl'] ?? '',
-                    'create_time' => time(),
-                ]);
+                $this->writeTaskLog($task, $content);
             }
             $this->payload['reply'] = '发布数据状态已更新';
             $this->recordDeviceLog($content, $media, $task);
@@ -122,6 +124,122 @@ class MediaStatusHandler extends BaseMessageHandler
         } finally {
             unset($content);
         }
+    }
+
+    private function findDeviceTask(array $where, array $payload, int $mediaId): SvDeviceTask
+    {
+        $task = SvDeviceTask::where($where)->findOrEmpty();
+        if (!$task->isEmpty()) {
+            return $task;
+        }
+
+        $deviceCode = (string)($payload['deviceId'] ?? '');
+        if ($deviceCode === '' || $mediaId <= 0) {
+            return $task;
+        }
+
+        return SvDeviceTask::where('device_code', $deviceCode)
+            ->where('sub_data_id', $mediaId)
+            ->findOrEmpty();
+    }
+
+    private function shouldForceTimeoutFail(SvDeviceTask $task, int $incoming): bool
+    {
+        if ($task->isEmpty()) {
+            return false;
+        }
+        if ((int)$task->end_time >= time()) {
+            return false;
+        }
+        if ($incoming === 1) {
+            return false;
+        }
+        if ((int)$task->status === DeviceEnum::TASK_STATUS_FINISHED) {
+            return false;
+        }
+        if (PublishRemarkGuard::isBillingLocked((string)$task->remark)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function applyTimeoutFail(
+        SvDeviceTask $task,
+        AiWechatCircleTask|SvPublishSettingDetail $media,
+        array $content,
+        int $status,
+        bool $isWechat
+    ): string {
+        $now = time();
+        $remark = '任务执行超时';
+        if ($status === 2) {
+            $msg = trim((string)($content['msg'] ?? ''));
+            if ($msg !== '') {
+                $remark = 'RPA执行：' . $msg;
+            }
+        }
+
+        $task->status = DeviceEnum::TASK_STATUS_FAILED;
+        $task->remark = $remark;
+        $task->update_time = $now;
+        $task->save();
+
+        if ($media->isEmpty()) {
+            return $remark;
+        }
+
+        if ($isWechat) {
+            if ((int)$media->send_status !== 2) {
+                $media->send_status = 3;
+                $media->remark = $remark;
+                $media->update_time = $now;
+                $media->finish_time = date('Y-m-d H:i', $now);
+                $media->save();
+            }
+            return $remark;
+        }
+
+        if ((int)$media->status !== 1) {
+            $media->status = 2;
+            $media->remark = $remark;
+            $media->update_time = $now;
+            $media->exec_time = $now;
+            $media->save();
+        }
+
+        $find = SvPublishSettingDetail::where('publish_account_id', $media->publish_account_id)
+            ->where('status', 'in', [0, 3])
+            ->findOrEmpty();
+        if ($find->isEmpty()) {
+            SvPublishSettingAccount::where('id', $media->publish_account_id)->update([
+                'status' => 2,
+                'update_time' => $now,
+            ]);
+            SvPublishSetting::where('id', $media->publish_id)->update([
+                'status' => 3,
+                'update_time' => $now,
+            ]);
+        }
+
+        return $remark;
+    }
+
+    private function writeTaskLog(SvDeviceTask $task, array $content, ?string $message = null): void
+    {
+        if ($task->isEmpty()) {
+            return;
+        }
+
+        SvDeviceTaskLog::create([
+            'user_id' => $task->user_id,
+            'task_id' => $task->id,
+            'task_source' => $task->source,
+            'device_code' => $task->device_code,
+            'message' => $message ?? ($content['msg'] ?? ''),
+            'image' => $content['imageUrl'] ?? '',
+            'create_time' => time(),
+        ]);
     }
 
     private function recordDeviceLog(array $content, AiWechatCircleTask|SvPublishSettingDetail $media, SvDeviceTask $task): void

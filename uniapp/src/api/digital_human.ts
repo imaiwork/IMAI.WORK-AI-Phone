@@ -223,6 +223,10 @@ export const shanjianVoiceClone = (data: Record<string, any>) => {
     return request.post({ url: '/shanjian.voice/add', data })
 }
 
+export const getSystemMusicList = () => {
+    return request.get({ url: '/shanjian.voice/musicLists' })
+}
+
 // sora发布任务创建
 export const createSoraPublishTask = (data: Record<string, any>) => {
     return request.post({ url: '/sora.publish/add', data })

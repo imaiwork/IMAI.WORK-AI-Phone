@@ -260,7 +260,7 @@ import { formatAudioTime } from "@/utils/util";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
+import { DigitalHumanModelVersionEnum, isShanjianVoiceModelVersion } from "@/enums/appEnums";
 import { cratedVoiceCopywriter } from "../../config/copywriter";
 import { voiceprintAgreementTitle, voiceprintAgreementContent } from "../../config/voiceprint-agreement";
 import ChooseModel from "@/ai_modules/digital_human/components/choose-model/choose-model.vue";
@@ -281,6 +281,8 @@ const tokensRequired = computed(() => {
     const tokenMap: any = {
         [DigitalHumanModelVersionEnum.CHANJING]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_CHANJING)?.score,
         [DigitalHumanModelVersionEnum.SHANJIAN]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN)?.score,
+        [DigitalHumanModelVersionEnum.SHANJIAN_S3]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN_S3)
+            ?.score,
         [DigitalHumanModelVersionEnum.MINIMAX_HD]: userStore.getTokenByScene(TokensSceneEnum.HUMAN_VOICE_MINIMAX_HD)
             ?.score,
         [DigitalHumanModelVersionEnum.MINIMAX_TURBO]: userStore.getTokenByScene(
@@ -308,7 +310,7 @@ const fileName = ref("");
 
 // 上传音频格式
 const getUploadAudioFormat = () => {
-    return formData.model_version == DigitalHumanModelVersionEnum.SHANJIAN ? ["mp3", "wav"] : ["mp3", "wav", "m4a"];
+    return isShanjianVoiceModelVersion(formData.model_version) ? ["mp3", "wav"] : ["mp3", "wav", "m4a"];
 };
 
 // 弹窗控制
@@ -572,12 +574,15 @@ const startVoiceCloning = async () => {
                 file_id: formData.file_id,
                 text: cratedVoiceCopywriter[currCopywriterIndex.value],
             });
+        const callShanjian = () =>
+            shanjianVoiceClone({
+                name: formData.name,
+                audio_url: formData.url,
+                model_version: formData.model_version,
+            });
         const apis: Partial<Record<DigitalHumanModelVersionEnum, () => Promise<any>>> = {
-            [DigitalHumanModelVersionEnum.SHANJIAN]: () =>
-                shanjianVoiceClone({
-                    name: formData.name,
-                    audio_url: formData.url,
-                }),
+            [DigitalHumanModelVersionEnum.SHANJIAN]: callShanjian,
+            [DigitalHumanModelVersionEnum.SHANJIAN_S3]: callShanjian,
             [DigitalHumanModelVersionEnum.CHANJING]: () => voiceClone(formData),
             [DigitalHumanModelVersionEnum.MINIMAX_HD]: () => callMinimax(),
             [DigitalHumanModelVersionEnum.MINIMAX_TURBO]: () => callMinimax(),

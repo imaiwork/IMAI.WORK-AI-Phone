@@ -15,23 +15,42 @@ class ToolUtil
     public function replaceImageInfo(string $data): string
     {
         $payload = json_decode($data, true);
-        if (!is_array($payload) || !isset($payload['content'])) {
+        if (!is_array($payload)) {
             return $data;
         }
 
-        $content = is_array($payload['content']) ? $payload['content'] : json_decode((string)$payload['content'], true);
-        if (!is_array($content)) {
-            return $data;
+        if (isset($payload['content'])) {
+            $content = is_array($payload['content']) ? $payload['content'] : json_decode((string)$payload['content'], true);
+            if (is_array($content)) {
+                if (isset($content['image'])) {
+                    $content['image'] = '图片内容';
+                }
+                if (isset($content['avatar'])) {
+                    $content['avatar'] = '头像内容';
+                }
+                $payload['content'] = $content;
+            }
         }
-        if (isset($content['image'])) {
-            $content['image'] = '图片内容';
-        }
-        if (isset($content['avatar'])) {
-            $content['avatar'] = '头像内容';
-        }
-        $payload['content'] = $content;
+
+        $payload = $this->redactSensitiveFields($payload);
 
         return json_encode($payload, JSON_UNESCAPED_UNICODE);
+    }
+
+    private function redactSensitiveFields(array $payload): array
+    {
+        $sensitiveKeys = ['token', 'access_token', 'refresh_token', 'auth_token', 'authorization', 'password'];
+        foreach ($payload as $key => $value) {
+            if (in_array(strtolower((string)$key), $sensitiveKeys, true)) {
+                $payload[$key] = '***';
+                continue;
+            }
+            if (is_array($value)) {
+                $payload[$key] = $this->redactSensitiveFields($value);
+            }
+        }
+
+        return $payload;
     }
 
     public function base64ToImage(array $item): string

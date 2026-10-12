@@ -95,6 +95,22 @@ class CrawlingManualController extends BaseApiController
         }
     }
 
+    public function checkWechat(){
+        $result = CrawlingManualLogic::checkWechat();
+        if ($result) {
+            return $this->data(CrawlingManualLogic::getReturnData());
+        }
+        return $this->fail(CrawlingManualLogic::getError());
+    }
+
+    public function clues(){
+        $result = CrawlingManualLogic::clues();
+        if ($result) {
+            return $this->data(CrawlingManualLogic::getReturnData());
+        }
+        return $this->fail(CrawlingManualLogic::getError());
+    }
+
     public function cron(){
         try {
             CrawlingManualLogic::crawlingManualTaskCron();

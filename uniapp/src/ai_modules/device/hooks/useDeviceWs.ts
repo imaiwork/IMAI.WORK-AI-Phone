@@ -7,6 +7,9 @@ import { isJson } from "@/utils/util";
 // 应用版本
 const APP_VERSION = config.version;
 
+/** ensureConnected 等待连接建立的超时时间 */
+const ENSURE_CONNECT_TIMEOUT = 5000;
+
 type DeviceWsEvent = "open" | "message" | "close" | "success" | "error";
 
 type DeviceWsEventCallback<T = unknown> = (data: T) => void;
@@ -60,6 +63,7 @@ export default function useDeviceWs(options?: WebSocketOptions) {
             content: {
                 ...data.content,
                 userId: getUserId() || userInfo.value?.id,
+                token: userStore.token || undefined,
                 deviceId: data.deviceId || undefined,
                 accountType: data.accountType,
             },
@@ -70,10 +74,11 @@ export default function useDeviceWs(options?: WebSocketOptions) {
         });
     };
 
-    /** 有有效 userId 且已连接时才 bind；用户信息晚到时会补绑 */
+    /** 有有效 userId、token 且已连接时才 bind；用户信息晚到时会补绑 */
     const bindSocket = () => {
         const userId = getUserId();
-        if (!isConnected.value || !userId) return;
+        const token = userStore.token || "";
+        if (!isConnected.value || !userId || !token) return;
         if (boundUserId.value === userId) return;
 
         send({
@@ -81,9 +86,28 @@ export default function useDeviceWs(options?: WebSocketOptions) {
             content: {
                 type: DeviceCmdEnum.BIND_WS,
                 sourceType: "mprog",
+                token,
             },
         });
         boundUserId.value = userId;
+    };
+
+    /** 下发依赖 WS 推送的指令前调用：未连接则重连并等待 open，超时返回 false */
+    const ensureConnected = (timeout = ENSURE_CONNECT_TIMEOUT) => {
+        if (isConnected.value) return Promise.resolve(true);
+        reconnect();
+        return new Promise<boolean>((resolve) => {
+            const stop = watch(isConnected, (connected) => {
+                if (!connected) return;
+                clearTimeout(timer);
+                stop();
+                resolve(true);
+            });
+            const timer = setTimeout(() => {
+                stop();
+                resolve(false);
+            }, timeout);
+        });
     };
 
     // 监听连接事件
@@ -161,6 +185,7 @@ export default function useDeviceWs(options?: WebSocketOptions) {
         send,
         reconnect,
         isConnected,
+        ensureConnected,
         onEvent,
         close,
     };

@@ -6,20 +6,21 @@ use app\api\logic\ApiLogic;
 use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\api\logic\shanjian\ShanjianVideoTaskLogic;
 use app\api\logic\videoSynthesis\CopywritingImitationLogic;
+use app\common\Jobs\HotspotVideoDispatchJob;
 use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\AiPersonaDigitalVoice;
 use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
-use app\common\model\human\HumanVoice;
-use app\common\Jobs\HotspotVideoDispatchJob;
 use app\common\model\hotspot\HotspotTask;
+use app\common\model\human\HumanVoice;
 use app\common\model\minimax\MinimaxShanjianTask;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
 use app\common\service\FileService;
 use app\common\service\OriginalMaterialSpec;
+use app\common\service\square\SquareAssetService;
 use think\facade\Queue;
 
 class VideoService
@@ -589,7 +590,11 @@ class VideoService
         $synthesisConfig = self::resolveSynthesisConfig($userId, $personaId);
         // 不选人设没有人设合成配置可依：背景音乐用高级设置里自传的曲子，没传就系统随机
         $musicUrl = $manualMode
-            ? ManualAssetService::resolveMusicUrl((string)($opt['music_url'] ?? ''))
+            ? ManualAssetService::resolveMusicUrl(
+                (string)($opt['music_url'] ?? ''),
+                (string)($opt['system_music_id'] ?? ''),
+                (int)($opt['music_source'] ?? ManualAssetService::MUSIC_SOURCE_SYSTEM)
+            )
             : self::resolveMusicUrl($userId, $personaId, $synthesisConfig);
         // 人设模式跟随人设合成配置；不选人设没有配置可依，用高级设置里用户自选的值
         // （音量 0 由下游 buildBackgroundMusicRule 判成 audioSwitch=false，即静音）
@@ -1134,6 +1139,10 @@ class VideoService
             : ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE;
         $isOriginalMode = !$manualMode && $personaId > 0
             && $frozenUseMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
+        // clips=素材混剪(3)，digital=数字人口播(1)；原图缺视频只拦混剪
+        $requiresOriginalVideo = ShanjianVideoSettingLogic::originalModeRequiresVideo(
+            ($opt['video_type'] ?? '') === 'clips' ? 3 : 1
+        );
         $selectedIds = $mode === 'ai' ? [] : ($opt['materials'] ?? []);
         $selected = $mode === 'ai' ? [] : self::loadPersonaMaterials(
             $userId,
@@ -1164,7 +1173,7 @@ class VideoService
             // 只有素材混剪缺视频出不了片才判死；数字人口播的素材是穿插画面，
             // 只选图片照样能合成，不该按「原图模式必须选视频」整单打回
             // （与下面 AI 补齐后那次收口同口径）
-            if ($opt['video_type'] === 'clips') {
+            if ($requiresOriginalVideo) {
                 $emptyVideoError = ShanjianVideoSettingLogic::originalModeEmptyVideoError($selected, $beforeTrim);
                 if ($emptyVideoError !== '') {
                     throw new HotspotUpstreamException($emptyVideoError);
@@ -1265,7 +1274,7 @@ class VideoService
             $beforeTrim = $selected;
             $selected = ShanjianVideoSettingLogic::trimMaterialsByDuration($selected);
             // 素材混剪必须有可用视频；数字人口播沿用上面「AI失败降级为纯口播」的处置，不因缺视频整单失败
-            if ($opt['video_type'] === 'clips') {
+            if ($requiresOriginalVideo) {
                 $emptyVideoError = ShanjianVideoSettingLogic::originalModeEmptyVideoError($selected, $beforeTrim);
                 if ($emptyVideoError !== '') {
                     throw new HotspotUpstreamException($emptyVideoError);
@@ -1360,16 +1369,21 @@ class VideoService
         if ($ids === [] || $userId <= 0 || $personaId <= 0) {
             return [];
         }
-        $rows = PersonaService::clipMaterialQuery(
-            $userId,
-            $personaId,
-            $frozenUseMode,
-            $frozenUseMode !== null
-        )
-            ->whereIn('id', $ids)
-            ->field(['id', 'file_url', 'thumbnail_url', 'material_type', 'duration'])
-            ->select()
-            ->toArray();
+        [$ownIds] = SquareAssetService::splitClipIds($ids);
+        $rows = [];
+        if ($ownIds !== []) {
+            $rows = PersonaService::clipMaterialQuery(
+                $userId,
+                $personaId,
+                $frozenUseMode,
+                $frozenUseMode !== null
+            )
+                ->whereIn('id', $ownIds)
+                ->field(['id', 'file_url', 'thumbnail_url', 'material_type', 'duration'])
+                ->select()
+                ->toArray();
+        }
+        $rows = array_merge($rows, SquareAssetService::clipRowsForSynthesis($userId, $personaId, $ids));
         // 按用户勾选顺序排列，而非数据库返回顺序
         $order = array_flip($ids);
         usort($rows, static fn($a, $b) => ($order[(int)$a['id']] ?? PHP_INT_MAX) <=> ($order[(int)$b['id']] ?? PHP_INT_MAX));
@@ -1416,7 +1430,7 @@ class VideoService
         $logs = [];
         foreach ($materialIds as $id) {
             $id = (int)$id;
-            if ($id <= 0) {
+            if ($id <= 0 || SquareAssetService::isClipId($id)) {
                 continue;
             }
             $logs[] = [

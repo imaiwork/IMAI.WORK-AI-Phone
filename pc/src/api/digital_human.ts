@@ -120,6 +120,10 @@ export const generatePrompt = (params: Record<string, any>) => {
 // 闪剪语音克隆
 export const shanjianVoiceClone = (params: Record<string, any>) => {
     return $request.post({ url: "/shanjian.voice/add", params });
+}
+
+export function getSystemMusicList() {
+    return $request.get({ url: "/shanjian.voice/musicLists" });
 };
 
 // 批量克隆形象

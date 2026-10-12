@@ -100,7 +100,7 @@ class TokenLogService
             $need_token = $use_token * $num;
         }else if(in_array($scene, ['storyboard_video_create','human_audio_minimax_hd','human_audio_minimax_turbo'])) {
             $need_token = $use_token * $num;
-        }else if(in_array($scene, ['ai_persona_analysis','ai_persona_report','human_voice_minimax_hd','human_voice_minimax_turbo', 'images_explosion_rewrite', 'human_avatar_shanjian_pro'])) {
+        }else if(in_array($scene, ['ai_persona_analysis','ai_persona_report','human_voice_minimax_hd','human_voice_minimax_turbo', 'human_voice_shanjian_s3', 'images_explosion_rewrite', 'human_avatar_shanjian_pro'])) {
             $need_token = $use_token;
         }
         // 配置了单价的场景:预检至少按单价,避免「有1点算力就放行、执行后再按单价扣失败」

@@ -885,6 +885,9 @@ const toneListModelVersion = computed(() => {
     if (!formData.model_version) return "";
     return [
         formData.model_version,
+        ...(formData.model_version === DigitalHumanModelVersionEnum.SHANJIAN
+            ? [DigitalHumanModelVersionEnum.SHANJIAN_S3]
+            : []),
         DigitalHumanModelVersionEnum.MINIMAX_HD,
         DigitalHumanModelVersionEnum.MINIMAX_TURBO,
     ].join(",");

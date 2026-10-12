@@ -56,7 +56,7 @@
             </view>
 
             <view class="material-toolbar">
-                <view class="flex items-center gap-[6rpx]">
+                <view class="material-toolbar-filters">
                     <view
                         v-for="(filter, index) in state.materialFilters"
                         :key="filter.name"
@@ -66,23 +66,8 @@
                         <text class="material-filter-label">{{ filter.name }}</text>
                     </view>
                 </view>
-                <view class="flex items-center gap-[12rpx] ml-auto">
-                    <view
-                        v-if="state.publishMode === 1 && state.materialList.length"
-                        class="resource-action active:opacity-70"
-                        :class="state.batchDeleteMode ? 'text-primary' : ''"
-                        aria-label="批量管理素材"
-                        @click="actions.toggleBatchDelete()">
-                        <text v-if="state.batchDeleteMode">完成</text>
-                        <u-icon v-else name="trash" color="#5B6B80" size="34"></u-icon>
-                    </view>
-                    <view
-                        v-if="!state.batchDeleteMode"
-                        class="resource-action active:opacity-70"
-                        @click="actions.upload()">
-                        <u-icon name="plus" color="#0065FB" size="22"></u-icon>
-                        <text>上传</text>
-                    </view>
+                <view class="resource-action active:opacity-70" @click="handleMaterialActions()">
+                    <text>更多</text>
                 </view>
             </view>
 
@@ -124,7 +109,10 @@
                     v-for="item in state.materialList"
                     :key="item.id"
                     class="material-card"
-                    :class="state.isMaterialSelected(item.id) ? 'border-primary' : 'border-[#E1E7EF]'"
+                    :class="[
+                        state.isMaterialSelected(item.id) ? 'border-primary' : 'border-[#E1E7EF]',
+                        item.source === 'square' && item.alive === false ? 'sq-dead' : '',
+                    ]"
                     @click="state.batchDeleteMode && actions.toggleMaterialSelected(item.id)">
                     <view
                         v-if="state.batchDeleteMode"
@@ -170,13 +158,27 @@
                             </view>
                         </view>
                         <template v-else>
-                            <image :src="item.thumbnail_url" class="absolute inset-0 w-full h-full" mode="aspectFill"></image>
+                            <image
+                                v-if="item.thumbnail_url || item.material_type === 2"
+                                :src="item.thumbnail_url || item.file_url"
+                                class="absolute inset-0 w-full h-full"
+                                mode="aspectFill"></image>
                         </template>
                         <view class="absolute top-[14rpx] left-[14rpx] flex flex-col gap-[8rpx]">
                             <text
                                 class="text-[18rpx] font-bold text-white px-[10rpx] py-[4rpx] rounded-[8rpx] w-fit"
                                 style="background: rgba(0, 0, 0, 0.55)">
                                 {{ item.material_type === 1 ? "视频" : item.material_type === 2 ? "图片" : "素材" }}
+                            </text>
+                            <text
+                                v-if="item.source === 'square'"
+                                class="text-[18rpx] font-bold text-white px-[10rpx] py-[4rpx] rounded-[8rpx]"
+                                :style="
+                                    item.alive === false
+                                        ? 'background: rgba(144, 147, 153, 0.9)'
+                                        : 'background: rgba(64, 158, 255, 0.92)'
+                                ">
+                                {{ item.alive === false ? "已下架" : "广场" }}
                             </text>
                             <text
                                 v-if="item.grab_type === 1"
@@ -205,6 +207,7 @@
                         <view
                             v-if="
                                 item.material_type === 1 &&
+                                item.alive !== false &&
                                 !state.isMaterialSlicing(item) &&
                                 !state.isMaterialSliceFailed(item)
                             "
@@ -252,7 +255,7 @@
                                     {{ item.slice_status_text || "分割失败" }}
                                 </text>
                                 <text
-                                    v-else
+                                    v-else-if="item.source !== 'square'"
                                     class="text-[20rpx] font-semibold px-[12rpx] py-[4rpx] rounded-[8rpx]"
                                     :class="
                                         item.use_num >= 3
@@ -263,7 +266,7 @@
                                     ">
                                     {{ item.use_num > 0 ? `已用${item.use_num}次` : "未使用" }}
                                 </text>
-                                <text class="text-[22rpx] text-[#748297]">
+                                <text class="ml-auto text-[22rpx] text-[#748297]">
                                     {{ state.formatMaterialTime(item.create_time) }}
                                 </text>
                             </view>
@@ -595,6 +598,12 @@
                     :class="{ 'copy-content--loading': state.copyLoading }"
                     :aria-hidden="state.copyLoading">
                     <view
+                        v-if="!state.copyBatchMode"
+                        class="copy-toolbar-button copy-toolbar-button--outline active:opacity-70"
+                        @click="actions.openPublicCopyPicker()">
+                        <text class="copy-toolbar-label">从公共热门文案添加</text>
+                    </view>
+                    <view
                         v-if="!state.copyBatchMode && state.copyList.length"
                         class="copy-toolbar-button copy-toolbar-button--outline active:opacity-70"
                         @click="actions.addCopy()">
@@ -637,9 +646,21 @@
                         "
                         @click="state.copyBatchMode ? actions.toggleCopySelected(item.id) : actions.editCopy(item)">
                         <view class="flex items-start gap-[16rpx]">
-                            <text class="resource-item-title flex-1 min-w-0 break-all line-clamp-3">
-                                {{ item.title || "未填写标题" }}
-                            </text>
+                            <view class="flex-1 min-w-0">
+                                <view class="flex items-center flex-wrap gap-[8rpx]">
+                                    <text class="resource-item-title break-all line-clamp-3">
+                                        {{ item.title || "未填写标题" }}
+                                    </text>
+                                    <text v-if="isPublicCopy(item)" class="copy-badge copy-badge--public">公共</text>
+                                    <text v-if="item.has_update" class="copy-badge copy-badge--upd">有更新</text>
+                                    <text v-else-if="item.edited" class="copy-badge copy-badge--edit">已改过</text>
+                                </view>
+                                <text
+                                    v-if="item.has_update"
+                                    class="block mt-[6rpx] text-[22rpx] text-[#F86E21]">
+                                    平台改过这条模板，点「更新」拿最新版
+                                </text>
+                            </view>
                             <view
                                 v-if="state.copyBatchMode"
                                 class="shrink-0 mt-[2rpx] w-[40rpx] h-[40rpx] rounded-full border-[4rpx] border-solid flex items-center justify-center"
@@ -672,8 +693,17 @@
                             </text>
                         </view>
                         <view v-if="!state.copyBatchMode" class="flex items-center gap-[20rpx] mt-[8rpx]">
+                            <view class="resource-button resource-button--text active:opacity-70" @click.stop="actions.copyText(item)">
+                                <text class="resource-button-label">复制</text>
+                            </view>
                             <view class="resource-button resource-button--text active:opacity-70" @click.stop="actions.editCopy(item)">
                                 <text class="resource-button-label">编辑</text>
+                            </view>
+                            <view
+                                v-if="isPublicCopy(item) && item.source_alive"
+                                class="resource-button resource-button--text active:opacity-70"
+                                @click.stop="actions.refreshCopy(item)">
+                                <text class="resource-button-label">更新</text>
                             </view>
                             <view class="resource-button resource-button--text active:opacity-70" @click.stop="actions.removeCopy(item)">
                                 <text class="resource-button-label">删除</text>
@@ -771,11 +801,14 @@ import {
     CopyDriverTypeEnum,
     CopyLibraryTypeEnum,
     isNewsCopy,
+    isPublicCopy,
     isPublishCopy,
     type CopyItem,
 } from "../hooks/useCopyLibrary";
 
 const props = defineProps<{
+    squarePickerVisible?: boolean;
+    publicCopyPickerVisible?: boolean;
     state: {
         activeMaterialTab: MaterialTabEnum;
         batchDeleteMode: boolean;
@@ -792,6 +825,7 @@ const props = defineProps<{
         materialFilters: readonly { name: string; value: string | number }[];
         activeMaterialFilter: number;
         materialList: any[];
+        squareJoinedIds?: number[];
         materialLoading: boolean;
         materialFinished: boolean;
         hasOverusedMaterial: boolean;
@@ -829,6 +863,10 @@ const props = defineProps<{
     };
     actions: {
         popupChange: (visible: boolean) => void;
+        openSquarePicker: () => void;
+        closeSquarePicker: () => void;
+        openPublicCopyPicker: () => void;
+        closePublicCopyPicker: () => void;
         switchMaterialTab: (tab: MaterialTabEnum) => void;
         switchPublishMode: (mode: PublishMode) => void;
         switchMaterialKind: (kind: MaterialKindEnum) => void;
@@ -863,6 +901,8 @@ const props = defineProps<{
         switchCopyDriveType: (type: CopyDriverTypeEnum) => void;
         addCopy: () => void;
         editCopy: (item: CopyItem) => void;
+        copyText: (item: CopyItem) => void;
+        refreshCopy: (item: CopyItem) => void;
         removeCopy: (item: CopyItem) => void;
         importCopy: () => void;
         aiGenerate: () => void;
@@ -877,11 +917,15 @@ const props = defineProps<{
 const showLibrarySetting = ref(false);
 const showMaterialRequirements = ref(false);
 const showCopyActionSheet = ref(false);
+const showMaterialActionSheet = ref(false);
 const localOverlayVisible = computed(
     () =>
+        Boolean(props.squarePickerVisible) ||
+        Boolean(props.publicCopyPickerVisible) ||
         showLibrarySetting.value ||
         showMaterialRequirements.value ||
         showCopyActionSheet.value ||
+        showMaterialActionSheet.value ||
         (props.state.activeMaterialTab === MaterialTabEnum.COMPOSE &&
             props.state.publishMode === 1 && props.state.batchDeleteMode) ||
         (props.state.activeMaterialTab === MaterialTabEnum.MUSIC && props.state.musicBatchMode) ||
@@ -890,7 +934,11 @@ const localOverlayVisible = computed(
 
 // 小程序卸载时原生事件编号可能已复用，弹层状态通过现有 actions 直接同步，避免误触发底部上传。
 watch(localOverlayVisible, (visible) => props.actions.popupChange(visible), { immediate: true });
-onUnmounted(() => props.actions.popupChange(false));
+onUnmounted(() => {
+    props.actions.closeSquarePicker();
+    props.actions.closePublicCopyPicker();
+    props.actions.popupChange(false);
+});
 
 const avatarVoiceLabel = (item: { is_original_voice?: number; bind_desc?: string; voice_name?: string }): string => {
     const label = item.is_original_voice === 1
@@ -921,6 +969,29 @@ const currentCopyTitle = computed(
 
 /** 文案说明默认收起，避免与多层筛选抢首屏 */
 const copyTipExpanded = ref(false);
+
+const handleMaterialActions = (): void => {
+    const items: { label: string; run: () => void }[] = [];
+    if (!props.state.batchDeleteMode && props.state.publishMode === 1) {
+        items.push({ label: "从素材库广场添加", run: () => props.actions.openSquarePicker() });
+    }
+    if (!props.state.batchDeleteMode) {
+        items.push({ label: "上传", run: () => props.actions.upload() });
+    }
+    if (props.state.publishMode === 1 && props.state.materialList.length) {
+        items.push({
+            label: props.state.batchDeleteMode ? "退出批量删除" : "批量删除",
+            run: () => props.actions.toggleBatchDelete(),
+        });
+    }
+    if (!items.length) return;
+    showMaterialActionSheet.value = true;
+    uni.showActionSheet({
+        itemList: items.map((item) => item.label),
+        complete: () => { showMaterialActionSheet.value = false; },
+        success: ({ tapIndex }) => items[tapIndex]?.run(),
+    });
+};
 
 // 文案库次要操作收敛到「⋯管理」
 const handleCopyManage = (): void => {
@@ -1045,7 +1116,11 @@ const handleCopyManage = (): void => {
 }
 
 .material-toolbar {
-    @apply flex flex-wrap items-center gap-[16rpx] my-[24rpx];
+    @apply flex items-center justify-between my-[8rpx];
+}
+
+.material-toolbar-filters {
+    @apply flex items-center min-w-0;
 }
 
 .material-filter {
@@ -1107,6 +1182,13 @@ const handleCopyManage = (): void => {
 
 .material-card {
     @apply relative min-w-0 rounded-[26rpx] bg-white overflow-hidden border-[2rpx] border-solid;
+}
+
+.sq-dead {
+    @apply grayscale;
+    .material-cover {
+        @apply bg-[#E5E7EB];
+    }
 }
 
 .material-cover {
@@ -1235,6 +1317,19 @@ const handleCopyManage = (): void => {
 
 .copy-toolbar-button--outline::before {
     @apply bg-white border-[#D8E2ED];
+}
+
+.copy-badge {
+    @apply text-[20rpx] px-[10rpx] py-[4rpx] rounded-[8rpx] text-white shrink-0;
+}
+.copy-badge--public {
+    background: #075ecf;
+}
+.copy-badge--upd {
+    background: #f86e21;
+}
+.copy-badge--edit {
+    background: #909399;
 }
 
 .copy-results {

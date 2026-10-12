@@ -54,7 +54,9 @@ interface DeviceState {
     onEvent: any
     send: any
     close: any
+    reconnect: any
     isConnected: boolean
+    connectionWatcher: any
 
     // 等待队列 - 用于在连接建立前暂存操作
     pendingOperations: Array<() => void>
@@ -109,7 +111,9 @@ export const useDeviceStore = defineStore('device', {
         onEvent: null,
         send: null,
         close: null,
+        reconnect: null,
         isConnected: false,
+        connectionWatcher: null,
         // 等待队列
         pendingOperations: []
     }),
@@ -158,26 +162,24 @@ export const useDeviceStore = defineStore('device', {
 
         // 手动开启 WebSocket 连接
         async connectWebSocket() {
-            if (this.ws && this.isConnected) {
+            // 已有实例则复用：小程序最多 5 条并发 WS，重复 useDeviceWs 会把名额耗尽
+            if (this.reconnect) {
+                if (!this.isConnected) this.reconnect()
                 return
             }
 
-            // // 如果有实例但连接已断开，清理旧实例
-            // if (this.ws && !this.isConnected) {
-            //     this.cleanupWebSocket();
-            // }
-
             try {
-                const { send, close, onEvent, socket, isConnected } = useDeviceWs()
+                const { send, close, onEvent, socket, isConnected, reconnect } = useDeviceWs()
 
                 this.ws = socket
                 this.onEvent = onEvent
                 this.send = send
                 this.close = close
+                this.reconnect = reconnect
                 this.isConnected = isConnected.value
 
                 // 监听连接状态变化
-                this.watchConnectionState(isConnected.value)
+                this.watchConnectionState(isConnected)
 
                 this.setupWebSocketListeners()
             } catch (error) {
@@ -188,6 +190,10 @@ export const useDeviceStore = defineStore('device', {
 
         // 添加清理 WebSocket 的方法
         cleanupWebSocket() {
+            if (this.connectionWatcher) {
+                this.connectionWatcher()
+                this.connectionWatcher = null
+            }
             if (this.close) {
                 this.close()
             }
@@ -195,34 +201,20 @@ export const useDeviceStore = defineStore('device', {
             this.onEvent = null
             this.send = null
             this.close = null
+            this.reconnect = null
             this.isConnected = false
         },
 
-        watchConnectionState(isConnectedRef: boolean) {
-            if (typeof watch !== 'undefined') {
-                watch(
-                    () => isConnectedRef,
-                    (newValue: boolean) => {
-                        this.isConnected = newValue
-                        if (!newValue) {
-                            console.log('WebSocket 连接已断开')
-                        }
-                    }
-                )
-            } else {
-                // 如果没有 watch，使用定时器检查
-                const checkConnection = () => {
-                    if (this.ws && isConnectedRef !== this.isConnected) {
-                        this.isConnected = isConnectedRef
-                        if (!this.isConnected) {
-                            console.log('WebSocket 连接已断开')
-                        }
-                    }
-                }
-
-                // 每秒检查一次连接状态
-                setInterval(checkConnection, 1000)
+        watchConnectionState(isConnectedRef: Ref<boolean>) {
+            if (this.connectionWatcher) {
+                this.connectionWatcher()
             }
+            this.connectionWatcher = watch(isConnectedRef, (newValue: boolean) => {
+                this.isConnected = newValue
+                if (!newValue) {
+                    console.log('WebSocket 连接已断开')
+                }
+            })
         },
 
         // 设置 WebSocket 事件监听
@@ -239,9 +231,9 @@ export const useDeviceStore = defineStore('device', {
                 await this.handleWebSocketSuccess(data)
             })
         },
-        // 关闭 WebSocket 连接
+        // 关闭 WebSocket 连接并释放实例，下次 connectWebSocket 重新建立
         closeWebSocket() {
-            this.close()
+            this.cleanupWebSocket()
         },
 
         // 添加操作到等待队列

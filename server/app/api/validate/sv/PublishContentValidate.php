@@ -11,7 +11,7 @@ class PublishContentValidate extends BaseValidate
 {
     protected $rule = [
         'id' => 'require|number',
-        'source' => 'in:sv,circle',
+        'source' => 'in:sv,circle,cloud',
         'platform' => 'max:20',
         'date' => 'dateFormat:Y-m-d',
         'persona_id' => 'number',

@@ -9,6 +9,7 @@ use app\common\model\aiPersona\AiPersonaDigitalAvatar;
 use app\common\model\aiPersona\Material;
 use app\common\service\aiPersona\AiPersonaTextService;
 use app\common\service\FileService;
+use app\common\service\square\SquareAssetService;
 
 class PersonaService
 {
@@ -120,18 +121,27 @@ class PersonaService
         $pageSize = max(1, min(50, $pageSize > 0 ? $pageSize : 10));
         $useMode = ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId);
         $ids = ScriptService::normalizePositiveIdList($ids);
+        [$ownIds, $squareAssetIds] = SquareAssetService::splitClipIds($ids);
 
         $query = self::clipMaterialQuery($userId, $personaId)
             ->field(['id', 'material_name', 'thumbnail_url', 'file_url', 'material_type', 'duration'])
             ->order('id', 'desc');
         if ($ids !== []) {
-            $query->whereIn('id', array_slice($ids, 0, self::CLIP_MATERIAL_ID_LIMIT));
+            if ($ownIds !== []) {
+                $query->whereIn('id', array_slice($ownIds, 0, self::CLIP_MATERIAL_ID_LIMIT));
+                $rows = $query->select()->toArray();
+            } else {
+                $rows = [];
+            }
         } else {
             $query->page($pageNo, $pageSize);
+            $rows = $query->select()->toArray();
         }
-        $rows = $query->select()->toArray();
 
         $out = [];
+        if ($ids !== [] || $pageNo === 1) {
+            $out = SquareAssetService::clipCards($userId, $personaId, $ids !== [] ? $squareAssetIds : null);
+        }
         foreach ($rows as $row) {
             $id = (int)($row['id'] ?? 0);
             // 空名兜底而非跳过：跳过会让分页每页条数失真（前端按返回条数判断是否到底），也导致素材展示不全
@@ -177,11 +187,21 @@ class PersonaService
         if ($userId <= 0 || $personaId <= 0 || $ids === []) {
             return [];
         }
-        $found = self::clipMaterialQuery($userId, $personaId, $useMode)
-            ->whereIn('id', $ids)
-            ->column('id');
-        $found = ScriptService::normalizePositiveIdList(is_array($found) ? $found : []);
-        return array_values(array_intersect($ids, $found));
+        [$ownIds, $squareAssetIds] = SquareAssetService::splitClipIds($ids);
+        $found = [];
+        if ($ownIds !== []) {
+            $ownFound = self::clipMaterialQuery($userId, $personaId, $useMode)
+                ->whereIn('id', $ownIds)
+                ->column('id');
+            $found = array_merge($found, ScriptService::normalizePositiveIdList(is_array($ownFound) ? $ownFound : []));
+        }
+        if ($squareAssetIds !== []) {
+            foreach (SquareAssetService::clipCards($userId, $personaId, $squareAssetIds) as $card) {
+                $found[] = (int)$card['id'];
+            }
+        }
+        $found = array_fill_keys($found, true);
+        return array_values(array_filter($ids, static fn ($id) => isset($found[(int)$id])));
     }
 
     /**

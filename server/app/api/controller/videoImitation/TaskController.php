@@ -5,10 +5,10 @@ namespace app\api\controller\videoImitation;
 use app\api\controller\BaseApiController;
 use app\api\logic\videoImitation\TaskLogic;
 use app\api\validate\videoImitation\TaskValidate;
+use app\common\service\CallbackTokenService;
 use think\exception\HttpResponseException;
 use think\facade\Log;
 use think\response\Json;
-use app\common\service\CallbackTokenService;
 
 /**
  * 视频复刻生成任务控制器
@@ -118,7 +118,8 @@ class TaskController extends BaseApiController
                 self::optionalFloat($this->request->post('speech_rate', null)),
                 // 未传=沿用已有；传空串=改回自动随机/系统音乐
                 self::optionalString($this->request->post('clip_template_id', null)),
-                self::optionalString($this->request->post('music_url', null))
+                self::optionalString($this->request->post('music_url', null)),
+                self::optionalString($this->request->post('system_music_id', null))
             );
             return $result !== false
                 ? $this->success('生成配置已确认，任务已提交', $result)

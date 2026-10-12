@@ -35,7 +35,13 @@ class TemplateCenterClient
         return self::fetchTemplates('/api/play-templates', 'tpl_center:play');
     }
 
-    private static function fetchTemplates(string $path, string $cacheKey): array
+    /** 系统曲库（id/name/audio_url/duration_sec/sort，只含上架） */
+    public static function systemMusics(): array
+    {
+        return self::fetchTemplates('/api/system-musics', 'tpl_center:system_music', 'musics');
+    }
+
+    private static function fetchTemplates(string $path, string $cacheKey, string $dataKey = 'templates'): array
     {
         $cached = Cache::get($cacheKey);
         if (is_array($cached) && $cached !== []) {
@@ -48,9 +54,9 @@ class TemplateCenterClient
         if (!is_array($json) || (int)($json['code'] ?? 0) !== 10000) {
             throw new Exception('模板中心返回异常: ' . mb_substr((string)($json['message'] ?? $body), 0, 200));
         }
-        $templates = $json['data']['templates'] ?? null;
+        $templates = $json['data'][$dataKey] ?? null;
         if (!is_array($templates)) {
-            throw new Exception('模板中心数据格式异常（缺 data.templates）');
+            throw new Exception('模板中心数据格式异常（缺 data.' . $dataKey . '）');
         }
         if ($templates !== []) {
             Cache::set($cacheKey, $templates, self::CACHE_TTL);

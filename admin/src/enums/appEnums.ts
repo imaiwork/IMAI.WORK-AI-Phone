@@ -89,9 +89,9 @@ export enum AppTypeEnum {
 // 当前版本新增的扣费场景，工作台/价格配置的场景卡片会打「新增」标识。
 // 每次发版把上一版的场景移除、换成本版新增的场景，标识才有意义。
 export const NEW_BILLING_SCENES: string[] = [
-    "play_face",
-    "play_dance",
-    "play_splice",
-    "work_data_fetch",
-    "dy_search_clue",
+    "human_voice_shanjian_s3",
 ];
+
+// 本版进货价变化、默认定价已上调的扣费场景。卡片打「价格变动」标识，提醒站长核对售价。
+export const PRICE_ADJUST_BILLING_SCENES: string[] = ["seedance2_720p_image2video_create"];
+export const PRICE_ADJUST_TAG = "价格变动，需要及时调整";

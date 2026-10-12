@@ -26,9 +26,10 @@ class ManualGenerationAssetService
      */
     public const ORIGIN_VOICE_ID = -1;
 
-    /** 洗稿背景音乐来源：1 系统音乐随机（默认），2 用户自传 */
+    /** 洗稿背景音乐来源：1 系统音乐随机（默认），2 用户自传，3 指定系统曲目 */
     public const MUSIC_SOURCE_SYSTEM = 1;
     public const MUSIC_SOURCE_UPLOAD = 2;
+    public const MUSIC_SOURCE_PICK = 3;
 
     /** 生成类型 → 闪剪剪辑模板 scene（与 TaskLogic::resolveStyleScene 同一套映射） */
     public static function sceneByGenerationType(int $generationType): string
@@ -109,7 +110,7 @@ class ManualGenerationAssetService
         $voices = [];
         $voiceRows = HumanVoice::where('user_id', $userId)
             ->where('status', 1)
-            ->whereIn('model_version', [8, 10, 11])
+            ->whereIn('model_version', array_merge(HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS, [10, 11]))
             ->where('voice_id', '<>', '')
             ->whereNull('delete_time')
             ->order('id', 'desc')
@@ -149,11 +150,15 @@ class ManualGenerationAssetService
             // 剪辑模板按生成类型分组下发，前端切类型不必重新拉接口；空字符串=自动随机
             'clip_templates' => self::clipTemplateGroups(),
             'selected_clip_template_id' => (string)$task->wash_clip_template_id,
-            // 背景音乐：没传过自选地址就是系统随机
-            'music_source' => trim((string)$task->wash_music_url) === ''
-                ? self::MUSIC_SOURCE_SYSTEM
-                : self::MUSIC_SOURCE_UPLOAD,
+            // 背景音乐：自传优先，其次指定系统曲，否则随机
+            'music_source' => trim((string)$task->wash_music_url) !== ''
+                ? self::MUSIC_SOURCE_UPLOAD
+                : (trim((string)($task->wash_system_music_id ?? '')) !== ''
+                    ? self::MUSIC_SOURCE_PICK
+                    : self::MUSIC_SOURCE_SYSTEM),
             'selected_music_url' => self::fileUrl((string)$task->wash_music_url),
+            'selected_system_music_id' => (string)($task->wash_system_music_id ?? ''),
+            'system_musics' => \app\common\service\SystemMusicService::publicList(),
             'next_step' => self::nextStep($task),
         ];
     }
@@ -170,7 +175,8 @@ class ManualGenerationAssetService
         ?float $musicVolume = null,
         ?float $speechRate = null,
         ?string $clipTemplateId = null,
-        ?string $musicUrl = null
+        ?string $musicUrl = null,
+        ?string $systemMusicId = null
     ): array {
         self::assertWashVideoTask($task, $userId);
         if (!in_array($generationType, [
@@ -234,7 +240,7 @@ class ManualGenerationAssetService
                 $voice = HumanVoice::where('id', $voiceId)
                     ->where('user_id', $userId)
                     ->where('status', 1)
-                    ->whereIn('model_version', [8, 10, 11])
+                    ->whereIn('model_version', array_merge(HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS, [10, 11]))
                     ->where('voice_id', '<>', '')
                     ->whereNull('delete_time')
                     ->find();
@@ -271,6 +277,14 @@ class ManualGenerationAssetService
         $musicValue = $musicUrl === null
             ? trim((string)$task->wash_music_url)
             : self::assertMusicUrl($musicUrl);
+        $systemMusicValue = $systemMusicId === null
+            ? trim((string)($task->wash_system_music_id ?? ''))
+            : trim($systemMusicId);
+        if ($musicValue !== '') {
+            $systemMusicValue = '';
+        } elseif ($systemMusicValue !== '' && !\app\common\service\SystemMusicService::isEnabled($systemMusicValue)) {
+            throw new \RuntimeException('这首系统音乐已下架，请重选或改回系统音乐随机');
+        }
 
         return [
             'generation_type' => $generationType,
@@ -282,6 +296,7 @@ class ManualGenerationAssetService
             'wash_third_voice_id' => $thirdVoiceId,
             'wash_clip_template_id' => $templateValue,
             'wash_music_url' => $musicValue,
+            'wash_system_music_id' => $systemMusicValue,
             'wash_music_volume' => $volumeValue,
             'wash_speech_rate' => $rateValue,
             'generation_config_confirmed' => 1,
@@ -313,7 +328,7 @@ class ManualGenerationAssetService
 
         $voiceId = (int)HumanVoice::where('user_id', $userId)
             ->where('status', 1)
-            ->whereIn('model_version', [8, 10, 11])
+            ->whereIn('model_version', array_merge(HumanVoice::SHANJIAN_VOICE_MODEL_VERSIONS, [10, 11]))
             ->where('voice_id', '<>', '')
             ->whereNull('delete_time')
             ->orderRand()

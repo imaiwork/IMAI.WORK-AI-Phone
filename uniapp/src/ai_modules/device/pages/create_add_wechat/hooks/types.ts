@@ -25,6 +25,8 @@ export interface AddFriendFormData {
     add_remark_enable: 0 | 1;
     remarks: string[];
     wechat_id: string[];
+    // 加微方式：1 ai获客 / 2 ai销售，默认 ai获客
+    add_friend_type: 1 | 2;
     wechat_reg_type: 0 | 1 | 2;
     time_config: string[];
     task_frep: number;
@@ -47,6 +49,7 @@ export const createDefaultFormData = (initialRemarks: string[] = []): AddFriendF
     fileurl: "",
     add_type: "1",
     wechat_id: [],
+    add_friend_type: 1,
     wechat_reg_type: 0,
     time_config: [
         uni.$u.timeFormat(new Date(), "hh:MM"),

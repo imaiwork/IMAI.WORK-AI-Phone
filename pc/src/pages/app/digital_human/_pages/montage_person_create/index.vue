@@ -344,11 +344,13 @@
                                     </span>
                                     <span class="text-[12px] font-medium text-slate-600 flex-1 truncate">
                                         {{
-                                            formData.music.length > 0
-                                                ? `已选 ${formData.music.length} 首音乐`
-                                                : formData.extra.ai_music
-                                                  ? "AI音乐库"
-                                                  : "无"
+                                            formData.extra.system_music_id
+                                                ? formData.extra.system_music_name || "已指定系统音乐"
+                                                : formData.music.length > 0
+                                                  ? `已选 ${formData.music.length} 首音乐`
+                                                  : formData.extra.ai_music
+                                                    ? "系统随机"
+                                                    : "无"
                                         }}
                                     </span>
                                     <Icon name="el-icon-ArrowRight" color="var(--slate-300)" :size="14" />
@@ -492,7 +494,7 @@ import dayjs from "dayjs";
 import { useUserStore } from "@/stores/user";
 import { createShanjianTask, addShanjianPerson } from "@/api/digital_human";
 import { MontageTypeEnum, SidebarTypeEnum, MontageStylesType } from "@/pages/app/digital_human/_enums";
-import { montageUploadConfig } from "@/pages/app/digital_human/_config";
+import { montageUploadConfig, calcMaterialDurationBudget } from "@/pages/app/digital_human/_config";
 import { useMaterial } from "@/pages/app/digital_human/_hooks/useMaterial";
 import { getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
 import MontageStylesChoose from "@/pages/app/digital_human/_components/montage-styles-choose.vue";
@@ -526,6 +528,8 @@ const formData = reactive<{
     clip: any[];
     extra: PackSwitchSetting & {
         ai_music: boolean;
+        system_music_id: string;
+        system_music_name: string;
         volume: number;
         soundSwitch: boolean;
         human: number;
@@ -548,6 +552,8 @@ const formData = reactive<{
     extra: {
         ...createPackSwitchSetting(),
         ai_music: true,
+        system_music_id: "",
+        system_music_name: "",
         volume: 0.5,
         soundSwitch: false,
         human: 0,
@@ -749,7 +755,7 @@ const handleMaterialData = async (
     let currentDuration = calcTotalDuration();
 
     const filteredList = list.filter((item) => {
-        const itemDuration = item.type === "image" ? montageUploadConfig.imageDuration : item.duration ?? 0;
+        const itemDuration = calcMaterialDurationBudget(item.type === "image", item.duration);
         if (currentDuration + itemDuration > maxSeconds) {
             skippedCount++;
             return false;
@@ -797,11 +803,23 @@ const openMusicDialog = async () => {
     showMusicDialog.value = true;
     await nextTick();
     chooseMusicRef.value?.open();
-    chooseMusicRef.value?.setSelected(formData.music, formData.extra.ai_music);
+    chooseMusicRef.value?.setSelected(
+        formData.music,
+        formData.extra.ai_music,
+        formData.extra.system_music_id,
+        formData.extra.system_music_name,
+    );
 };
-const handleMusicConfirm = (data: { music: any[]; ai_music: boolean }) => {
-    formData.music = data.music;
-    formData.extra.ai_music = data.ai_music;
+const handleMusicConfirm = (data: {
+    music: any[];
+    ai_music: boolean;
+    system_music_id?: string;
+    system_music_name?: string;
+}) => {
+    formData.music = data.system_music_id ? [] : data.music;
+    formData.extra.ai_music = !!data.ai_music && !data.system_music_id;
+    formData.extra.system_music_id = data.system_music_id || "";
+    formData.extra.system_music_name = data.system_music_name || "";
 };
 
 // ─── 剪辑风格 ────────────────────────────────────────────────

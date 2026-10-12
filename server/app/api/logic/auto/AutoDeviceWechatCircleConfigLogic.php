@@ -3,21 +3,18 @@
 namespace app\api\logic\auto;
 
 use app\api\logic\ApiLogic;
-use app\common\enum\DeviceEnum;
-use app\common\enum\user\AccountLogEnum;
-use app\common\logic\AccountLogLogic;
-use app\common\model\auto\AutoDeviceWechatCircleConfig;
-use app\common\model\auto\AutoDeviceConfig;
-use app\common\model\auto\AutoNeedsAnalysis;
-use app\common\model\sv\SvAccount;
-use app\common\model\wechat\AiWechatCircleTaskConfig;
-use app\common\model\wechat\AiWechatCircleTask;
 use app\api\logic\device\TaskLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\common\enum\DeviceEnum;
+use app\common\model\auto\AutoDeviceWechatCircleConfig;
+use app\common\model\auto\AutoNeedsAnalysis;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
-use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\common\model\sv\SvAccount;
+use app\common\model\wechat\AiWechatCircleTask;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
 use Exception;
 
 /**
@@ -391,8 +388,7 @@ class AutoDeviceWechatCircleConfigLogic extends ApiLogic
                     $shanjianVideoSettingData['wechat_type'] = 1;
                     // 1. 插入到山涧视频设置表
                     $shanjianVideoSetting = ShanjianVideoSetting::create($shanjianVideoSettingData);
-                    $number = random_int(1, 20);
-                    $music_url = config('app.app_host') . '/static/audio/music/' . $number . '.mp3';
+                    $music_url = \app\common\service\SystemMusicService::resolveForDevice((string)($task->device_code ?? ''));
                     $shanjianVideoTaskData = [
                         'shanjian_type' => 3, // 设置类型
                         'device_code' => $task->device_code,

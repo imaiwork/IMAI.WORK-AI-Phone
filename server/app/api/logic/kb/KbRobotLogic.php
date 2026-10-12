@@ -1173,7 +1173,8 @@ class KbRobotLogic extends BaseLogic
             $params['keywords'] = self::mergeCopywritingKeywords(
                 (int)$params['persona_id'],
                 (string)$cozeKeywords,
-                $params['keywords'] ?? ''
+                $params['keywords'] ?? '',
+                (string)($params['keyword_priority'] ?? '')
             );
 
 
@@ -1221,10 +1222,28 @@ class KbRobotLogic extends BaseLogic
     /**
      * 人设线索与用户主题合流。
      * persona_id>0 且主题非空时拼接主题，避免非空 keywords 被整段丢掉。
+     * keyword_priority=theme 时热点在前、人设在后，仅热点口播使用。
      */
-    public static function mergeCopywritingKeywords(int $personaId, string $cozeKeywords, mixed $keywords): string
-    {
+    public static function mergeCopywritingKeywords(
+        int $personaId,
+        string $cozeKeywords,
+        mixed $keywords,
+        string $keywordPriority = ''
+    ): string {
         $theme = is_scalar($keywords) ? trim((string)$keywords) : '';
+        if ($keywordPriority === 'theme') {
+            if ($theme === '') {
+                return '';
+            }
+            $parts = [
+                $theme,
+                '【硬性要求】口播正文必须出现以上热点话题原文，禁止写成与热点无关的纯人设带货稿。',
+            ];
+            if ($personaId > 0 && trim($cozeKeywords) !== '') {
+                $parts[] = '人设参考（仅口吻与身份，不得替换主题）：' . $cozeKeywords;
+            }
+            return implode("\n", $parts);
+        }
         if ($personaId > 0 && $theme !== '') {
             return $cozeKeywords . '我想生成的主题是：【' . $theme . '】。';
         }

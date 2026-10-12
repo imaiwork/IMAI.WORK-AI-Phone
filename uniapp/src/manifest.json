@@ -2,7 +2,7 @@
     "name": "IMAI",
     "appid": "__UNI__837DFBD",
     "description": "",
-    "versionName": "2.13.2",
+    "versionName": "2.13.3",
     "versionCode": 21301,
     "transformPx": false,
     /* 5+App特有相关 */
@@ -118,7 +118,8 @@
             "urlCheck": false,
             "es6": true,
             "minified": true,
-            "ignoreUploadUnusedFiles": true
+            "ignoreUploadUnusedFiles": false,
+            "ignoreDevUnusedFiles": false
         },
         "__usePrivacyCheck__": true,
         "usingComponents": true,

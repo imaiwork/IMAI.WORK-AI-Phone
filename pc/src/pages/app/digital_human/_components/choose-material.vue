@@ -494,6 +494,7 @@
 <script setup lang="ts">
 import { batchGetVideoInfoByUrl } from "@/api/app";
 import { getMaterialLibraryList, getMaterialLibraryGroupList, batchUpdateMaterialDate } from "@/api/material";
+import { montageUploadConfig } from "@/pages/app/digital_human/_config";
 
 enum ShowType {
     ALL = 0,
@@ -883,7 +884,8 @@ const applyDurationLimit = (
     let accumulated = 0;
     const kept: any[] = [];
     for (const item of items) {
-        const d = getItemDuration(item);
+        // 视频按存储的整秒累加会低估总时长，补一秒截断误差再判，口径与后端一致
+        const d = getItemDuration(item) + (isImage(item) ? 0 : montageUploadConfig.videoDurationSafetyMargin);
         if (accumulated + d <= maxSeconds) {
             accumulated += d;
             kept.push(item);

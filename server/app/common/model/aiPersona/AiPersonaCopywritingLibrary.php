@@ -22,6 +22,7 @@ class AiPersonaCopywritingLibrary extends BaseModel
 
     const SOURCE_MANUAL = 1;
     const SOURCE_IMPORT = 2;
+    const SOURCE_PUBLIC = 3;
 
     const STATUS_ENABLED = 1;
     const STATUS_DISABLED = 0;

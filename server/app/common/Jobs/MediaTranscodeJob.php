@@ -6,8 +6,8 @@ use app\common\enum\FileEnum;
 use app\common\model\file\File;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
-use app\common\service\UploadService;
 use app\common\service\transcoding\OssMediaProcessService;
+use app\common\service\UploadService;
 use think\facade\Cache;
 use think\facade\Log;
 use think\facade\Queue;
@@ -729,6 +729,7 @@ class MediaTranscodeJob
      */
     private function markTranscodeSuccess(int $fileId, string $url, array $meta = []): void
     {
+        $oldUri = trim((string)(File::where('id', $fileId)->value('uri') ?? ''));
         $update = [
             'uri' => $url,
             'transcode_status' => 3,
@@ -739,6 +740,7 @@ class MediaTranscodeJob
             $update['duration'] = $duration;
         }
         File::where('id', $fileId)->update($update);
+        $this->syncSquareAssetUrl($oldUri, $url);
 
         $file = File::where('id', $fileId)
             ->field('id,uri,transcode_status')
@@ -759,6 +761,35 @@ class MediaTranscodeJob
 
         $this->publishOriginalMaterialAfterTranscode($fileId, $url, $meta);
         $this->autoStartSliceAfterTranscode($fileId, $url, $meta);
+    }
+
+    /**
+     * 广场素材入库时快照的是上传瞬间的 uri，转码成功后必须回写，否则闪剪仍拿到原片。
+     */
+    private function syncSquareAssetUrl(string $oldUri, string $newUrl): void
+    {
+        $oldUri = trim($oldUri);
+        $newUrl = trim($newUrl);
+        if ($oldUri === '' || $newUrl === '' || $oldUri === $newUrl) {
+            return;
+        }
+        try {
+            $oldStored = FileService::setFileUrl($oldUri);
+            $newStored = FileService::setFileUrl($newUrl);
+            if ($oldStored === '' || $newStored === '' || $oldStored === $newStored) {
+                return;
+            }
+            $uris = array_values(array_unique(array_filter([$oldStored, $oldUri])));
+            $affected = \app\common\model\square\SquareAsset::whereIn('url', $uris)
+                ->update(['url' => $newStored, 'update_time' => time()]);
+            if ($affected > 0) {
+                Log::channel('ffmpeg')->write(
+                    "[转码回写] 广场素材 url 已更新 count={$affected} old={$oldStored} new={$newStored}"
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::channel('ffmpeg')->write('[转码回写] 广场素材 url 更新失败: ' . $e->getMessage());
+        }
     }
 
     /**

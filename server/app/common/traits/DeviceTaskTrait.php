@@ -21,7 +21,6 @@ use app\common\model\sv\SvDeviceTakeOverTask;
 use app\common\model\sv\SvDeviceTakeOverTaskAccount;
 use app\common\model\sv\SvDeviceTask;
 use app\common\model\sv\SvDySearchTask;
-use app\common\model\sv\SvDySearchTaskDevice;
 use app\common\model\sv\SvLeadScrapingSetting;
 use app\common\model\sv\SvLeadScrapingSettingAccount;
 use app\common\model\sv\SvPublishSetting;
@@ -652,6 +651,16 @@ trait DeviceTaskTrait
             self::$logtitle = "自动批量加好友任务[{$dtask->device_code}]";
             self::checkOnline($dtask->device_code, 'ws');
 
+            $manualTask = SvCrawlingManualTask::where('id', $dtask->sub_task_id)->findOrEmpty();
+            // AI销售加微由 crawlingSaleManualTaskCron 独占下发，与线索来源无关
+            if (!$manualTask->isEmpty() && (int)($manualTask->add_friend_type ?? 0) === 2) {
+                return $callback([
+                    'status' => 1,
+                    'remark' => '任务执行中',
+                ]);
+            }
+
+
             $records = SvCrawlingManualTaskRecord::alias('a')
                 ->field('a.*')
                 ->field('t.add_type, t.add_number, t.add_interval_time, t.add_friends_prompt, t.add_remark_enable, t.remarks, t.wechat_id, t.wechat_reg_type')
@@ -764,9 +773,9 @@ trait DeviceTaskTrait
                 ]);
             }
             if (empty($sendWechatIds)) {
-                $dtask->end_time = time() + 60;
-                $dtask->remark = '无加微账号可加,任务结束';
-                $dtask->save();
+                    $dtask->end_time = time() + 60;
+                    $dtask->remark = '无加微账号可加,任务结束';
+                    $dtask->save();
             }
             if (!empty($sendWechatIds)) {
                 $data = array(
@@ -2071,150 +2080,6 @@ trait DeviceTaskTrait
         } catch (\Exception $e) {
             self::setLog('_setPublishStatus' . $e, 'error');
             throw new \Exception($e->getMessage(), $e->getCode());
-        }
-    }
-
-    public static function dySearchStartTask(SvDeviceTask $dtask, Output $output, callable $callback)
-    {
-        try {
-            self::$logtitle = "抖音获客任务[{$dtask->device_code}]";
-            $task = SvDySearchTask::where('id', $dtask->sub_task_id)->findOrEmpty();
-            if ($task->isEmpty()) {
-                $output->writeln('获客任务不存在或已删除');
-                self::setLog('获客任务不存在或已删除', 'dy_search');
-                if (is_callable($callback)) {
-                    return $callback([
-                        'status' => 2,
-                        'remark' => '获客任务不存在或已删除',
-                    ]);
-                }
-                return;
-            }
-            if ((int)$task->status === 2) {
-                $output->writeln('获客任务已暂停');
-                self::setLog('获客任务已暂停', 'dy_search');
-                if (is_callable($callback)) {
-                    return $callback([
-                        'status' => 0,
-                        'remark' => '任务已暂停',
-                    ]);
-                }
-                return;
-            }
-            if (in_array((int)$task->status, [3, 4], true)) {
-                if (is_callable($callback)) {
-                    return $callback([
-                        'status' => 2,
-                        'remark' => '任务已结束',
-                    ]);
-                }
-                return;
-            }
-
-            $bind = SvDySearchTaskDevice::where('task_id', $task->id)
-                ->where('device_code', $dtask->device_code)
-                ->where('status', 'in', [0, 1])
-                ->findOrEmpty();
-            if ($bind->isEmpty()) {
-                $output->writeln("暂时没有需要执行的设备：\n" . Db::getLastSql());
-                self::setLog("暂时没有需要执行的设备：\n" . Db::getLastSql(), 'dy_search');
-                throw new \Exception('暂时没有需要执行的设备');
-            }
-
-            self::checkOnline($dtask->device_code, 'ws');
-            self::pushTaskContent($task, $bind, $dtask);
-
-            SvDySearchTask::where('id', $task->id)->update(['status' => 1, 'update_time' => time()]);
-            $bind->status = 1;
-            $bind->update_time = time();
-            $bind->save();
-
-            if (is_callable($callback)) {
-                return $callback([
-                    'status' => 1,
-                    'remark' => '任务执行中',
-                ]);
-            }
-        } catch (\Throwable $th) {
-            self::setLog('抖音获客任务执行失败：' . $th->getMessage() . ' device=' . $dtask->device_code . ' sub_task_id=' . $dtask->sub_task_id, 'dy_search');
-            $output->writeln('任务执行失败：' . $th->getMessage());
-            $retryable = !str_contains($th->getMessage(), '暂时没有需要执行的设备');
-            if (is_callable($callback)) {
-                return $callback([
-                    'status' => $retryable ? 0 : 3,
-                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
-                ]);
-            }
-            throw new \Exception($th->getMessage(), $th->getCode());
-        }
-    }
-
-    /**
-     * 搜寻任务从未启动就过了时段：收口本设备绑定，必要时把主任务标完成。
-     * 加微任务（类型 19）不要走这里，避免误收口搜寻主任务。
-     */
-    public static function dySearchCloseTimeoutUnstarted(SvDeviceTask $task): void
-    {
-        if ((int)$task->task_type !== DeviceEnum::TASK_TYPE_DY_SEARCH) {
-            return;
-        }
-        $taskId = (int)$task->sub_task_id;
-        $deviceCode = trim((string)$task->device_code);
-        if ($taskId < 1 || $deviceCode === '') {
-            return;
-        }
-        SvDySearchTaskDevice::where('task_id', $taskId)
-            ->where('device_code', $deviceCode)
-            ->where('status', '<>', 3)
-            ->update(['status' => 3, 'update_time' => time()]);
-        self::dySearchMaybeFinishMainTask($taskId);
-    }
-
-    public static function dySearchEndTask(SvDeviceTask $task, Output $output, callable $callback)
-    {
-        try {
-            self::$logtitle = "抖音获客任务[{$task->device_code}]";
-            $bind = SvDySearchTaskDevice::where('task_id', $task->sub_task_id)
-                ->where('device_code', $task->device_code)
-                ->findOrEmpty();
-
-            try {
-                //self::dySearchCancel((int)$task->sub_task_id, '时段结束', (string)$task->device_code);
-            } catch (\Throwable $e) {
-                self::setLog('抖音获客时段结束取消指令失败：' . $e->getMessage(), 'dy_search');
-            }
-            if (!$bind->isEmpty() && (int)$bind->status !== 3) {
-                $bind->status = 3;
-                $bind->update_time = time();
-                $bind->save();
-            }
-            self::dySearchMaybeFinishMainTask((int)$task->sub_task_id);
-            self::setWsSelect();
-            self::redis()->set("xhs:device:{$task->device_code}:taskStatus", json_encode([
-                'taskStatus' => 'standby',
-                'taskType' => 'setDySearch',
-                'msg' => '执行抖音获客',
-                'duration' => 0,
-                'time' => date('Y-m-d H:i:s', time()),
-                'scene' => 'dy_search',
-            ], JSON_UNESCAPED_UNICODE));
-
-            if (is_callable($callback)) {
-                return $callback([
-                    'status' => 2,
-                    'remark' => '任务执行结束',
-                ]);
-            }
-        } catch (\Throwable $th) {
-            self::setLog('抖音获客时段结束失败：' . $th->getMessage() . ' device=' . $task->device_code . ' sub_task_id=' . $task->sub_task_id, 'dy_search');
-            $output->writeln('任务执行失败：' . $th->getMessage());
-            if (is_callable($callback)) {
-                return $callback([
-                    'status' => 3,
-                    'remark' => '任务执行失败：' . self::getErrorMsg($th),
-                ]);
-            }
-            throw new \Exception($th->getMessage(), $th->getCode());
         }
     }
 

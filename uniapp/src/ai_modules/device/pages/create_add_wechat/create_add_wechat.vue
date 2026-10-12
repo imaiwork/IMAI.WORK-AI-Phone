@@ -80,12 +80,23 @@
                                 <text class="text-[28rpx] font-extrabold text-[#0D1117]">加微设置</text>
                             </view>
                             <view class="px-[28rpx] py-[20rpx] flex flex-col gap-[20rpx]">
+                                <view v-if="showAddFriendType">
+                                    <text class="text-[22rpx] text-[#9CA3AF] block mb-[12rpx]">加微方式</text>
+                                    <data-select
+                                        v-model="formData.add_friend_type"
+                                        :clear="false"
+                                        :localdata="[
+                                            { text: 'ai获客', value: 1 },
+                                            { text: 'ai销售', value: 2 },
+                                        ]" />
+                                </view>
+                                <view v-if="showAddFriendType" class="h-[1rpx] bg-[#F0F2F5]" />
                                 <view>
                                     <text class="text-[22rpx] text-[#9CA3AF] block mb-[12rpx]">加微微信</text>
                                     <data-select
                                         v-model="formData.wechat_id"
                                         multiple
-                                        :localdata="optionsData.wechatLists" />
+                                        :localdata="wechatLists" />
                                 </view>
                                 <view class="h-[1rpx] bg-[#F0F2F5]" />
                                 <view>
@@ -340,9 +351,8 @@
 </template>
 
 <script setup lang="ts">
-import { getPublishAccountList } from "@/api/device";
+import { getPublishAccountList, checkWechatClue } from "@/api/device";
 import { useAppStore } from "@/stores/app";
-import { useDictOptions } from "@/hooks/useDictOptions";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { ListenerTypeEnum, ClueSourceEnum } from "@/ai_modules/device/enums";
 import Steps from "@/ai_modules/device/components/steps/steps.vue";
@@ -371,6 +381,8 @@ watch(
 );
 
 const currentFrequency = ref(0);
+// 加微方式：checkWechat 返回 exists=true 时展示
+const showAddFriendType = ref(false);
 
 // ── Hooks ─────────────────────────────────────────────────────────────────────
 const { taskList, uploadMaterialList, showUploadProgress, handleAddTask, handleDeleteTask } = useTaskList(formData);
@@ -413,16 +425,39 @@ const {
 } = useCreateTask({ formData, taskList, currentFrequency, timeIntervalIndex, timeInterval });
 
 // ── 账号列表 ──────────────────────────────────────────────────────────────────
-const { optionsData } = useDictOptions<{ wechatLists: any[] }>({
-    wechatLists: {
-        api: getPublishAccountList,
-        params: { page_size: 9999, type: 1 },
-        transformData: (res: any) => res.lists?.map((item: any) => ({ text: item.nickname, value: item.account })),
+const wechatLists = ref<any[]>([]);
+
+// 加微方式决定 alllists 的 mode：ai获客(1) → mode=1，ai销售(2) → mode=2
+const fetchWechatLists = async () => {
+    const mode = formData.add_friend_type;
+    try {
+        const res: any = await getPublishAccountList({ page_size: 9999, type: 1, mode });
+        wechatLists.value = res.lists?.map((item: any) => ({ text: item.nickname, value: item.account })) || [];
+    } catch (error) {
+        wechatLists.value = [];
+    }
+};
+
+// 切换加微方式时清空已选微信并重新加载列表
+watch(
+    () => formData.add_friend_type,
+    () => {
+        formData.wechat_id = [];
+        fetchWechatLists();
     },
-});
+);
 
 // ── onLoad EventBus ───────────────────────────────────────────────────────────
 onLoad(() => {
+    fetchWechatLists();
+    checkWechatClue()
+        .then((res: any) => {
+            showAddFriendType.value = !!res?.exists;
+        })
+        .catch(() => {
+            showAddFriendType.value = false;
+        });
+
     on("confirm", (res: any) => {
         const { type, data } = res;
         if (type === ListenerTypeEnum.WECHAT_CLUE) {

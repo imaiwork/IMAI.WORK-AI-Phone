@@ -277,9 +277,13 @@
                                     </span>
                                     <span class="text-[12px] font-medium text-slate-600 flex-1 truncate">
                                         {{
-                                            formData.music.length > 0
-                                                ? `已选 ${formData.music.length} 首音乐`
-                                                : "AI音乐库"
+                                            formData.extra.system_music_id
+                                                ? formData.extra.system_music_name || "已指定系统音乐"
+                                                : formData.music.length > 0
+                                                  ? `已选 ${formData.music.length} 首音乐`
+                                                  : formData.extra.ai_music
+                                                    ? "系统随机"
+                                                    : "无"
                                         }}
                                     </span>
                                     <Icon name="el-icon-ArrowRight" color="var(--slate-300)" :size="14" />
@@ -514,6 +518,9 @@ const formData = reactive<{
     clip: ClipCopywritingItem[];
     topTitleList: any[];
     extra: {
+        ai_music: boolean;
+        system_music_id: string;
+        system_music_name: string;
         volume: number;
         soundSwitch: boolean;
         human: number;
@@ -531,7 +538,17 @@ const formData = reactive<{
     music: [],
     clip: [],
     topTitleList: [],
-    extra: { volume: 0.2, soundSwitch: false, human: 0, music: 0, clip: 0, video_count: 1 },
+    extra: {
+        ai_music: true,
+        system_music_id: "",
+        system_music_name: "",
+        volume: 0.2,
+        soundSwitch: false,
+        human: 0,
+        music: 0,
+        clip: 0,
+        video_count: 1,
+    },
     audio: [],
 });
 
@@ -659,9 +676,23 @@ const openMusicDialog = async () => {
     showMusicDialog.value = true;
     await nextTick();
     chooseMusicRef.value?.open();
+    chooseMusicRef.value?.setSelected(
+        formData.music,
+        formData.extra.ai_music,
+        formData.extra.system_music_id,
+        formData.extra.system_music_name,
+    );
 };
-const handleMusicConfirm = (data: { music: any[] }) => {
-    formData.music = data.music;
+const handleMusicConfirm = (data: {
+    music: any[];
+    ai_music?: boolean;
+    system_music_id?: string;
+    system_music_name?: string;
+}) => {
+    formData.music = data.system_music_id ? [] : data.music;
+    formData.extra.ai_music = !!data.ai_music && !data.system_music_id;
+    formData.extra.system_music_id = data.system_music_id || "";
+    formData.extra.system_music_name = data.system_music_name || "";
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -813,7 +844,12 @@ const buildCreateParams = (): Record<string, any> => {
         system_voice_code: formData.voice?.code || undefined,
         TitleArray: formData.topTitleList.map((item: any) => item.text),
         MediaGroupArray: mediaGroupArray,
-        BackgroundMusicArray: formData.music.map((item: any) => item.content),
+        BackgroundMusicArray:
+            formData.extra.system_music_id || formData.extra.ai_music
+                ? []
+                : formData.music.map((item: any) => item.content),
+        system_music_id: formData.extra.system_music_id || "",
+        ai_music: !!formData.extra.ai_music && !formData.extra.system_music_id,
         BackgroundMusicVolume: formData.extra.volume,
     };
 

@@ -54,6 +54,7 @@ export default function useDeviceWs(options?: WebSocketOptions) {
             content: {
                 ...data.content,
                 userId: getUserId() || userInfo.value?.id,
+                token: userStore.token || undefined,
                 deviceId: data.deviceId || undefined,
                 accountType: data.accountType,
             },
@@ -64,10 +65,11 @@ export default function useDeviceWs(options?: WebSocketOptions) {
         });
     };
 
-    /** 有有效 userId 且已连接时才 bind；用户信息晚到时会补绑 */
+    /** 有有效 userId、token 且已连接时才 bind；用户信息晚到时会补绑 */
     const bindSocket = () => {
         const userId = getUserId();
-        if (!isConnected.value || !userId) return;
+        const token = userStore.token || "";
+        if (!isConnected.value || !userId || !token) return;
         if (boundUserId.value === userId) return;
 
         send({
@@ -75,6 +77,7 @@ export default function useDeviceWs(options?: WebSocketOptions) {
             content: {
                 type: DeviceCmdEnum.BIND_WS,
                 sourceType: "pc",
+                token,
             },
         });
         boundUserId.value = userId;

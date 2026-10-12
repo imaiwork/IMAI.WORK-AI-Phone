@@ -215,6 +215,16 @@ export const createManualAddWechat = (data: any) => {
     return request.post({ url: "/sv.crawlingManual/add", data });
 };
 
+// 检查是否存在客资线索（控制「加微方式」显示）
+export const checkWechatClue = (data?: Record<string, any>) => {
+    return request.get({ url: "/sv.crawlingManual/checkWechat", data });
+};
+
+// 客资线索统计（动态获取时的线索总数/已添加/剩余）
+export const getCustomerLeadClues = (data?: Record<string, any>) => {
+    return request.get({ url: "/sv.crawlingManual/clues", data });
+};
+
 // 截流任务新增
 export const createClosureTask = (data: any) => {
     return request.post({ url: "/sv.leadScraping/add", data });

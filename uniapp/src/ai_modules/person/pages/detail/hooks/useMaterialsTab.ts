@@ -15,6 +15,8 @@ import {
     updateMaterial,
     updatePerson,
 } from "@/api/person";
+import { getSquareRefs, removeSquareRefs } from "@/api/square";
+import { isSquareMaterial, SquareSourceEnum } from "@/ai_modules/person/enums/square";
 import { UploadAlbumTypeEnum, UploadCategoryEnum } from "@/enums/appEnums";
 import { useMaterial } from "@/ai_modules/person/hooks/useMaterial";
 import { MATERIAL_KIND_TO_USE_MODE, MaterialKindEnum, normalizeMaterialUseMode } from "@/ai_modules/person/enums";
@@ -85,6 +87,10 @@ export interface MaterialItem {
     keep_original?: number;
     source_type?: string;
     source_type_text?: string;
+    source?: string;
+    alive?: boolean;
+    list_id?: string;
+    asset_id?: number;
 }
 
 export interface SliceStatistics {
@@ -314,6 +320,56 @@ export const useMaterialsTab = ({
     const getUploadedFileIds = (items: any[]): number[] =>
         items.map((item) => Number(item?.id || item?.file_id || item?.original_video_id)).filter(Boolean);
 
+    const toSquareMaterialItem = (item: any): MaterialItem => {
+        const materialType = Number(item.material_type || item.kind || PersonaMaterialTypeEnum.VIDEO);
+        const fileUrl = item.file_url || item.url || "";
+        const coverUrl = item.thumbnail_url || item.cover_url || "";
+        return {
+            id: String(item.list_id || `sq-${item.id}`),
+            material_name: item.material_name || item.name || "广场素材",
+            thumbnail_url: coverUrl || (materialType === PersonaMaterialTypeEnum.IMAGE ? fileUrl : ""),
+            file_url: fileUrl,
+            duration: Number(item.duration || item.duration_sec || 0),
+            use_status: item.alive === false ? 0 : 1,
+            create_time: item.ref_at || item.create_time || "",
+            material_type: materialType,
+            use_num: 0,
+            grab_type: 0,
+            source: SquareSourceEnum.SQUARE,
+            alive: item.alive !== false,
+            list_id: item.list_id,
+            asset_id: Number(item.id || 0),
+        };
+    };
+
+    const squareRefs = ref<MaterialItem[]>([]);
+    const querySquareRefs = async () => {
+        if (!personId.value) {
+            squareRefs.value = [];
+            return;
+        }
+        // 成品直发库不展示广场卡，但计数还要留着，切库时不能把已拉到的引用清掉
+        if (publishMode.value !== 1) return;
+        try {
+            const res: any = await getSquareRefs({ persona_id: personId.value });
+            squareRefs.value = (res?.items || []).map(toSquareMaterialItem);
+        } catch {
+            // 广场接口失败时仍保留已拉到的引用卡
+        }
+    };
+
+    const displayMaterialList = computed(() => {
+        if (publishMode.value !== 1) return materialList.value;
+        const filter = materialFilters[activeMaterialFilter.value]?.value;
+        const kinds = String(filter ?? "")
+            .split(",")
+            .map((item) => Number(item))
+            .filter(Boolean);
+        const refs = squareRefs.value.filter((item) => !kinds.length || kinds.includes(item.material_type));
+        const ownIds = new Set(materialList.value.map((item) => String(item.id)));
+        return [...refs.filter((item) => !ownIds.has(String(item.id))), ...materialList.value];
+    });
+
     const activeMaterialTab = ref<MaterialTabEnum>(MaterialTabEnum.COMPOSE);
     const activeMaterialFilter = ref(0);
     const materialList = ref<MaterialItem[]>([]);
@@ -364,7 +420,9 @@ export const useMaterialsTab = ({
     const selectedMaterialCount = computed(() => selectedMaterialIds.value.length);
     // 全选状态：当前已加载素材全部被选中（空列表不算全选）
     const isAllMaterialSelected = computed(
-        () => materialList.value.length > 0 && materialList.value.every((item) => isMaterialSelected(item.id)),
+        () =>
+            displayMaterialList.value.length > 0 &&
+            displayMaterialList.value.every((item) => isMaterialSelected(item.id)),
     );
     const selectedMusicCount = computed(() => selectedMusicIds.value.length);
     const isMusicSelected = (id: string): boolean => selectedMusicIds.value.includes(id);
@@ -602,11 +660,13 @@ export const useMaterialsTab = ({
             });
             if (requestId !== materialRequestId) return false;
             materialList.value = pageNo === 1 ? lists : materialList.value.concat(lists);
+            if (pageNo === 1) await querySquareRefs();
             if (materialList.value.length >= count || lists.length < materialParams.page_size) {
                 materialFinished.value = true;
             }
         } catch {
             if (requestId !== materialRequestId) return false;
+            if (pageNo === 1) await querySquareRefs();
             materialFinished.value = true;
         } finally {
             if (requestId === materialRequestId) materialLoading.value = false;
@@ -1057,17 +1117,26 @@ export const useMaterialsTab = ({
     };
 
     const handleDeleteMaterial = async (item: MaterialItem): Promise<void> => {
+        const square = isSquareMaterial(item);
         uni.showModal({
             title: "提示",
-            content: "确定删除该素材吗？",
+            content: square ? "确定从我的素材移除这条广场引用吗？" : "确定删除该素材吗？",
             success: async ({ confirm }) => {
                 if (!confirm) return;
                 uni.showLoading({ title: "删除中...", mask: true });
                 try {
-                    await deleteMaterial({ id: item.id });
-                    uni.showToast({ title: "删除成功", icon: "success", duration: 2000 });
-                    await reloadMaterialList();
-                    await syncSliceProgressWithMaterialList();
+                    if (square) {
+                        await removeSquareRefs({
+                            persona_id: personId.value,
+                            ids: [item.asset_id || item.id],
+                        });
+                        await querySquareRefs();
+                    } else {
+                        await deleteMaterial({ id: item.id });
+                        await reloadMaterialList();
+                        await syncSliceProgressWithMaterialList();
+                    }
+                    uni.showToast({ title: square ? "已移除" : "删除成功", icon: "success", duration: 2000 });
                 } catch (error: any) {
                     uni.showToast({ title: error || "删除失败", icon: "none", duration: 3000 });
                 } finally {
@@ -1119,7 +1188,7 @@ export const useMaterialsTab = ({
 
     const handleToggleSelectAll = (): void => {
         if (!batchDeleteMode.value) return;
-        selectedMaterialIds.value = isAllMaterialSelected.value ? [] : materialList.value.map((item) => item.id);
+        selectedMaterialIds.value = isAllMaterialSelected.value ? [] : displayMaterialList.value.map((item) => item.id);
     };
 
     const handleConfirmBatchDelete = (): void => {
@@ -1136,7 +1205,17 @@ export const useMaterialsTab = ({
                 if (!confirm) return;
                 uni.showLoading({ title: "删除中...", mask: true });
                 try {
-                    await batchDeleteMaterial({ ids: selectedMaterialIds.value });
+                    const selected = displayMaterialList.value.filter((item) =>
+                        selectedMaterialIds.value.includes(item.id),
+                    );
+                    const squareIds = selected.filter(isSquareMaterial).map((item) => item.asset_id || item.id);
+                    const ownIds = selected.filter((item) => !isSquareMaterial(item)).map((item) => item.id);
+                    if (squareIds.length) {
+                        await removeSquareRefs({ persona_id: personId.value, ids: squareIds });
+                    }
+                    if (ownIds.length) {
+                        await batchDeleteMaterial({ ids: ownIds });
+                    }
                     uni.showToast({ title: "删除成功", icon: "success", duration: 2000 });
                     handleCancelBatchDelete();
                     await reloadMaterialList();
@@ -1200,6 +1279,19 @@ export const useMaterialsTab = ({
     };
 
     const handleMoreMaterial = (item: MaterialItem): void => {
+        if (isSquareMaterial(item)) {
+            uni.showActionSheet({
+                itemList: item.alive && item.file_url ? ["查看", "移除引用"] : ["移除引用"],
+                success: ({ tapIndex }) => {
+                    if (item.alive && item.file_url && tapIndex === 0) {
+                        handlePreviewMaterial(item);
+                        return;
+                    }
+                    handleDeleteMaterial(item);
+                },
+            });
+            return;
+        }
         if (isMaterialSlicing(item)) {
             uni.showToast({ title: "视频切割中，请稍候", icon: "none", duration: 2000 });
             return;
@@ -1239,6 +1331,10 @@ export const useMaterialsTab = ({
     const handlePreviewMaterial = (item: MaterialItem): void => {
         if (batchDeleteMode.value) {
             handleToggleMaterialSelected(item.id);
+            return;
+        }
+        if (isSquareMaterial(item) && !item.alive) {
+            uni.showToast({ title: "该广场素材已下架", icon: "none", duration: 2000 });
             return;
         }
         if (isMaterialSlicing(item)) {
@@ -1668,7 +1764,9 @@ export const useMaterialsTab = ({
         loadNextMusicPage,
         materialFinished,
         materialKind,
-        materialList,
+        materialList: displayMaterialList,
+        querySquareRefs,
+        squareRefs,
         materialLoading,
         materialParams,
         materialType,

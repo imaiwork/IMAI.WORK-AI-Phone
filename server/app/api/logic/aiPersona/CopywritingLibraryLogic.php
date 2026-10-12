@@ -7,8 +7,8 @@ use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryPlatformUse;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryUseLog;
-use app\common\service\SpreadsheetService;
 use app\common\service\aiPersona\IdRoundRobinPicker;
+use app\common\service\SpreadsheetService;
 use think\facade\Db;
 
 class CopywritingLibraryLogic extends ApiLogic
@@ -116,6 +116,9 @@ class CopywritingLibraryLogic extends ApiLogic
 
             unset($data['id'], $data['user_id'], $data['source'], $data['create_time'], $data['use_count'], $data['last_used_time']);
             $data['update_time'] = time();
+            if ((int)($library->source_id ?? 0) > 0) {
+                $data['edited'] = 1;
+            }
             $library->save($data);
             self::$returnData = $library->refresh()->toArray();
             return true;
@@ -431,6 +434,11 @@ class CopywritingLibraryLogic extends ApiLogic
         $newUseMode = (int)self::configValue($newConfig, 'library_use_mode', self::USE_MODE_RANDOM);
         $oldReuseMode = (int)self::configValue($oldConfig, 'library_reuse_mode', self::REUSE_MODE_ONCE);
         $newReuseMode = (int)self::configValue($newConfig, 'library_reuse_mode', self::REUSE_MODE_ONCE);
+
+        $newSourceIsHotspot = $newSource === \app\common\model\aiPersona\AiPersonaSynthesisConfig::COPYWRITING_SOURCE_HOTSPOT;
+        if ($newSourceIsHotspot) {
+            return false;
+        }
 
         return $oldSource !== $newSource
             || $oldUseMode !== $newUseMode

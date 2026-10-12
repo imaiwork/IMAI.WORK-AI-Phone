@@ -150,6 +150,7 @@ class AccountLogCatEnum
         ]) + self::assign(self::MIX, [
             AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN,
             AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN,
+            AccountLogEnum::TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3,
             AccountLogEnum::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN,
             AccountLogEnum::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN,
             AccountLogEnum::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN,

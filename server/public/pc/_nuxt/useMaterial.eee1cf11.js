@@ -1,0 +1,1 @@
+import{g as n,a as l,d as o}from"./matrix.df359755.js";import{aY as s}from"./entry.91cf0653.js";function w(){const a=async t=>await n({id:t}),e=async t=>await l(t),i=s(async t=>{},1e3);return{getCopywritingMaterialDetail:a,addCopywritingMaterial:e,updateCopywritingMaterial:i,deleteCopywritingMaterial:async t=>{await o({id:t})}}}export{w as default};

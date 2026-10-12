@@ -450,7 +450,7 @@ import { useUserStore } from "@/stores/user";
 import { useAppStore } from "@/stores/app";
 import { updateUser } from "@/api/account";
 import { useRedeemCode } from "@/api/recharge";
-import { isIOS, isAndroid } from "@/utils/client";
+import { isIOS } from "@/utils/client";
 import { isReleaseVersion } from "@/utils/env";
 import UpdateUserInfo from "@/packages/pages/login/components/update-user-info.vue";
 import { useCopy } from "@/hooks/useCopy";
@@ -842,10 +842,10 @@ const handleRecharge = () => {
     }
     let pathUrl = "/packages/pages/redeem/redeem";
     if (cardCodeConfig.value.is_open == 1) {
-        if (
-            (isIOS() && rechargeConfig.value.is_ios_open == 1) ||
-            (isAndroid() && rechargeConfig.value.is_and_open == 1)
-        ) {
+        const canRecharge = isIOS()
+            ? rechargeConfig.value.is_ios_open == 1
+            : rechargeConfig.value.is_and_open == 1;
+        if (canRecharge) {
             pathUrl = "/packages/pages/recharge/recharge";
         }
     } else {

@@ -29,6 +29,7 @@ components.d.ts
 .hbuilderx  
 
 # .env
+.env
 .env.development
 .env.production
 

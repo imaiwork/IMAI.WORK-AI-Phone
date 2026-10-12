@@ -384,9 +384,7 @@
                                 <u-switch v-model="formData.extra.soundSwitch" inactive-color="#E5E5E5" :size="36" />
                             </view>
                             <navigator
-                                :url="`/ai_modules/digital_human/pages/music_choose/music_choose?music=${JSON.stringify(
-                                    formData.music,
-                                )}&volume=${formData.extra.volume}&ai_music=${formData.extra.ai_music}`"
+                                :url="buildMusicChooseUrl(formData)"
                                 hover-class="none"
                                 class="flex items-center gap-[12rpx] px-[28rpx] h-[100rpx]">
                                 <text class="flex-1 text-[28rpx] font-semibold text-[#0D1117]">背景音乐</text>
@@ -396,7 +394,8 @@
                                         <text class="text-primary font-bold">{{ formData.music.length }}</text>
                                         <text class="text-[#9CA3AF]">个</text>
                                     </template>
-                                    <text v-else-if="formData.extra.ai_music" class="text-[#9CA3AF]">AI 音乐库</text>
+                                    <text v-else-if="formData.extra.system_music_id" class="text-[#9CA3AF] line-clamp-1 max-w-[240rpx]">{{ formData.extra.system_music_name || "已指定" }}</text>
+                                    <text v-else-if="formData.extra.ai_music" class="text-[#9CA3AF]">系统随机</text>
                                     <text v-else class="text-[#9CA3AF]">无</text>
                                     <u-icon name="arrow-right" size="20" color="#C0C4CC" />
                                 </view>
@@ -606,6 +605,7 @@
 <script setup lang="ts">
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum, MontageTypeEnum, MontageStylesType } from "@/ai_modules/digital_human/enums";
+import { applyMontageMusic, buildMusicChooseUrl } from "@/ai_modules/digital_human/config/system-music";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import Steps from "@/ai_modules/digital_human/components/steps/steps.vue";
 import ChooseTone from "@/ai_modules/digital_human/components/choose-tone/choose-tone.vue";
@@ -640,6 +640,8 @@ const formData = reactive<{
     music: any[];
     extra: PackSwitchSetting & {
         ai_music: boolean;
+        system_music_id: string;
+        system_music_name: string;
         soundSwitch: boolean;
         volume: number;
         music: number;
@@ -659,6 +661,8 @@ const formData = reactive<{
     extra: {
         ...createPackSwitchSetting(),
         ai_music: true,
+        system_music_id: "",
+        system_music_name: "",
         soundSwitch: false,
         volume: 0.5,
         music: 0,
@@ -755,8 +759,8 @@ const {
  */
 const toneModelVersion = computed(() =>
     copywriterTypeIndex.value === 1
-        ? DigitalHumanModelVersionEnum.SHANJIAN
-        : `${DigitalHumanModelVersionEnum.SHANJIAN},${DigitalHumanModelVersionEnum.MINIMAX_HD},${DigitalHumanModelVersionEnum.MINIMAX_TURBO}`,
+        ? `${DigitalHumanModelVersionEnum.SHANJIAN},${DigitalHumanModelVersionEnum.SHANJIAN_S3}`
+        : `${DigitalHumanModelVersionEnum.SHANJIAN},${DigitalHumanModelVersionEnum.SHANJIAN_S3},${DigitalHumanModelVersionEnum.MINIMAX_HD},${DigitalHumanModelVersionEnum.MINIMAX_TURBO}`,
 );
 
 // ─── 步骤导航（在 useGenerateSetting 之后声明，以便传入 voiceValue） ──
@@ -785,14 +789,7 @@ onLoad(() => {
             onCopywriterConfirm(data);
         }
         if (type === ListenerTypeEnum.CHOOSE_MUSIC) {
-            if (data.music === -1) {
-                formData.extra.ai_music = true;
-                formData.music = [];
-            } else {
-                formData.music = data.music;
-                formData.extra.ai_music = false;
-            }
-            formData.extra.volume = data.volume;
+            applyMontageMusic(formData, data);
         }
         if (type === ListenerTypeEnum.CHOOSE_VIDEO_STYLES) {
             if (!data.length) return;

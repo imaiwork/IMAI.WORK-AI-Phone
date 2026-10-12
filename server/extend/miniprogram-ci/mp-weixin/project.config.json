@@ -14,7 +14,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "latest",
-  "appid": "wx8793855d1e2d4208",
+  "appid": "wx001fdea2ed617f56",
   "projectname": "IMAI",
   "condition": {
     "search": {
@@ -33,6 +33,5 @@
       "current": -1,
       "list": []
     }
-  },
-  "isGameTourist": false
+  }
 }

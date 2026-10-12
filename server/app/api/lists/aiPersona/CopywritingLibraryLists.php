@@ -7,6 +7,7 @@ use app\common\lists\ListsExtendInterface;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryPlatformUse;
+use app\common\service\copywriting\PublicCopywritingService;
 
 class CopywritingLibraryLists extends BaseApiDataLists implements ListsSearchInterface, ListsExtendInterface
 {
@@ -71,7 +72,7 @@ class CopywritingLibraryLists extends BaseApiDataLists implements ListsSearchInt
         }
         unset($item);
 
-        return $list;
+        return PublicCopywritingService::attachListFlags($list);
     }
 
     public function count(): int

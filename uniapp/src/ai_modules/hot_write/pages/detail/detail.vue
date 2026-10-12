@@ -356,6 +356,7 @@ import {
 } from "@/api/hot_write";
 import { generateMatrixPrompt } from "@/api/device";
 import { getCopyWritingGenerate } from "@/api/agent";
+import { ManualPublishSourceEnum } from "@/enums/publishEnums";
 import usePolling from "@/hooks/usePolling";
 import { formatAudioTime } from "@/utils/util";
 import {
@@ -809,7 +810,7 @@ const onPublishImageText = () => {
         url: "/ai_modules/device/pages/create_task/create_task",
         params: {
             type: 2, // TaskType.IMAGE 发布图文
-            source: "hot_write",
+            source: ManualPublishSourceEnum.HOT_WRITE,
             data: JSON.stringify({ id: taskDetail.value.id }),
         },
     });
@@ -991,6 +992,7 @@ const onConfirmWashConfig = async (payload: {
     speech_rate?: number;
     clip_template_id: string;
     music_url: string;
+    system_music_id?: string;
 }) => {
     if (washSubmitting.value) return;
     const rewriteStep = allSteps.value.find((s) => s.id === 7);
@@ -1015,6 +1017,7 @@ const onConfirmWashConfig = async (payload: {
             voice_id: payload.voice_id,
             clip_template_id: payload.clip_template_id,
             music_url: payload.music_url,
+            system_music_id: payload.system_music_id || "",
             rewritten_text: rewrittenText,
         });
         uni.hideLoading();

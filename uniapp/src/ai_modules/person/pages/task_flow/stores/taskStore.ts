@@ -160,6 +160,7 @@ export enum TaskScene {
     CITY_INTERCEPT = 13,
     GROUP_PURCHASE_INTERCEPT = 14,
     COMMENT_LIKE = 15,
+    DY_SEARCH = 18,
 }
 
 export const taskConfig: Record<TaskScene, TaskConfigItem> = {
@@ -265,6 +266,11 @@ export const taskConfig: Record<TaskScene, TaskConfigItem> = {
         label: "评论点赞",
         scene: 15,
         platforms: [{ type: SPH_TYPE, name: "视频号" }],
+    },
+    [TaskScene.DY_SEARCH]: {
+        label: "抖音搜寻获客",
+        scene: 18,
+        platforms: [{ type: DOYIN_TYPE, name: "抖音" }],
     },
 };
 

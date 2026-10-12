@@ -199,7 +199,7 @@
 
             <view v-if="formData.add_type === 1" class="px-[28rpx] py-[24rpx]">
                 <text class="block mb-[12rpx] text-xs text-[#9CA3AF]">加微微信</text>
-                <data-select v-model="formData.wechat_id" multiple :localdata="wechatOptions" />
+                <data-select v-model="selectedWechatIds" multiple :localdata="wechatOptions" />
 
                 <text class="block mt-[28rpx] mb-[20rpx] text-xs text-[#9CA3AF]">加微规则</text>
                 <option-grid v-model="formData.add_rule" :options="addRuleOptions" :columns="2" />
@@ -336,6 +336,12 @@ const emit = defineEmits<{
 const formData = computed({
     get: () => props.modelValue,
     set: (value) => emit('update:modelValue', value)
+})
+
+// 多选组件使用数组，表单和提交接口使用逗号分隔的微信账号。
+const selectedWechatIds = computed({
+    get: () => formData.value.wechat_id.split(',').filter(Boolean),
+    set: (value: string[]) => (formData.value.wechat_id = value.join(','))
 })
 
 /**

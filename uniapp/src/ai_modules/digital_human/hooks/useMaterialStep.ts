@@ -1,6 +1,6 @@
 import useUpload from "@/hooks/useUpload";
 import { useMaterial } from "@/ai_modules/digital_human/hooks/useMaterial";
-import { montageConfig } from "@/enums/montageEnums";
+import { montageConfig, calcMaterialDurationBudget } from "@/enums/montageEnums";
 import { UploadCategoryEnum, UploadAlbumTypeEnum } from "@/enums/appEnums";
 
 interface UseMaterialStepOptions {
@@ -25,10 +25,11 @@ export function useMaterialStep({ formData }: UseMaterialStepOptions) {
 
     // ─── 素材总时长 ──────────────────────────────────────────────
 
+    // 口径含截断误差补偿：消费方（getDurationLimit、useSteps 校验、图组确认）都是闸门，
+    // 展示用的已用/剩余时长走 material-duration-bar，仍按原值显示
     const getMaterialTotalDuration = (): number =>
         formData.materialList.reduce(
-            (acc: number, item: any) =>
-                item.type === "video" ? acc + Number(item.duration) : acc + montageConfig.imageDuration,
+            (acc: number, item: any) => acc + calcMaterialDurationBudget(item.type !== "video", item.duration),
             0,
         );
 

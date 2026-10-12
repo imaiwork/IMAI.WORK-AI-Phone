@@ -15,7 +15,7 @@ use think\exception\HttpResponseException;
 class ClawController extends BaseApiController
 {
 
-    public array $notNeedLogin = ['getInfo', 'getTask', 'setAccount', 'unbindReport'];
+    public array $notNeedLogin = ['getInfo', 'getTask', 'unbindReport'];
 
     public function getInfo()
     {
@@ -51,7 +51,7 @@ class ClawController extends BaseApiController
     {
         try {
             $params = $this->request->post();
-            $result = ClawLogic::setAccount($params);
+            $result = ClawLogic::setAccount($params, $this->userId);
             if ($result) {
                 return $this->data(ClawLogic::getReturnData());
             }

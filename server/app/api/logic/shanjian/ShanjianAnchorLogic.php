@@ -35,10 +35,14 @@ class ShanjianAnchorLogic extends ApiLogic
 
         // 并发去重：本用户同 dh_id 进行中/成功则跳过；失败软删后重提
         $exists = PublicAnchorBindService::takeOwnShanjianForSubmit((int)$dh_id, (int)$user_id, self::CLONE_TYPE_FAST);
+        $placeholder = null;
         if (!empty($exists)) {
-            Log::channel('shanjiannotice')->write('极速克隆记录已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id);
-            self::$returnData = ['id' => $exists->id];
-            return true;
+            if (trim((string)$exists->task_id) !== '') {
+                Log::channel('shanjiannotice')->write('极速克隆记录已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id);
+                self::$returnData = ['id' => $exists->id];
+                return true;
+            }
+            $placeholder = $exists;
         }
 
         $digitalHuman = PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$user_id);
@@ -75,14 +79,27 @@ class ShanjianAnchorLogic extends ApiLogic
                 'create_time'    => time(),
                 'dh_id'          => $dh_id,
                 'clone_type'     => self::CLONE_TYPE_FAST,
+                'remark'         => '',
             ];
-            $model = new ShanjianAnchor();
-            $model->save($data);
-            $data['id']       = $model->id;
+            if (!empty($placeholder)) {
+                unset($data['create_time']);
+                $placeholder->save($data);
+                $data['id'] = $placeholder->id;
+            } else {
+                $model = new ShanjianAnchor();
+                $model->save($data);
+                $data['id'] = $model->id;
+            }
             self::$returnData = $data;
             return true;
         } else {
             $msg = $response['message'] ?? '检验失败';
+            if (!empty($placeholder)) {
+                $placeholder->save([
+                    'status' => 2,
+                    'remark' => $msg,
+                ]);
+            }
             Log::channel('shanjiannotice')->write('定时任务闪剪形象创建失败，' . $msg);
             $task_ids['shanjian']['status'] = 2;
             $digitalHuman->task_ids         = json_encode($task_ids);
@@ -105,10 +122,14 @@ class ShanjianAnchorLogic extends ApiLogic
 
         // 并发去重：本用户同 dh_id 进行中/成功则跳过；失败软删后重提
         $exists = PublicAnchorBindService::takeOwnShanjianForSubmit((int)$dh_id, (int)$user_id, self::CLONE_TYPE_PRO);
+        $placeholder = null;
         if (!empty($exists)) {
-            Log::channel('shanjiannotice')->write('专业克隆记录已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id);
-            self::$returnData = ['id' => $exists->id];
-            return true;
+            if (trim((string)$exists->task_id) !== '') {
+                Log::channel('shanjiannotice')->write('专业克隆记录已存在，跳过：dh_id=' . $dh_id . ' user_id=' . $user_id);
+                self::$returnData = ['id' => $exists->id];
+                return true;
+            }
+            $placeholder = $exists;
         }
 
         $digitalHuman = PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$user_id);
@@ -148,15 +169,28 @@ class ShanjianAnchorLogic extends ApiLogic
                 'create_time'    => time(),
                 'dh_id'          => $dh_id,
                 'clone_type'     => self::CLONE_TYPE_PRO,
+                'remark'         => '',
             ];
-            $model = new ShanjianAnchor();
-            $model->save($data);
-            $data['id']       = $model->id;
+            if (!empty($placeholder)) {
+                unset($data['create_time']);
+                $placeholder->save($data);
+                $data['id'] = $placeholder->id;
+            } else {
+                $model = new ShanjianAnchor();
+                $model->save($data);
+                $data['id'] = $model->id;
+            }
             self::$returnData = $data;
             return true;
         }
 
         $msg = $response['message'] ?? '检验失败';
+        if (!empty($placeholder)) {
+            $placeholder->save([
+                'status' => 2,
+                'remark' => $msg,
+            ]);
+        }
         Log::channel('shanjiannotice')->write('定时任务闪剪专业形象创建失败，' . $msg);
         $task_ids['shanjian_pro']['status'] = 2;
         $digitalHuman->task_ids             = json_encode($task_ids);

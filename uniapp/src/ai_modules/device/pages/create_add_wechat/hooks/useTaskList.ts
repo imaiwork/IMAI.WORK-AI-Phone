@@ -4,6 +4,7 @@
 import config from "@/config";
 import { chooseFile } from "@/components/file-upload/choose-file";
 import { uploadFile } from "@/api/app";
+import { getCustomerLeadClues } from "@/api/device";
 import { useCopy } from "@/hooks/useCopy";
 import { ClueSourceEnum } from "@/ai_modules/device/enums";
 import type { AddFriendFormData } from "./types";
@@ -27,13 +28,16 @@ export function useTaskList(formData: AddFriendFormData) {
     };
 
     const handleAddTask = () => {
+        const itemList = [
+            "复制模版链接",
+            "从聊天记录中选择文件（需要符合模板）",
+            "从获客任务中选择线索",
+            "从抖音获客任务中选择线索",
+            "从客资线索中动态获取",
+        ];
+
         uni.showActionSheet({
-            itemList: [
-                "复制模版链接",
-                "从聊天记录中选择文件（需要符合模板）",
-                "从获客任务中选择线索",
-                "从抖音获客任务中选择线索",
-            ],
+            itemList,
             success: async (res) => {
                 if (res.tapIndex === 0) {
                     copy(config.baseUrl + "static/file/template/wechatidcsv.csv");
@@ -86,6 +90,31 @@ export function useTaskList(formData: AddFriendFormData) {
                     uni.navigateTo({
                         url: `/ai_modules/device/pages/wechat_clue/wechat_clue?source=${ClueSourceEnum.DY_SEARCH}`,
                     });
+                } else if (res.tapIndex === 4) {
+                    if (formData.source !== ClueSourceEnum.CUSTOMER_LEADS) {
+                        formData.source = ClueSourceEnum.CUSTOMER_LEADS;
+                        formData.fileurl = "";
+                        taskList.value = [];
+                    }
+                    if (!taskList.value.length) {
+                        taskList.value.push({
+                            name: "客资线索（动态获取）",
+                            file_type: 2,
+                            source: ClueSourceEnum.CUSTOMER_LEADS,
+                            total: 0,
+                            added: 0,
+                        });
+                    }
+                    try {
+                        const stats = await getCustomerLeadClues();
+                        const card = taskList.value[0];
+                        if (card) {
+                            card.total = Number(stats?.clue_total) || 0;
+                            card.added = Number(stats?.added_count) || 0;
+                        }
+                    } catch (error) {
+                        console.log(error);
+                    }
                 }
             },
             fail: (err) => console.log(err),

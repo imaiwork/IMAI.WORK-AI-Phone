@@ -44,6 +44,23 @@
                                     v-if="type === 1"
                                     class="flex items-center justify-between h-[96rpx] border-[0] border-b border-solid border-[#F0F2F5]">
                                     <view class="flex items-center gap-[12rpx]">
+                                        <view class="w-[8rpx] h-[8rpx] rounded-full bg-[#0284C7]" />
+                                        <text class="text-[#4B5563]">{{ shanjianS3VoiceCostLabel }}</text>
+                                    </view>
+                                    <view class="flex items-center gap-[6rpx]">
+                                        <text class="text-[28rpx] font-extrabold text-primary">
+                                            {{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN_S3).score }}
+                                        </text>
+                                        <text class="text-[22rpx] text-[#9CA3AF]">
+                                            {{ getTokenByScene(TokensSceneEnum.HUMAN_VOICE_SHANJIAN_S3).unit }}
+                                        </text>
+                                    </view>
+                                </view>
+
+                                <view
+                                    v-if="type === 1"
+                                    class="flex items-center justify-between h-[96rpx] border-[0] border-b border-solid border-[#F0F2F5]">
+                                    <view class="flex items-center gap-[12rpx]">
                                         <view class="w-[8rpx] h-[8rpx] rounded-full bg-[#8B5CF6]" />
                                         <text class="text-[#4B5563]">形象克隆费用</text>
                                     </view>
@@ -117,7 +134,8 @@
 <script setup lang="ts">
 // script 完全不变
 import { useUserStore } from "@/stores/user";
-import { TokensSceneEnum } from "@/enums/appEnums";
+import { useAppStore } from "@/stores/app";
+import { DigitalHumanModelVersionEnum, TokensSceneEnum } from "@/enums/appEnums";
 import { MontageTypeEnum } from "@/ai_modules/digital_human/enums";
 
 const props = withDefaults(
@@ -142,6 +160,15 @@ const show = computed({
 });
 
 const userStore = useUserStore();
+const appStore = useAppStore();
+const shanjianS3VoiceCostLabel = computed(() => {
+    const models = appStore.getAiModelConfig?.humanModels || [];
+    const found = models.find(
+        (item: { model_version?: number | string; name?: string }) =>
+            Number(item.model_version) === DigitalHumanModelVersionEnum.SHANJIAN_S3,
+    );
+    return found?.name ? `${found.name}声音克隆费用` : "数字人s3声音克隆费用";
+});
 
 const getScene = computed(() => {
     const descriptions: Record<number, { title: string; desc: string; key: string | { name: string; key: string }[] }> =

@@ -36,9 +36,15 @@ class SyncShanjianClipTemplatesCron extends Command
             $ok = true;
             try {
                 $result = ShanjianClipTemplateSyncService::syncFromPlatform();
-                $message = '同步剪辑模板成功: ' . json_encode($result, JSON_UNESCAPED_UNICODE);
+                $partialFailed = ($result['failed'] ?? 0) > 0;
+                $message = ($partialFailed ? '同步剪辑模板部分失败(已跳过失败条目): ' : '同步剪辑模板成功: ')
+                    . json_encode($result, JSON_UNESCAPED_UNICODE);
                 $output->writeln($message);
-                Log::channel('crontab')->info($message);
+                if ($partialFailed) {
+                    Log::channel('crontab')->error($message);
+                } else {
+                    Log::channel('crontab')->info($message);
+                }
             } catch (\Throwable $e) {
                 $ok = false;
                 $message = '同步剪辑模板失败: ' . $e->getMessage();
@@ -64,6 +70,7 @@ class SyncShanjianClipTemplatesCron extends Command
                 $output->writeln($message);
                 Log::channel('crontab')->error($message);
             }
+
             return $ok;
         } catch (\Throwable $e) {
             $message = '同步剪辑模板失败: ' . $e->getMessage();

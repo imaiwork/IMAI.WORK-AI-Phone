@@ -15,6 +15,7 @@ use app\common\model\human\HumanAnchor;
 use app\common\model\material\FfmpegFile;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\user\User;
+use app\common\service\digitalHuman\PendingAnchorTaskService;
 use app\common\service\digitalHuman\PublicAnchorBindService;
 use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
@@ -350,6 +351,8 @@ class DigitalHumanLogic extends ApiLogic
             ];
             Log::channel('ffmpeg')->write('ffmpeg转码1'.json_encode($anchorData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             FfmpegFileLogic::addFfmpegFile($anchorData);
+            PendingAnchorTaskService::materialize('human');
+            PendingAnchorTaskService::materialize('shanjian');
             self::$returnData = $dh->refresh()->toArray();
             return true;
         } catch (\Exception $exception) {
@@ -569,13 +572,26 @@ class DigitalHumanLogic extends ApiLogic
                 $chanjing = PublicAnchorBindService::ownChanjing((int)$item['id'], $ownerId);
                 // ai_type=1 只走蝉镜；ai_type=0 需蝉镜+闪剪都有子任务；一克三还需专业子任务
                 $aiType = (int)($item['ai_type'] ?? 0);
+                // 分发前占位行还没有上游任务，不能当成渠道已提交
+                $chanjingReady = !empty($chanjing) && trim((string)$chanjing->anchor_id) !== '';
+                $shanjianReady = !empty($shanjian) && trim((string)$shanjian->task_id) !== '';
+                $shanjianProReady = !empty($shanjianPro) && trim((string)$shanjianPro->task_id) !== '';
                 $failed = $aiType === 1
-                    ? empty($chanjing)
-                    : (empty($chanjing) || empty($shanjian) || ($cloneMode === 3 && empty($shanjianPro)));
+                    ? !$chanjingReady
+                    : (!$chanjingReady || !$shanjianReady || ($cloneMode === 3 && !$shanjianProReady));
                 if ($failed) {
                     $update['status'] = 3;
                     $update['remark'] = '形象生成失败';
                     DigitalHumanAnchor::where('id', $item['id'])->update($update);
+                    HumanAnchor::where('dh_id', $item['id'])
+                        ->where('user_id', $ownerId)
+                        ->where('model_version', 7)
+                        ->where('anchor_id', '')
+                        ->update(['status' => 2, 'remark' => '形象生成失败']);
+                    ShanjianAnchor::where('dh_id', $item['id'])
+                        ->where('user_id', $ownerId)
+                        ->where('task_id', '')
+                        ->update(['status' => 2, 'remark' => '形象生成失败']);
                 }
             }
         }

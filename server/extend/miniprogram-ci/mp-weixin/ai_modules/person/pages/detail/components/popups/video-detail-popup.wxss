@@ -1,1 +1,1 @@
-.detail-close.data-v-29b18d23{position:relative}.detail-close.data-v-29b18d23:after{content:"";position:absolute;inset:-12rpx}
+.detail-close.data-v-29b18d23{position:relative}.detail-close.data-v-29b18d23:after{content:"";position:absolute;top:-12rpx;right:-12rpx;bottom:-12rpx;left:-12rpx}

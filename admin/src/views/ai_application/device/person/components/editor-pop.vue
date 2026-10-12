@@ -220,6 +220,15 @@
                             {{ currentMaterialHint.cost }}
                         </div>
                     </div>
+                    <div v-if="innerState.materialSource === MaterialSourceEnum.Square" class="mt-3">
+                        <div class="text-xs text-[#86909C] mb-2">从这些广场分组取素材（不选=全部已上架分组）</div>
+                        <el-checkbox-group v-model="innerState.squareGroupIds">
+                            <el-checkbox v-for="item in squareGroups" :key="item.id" :label="item.id">
+                                {{ item.name }}
+                            </el-checkbox>
+                        </el-checkbox-group>
+                        <div v-if="!squareGroups.length" class="text-xs text-[#C0C4CC]">还没有上架的广场分组</div>
+                    </div>
                 </div>
 
                 <!-- ③ 文案来源 -->
@@ -227,7 +236,7 @@
                     <div class="rule-sec-hd">
                         <div class="rule-sec-title">文案来源</div>
                     </div>
-                    <div class="rule-seg">
+                    <div class="rule-seg rule-seg-copy">
                         <div
                             v-for="opt in copySourceOptions"
                             :key="opt.val"
@@ -243,6 +252,26 @@
                     </div>
                     <div class="rule-note">
                         <div class="rule-note-text">{{ currentCopyHint }}</div>
+                    </div>
+
+                    <copy-hotspot-panel v-if="hasCopyHotspot" :persona-id="personId" />
+
+                    <!-- 热点生成 · 取用规则（与 copywriting_source=5 一并提交） -->
+                    <div v-if="hasCopyHotspot" class="mt-3">
+                        <div class="text-xs font-semibold text-[#4B5563] mb-2">取用规则</div>
+                        <div class="rule-seg">
+                            <div
+                                v-for="opt in HOTSPOT_PICK_MODE_OPTIONS"
+                                :key="opt.val"
+                                class="rule-seg-btn"
+                                :class="{ sel: innerState.hotspotPickMode === opt.val }"
+                                @click="innerState.hotspotPickMode = opt.val">
+                                <span>{{ opt.label }}</span>
+                            </div>
+                        </div>
+                        <div class="rule-note">
+                            <div class="rule-note-text">{{ currentHotspotPickNote }}</div>
+                        </div>
                     </div>
 
                     <!-- AI生成子设置：文案生成类型（预设 + 自定义） -->
@@ -354,12 +383,39 @@
                             :key="opt.val"
                             class="rule-seg-btn"
                             :class="{ sel: innerState.musicSource === opt.val }"
-                            @click="innerState.musicSource = opt.val">
+                            @click="pickMusicSource(opt.val)">
                             <span>{{ opt.label }}</span>
                         </div>
                     </div>
                     <div class="rule-note">
                         <div class="rule-note-text">{{ currentMusicSourceHint }}</div>
+                    </div>
+                    <div v-if="innerState.musicSource === MusicSourceEnum.System" class="mt-3">
+                        <div class="rule-seg">
+                            <div
+                                class="rule-seg-btn"
+                                :class="{ sel: !innerState.systemMusicId }"
+                                @click="clearSystemMusic">
+                                <span>每次随机</span>
+                            </div>
+                            <div
+                                class="rule-seg-btn"
+                                :class="{ sel: !!innerState.systemMusicId }"
+                                @click="showSystemMusic = true">
+                                <span>指定一首</span>
+                            </div>
+                        </div>
+                        <div v-if="innerState.systemMusicId" class="mt-2 flex items-center gap-2">
+                            <span class="flex-1 min-w-0 text-xs text-slate-600 truncate">
+                                {{ innerState.systemMusicName || "已指定" }}
+                            </span>
+                            <button class="text-xs font-bold text-primary" @click="showSystemMusic = true">重选</button>
+                        </div>
+                        <div
+                            v-if="innerState.systemMusicId && !innerState.systemMusicEnabled"
+                            class="mt-1 text-xs text-amber-500">
+                            这首已下架，下次将随机
+                        </div>
                     </div>
                 </div>
 
@@ -404,6 +460,28 @@
         </div>
     </popup>
 
+    <el-dialog v-model="showSystemMusic" title="系统音乐" width="420px" append-to-body>
+        <div class="music-list">
+            <button
+                type="button"
+                class="music-row"
+                :class="{ sel: !innerState.systemMusicId }"
+                @click="onSystemMusic('', '')">
+                每次随机
+            </button>
+            <button
+                v-for="item in systemMusics"
+                :key="item.id"
+                type="button"
+                class="music-row"
+                :class="{ sel: innerState.systemMusicId === item.id }"
+                @click="onSystemMusic(item.id, item.name)">
+                <span class="music-row-name">{{ item.name }}</span>
+            </button>
+            <div v-if="!systemMusics.length" class="music-empty">暂无上架曲目</div>
+        </div>
+    </el-dialog>
+
     <video-template-choose-pop
         v-model="templatePickerVisible"
         :types="activeSynthApiTypes"
@@ -432,10 +510,12 @@ import {
     getAiSynthesisRuleDetail,
     getAvatarList,
 } from "@/api/ai_application/device/person";
+import { getSquareGroups } from "@/api/ai_application/square";
 import Popup from "@/components/popup/index.vue";
 import feedback from "@/utils/feedback";
 import { useLockFn } from "@/hooks/useLockFn";
 import VideoTemplateChoosePop from "./video-template-choose-pop.vue";
+import CopyHotspotPanel from "./copy-hotspot-panel.vue";
 import { TemplateConfigMap } from "../enums/template";
 import {
     ALL_SYNTH_API_TYPES,
@@ -457,13 +537,25 @@ enum MaterialSourceEnum {
     PureAI = "PureAI",
     AILib = "AILib",
     PureLib = "PureLib",
+    Square = "Square",
 }
 enum CopySourceEnum {
     Rewrite = "Rewrite",
     AIGen = "AIGen",
     None = "None",
+    Hotspot = "Hotspot",
     Lib = "Lib",
 }
+
+/** 热点生成 · 取用规则，对齐 la_ai_persona_synthesis_config.hotspot_pick_mode */
+enum HotspotPickModeEnum {
+    Latest = 1,
+    Once = 2,
+}
+
+const normalizeHotspotPickMode = (value: unknown): HotspotPickModeEnum =>
+    Number(value) === HotspotPickModeEnum.Once ? HotspotPickModeEnum.Once : HotspotPickModeEnum.Latest;
+
 enum CoverSourceEnum {
     Default = "Default",
     AI = "AI",
@@ -537,6 +629,7 @@ const MATERIAL_SOURCE_OPTIONS = [
     { val: MaterialSourceEnum.PureAI, label: "纯AI找素材" },
     { val: MaterialSourceEnum.AILib, label: "AI+素材库" },
     { val: MaterialSourceEnum.PureLib, label: "纯素材库" },
+    { val: MaterialSourceEnum.Square, label: "素材库+广场" },
 ];
 
 const COVER_SOURCE_OPTIONS = [
@@ -621,14 +714,33 @@ const MATERIAL_HINTS: Record<string, { effect: string; cost: string; costType: s
         cost: "无额外费用",
         costType: "free",
     },
+    [MaterialSourceEnum.Square]: {
+        effect: "自有素材与广场素材对半使用，一边不够时用另一边补缺口。",
+        cost: "无额外费用",
+        costType: "free",
+    },
 };
 
 const COPY_HINTS: Record<string, string> = {
     [CopySourceEnum.Rewrite]: "智能提取爆款视频框架，大幅提升上热门概率。",
     [CopySourceEnum.AIGen]: "根据核心词快速裂变，保证极高原创度和产出效率。",
     [CopySourceEnum.None]: "纯画面与音乐展示，不生成任何口播或字幕，适合风景、沉浸式空镜。",
+    [CopySourceEnum.Hotspot]: "从热点库取用已入库的热点，结合人设生成追热点文案，时效性最强。",
     [CopySourceEnum.Lib]: "从该人设的文案库中按规则取用，已审过的内容直接发，更稳。",
 };
+
+const HOTSPOT_PICK_MODE_OPTIONS = [
+    {
+        val: HotspotPickModeEnum.Latest,
+        label: "最新入库优先",
+        note: "每次生成取最新入库的热点，追热点时效最好。",
+    },
+    {
+        val: HotspotPickModeEnum.Once,
+        label: "每条只用一次",
+        note: "按入库顺序取用，每条用完即标记，不重复消费同一热点。",
+    },
+] as const;
 
 /** AI生成 · 文案生成类型（预设 + 自定义），对应 copywriting_generation_type / copywriting_generation_custom */
 enum CopyAiTypeEnum {
@@ -677,7 +789,8 @@ const MUSIC_SOURCE_OPTIONS = [
 ];
 
 const MUSIC_SOURCE_HINTS: Record<number, string> = {
-    [MusicSourceEnum.System]: "从系统内置的海量正版 BGM 中随机挑选配乐。",
+    [MusicSourceEnum.System]:
+        "默认每次随机。指定一首后，人设自动出片、设备发布、热点已选人设、爆款人设模式都会用这一首。闪剪手动创建仍当次另选。",
     [MusicSourceEnum.Persona]: "从该人设「素材库 · 音乐库」中随机取用自定义配乐。",
     [MusicSourceEnum.None]: "生成视频时不添加背景音乐，仅保留口播与环境声。",
 };
@@ -692,12 +805,14 @@ const MATERIAL_SOURCE_TO_API: Record<string, number> = {
     [MaterialSourceEnum.PureAI]: 1,
     [MaterialSourceEnum.AILib]: 2,
     [MaterialSourceEnum.PureLib]: 3,
+    [MaterialSourceEnum.Square]: 4,
 };
 const COPY_SOURCE_TO_API: Record<string, number> = {
     [CopySourceEnum.Rewrite]: 1,
     [CopySourceEnum.AIGen]: 2,
     [CopySourceEnum.None]: 3,
     [CopySourceEnum.Lib]: 4,
+    [CopySourceEnum.Hotspot]: 5,
 };
 const COVER_SOURCE_TO_API: Record<string, number> = {
     [CoverSourceEnum.Default]: 1,
@@ -762,14 +877,21 @@ interface InnerState {
     newsDuration: number;
     copyLibUseMode: LibUseModeEnum;
     copyLibRandomRule: LibRuleEnum;
+    /** 热点生成 · 取用规则，提交 hotspot_pick_mode：1 最新入库优先 / 2 每条只用一次 */
+    hotspotPickMode: HotspotPickModeEnum;
     /** 视频模板：key 为 generation_types 数字（1/3/4） */
     templateConfig: TemplateConfigMap;
     /** 背景音乐来源：1 系统 / 2 人设 / 3 无 */
     musicSource: MusicSourceEnum;
+    systemMusicId: string;
+    systemMusicName: string;
+    systemMusicEnabled: boolean;
     /** 音乐音量 0~1，一位小数 */
     musicVolume: number;
     /** 口播语速 0.5~2，一位小数 */
     speechRate: number;
+    /** 素材库+广场时限定的分组 */
+    squareGroupIds: number[];
 }
 
 const DEFAULT_INNER_STATE = (): InnerState => ({
@@ -790,10 +912,15 @@ const DEFAULT_INNER_STATE = (): InnerState => ({
     newsDuration: NEWS_DURATION.default,
     copyLibUseMode: LibUseModeEnum.Random,
     copyLibRandomRule: LibRuleEnum.Once,
+    hotspotPickMode: HotspotPickModeEnum.Latest,
     templateConfig: {},
     musicSource: MusicSourceEnum.System,
+    systemMusicId: "",
+    systemMusicName: "",
+    systemMusicEnabled: true,
     musicVolume: MUSIC_VOLUME_DEFAULT,
     speechRate: SPEECH_RATE_DEFAULT,
+    squareGroupIds: [],
 });
 
 const emit = defineEmits(["success", "close"]);
@@ -801,6 +928,7 @@ const popupRef = shallowRef<InstanceType<typeof Popup>>();
 const loading = ref(false);
 const personId = ref<string | number>("");
 const isMaterialEmpty = ref(false);
+const squareGroups = ref<{ id: number; name: string; enabled: number }[]>([]);
 const templatePickerVisible = ref(false);
 
 const innerState = reactive<InnerState>(DEFAULT_INNER_STATE());
@@ -809,6 +937,10 @@ const hasDigitalHuman = computed(() => innerState.synthTypes.includes(SynthTypeE
 const hasNews = computed(() => innerState.synthTypes.includes(SynthTypeEnum.News));
 const hasCopyLib = computed(() => innerState.copySource === CopySourceEnum.Lib);
 const hasCopyAiGen = computed(() => innerState.copySource === CopySourceEnum.AIGen);
+const hasCopyHotspot = computed(() => innerState.copySource === CopySourceEnum.Hotspot);
+const currentHotspotPickNote = computed(
+    () => HOTSPOT_PICK_MODE_OPTIONS.find((o) => o.val === innerState.hotspotPickMode)?.note ?? "",
+);
 const currentCopyAiTypeNote = computed(() => {
     const custom = innerState.copyAiCustom.trim();
     if (innerState.copyAiType === CopyAiTypeEnum.Custom && custom) return `将按「${custom}」的方向生成文案。`;
@@ -839,6 +971,7 @@ const canUseNoCopy = computed(
 const copySourceOptions = computed(() => [
     { val: CopySourceEnum.Rewrite, label: "找爆款仿写", locked: false },
     { val: CopySourceEnum.AIGen, label: "AI直接生成", locked: false },
+    { val: CopySourceEnum.Hotspot, label: "热点生成", locked: false },
     { val: CopySourceEnum.Lib, label: "文案库", locked: false },
     // { val: CopySourceEnum.None, label: '无需文案', locked: !canUseNoCopy.value }
 ]);
@@ -860,6 +993,23 @@ const currentCoverHint = computed(() => COVER_HINTS[innerState.coverSource]);
 const currentMusicSourceHint = computed(
     () => MUSIC_SOURCE_HINTS[innerState.musicSource] || MUSIC_SOURCE_HINTS[MusicSourceEnum.System],
 );
+const showSystemMusic = ref(false);
+const systemMusics = ref<any[]>([]);
+const pickMusicSource = (val: MusicSourceEnum) => {
+    innerState.musicSource = val;
+    if (val !== MusicSourceEnum.System) clearSystemMusic();
+};
+const clearSystemMusic = () => {
+    innerState.systemMusicId = "";
+    innerState.systemMusicName = "";
+    innerState.systemMusicEnabled = true;
+};
+const onSystemMusic = (id: string, name: string) => {
+    innerState.systemMusicId = id;
+    innerState.systemMusicName = name;
+    innerState.systemMusicEnabled = id !== "";
+    showSystemMusic.value = false;
+};
 
 const musicVolumePercent = computed(() => Math.round(innerState.musicVolume * 100));
 const speechRateLabel = computed(() => `${innerState.speechRate.toFixed(1)}x`);
@@ -1004,7 +1154,10 @@ const buildPayload = () => ({
     persona_id: personId.value,
     generation_types: innerState.synthTypes.map((t) => SYNTH_TYPE_TO_API[t]).filter(Boolean),
     visual_material_source: MATERIAL_SOURCE_TO_API[innerState.materialSource],
+    square_group_ids:
+        innerState.materialSource === MaterialSourceEnum.Square ? innerState.squareGroupIds : [],
     copywriting_source: COPY_SOURCE_TO_API[innerState.copySource],
+    hotspot_pick_mode: normalizeHotspotPickMode(innerState.hotspotPickMode),
     copywriting_generation_type: COPY_AI_TYPE_TO_API[innerState.copyAiType],
     copywriting_generation_custom:
         innerState.copyAiType === CopyAiTypeEnum.Custom ? innerState.copyAiCustom.trim() : "",
@@ -1020,6 +1173,8 @@ const buildPayload = () => ({
     product_use_mode: LIB_USE_MODE_TO_API[innerState.libUseMode],
     product_reuse_mode: LIB_RULE_TO_API[innerState.libRandomRule],
     music_source: normalizeMusicSource(innerState.musicSource),
+    system_music_id:
+        normalizeMusicSource(innerState.musicSource) === MusicSourceEnum.System ? innerState.systemMusicId : "",
     music_volume: normalizeMusicVolume(innerState.musicVolume),
     speech_rate: normalizeSpeechRate(innerState.speechRate),
     // 提交全部类型配置，避免未勾选类型在后端被重置为自动随机
@@ -1060,8 +1215,12 @@ const getDetail = async () => {
         innerState.materialSource =
             (API_TO_MATERIAL_SOURCE[String(res.visual_material_source)] as MaterialSourceEnum) ??
             MaterialSourceEnum.AILib;
+        innerState.squareGroupIds = Array.isArray(res.square_group_ids)
+            ? res.square_group_ids.map((id: any) => Number(id)).filter(Boolean)
+            : [];
         innerState.copySource =
             (API_TO_COPY_SOURCE[String(res.copywriting_source)] as CopySourceEnum) ?? CopySourceEnum.Rewrite;
+        innerState.hotspotPickMode = normalizeHotspotPickMode(res.hotspot_pick_mode);
         innerState.copyAiType =
             API_TO_COPY_AI_TYPE[String(res.copywriting_generation_type)] ?? CopyAiTypeEnum.Ganhuo;
         innerState.copyAiCustom = String(res.copywriting_generation_custom ?? "").slice(0, COPY_AI_CUSTOM_MAX);
@@ -1089,6 +1248,10 @@ const getDetail = async () => {
         innerState.newsDuration = clampNewsDuration(res.news_mixcut_duration);
         innerState.coverImage = res.pic ?? "";
         innerState.musicSource = normalizeMusicSource(res.music_source);
+        innerState.systemMusicId = String(res.system_music_id || "");
+        innerState.systemMusicName = String(res.system_music_name || "");
+        innerState.systemMusicEnabled = res.system_music_enabled !== false;
+        systemMusics.value = Array.isArray(res.system_musics) ? res.system_musics : [];
         innerState.musicVolume = normalizeMusicVolume(res.music_volume ?? MUSIC_VOLUME_DEFAULT);
         innerState.speechRate = normalizeSpeechRate(res.speech_rate ?? SPEECH_RATE_DEFAULT);
         innerState.materialKind =
@@ -1116,6 +1279,13 @@ const open = (id: string | number, opts?: { isMaterialEmpty?: boolean }) => {
     // 重置后再拉详情
     Object.assign(innerState, DEFAULT_INNER_STATE());
     getDetail();
+    getSquareGroups()
+        .then((res: any) => {
+            squareGroups.value = (res?.groups || []).filter((item: any) => Number(item.enabled) === 1);
+        })
+        .catch(() => {
+            squareGroups.value = [];
+        });
     popupRef.value?.open();
 };
 
@@ -1168,6 +1338,9 @@ defineExpose({ open });
 .rule-seg-btn.locked {
     cursor: not-allowed;
     opacity: 0.55;
+}
+.rule-seg-copy .rule-seg-btn {
+    @apply whitespace-nowrap px-1 text-[11px];
 }
 
 .rule-note {
@@ -1245,5 +1418,43 @@ defineExpose({ open });
 }
 .rule-slider-label {
     @apply text-[11px] text-[#86909C];
+}
+
+.music-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+}
+.music-row {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #1d2129;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+}
+.music-row.sel {
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary);
+}
+.music-row-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.music-empty {
+    padding: 24px 0;
+    text-align: center;
+    font-size: 12px;
+    color: #86909c;
 }
 </style>

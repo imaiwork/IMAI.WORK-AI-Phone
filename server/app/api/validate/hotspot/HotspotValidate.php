@@ -4,6 +4,7 @@ namespace app\api\validate\hotspot;
 
 use app\common\service\hotspot\HotspotUpstreamException;
 use app\common\service\hotspot\PersonaService;
+use app\common\service\hotspot\PoolService;
 use app\common\service\hotspot\ScriptService;
 use app\common\validate\BaseValidate;
 
@@ -35,6 +36,9 @@ class HotspotValidate extends BaseValidate
         'page_size' => 'integer|between:1,50',
         'ids' => 'checkIdList',
         'status' => 'in:running,done,fail,wait',
+        'analysis_id' => 'integer|egt:0',
+        'creation_id' => 'integer|egt:0',
+        'pool_id' => 'require|integer|gt:0',
     ];
 
     protected $message = [
@@ -62,11 +66,18 @@ class HotspotValidate extends BaseValidate
         'page_size.integer' => '每页数量必须是整数',
         'page_size.between' => '每页数量必须在 1 到 50 之间',
         'status.in' => '任务状态不支持',
+        'analysis_id.integer' => '分析记录不正确',
+        'analysis.requireStockAnalysis' => '分析不能为空',
+        'creation_id.integer' => '创作记录不正确',
+        'pool_id.require' => '待用记录不存在',
+        'pool_id.integer' => '待用记录不存在',
+        'pool_id.gt' => '待用记录不存在',
     ];
 
     public function sceneHot()
     {
-        return $this->only(['platform', 'period', 'day', 'limit']);
+        return $this->only(['platform', 'period', 'day', 'limit', 'persona_id'])
+            ->remove('persona_id', 'require|gt');
     }
 
     public function sceneHistoryDates()
@@ -91,7 +102,8 @@ class HotspotValidate extends BaseValidate
 
     public function sceneLastFlow()
     {
-        return $this->only(['topic', 'platform']);
+        return $this->only(['topic', 'platform', 'persona_id'])
+            ->remove('persona_id', 'require|gt');
     }
 
     public function sceneAnalyze()
@@ -132,6 +144,56 @@ class HotspotValidate extends BaseValidate
     public function sceneTaskId()
     {
         return $this->only(['id']);
+    }
+
+    public function sceneStockLists()
+    {
+        return $this->only(['persona_id'])->remove('persona_id', 'require|gt');
+    }
+
+    public function sceneStockAdd()
+    {
+        return $this->only([
+            'persona_id',
+            'topic',
+            'platform',
+            'title',
+            'script',
+            'summary',
+            'core_points',
+            'analysis',
+            'analysis_id',
+            'creation_id',
+        ])->remove('platform', 'require')
+            ->remove('persona_id', 'require|gt')
+            ->remove('analysis', 'array')
+            ->append('analysis', 'requireStockAnalysis');
+    }
+
+    public function sceneStockDetail()
+    {
+        return $this->only(['topic', 'platform', 'persona_id'])
+            ->remove('platform', 'require')
+            ->remove('persona_id', 'require|gt');
+    }
+
+    public function sceneStockDelete()
+    {
+        return $this->only(['pool_id']);
+    }
+
+    /**
+     * 入库与更新入库都要带分析内容。analysis_id 有值时交给业务层回读台账，这里先放行。
+     */
+    protected function requireStockAnalysis($value, $rule = '', array $data = [])
+    {
+        if (!PoolService::analysisPayloadEmpty($value)) {
+            return true;
+        }
+        if ((int)($data['analysis_id'] ?? 0) > 0) {
+            return true;
+        }
+        return '分析不能为空';
     }
 
     protected function checkTaskNo($value)

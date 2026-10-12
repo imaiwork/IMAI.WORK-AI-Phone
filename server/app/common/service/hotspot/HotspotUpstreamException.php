@@ -6,4 +6,5 @@ use RuntimeException;
 
 class HotspotUpstreamException extends RuntimeException
 {
+    public int $poolId = 0;
 }

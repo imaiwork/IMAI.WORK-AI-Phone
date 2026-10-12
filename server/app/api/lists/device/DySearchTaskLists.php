@@ -25,11 +25,7 @@ class DySearchTaskLists extends BaseApiDataLists implements ListsSearchInterface
 
     public function lists(): array
     {
-        $query = SvDySearchTask::where('user_id', $this->userId);
-        if ($this->searchWhere !== []) {
-            $query->where($this->searchWhere);
-        }
-        $query = $this->applySearchMode($query);
+        $query = $this->manualTaskQuery();
         $list = $query
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
@@ -65,12 +61,19 @@ class DySearchTaskLists extends BaseApiDataLists implements ListsSearchInterface
 
     public function count(): int
     {
+        return $this->manualTaskQuery()->count();
+    }
+
+    /**
+     * 手动获客台账：只出手动任务，排除 24h 自动化（source=2 / auto_type=1）。
+     */
+    private function manualTaskQuery()
+    {
         $query = SvDySearchTask::where('user_id', $this->userId);
         if ($this->searchWhere !== []) {
             $query->where($this->searchWhere);
         }
-        $query = $this->applySearchMode($query);
-        return $query->count();
+        return $this->applySearchMode($query);
     }
 
     /**

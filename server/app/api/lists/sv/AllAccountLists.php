@@ -35,6 +35,9 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function lists(): array
     {
+        if ($this->userId <= 0) {
+            return [];
+        }
         return array_map(fn (array $item) => $this->formatAccount($item), $this->pagedAccounts());
     }
 
@@ -129,7 +132,7 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
     }
 
     /**
-     * 与设备详情对齐：当前用户名下的账号，或挂在当前用户设备上的账号。
+     * 只返回当前用户名下的账号，设备和设置也按账号归属隔离。
      * setting / device 用左连接，避免快手等账号缺 sv_setting 时被内连接滤掉。
      */
     private function accountQuery()
@@ -137,22 +140,14 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
         $query = SvAccount::alias('w')
             ->field('w.user_id,w.id,w.device_code,w.account,w.nickname,w.avatar,w.status,w.create_time,w.update_time,w.extra,w.type,
                     s.takeover_mode,s.open_ai,s.sort,s.remark,s.takeover_range_mode, s.takeover_type,s.robot_id, d.device_name,d.device_model, "sv" as source')
-            ->leftJoin('sv_device d', 'd.device_code = w.device_code')
+            ->leftJoin('sv_device d', 'd.device_code = w.device_code and d.user_id = w.user_id')
             ->leftJoin('sv_setting s', 's.account = w.account and s.user_id = w.user_id')
             ->where($this->searchWhere);
 
         if ($this->userId > 0) {
-            $query->where(function ($q) {
-                $q->where('w.user_id', $this->userId)
-                    ->whereOr('d.user_id', $this->userId);
-            });
+            $query->where('w.user_id', $this->userId);
         } else {
-            // 免登录只允许设备端按自己的 device_code 或指定 account 查，不给无条件全站拉取账号的口子
-            $deviceCode = trim((string)$this->request->get('device_code', ''));
-            $account = trim((string)$this->request->get('account', ''));
-            if ($deviceCode === '' && $account === '') {
-                $query->whereRaw('1=0');
-            }
+            $query->whereRaw('1=0');
         }
 
         return $query;
@@ -183,6 +178,9 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
      */
     public function count(): int
     {
+        if ($this->userId <= 0) {
+            return 0;
+        }
         if ($this->mergeWechat()) {
             return count($this->getMergedAccounts());
         }

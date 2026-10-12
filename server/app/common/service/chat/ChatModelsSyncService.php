@@ -148,6 +148,7 @@ class ChatModelsSyncService
         $staleRows = ModelsCost::alias('c')
             ->join('models m', 'm.id = c.model_id')
             ->where('c.type', ChatEnum::MODEL_TYPE_CHAT)
+            ->where('m.type', ChatEnum::MODEL_TYPE_CHAT)
             ->where('m.is_system', 1)
             ->whereNotIn('c.alias', $uniqueAliases)
             ->where('c.alias', '<>', ChatEnum::DEFAULT_CHAT_MODEL_ALIAS)

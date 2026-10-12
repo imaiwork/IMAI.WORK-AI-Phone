@@ -375,7 +375,7 @@ import {
     changeAccountStatus,
 } from "@/api/device";
 import { getAgentList } from "@/api/agent";
-import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum } from "@/enums/appEnums";
+import { AppTypeEnum, DeviceCmdEnum, DeviceCmdCodeEnum, DeviceWsMessage } from "@/enums/appEnums";
 import { formatNumberToWanOrYi } from "@/utils/util";
 import useDeviceWs from "@/ai_modules/device/hooks/useDeviceWs";
 import { applyAccountFetchError } from "@/ai_modules/device/hooks/apply-account-fetch-error";
@@ -385,7 +385,7 @@ import { DeviceEventAction } from "@/ai_modules/device/enums";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import ChooseAgent from "@/ai_modules/device/components/choose-agent/choose-agent.vue";
 
-const { onEvent, close } = useDeviceWs();
+const { onEvent, close, ensureConnected } = useDeviceWs();
 const deviceStore = useDeviceStore();
 const { getSortedPlatform } = storeToRefs(deviceStore);
 const deviceCode = ref<string>("");
@@ -651,6 +651,8 @@ const handleAccountConfirm = async () => {
     updateAccountSteps.value[0].status = 1; // 设置第一步为进行中
 
     try {
+        // 进度全靠 WS 推送，先确保连接可用再下发指令
+        if (!(await ensureConnected())) throw DeviceWsMessage[DeviceCmdCodeEnum.CONNECT_ERROR];
         await fetchDeviceAccount({
             device_code: deviceCode.value,
             type: currentPlatform.value,

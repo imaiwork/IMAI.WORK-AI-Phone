@@ -47,6 +47,8 @@ const COPYWRITING_SOURCE_MAP: Record<number, TagConfig> = {
     1: { label: "爆款仿写", bg: "#FFEAEC", color: "#F56C6C" },
     2: { label: "AI生成", bg: "#EEF2FF", color: "#4F46E5" },
     3: { label: "无文案", bg: "#F2F3F5", color: "#999999" },
+    4: { label: "文案库", bg: "#F0FBE8", color: "#389E0D" },
+    5: { label: "热点生成", bg: "#FFF7E8", color: "#D46B08" },
 };
 
 const SHANJIAN_TYPE_MAP: Record<number, TagConfig> = {

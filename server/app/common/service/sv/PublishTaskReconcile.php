@@ -84,13 +84,28 @@ class PublishTaskReconcile
     /**
      * @return array{action:string,fail_inflight_detail?:bool}
      */
-    public static function decideClose(string $taskRemark, ?int $detailStatus, string $lastLogMessage): array
-    {
+    public static function decideClose(
+        string $taskRemark,
+        ?int $detailStatus,
+        string $lastLogMessage,
+        ?int $taskStatus = null
+    ): array {
         if (PublishRemarkGuard::isBillingLocked($taskRemark)) {
             return [
                 'action' => self::CLOSE_BILLING,
                 'fail_inflight_detail' => $detailStatus === 3,
             ];
+        }
+
+        // 任务已被写成完成：到期收口不得再打成断网失败。
+        if ($taskStatus === 2) {
+            if ($detailStatus === 1) {
+                return ['action' => self::CLOSE_FINISH];
+            }
+            if ($detailStatus === 2 && !PublishRemarkGuard::isPublishSuccessText($lastLogMessage)) {
+                return ['action' => self::CLOSE_FAIL_DETAIL];
+            }
+            return ['action' => self::CLOSE_SUCCESS_FROM_LOG];
         }
 
         if ($detailStatus === 1) {
@@ -107,6 +122,18 @@ class PublishTaskReconcile
         }
 
         return ['action' => self::CLOSE_TIMEOUT];
+    }
+
+    /**
+     * 读日志生成失败备注之后再判一次：成功文案必须升为成功，不能落成断网失败。
+     */
+    public static function resolveAfterInflightRemark(string $action, string $inflightRemark): string
+    {
+        if ($action === self::CLOSE_FAIL_INFLIGHT && PublishRemarkGuard::isPublishSuccessText($inflightRemark)) {
+            return self::CLOSE_SUCCESS_FROM_LOG;
+        }
+
+        return $action;
     }
 
     /**

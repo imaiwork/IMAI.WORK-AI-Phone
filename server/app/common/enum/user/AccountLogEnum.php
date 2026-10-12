@@ -181,6 +181,7 @@ class AccountLogEnum
     const TOKENS_DEC_AI_SHANJIAN_AUTHORIZED_VIDEO = 5040;
     const TOKENS_DEC_SHANJIAN_AI_COVER = 5041;
     const TOKENS_DEC_HUMAN_AVATAR_SHANJIAN_PRO = 5042;
+    const TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3 = 5043;
 
 
     const TOKENS_DEC_HUMAN_EXT = 5060;
@@ -455,6 +456,7 @@ class AccountLogEnum
         self::TOKENS_DEC_HUMAN_VIDEO_CHANJING,
         self::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN,
         self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN,
+        self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3,
         self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN,
         self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN,
         self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN,
@@ -762,6 +764,7 @@ class AccountLogEnum
 
             self::TOKENS_DEC_HUMAN_AVATAR_SHANJIAN => '口播混剪形象克隆扣费减少算力',
             self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN => '极速版音色克隆扣费减少算力',
+            self::TOKENS_DEC_HUMAN_VOICE_SHANJIAN_S3 => self::shanjianS3VoiceTokensDesc(),
             self::TOKENS_DEC_HUMAN_VIDEO_SHANJIAN => '口播混剪视频克隆扣费减少算力',
             self::TOKENS_DEC_REALMAN_BROADCAST_SHANJIAN => '真人口播混剪扣费减少算力',
             self::TOKENS_DEC_BROADCAST_MIXCUT_SHANJIAN => '素材混剪视频扣费减少算力',
@@ -815,10 +818,10 @@ class AccountLogEnum
             self::TOKENS_DEC_SORA_COPYWRITING => '一句话生成视频AI优化文案减少算力',
             self::TOKENS_DEC_HUMAN_AVATAR_SORA => '一句话生成视频角色创建减少算力',
             self::TOKENS_DEC_SORA_DRAW_AVATAR => '一句话生成视频真人角色转绘减少算力',
-            self::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_480P => 'Seedance 2.0模型480p参考图文生成视频减少算力',
-            self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_480P => 'Seedance 2.0模型480p参考视频生成视频减少算力',
-            self::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P => 'Seedance 2.0模型720p参考图文生成视频减少算力',
-            self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P => 'Seedance 2.0模型720p参考视频生成视频减少算力',
+            self::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_480P => 'Seedance 2.5模型480p参考图文生成视频减少算力',
+            self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_480P => 'Seedance 2.5模型480p参考视频生成视频减少算力',
+            self::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P => 'Seedance 2.5模型720p参考图文生成视频减少算力',
+            self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P => 'Seedance 2.5模型720p参考视频生成视频减少算力',
 
                 // 自动化功能描述
             self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED => '自动化社媒平台发布减少算力',
@@ -887,6 +890,12 @@ class AccountLogEnum
     {
         $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(7, true) ?: '数字人';
         return '数字人' . $type . ' - ' . $modelName . '-减少算力';
+    }
+
+    private static function shanjianS3VoiceTokensDesc(): string
+    {
+        $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(15, true) ?: '数字人s3';
+        return $modelName . '音色克隆减少算力';
     }
 
 

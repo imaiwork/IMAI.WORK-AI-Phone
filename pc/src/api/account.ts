@@ -1,5 +1,12 @@
 import { getClient } from "@/utils/env";
 
+/** PC 终端。环境变量 NUXT_CLIENT 未配置时回退，避免序列化丢掉空值。 */
+const DEFAULT_CLIENT = "4";
+
+function resolveClient() {
+    return getClient() || DEFAULT_CLIENT;
+}
+
 // 公开:获取注册模式 + 默认邀请来源(决定登录弹窗是否显示邀请码输入框)
 export function getRegisterMode() {
     return $request.get({ url: "/login/registerMode" });
@@ -9,7 +16,7 @@ export function getRegisterMode() {
 export function login(params: any) {
     return $request.post({
         url: "/login/account",
-        params: { ...params, terminal: getClient() },
+        params: { ...params, terminal: resolveClient() },
     });
 }
 // 登录
@@ -21,7 +28,7 @@ export function logout() {
 export function register(params: any) {
     return $request.post({
         url: "/login/register",
-        params: { ...params, channel: getClient() },
+        params: { ...params, channel: resolveClient() },
     });
 }
 

@@ -212,17 +212,25 @@ trait TaskNoticeTrait
                 'response' => $response
             ])->log();
 
-            $record = SvAddWechatRecord::where('task_id', $data['Content']['TaskId'])->limit(1)->findOrEmpty();
-            $isSvAddWechat = true;
+            $taskId = (string)($data['Content']['TaskId'] ?? '');
+            $addRecord = SvAddWechatRecord::where('task_id', $taskId)->limit(1)->findOrEmpty();
+            $manualRecord = SvCrawlingManualTaskRecord::where('exec_task_id', $taskId)->limit(1)->findOrEmpty();
+            $isSvAddWechat = !$addRecord->isEmpty();
+            $record = $isSvAddWechat ? $addRecord : $manualRecord;
+            $saleLinked = !$addRecord->isEmpty() && !$manualRecord->isEmpty();
             if ($record->isEmpty()) {
-                $record = SvCrawlingManualTaskRecord::where('exec_task_id', $data['Content']['TaskId'])->limit(1)->findOrEmpty();
-                $isSvAddWechat = false;
+                $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('AddFriendsTaskOpt')->withContext([
+                    'msg' => 'AddFriendsTaskOpt 未找到对应记录',
+                    'task_id' => $taskId,
+                ])->log();
+            } else {
                 $this->withChannel('wechat_socket')->withLevel('notice')->withTitle('AddFriendsTaskOpt')->withContext([
                     'msg' => 'AddFriendsTaskOpt',
-                    'record' => $record->toArray()
+                    'record' => $record->toArray(),
+                    'sale_linked' => $saleLinked,
                 ])->log();
             }
-            $errMsg = $data['Content']['ErrMsg'];
+            $errMsg = $data['Content']['ErrMsg'] ?? '';
             if (!$record->isEmpty()) {
                 $record->status = (int)$data['Content']['Success'] === 1 ? 1 : 0;
                 $record->result = $record->status === 1 ? '添加请求成功!' : $data['Content']['ErrMsg'];
@@ -242,11 +250,14 @@ trait TaskNoticeTrait
                     ],
                     'security_risk' => [
                         'keyword' => ['当前账号存在安全风险', '你的账号暂时无法添加朋友'],
-                        'handler' => function () use ($record, $isSvAddWechat) {
+                        'handler' => function () use ($record, $isSvAddWechat, $saleLinked) {
                             $record->status = 0;
-                            $this->_setColingWechat($record);
                             if ($isSvAddWechat) {
-                                $this->_resetAddFriendWechat($record);
+                                $this->_setColingWechat($record);
+                                // 销售加微不走获客通道重派，避免同一客资被再次下发
+                                if (!$saleLinked) {
+                                    $this->_resetAddFriendWechat($record);
+                                }
                             }
                         }
                     ]
@@ -256,7 +267,7 @@ trait TaskNoticeTrait
                 foreach ($errorHandlers as $handler) {
                     $keywords = is_array($handler['keyword']) ? $handler['keyword'] : [$handler['keyword']];
                     foreach ($keywords as $keyword) {
-                        if (strpos($errMsg, $keyword) !== false) {
+                        if (strpos((string)$errMsg, $keyword) !== false) {
                             $handler['handler']();
                             break 2; // 匹配后跳出双层循环
                         }
@@ -265,6 +276,37 @@ trait TaskNoticeTrait
 
                 $record->update = time();
                 $record->save();
+
+                $status = (int)$record->status;
+                $result = (string)$record->result;
+                if ($saleLinked) {
+                    // 同一 TaskId 同时回写两张表。失败不再放回客资池，也不把手动记录打回待执行，避免同一线索被再次下发。
+                    if ($status === 4) {
+                        $addRecord->status = 2;
+                        $manualRecord->status = 2;
+                    } else {
+                        $finalStatus = $status === 1 ? 1 : 0;
+                        $addRecord->status = $finalStatus;
+                        $manualRecord->status = $finalStatus;
+                    }
+                    $addRecord->result = $result;
+                    $manualRecord->result = $result;
+                    $addRecord->update_time = time();
+                    $manualRecord->update_time = time();
+                    $addRecord->save();
+                    $manualRecord->save();
+                } elseif (!$isSvAddWechat) {
+                    $addStatus = $status === 1 ? 1 : ($status === 4 ? 2 : 0);
+                    SvAddWechatRecord::where('user_id', $record['user_id'])
+                        ->where('reg_wechat', $record['clue_wechat'])
+                        ->where('status', 2)
+                        ->update([
+                            'status' => $addStatus,
+                            'result' => $result,
+                            'task_id' => $taskId,
+                            'update_time' => time(),
+                        ]);
+                }
 
                 $wechat = AiWechat::where('wechat_id', '=', $record->wechat_no)->limit(1)->find();
                 if (!$wechat->isEmpty()) {

@@ -119,6 +119,7 @@ class DeviceValidate extends BaseValidate
             DeviceEnum::AUTO_TASK_SCENE_COMMENT_LIKE,
             DeviceEnum::AUTO_TASK_SCENE_VIRAL_REWRITER,
             DeviceEnum::AUTO_TASK_SCENE_PRECISE_CLUES,
+            DeviceEnum::AUTO_TASK_SCENE_DY_SEARCH,
         ];
 
         return in_array($source, $allowScenes, true) ? true : '任务类型错误';

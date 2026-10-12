@@ -19,9 +19,18 @@ class SvReplyStrategy extends BaseModel
 
     public function getStopKeywordsAttr($value)
     {
-        if (is_string($value)) {
-            return implode(';', json_decode($value, true));
+        if (is_array($value)) {
+            return implode(';', $value);
         }
-        return '';
+        if (!is_string($value) || $value === '') {
+            return '';
+        }
+
+        $decoded = json_decode($value, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $value;
+        }
+
+        return is_array($decoded) ? implode(';', $decoded) : (string)$decoded;
     }
 }

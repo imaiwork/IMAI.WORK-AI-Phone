@@ -79,7 +79,9 @@ const config = {
     version: packageJson.version, //版本号
     baseUrl, //请求接口域名
     urlPrefix: 'api', //请求默认前缀
-    timeout: 10 * 30 * 1000 //请求超时时长
+    timeout: 10 * 30 * 1000, //请求超时时长
+    // 视频上传后还要转存对象存储，4 个并行时会超过普通请求的 5 分钟
+    uploadTimeout: 30 * 60 * 1000
 }
 
 export default config

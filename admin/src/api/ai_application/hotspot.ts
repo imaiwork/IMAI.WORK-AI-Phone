@@ -56,3 +56,13 @@ export function retryHotspotTask(data: any) {
 export function deleteHotspotTask(data: any) {
     return request.post({ url: "/hotspot.task/delete", data });
 }
+
+/** 视频剪辑 · 热点库列表（待使用 + 已使用） */
+export function getHotspotStock(params: { persona_id: number | string }) {
+    return request.get({ url: "/hotspot.pool/lists", params });
+}
+
+/** 视频剪辑 · 移出热点库待用 */
+export function deleteHotspotStock(data: { id: number | string; persona_id: number | string }) {
+    return request.post({ url: "/hotspot.pool/delete", data });
+}

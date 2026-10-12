@@ -29,7 +29,7 @@ class AutoTaskSceneScheduleSyncService
         $closed = [];
         foreach ($newMap as $scene => $newItem) {
             $scene = (int)$scene;
-            if ($scene < AutoTaskSceneConfigService::SCENE_MIN || $scene > AutoTaskSceneConfigService::SCENE_MAX) {
+            if (!AutoTaskSceneConfigService::isWorkflowScene($scene)) {
                 continue;
             }
             if (!is_array($newItem)) {
@@ -75,7 +75,7 @@ class AutoTaskSceneScheduleSyncService
         $closed = [];
         foreach ($configMap as $scene => $item) {
             $scene = (int)$scene;
-            if ($scene < AutoTaskSceneConfigService::SCENE_MIN || $scene > AutoTaskSceneConfigService::SCENE_MAX) {
+            if (!AutoTaskSceneConfigService::isWorkflowScene($scene)) {
                 continue;
             }
             if (!is_array($item)) {
@@ -137,7 +137,7 @@ class AutoTaskSceneScheduleSyncService
         $reopened = [];
         foreach ($newMap as $scene => $newItem) {
             $scene = (int)$scene;
-            if ($scene < AutoTaskSceneConfigService::SCENE_MIN || $scene > AutoTaskSceneConfigService::SCENE_MAX) {
+            if (!AutoTaskSceneConfigService::isWorkflowScene($scene)) {
                 continue;
             }
             if (!is_array($newItem)) {
@@ -518,7 +518,7 @@ class AutoTaskSceneScheduleSyncService
         $normalized = [];
         foreach ($closedByScene as $scene => $types) {
             $scene = (int)$scene;
-            if ($scene < AutoTaskSceneConfigService::SCENE_MIN || $scene > AutoTaskSceneConfigService::SCENE_MAX) {
+            if (!AutoTaskSceneConfigService::isWorkflowScene($scene)) {
                 continue;
             }
             if (!is_array($types) || $types === []) {

@@ -75,8 +75,9 @@
             class="px-[20rpx] pt-1 relative z-[33] flex-shrink-0"
             :class="[
                 isHome ? 'bg-white chat-bottom-white pb-[16rpx]' : '',
-                isCoze || isStaff ? 'mb-[40rpx]' : isHome ? '' : 'mb-[20rpx]',
-            ]">
+                keyboardOpen ? 'keyboard-dock' : isCoze || isStaff ? 'mb-[40rpx]' : isHome ? '' : 'mb-[20rpx]',
+            ]"
+            :style="keyboardOpen ? { bottom: keyboardHeight + 'px' } : {}">
             <view class="relative z-[79] chat-bottom-box">
                 <view class="flex flex-col">
                     <!-- 对话工具栏：键盘期折叠隐藏（不卸载，避免丢横向滚动/输入跳动）；收起后延迟展开防点穿 -->
@@ -200,10 +201,10 @@
                                             opt.mode === 'image'
                                                 ? 'photo'
                                                 : opt.mode === 'map'
-                                                  ? 'map'
-                                                  : opt.mode === 'video'
-                                                    ? 'play-right'
-                                                    : 'file-text'
+                                                ? 'map'
+                                                : opt.mode === 'video'
+                                                ? 'play-right'
+                                                : 'file-text'
                                         "
                                         :size="24"
                                         color="#6B7280"></u-icon>
@@ -1179,8 +1180,15 @@ const previousScrollTop = ref(0);
 const isProgrammaticScroll = ref(false);
 let scrollToLowerTimer: ReturnType<typeof setTimeout> | null = null;
 
-const { keyboardOpen, spacerHeight, showToolbar, guardToolbarAction, dismissKeyboard, hideKeyboard } =
-    useKeyboardSpacer({
+const {
+    keyboardOpen,
+    keyboardHeight,
+    spacerHeight,
+    showToolbar,
+    guardToolbarAction,
+    dismissKeyboard,
+    hideKeyboard,
+} = useKeyboardSpacer({
         tabbarVisible: () => !!props.isHome,
         extraOffset: () => (props.isStaff ? 20 : 0),
     });
@@ -1428,6 +1436,17 @@ defineExpose({
 <style lang="scss" scoped>
 .chat-bottom-white {
     box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+/* 键盘盖住文档流里的底栏时，改贴在键盘上沿。flex 占位在部分机型不会把输入条顶出键盘。 */
+.keyboard-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 80;
+    background: #eef0f6;
+}
+.keyboard-dock.chat-bottom-white {
+    background: #fff;
 }
 .toolbar-collapsed {
     @apply h-0 mb-0 opacity-0 overflow-hidden pointer-events-none;
