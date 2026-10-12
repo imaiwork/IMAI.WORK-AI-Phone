@@ -8,10 +8,25 @@ IMAI.WORK 采用多端控制台、服务端任务编排与手机执行端协作�
 
 本仓库包含 PHP 服务端、PC 工作台、运营管理后台和 uni-app 移动端代码。手机执行端及外部模型、内容生成等服务的接入条件应与平台代码分别说明。
 
-[前台演示](https://demo.imai.work/) · [后台演示](https://demo.imai.work/admin/) · [技术文档与图片索引](./docs/README.md)
+[加入官方交流群](./docs/assets/community/01-community-invite.png) · [前台演示](https://demo.imai.work/) · [后台演示](https://demo.imai.work/admin/) · [官方网站](https://imai.work/) · [技术文档与图片索引](./docs/README.md)
+
+## 社区与项目支持
+
+![欢迎加入 IMAI.WORK 官方交流群](./docs/assets/community/01-community-invite.png)
+
+如果你觉得项目有价值，欢迎点击仓库右上角的 **Star ⭐**，让更多人看到国产开源项目。给项目 Star 后，可凭截图获取项目宣传 PPT、PSD 和 Sketch 源文件。
+
+[加入官方交流群](./docs/assets/community/01-community-invite.png) · [在线演示](https://demo.imai.work/) · [官方网站](https://imai.work/)
+
+### 项目路演
+
+可以查看中央广播电视台《赢在 AI》关于此项目的路演介绍，扫描下方二维码查看。
+
+![中央广播电视台《赢在 AI》项目路演二维码](./docs/assets/community/02-roadshow-qrcode.png)
 
 ## 阅读导航
 
+- [社区与项目支持](#社区与项目支持)：官方交流群、Star 支持与项目路演。
 - [系统架构](#系统架构)：各端职责、数据存储和通信组件。
 - [两种任务执行模式](#两种任务执行模式)：业务任务调度与 Phone Agent 的适用方式。
 - [Phone Agent 实现](#phone-agent-实现)：规划、观察、模型调用、动作解析和事件记录。
