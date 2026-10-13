@@ -36,7 +36,8 @@ namespace app\common\service {
         public function fetchWorkDataAnalytics($platform, $account) {
             self::$calls++;
             if (self::$duringFetch) (self::$duringFetch)();
-            if (self::$fail) throw new \RuntimeException('upstream failed');
+            // 与生产一致：中台取数失败抛 HotspotUpstreamException，由 WorkDataFetchService 转成业务异常
+            if (self::$fail) throw new \app\common\service\hotspot\HotspotUpstreamException('上游接口限流');
             return ['platform' => $platform, 'account' => ['uniqueId' => $account], 'items' => [], 'windows' => []];
         }
     }
@@ -79,6 +80,7 @@ namespace {
     WorkDataFetchService::fetch(7, 1, 'douyin', true);
     check(ToolsService::$calls === 1 && charges() === 1, '刷新节流命中不重复取数和扣费');
     $memory = new \ReflectionProperty(WorkDataCache::class, 'memory');
+    $memory->setAccessible(true);
     $cache = $memory->getValue();
     unset($cache[WorkDataCache::payloadKey('douyin', 'demo')], $cache[WorkDataCache::refreshKey('douyin', 'demo')]);
     $memory->setValue(null, $cache);
@@ -105,6 +107,17 @@ namespace {
     ToolsService::$fail = true;
     try { WorkDataFetchService::fetch(7, 1, 'douyin', true); } catch (\RuntimeException $e) {}
     check(ToolsService::$calls === 1 && charges() === 0, '上游失败不扣费');
+    // 定时同步是每分钟一次的 cron：失败必须记负缓存退避，否则每分钟重查一次，
+    // 中台按次向站长计费而取数失败时用户一分算力没扣，这笔钱全由站长垫。
+    $persona = resetCase(1);
+    ToolsService::$fail = true;
+    try { WorkDataFetchService::fetch(7, 1, 'xhs', false, null, true); } catch (\Throwable $e) {}
+    check(ToolsService::$calls === 1 && charges() === 0, '定时同步上游失败不扣用户算力');
+    try { WorkDataFetchService::fetch(7, 1, 'xhs', false, null, true); } catch (\Throwable $e) {}
+    check(ToolsService::$calls === 1 && charges() === 0, '失败退避窗口内不重复请求中台');
+    ToolsService::$fail = false;
+    WorkDataFetchService::fetch(7, 1, 'xhs', true);
+    check(ToolsService::$calls === 2 && charges() === 1, '手动刷新绕过失败退避可立即重试');
     $persona = resetCase();
     check(WorkDataLogic::syncSettings(['persona_id' => 1, 'auto_sync_enabled' => 1], 8) === false && $persona['work_data_auto_sync'] === 0, '不能修改其他用户的人设开关');
     check(WorkDataLogic::syncSettings(['persona_id' => 1, 'auto_sync_enabled' => 1], 7)['auto_sync_enabled'] === true, '本人开关保存与回显一致');

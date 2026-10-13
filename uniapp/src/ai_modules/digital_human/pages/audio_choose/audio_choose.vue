@@ -44,7 +44,7 @@
                                     class="w-full h-full"></image>
                                 <image
                                     v-else
-                                    src="@/ai_modules/digital_human/static/icons/music_black.svg"
+                                    src="@/static/images/digital_human/music_black.svg"
                                     class="w-full h-full"></image>
                             </view>
                             <text class="line-clamp-1">{{ item.name }}</text>
@@ -58,11 +58,11 @@
                             <view class="w-[28rpx] h-[28rpx]">
                                 <image
                                     v-if="isChoose(item.id)"
-                                    src="@/ai_modules/digital_human/static/icons/radio_s.svg"
+                                    src="@/static/images/digital_human/radio_s.svg"
                                     class="w-full h-full"></image>
                                 <image
                                     v-else
-                                    src="@/ai_modules/digital_human/static/icons/radio.svg"
+                                    src="@/static/images/digital_human/radio.svg"
                                     class="w-full h-full"></image>
                             </view>
                         </view>
@@ -104,7 +104,7 @@ import { getMaterialMusicList, getMaterialLibraryList, addMaterialMusic } from "
 import { uploadFile } from "@/api/app";
 import { useAudio } from "@/hooks/useAudio";
 import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
-import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 const { emit } = useEventBusManager();

@@ -218,10 +218,12 @@ export default function useUpload(options: UseUploadOptions = {}) {
             "clip[video][duration]": clip[0].video.duration,
             ...extraFormData,
         };
-        // 图片不参与视频切割：业务侧传入的 ffmpeg=2 对图片强制降为 1
+        // 图片不参与视频切割：业务侧传入的 ffmpeg=2 对图片强制降为 1。
+        // 人设和分组一起拿掉，改由上传成功后的手动入库写入分组；只留分组会让上传接口报「分组不存在」。
         if (isImageUploadItem(item, fileCategory) && Number(formData.ffmpeg) === 2) {
             formData.ffmpeg = 1;
             delete formData.persona_id;
+            delete formData.group_id;
         }
         const fileRes: any = await uploadFile(
             fileCategory === "all" ? "file" : fileCategory,

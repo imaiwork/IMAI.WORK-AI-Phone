@@ -2,9 +2,10 @@
 
 namespace app\api\logic\videoSynthesis;
 
-use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\aiPersona\CopywritingLibraryLogic;
+use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\shanjian\ShanjianVideoSettingLogic;
+use app\common\exception\MaterialNotReadyException;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryUseLog;
 use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
@@ -21,7 +22,6 @@ use app\common\service\hotspot\PoolService;
 use app\common\service\hotspot\ResearchService;
 use app\common\service\hotspot\ScriptService;
 use think\facade\Cache;
-use app\common\exception\MaterialNotReadyException;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -1674,6 +1674,7 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             $copywritingSource = AiPersonaSynthesisConfig::COPYWRITING_SOURCE_LIBRARY;
             $libraryId = 0;
             $publishTopic = '';
+            $pairedPublish = [];
 
             try {
                 if (!empty($library)) {
@@ -1685,6 +1686,11 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                     }
                     $materialKeywords = $taskMsg ?: $taskTitle;
                     $publishTopic = ShanjianVideoTask::stringifyTopic($library['topic'] ?? '');
+                    $pairedPublish = [
+                        'title' => trim((string)($library['publish_title'] ?? '')),
+                        'content' => trim((string)($library['publish_content'] ?? '')),
+                        'topic' => ShanjianVideoTask::stringifyTopic($library['publish_topic'] ?? ''),
+                    ];
                 } else {
                     // 文案库无可用文案：回退 AI 生成（AutoDeviceSettingLogic::copywriting 内扣费）
                     if ($coze === null) {
@@ -1717,7 +1723,8 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                     0,
                     $materialKeywords,
                     $execTime,
-                    $publishTopic
+                    $publishTopic,
+                    $pairedPublish
                 );
                 if ($result) {
                     $createdTasks[] = $result;
@@ -1753,6 +1760,7 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                     'title' => $taskTitle ?: ($libraryId > 0 ? '文案库视频' : 'AI自动生成视频'),
                     'msg' => $taskMsg,
                     'publish_topic' => $publishTopic,
+                    'paired_publish' => $pairedPublish,
                 ]);
                 if ($failed) {
                     $createdTasks[] = $failed;

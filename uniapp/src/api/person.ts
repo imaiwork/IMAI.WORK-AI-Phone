@@ -124,6 +124,28 @@ export const batchDeleteMaterial = (data: Record<string, any>) => {
     return request.post({ url: "/aiPersona.material/batchDelete", data });
 };
 
+// 剪辑原片批量改分组。group_id=0 表示移回未分组
+export const batchUpdateMaterialGroup = (data: Record<string, any>) => {
+    return request.post({ url: "/aiPersona.material/batchUpdate", data });
+};
+
+// 剪辑原片分组
+export const getMaterialGroupList = (data: Record<string, any>) => {
+    return request.get({ url: "/aiPersona.materialGroup/lists", data }, { ignoreCancel: true });
+};
+
+export const addMaterialGroup = (data: Record<string, any>) => {
+    return request.post({ url: "/aiPersona.materialGroup/add", data });
+};
+
+export const updateMaterialGroup = (data: Record<string, any>) => {
+    return request.post({ url: "/aiPersona.materialGroup/update", data });
+};
+
+export const deleteMaterialGroup = (data: Record<string, any>) => {
+    return request.post({ url: "/aiPersona.materialGroup/delete", data });
+};
+
 // 一键删除切割失败的视频素材
 export const deleteFailedSlices = (data: { persona_id: number | string }) => {
     return request.post({ url: "/aiPersona.material/deleteFailedSlices", data });

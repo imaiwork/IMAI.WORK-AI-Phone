@@ -1,1 +1,0 @@
-import{ba as t}from"./entry.91cf0653.js";const e=Symbol("team-console");function r(){const o=t(e);if(!o)throw new Error("[team] TeamConsoleContext 未注入");return o}export{e as TEAM_CONSOLE_KEY,r as useTeamContext};

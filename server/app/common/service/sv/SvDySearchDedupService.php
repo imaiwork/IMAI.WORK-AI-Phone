@@ -30,7 +30,7 @@ class SvDySearchDedupService
 
         return !SvAddWechatRecord::where('user_id', $userId)
             ->where('reg_wechat', $regWechat)
-            ->where('status', 'in', [1, 2, 4, 5, 6])
+            ->where('status', 'in', [1, 2, 4, 5, 6, SvAddWechatRecord::STATUS_RESULT_UNKNOWN])
             ->limit(1)
             ->findOrEmpty()
             ->isEmpty();

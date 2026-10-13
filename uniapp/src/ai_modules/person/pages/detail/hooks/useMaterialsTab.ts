@@ -1,18 +1,23 @@
 import {
     addAvatar,
     addVoice,
+    addMaterialGroup,
     batchAddMaterial,
     batchDeleteMaterial,
+    batchUpdateMaterialGroup,
+    deleteMaterialGroup,
     bindAvatarVoice,
     deleteAvatar,
     deleteFailedSlices,
     deleteMaterial,
     deleteVoice,
     getAvatarList as getAvatarListApi,
+    getMaterialGroupList,
     getMaterialLibraryList,
     getVideoSliceStatistics,
     getVoiceList as getVoiceListApi,
     updateMaterial,
+    updateMaterialGroup,
     updatePerson,
 } from "@/api/person";
 import { getSquareRefs, removeSquareRefs } from "@/api/square";
@@ -358,8 +363,34 @@ export const useMaterialsTab = ({
         }
     };
 
+    /** 剪辑原片库：全部平铺，或分组文件夹。未分组不是一行数据，id 用 0。 */
+    const materialFolderView = ref<"all" | "groups">("all");
+    const materialFolderId = ref<number | null>(null);
+    const materialFolderName = ref("");
+    const materialFolders = ref<{ id: number; name: string; material_count: number }[]>([]);
+    const ungroupedCount = ref(0);
+    const showingMaterialGroupList = computed(
+        () => publishMode.value === 1 && materialFolderView.value === "groups" && materialFolderId.value === null,
+    );
+    /** 分组列表里点上传时先选定的目标。打开具体分组后以该分组为准。 */
+    const uploadTargetGroupId = ref<number | null>(null);
+    const currentUploadGroupId = (): number => {
+        if (publishMode.value !== 1) return 0;
+        if (materialFolderId.value !== null) {
+            return materialFolderId.value > 0 ? materialFolderId.value : 0;
+        }
+        return uploadTargetGroupId.value !== null && uploadTargetGroupId.value > 0 ? uploadTargetGroupId.value : 0;
+    };
+    const refreshGroupsIfListing = (): void => {
+        if (publishMode.value === 1 && materialFolderView.value === "groups" && materialFolderId.value === null) {
+            loadMaterialGroups();
+        }
+    };
+
     const displayMaterialList = computed(() => {
         if (publishMode.value !== 1) return materialList.value;
+        // 文件夹和未分组里只看人设自己的素材，广场引用留在「全部」
+        if (materialFolderId.value !== null) return materialList.value;
         const filter = materialFilters[activeMaterialFilter.value]?.value;
         const kinds = String(filter ?? "")
             .split(",")
@@ -486,10 +517,15 @@ export const useMaterialsTab = ({
         try {
             await updatePerson({ id: personId.value, material_use_mode: MATERIAL_KIND_TO_USE_MODE[kind] });
             materialKind.value = kind;
+            // 两种模式的分组互不相通。切走后不再停在上一个模式的分组里。
+            uploadTargetGroupId.value = null;
+            materialFolderId.value = null;
+            materialFolderName.value = "";
             // 素材列表按 keep_original 过滤，模式变了必须重拉，
             // 否则列表还是上一个模式的结果，来回切几次就会显示成空的。
             // 音乐库不分模式，不需要跟着刷
             await resetMaterialList();
+            if (materialFolderView.value === "groups") await loadMaterialGroups();
             uni.hideLoading();
             uni.$u.toast(
                 kind === MaterialKindEnum.ORIGINAL
@@ -543,6 +579,7 @@ export const useMaterialsTab = ({
                 shouldManualAddAfterUpload.value = false;
                 uni.$u.toast(`已入库 ${res.length} 个原图素材`);
                 reloadMaterialList();
+                refreshGroupsIfListing();
                 return;
             }
             const needManualAdd = isDirectUploadScene() || shouldManualAddAfterUpload.value;
@@ -570,9 +607,11 @@ export const useMaterialsTab = ({
                 if (images.length) {
                     handleAddMaterial(toPayload(images), pendingUploadScene.value);
                 }
+                refreshGroupsIfListing();
                 return;
             }
             handleAddMaterial(toPayload(res), pendingUploadScene.value);
+            refreshGroupsIfListing();
         },
     });
 
@@ -657,16 +696,18 @@ export const useMaterialsTab = ({
                 publish_mode: publishMode.value,
                 // 素材模式只管剪辑原片库；成品直发库不按原图过滤
                 ...(publishMode.value === 1 ? getMaterialKindQuery() : {}),
+                ...(materialFolderId.value !== null ? { group_id: materialFolderId.value } : {}),
             });
             if (requestId !== materialRequestId) return false;
             materialList.value = pageNo === 1 ? lists : materialList.value.concat(lists);
-            if (pageNo === 1) await querySquareRefs();
+            if (pageNo === 1 && materialFolderId.value === null) await querySquareRefs();
+            if (pageNo === 1 && materialFolderView.value === "groups") await loadMaterialGroups();
             if (materialList.value.length >= count || lists.length < materialParams.page_size) {
                 materialFinished.value = true;
             }
         } catch {
             if (requestId !== materialRequestId) return false;
-            if (pageNo === 1) await querySquareRefs();
+            if (pageNo === 1 && materialFolderId.value === null) await querySquareRefs();
             materialFinished.value = true;
         } finally {
             if (requestId === materialRequestId) materialLoading.value = false;
@@ -857,6 +898,7 @@ export const useMaterialsTab = ({
     };
 
     const loadNextMaterialPage = () => {
+        if (showingMaterialGroupList.value) return;
         if (materialLoading.value || materialFinished.value) return;
         materialParams.page_no += 1;
         queryMaterialList();
@@ -867,7 +909,12 @@ export const useMaterialsTab = ({
             handleCancelMusicBatch();
         }
         if (tab !== MaterialTabEnum.COMPOSE) {
+            const leaveGroup = materialFolderView.value !== "all" || materialFolderId.value !== null;
+            materialFolderView.value = "all";
+            materialFolderId.value = null;
+            materialFolderName.value = "";
             handleCancelBatchDelete();
+            if (leaveGroup) resetMaterialList();
         }
         activeMaterialTab.value = tab;
     };
@@ -875,6 +922,10 @@ export const useMaterialsTab = ({
     const handleSwitchPublishMode = (mode: PublishMode) => {
         if (publishMode.value === mode) return;
         // 剪辑原片库 / 成品直发库 仅作视图切换，不再持久化 publish_mode
+        materialFolderView.value = "all";
+        materialFolderId.value = null;
+        materialFolderName.value = "";
+        handleCancelBatchDelete();
         publishMode.value = mode;
         activeMaterialFilter.value = 0;
         resetMaterialList();
@@ -897,10 +948,21 @@ export const useMaterialsTab = ({
     // 素材内容的「上传」按钮两个库共用，落哪个库要看当前在看哪个：
     // 一直按 COMPOSE 场景走，成品会被当成剪辑原片入库（原图模式下还会带上原图硬规格，
     // 59 秒以上的成品直接被服务端拒掉）
-    const handleOpenComposeUpload = (): void => {
+    const openComposeUpload = (keepTarget = false): void => {
+        if (!keepTarget) uploadTargetGroupId.value = null;
         handleOpenUploadCategoryPanel(
             publishMode.value === 2 ? MaterialUploadScene.DIRECT : MaterialUploadScene.COMPOSE,
         );
+    };
+
+    const handleOpenComposeUpload = (): void => {
+        openComposeUpload(false);
+    };
+
+    /** 分组列表还没进入某个分组，上传前由用户选定保存位置。 */
+    const handleUploadToGroup = (groupId: number): void => {
+        uploadTargetGroupId.value = groupId > 0 ? groupId : 0;
+        openComposeUpload(true);
     };
 
     const handleOpenMusicUpload = (): void => {
@@ -930,6 +992,141 @@ export const useMaterialsTab = ({
     const isComposeOriginalLibraryUpload = () =>
         pendingUploadScene.value === MaterialUploadScene.COMPOSE && publishMode.value === 1;
 
+    const uploadGroupFields = (): { group_id?: number } => {
+        const groupId = currentUploadGroupId();
+        return groupId > 0 ? { group_id: groupId } : {};
+    };
+
+    const loadMaterialGroups = async (): Promise<void> => {
+        if (!personId.value || publishMode.value !== 1) return;
+        try {
+            const res: any = await getMaterialGroupList({
+                persona_id: personId.value,
+                page_no: 1,
+                page_size: 100,
+                ...getMaterialKindQuery(),
+            });
+            materialFolders.value = Array.isArray(res?.lists) ? res.lists : [];
+            ungroupedCount.value = Number(res?.extend?.ungrouped_count ?? 0);
+        } catch {
+            materialFolders.value = [];
+            ungroupedCount.value = 0;
+        }
+    };
+
+    const handleSwitchMaterialScope = async (view: "all" | "groups"): Promise<void> => {
+        if (publishMode.value !== 1) return;
+        handleCancelBatchDelete();
+        uploadTargetGroupId.value = null;
+        if (view === "all") {
+            const changed = materialFolderView.value !== "all" || materialFolderId.value !== null;
+            materialFolderView.value = "all";
+            materialFolderId.value = null;
+            materialFolderName.value = "";
+            if (changed) await resetMaterialList();
+            return;
+        }
+        materialFolderView.value = "groups";
+        materialFolderId.value = null;
+        materialFolderName.value = "";
+        await loadMaterialGroups();
+    };
+
+    const handleOpenMaterialFolder = async (folder: { id: number; name: string }): Promise<void> => {
+        uploadTargetGroupId.value = null;
+        materialFolderView.value = "groups";
+        materialFolderId.value = Number(folder.id) || 0;
+        materialFolderName.value = folder.name || (Number(folder.id) > 0 ? "分组" : "未分组");
+        handleCancelBatchDelete();
+        await resetMaterialList();
+    };
+
+    const handleBackMaterialFolder = async (): Promise<void> => {
+        materialFolderId.value = null;
+        materialFolderName.value = "";
+        materialFolderView.value = "groups";
+        handleCancelBatchDelete();
+        await loadMaterialGroups();
+    };
+
+    const handleSaveMaterialGroup = async (name: string, id = 0): Promise<boolean> => {
+        const title = name.trim();
+        if (!title) {
+            uni.$u.toast("请填写分组名称");
+            return false;
+        }
+        if (title.length > 30) {
+            uni.$u.toast("分组名称最多 30 个字");
+            return false;
+        }
+        uni.showLoading({ title: "保存中...", mask: true });
+        try {
+            if (id > 0) {
+                await updateMaterialGroup({ id, name: title });
+                if (materialFolderId.value === id) materialFolderName.value = title;
+            } else {
+                await addMaterialGroup({
+                    persona_id: personId.value,
+                    name: title,
+                    keep_original: isOriginalKind() ? KEEP_ORIGINAL_YES : KEEP_ORIGINAL_NO,
+                });
+            }
+            uni.hideLoading();
+            uni.$u.toast(id > 0 ? "分组名称已更新" : "已新建分组");
+            await loadMaterialGroups();
+            return true;
+        } catch (error: any) {
+            uni.hideLoading();
+            uni.$u.toast(error || "保存失败，请重试");
+            return false;
+        }
+    };
+
+    const handleDeleteMaterialGroup = async (id: number): Promise<void> => {
+        if (id <= 0) return;
+        uni.showLoading({ title: "删除中...", mask: true });
+        try {
+            await deleteMaterialGroup({ id });
+            if (materialFolderId.value === id) {
+                materialFolderId.value = null;
+                materialFolderName.value = "";
+            }
+            uni.hideLoading();
+            uni.$u.toast("分组已删除，素材回到未分组");
+            await loadMaterialGroups();
+        } catch (error: any) {
+            uni.hideLoading();
+            uni.$u.toast(error || "删除失败，请重试");
+        }
+    };
+
+    const handleMoveMaterials = async (groupId: number): Promise<boolean> => {
+        const selected = displayMaterialList.value.filter((item) => selectedMaterialIds.value.includes(item.id));
+        const ownIds = selected.filter((item) => !isSquareMaterial(item)).map((item) => item.id);
+        const squareCount = selected.length - ownIds.length;
+        if (!ownIds.length) {
+            uni.$u.toast("广场引用不能移动");
+            return false;
+        }
+        uni.showLoading({ title: "移动中...", mask: true });
+        try {
+            await batchUpdateMaterialGroup({
+                persona_id: personId.value,
+                ids: ownIds,
+                group_id: groupId > 0 ? groupId : 0,
+            });
+            uni.hideLoading();
+            uni.$u.toast(squareCount > 0 ? "已移动，广场引用不会跟着移动" : "已移动");
+            handleCancelBatchDelete();
+            await reloadMaterialList();
+            return true;
+        } catch (error: any) {
+            uni.hideLoading();
+            uni.$u.toast(error || "移动失败，请重试");
+            return false;
+        }
+    };
+
     const startAlbumUpload = (category: UploadAlbumTypeEnum, cutMode: "cut" | "none" | null = null) => {
         if (isDirectUploadScene()) {
             shouldManualAddAfterUpload.value = false;
@@ -943,17 +1140,19 @@ export const useMaterialsTab = ({
                 persona_id: personId.value,
                 ffmpeg: 0,
                 material_kind: MaterialKindEnum.ORIGINAL,
+                ...uploadGroupFields(),
             });
             return;
         }
         // 剪辑原片库：切割走后端自动入库；不切割传 ffmpeg=1 并手动添加
         if (cutMode === "none") {
             shouldManualAddAfterUpload.value = true;
+            // 这里只传文件，分组在后面的手动入库里带。上传请求没有人设，带了分组会被当成分组不存在。
             uploadAndProcessFiles(category, { ffmpeg: 1 });
             return;
         }
         shouldManualAddAfterUpload.value = false;
-        uploadAndProcessFiles(category, { persona_id: personId.value, ffmpeg: 2 });
+        uploadAndProcessFiles(category, { persona_id: personId.value, ffmpeg: 2, ...uploadGroupFields() });
     };
 
     const handleSelectCategory = (category: UploadAlbumTypeEnum | UploadCategoryEnum): void => {
@@ -1093,12 +1292,16 @@ export const useMaterialsTab = ({
                 ...(isOriginalKind() && targetPublishMode === 1
                     ? { material_kind: MaterialKindEnum.ORIGINAL }
                     : {}),
+                ...(targetPublishMode === 1 && currentUploadGroupId() > 0
+                    ? { group_id: currentUploadGroupId() }
+                    : {}),
                 items: items.map((item: any) => ({
                     ...item,
                     publish_mode: targetPublishMode,
                 })),
             });
             uni.showToast({ title: "添加成功", icon: "none", duration: 3000 });
+            refreshGroupsIfListing();
             if (scene === MaterialUploadScene.DIRECT) {
                 await resetDirectMaterialList();
             } else {
@@ -1720,6 +1923,7 @@ export const useMaterialsTab = ({
         handleMaterialFilter,
         handleMoreMaterial,
         handleOpenComposeUpload,
+        handleUploadToGroup,
         handleOpenDirectPublish,
         handleOpenDirectUpload,
         handleOpenMusicUpload,
@@ -1740,6 +1944,12 @@ export const useMaterialsTab = ({
         handleSelectMaterial,
         handleSetDirectPublishVisible,
         handleSwitchPublishMode,
+        handleSwitchMaterialScope,
+        handleOpenMaterialFolder,
+        handleBackMaterialFolder,
+        handleSaveMaterialGroup,
+        handleDeleteMaterialGroup,
+        handleMoveMaterials,
         handleSwitchMaterialKind,
         handleSwitchMaterialTab,
         handleToggleBatchDelete,
@@ -1760,9 +1970,16 @@ export const useMaterialsTab = ({
         isMaterialSlicing,
         isMaterialSliceFailed,
         failedMaterialCount,
+        loadMaterialGroups,
         loadNextMaterialPage,
         loadNextMusicPage,
         materialFinished,
+        materialFolderView,
+        materialFolderId,
+        materialFolderName,
+        materialFolders,
+        ungroupedCount,
+        showingMaterialGroupList,
         materialKind,
         materialList: displayMaterialList,
         querySquareRefs,

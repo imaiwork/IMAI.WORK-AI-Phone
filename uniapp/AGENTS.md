@@ -21,8 +21,9 @@
 ## 2. 目录与模块边界
 
 -   `src/pages` 放主包页面。
--   `src/packages/pages` 放普通分包页面。
--   `src/ai_modules/*` 放 AI 业务模块，模块内可有自己的 `pages`、`components`、`hooks`、`stores`、`enums`、`static`。
+-   `src/packages/pages` 放普通分包页面；`src/packages_core/pages` 只放首页 `home` 与 AI 助手 `chat`（为控制 `packages` 分包体积单独拆出）。小程序不允许分包之间互相引用组件和 js，被多个分包共用的组件、hook 必须放主包（`src/components`、`src/hooks`），不要在分包之间用 `@/packages/...` 交叉 import。
+-   `src/ai_modules/*` 放 AI 业务模块，模块内可有自己的 `pages`、`components`、`hooks`、`stores`、`enums`、`static`。数字人模块拆成两个分包：`digital_human`（首页、玩法视频、形象/音频管理）和 `digital_human_create`（数字人/混剪/Sora 创作、平台发布、文案、音色克隆）；两者共用的 `tokens-cost`、`MontageTypeEnum` 等枚举已放主包（`src/components/tokens-cost`、`src/enums/digitalHuman.ts`），新页面按业务归属放进对应分包，不要跨这两个分包 import。
+-   模块 `static/` 目录下的所有文件都会被原样打进该分包（不管有没有被引用），只放真正要用的图片；`Recorder-UniCore` 这类 js 库放 `lib/` 而不是 `static/`。
 -   `src/components` 放跨业务复用组件，模块私有组件优先放在对应模块目录。
 -   `src/api` 只放接口函数，不写页面状态和 UI 逻辑。
 -   `src/hooks` 放组合式函数，命名必须是 `useXxx`。
@@ -234,7 +235,7 @@ const show = computed({
 
 **配套要点**：
 
--   `popup-bottom` 的弹窗头部（拖拽条、标题、副标题、关闭按钮）必须用组件提供的 `#header` slot，不要在 `#content` 里自己堆一套头部。`#content` 只放主体（滚动区 + 底部操作区）。提供 `#header` 后，`popup-bottom` 默认的拖拽条/标题不再渲染，避免头部重复或结构错位。参考 `packages/components/chat-scroll-view/components/mount-popup.vue` 的 `#header` 写法。
+-   `popup-bottom` 的弹窗头部（拖拽条、标题、副标题、关闭按钮）必须用组件提供的 `#header` slot，不要在 `#content` 里自己堆一套头部。`#content` 只放主体（滚动区 + 底部操作区）。提供 `#header` 后，`popup-bottom` 默认的拖拽条/标题不再渲染，避免头部重复或结构错位。参考 `components/mount-popup/mount-popup.vue` 的 `#header` 写法。
 -   `#content` 内若需要「滚动区 + 固定底部按钮」布局：根节点用 `h-full w-full flex flex-col`，中间滚动区用 `grow min-h-0` 包裹 `scroll-view`，底部操作区作为 `flex` 末项固定；底部安全区用 `pb-[calc(20rpx+env(safe-area-inset-bottom))]`。
 -   只在弹窗内部维护「纯 UI 临时态」（如展开项、tab 索引）；业务状态走 props 进、emit 出，不下沉到弹窗。
 -   弹窗关闭时需要重置的内部 UI 态，用 `watch(() => props.modelValue, v => { if (!v) reset() })`。

@@ -2,11 +2,12 @@
 
 namespace app\api\controller;
 
+use app\api\logic\aiPersona\MaterialGroupLogic;
+use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\enum\FileEnum;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\lianlian\LlConversation;
-use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\service\OriginalMaterialSpec;
 use app\common\service\UploadService;
 use Exception;
@@ -39,6 +40,10 @@ class UploadController extends BaseApiController
                 $personaId
             );
             $isOriginal = OriginalMaterialSpec::isOriginalKind($materialKind);
+            $groupId = $this->resolveUploadGroupId(
+                $personaId,
+                $isOriginal ? Material::KEEP_ORIGINAL_YES : Material::KEEP_ORIGINAL_NO
+            );
             if ($isOriginal) {
                 if ((int)$ffmpeg !== 0) {
                     return $this->fail('原图模式图片上传必须 ffmpeg=0');
@@ -79,7 +84,8 @@ class UploadController extends BaseApiController
                     $result,
                     $personaId,
                     0,
-                    Material::KEEP_ORIGINAL_YES
+                    Material::KEEP_ORIGINAL_YES,
+                    $groupId
                 );
                 if (empty($material['id'])) {
                     return $this->fail('原图模式素材入库失败');
@@ -90,7 +96,7 @@ class UploadController extends BaseApiController
                 return $this->success('上传成功', $result);
             }
 
-            $material = $this->createPersonaImageMaterial($result, $personaId, $ffmpeg);
+            $material = $this->createPersonaImageMaterial($result, $personaId, $ffmpeg, Material::KEEP_ORIGINAL_NO, $groupId);
             if (!empty($material['id'])) {
                 $result['material_id'] = (int)$material['id'];
             }
@@ -178,6 +184,12 @@ class UploadController extends BaseApiController
                 (string)$this->request->post('material_kind', ''),
                 $personaId
             );
+            $groupId = $this->resolveUploadGroupId(
+                $personaId,
+                OriginalMaterialSpec::isOriginalKind($materialKind)
+                    ? Material::KEEP_ORIGINAL_YES
+                    : Material::KEEP_ORIGINAL_NO
+            );
             $scene = (string)$this->request->post('scene', 'persona');
             if (!in_array($scene, ['ai_creation', 'persona'], true)) {
                 $scene = 'persona';
@@ -223,7 +235,8 @@ class UploadController extends BaseApiController
                 $fetchVideoInfo,
                 $personaId,
                 '',
-                $scene
+                $scene,
+                $groupId
             );
 
             // ffmpeg=0：完整视频立即入库，不转码、不切割、不扣费（需 persona_id）。
@@ -239,7 +252,8 @@ class UploadController extends BaseApiController
                     $result,
                     $personaId,
                     0,
-                    Material::KEEP_ORIGINAL_YES
+                    Material::KEEP_ORIGINAL_YES,
+                    $groupId
                 );
                 if (empty($material['id'])) {
                     return $this->fail('原图模式素材入库失败');
@@ -250,7 +264,7 @@ class UploadController extends BaseApiController
                 return $this->success('上传成功', $result);
             }
 
-            $material = $this->createPersonaOriginalVideoMaterial($result, $personaId, $ffmpeg);
+            $material = $this->createPersonaOriginalVideoMaterial($result, $personaId, $ffmpeg, Material::KEEP_ORIGINAL_NO, $groupId);
             if (!empty($material['id'])) {
                 $result['material_id'] = (int)$material['id'];
             }
@@ -370,7 +384,8 @@ class UploadController extends BaseApiController
         array $uploadResult,
         int $personaId,
         int $ffmpeg,
-        int $keepOriginal = Material::KEEP_ORIGINAL_NO
+        int $keepOriginal = Material::KEEP_ORIGINAL_NO,
+        int $groupId = 0
     ): array {
         $isOriginal = $keepOriginal === Material::KEEP_ORIGINAL_YES;
         if ($isOriginal) {
@@ -418,12 +433,16 @@ class UploadController extends BaseApiController
                 'height'        => (int)($uploadResult['height'] ?? 0),
                 'use_status'    => Material::USE_STATUS_ENABLED,
                 'publish_mode'  => (int)($persona->publish_mode ?? Material::PUBLISH_MODE_MAKE_VIDEO),
+                'group_id'      => 0,
                 'create_time'   => $now,
                 'update_time'   => $now,
             ];
             if ($isOriginal) {
                 $payload['keep_original'] = Material::KEEP_ORIGINAL_YES;
                 $payload['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
+            }
+            if ((int)$payload['publish_mode'] === Material::PUBLISH_MODE_MAKE_VIDEO && $groupId > 0) {
+                $payload['group_id'] = $groupId;
             }
             $material = Material::create($payload);
 
@@ -478,7 +497,8 @@ class UploadController extends BaseApiController
         array $uploadResult,
         int $personaId,
         int $ffmpeg,
-        int $keepOriginal = Material::KEEP_ORIGINAL_NO
+        int $keepOriginal = Material::KEEP_ORIGINAL_NO,
+        int $groupId = 0
     ): array {
         if ((int)$ffmpeg !== 0 || $personaId <= 0) {
             return [];
@@ -509,6 +529,7 @@ class UploadController extends BaseApiController
                     'keep_original' => $keepOriginal === Material::KEEP_ORIGINAL_YES
                         ? Material::KEEP_ORIGINAL_YES
                         : Material::KEEP_ORIGINAL_NO,
+                    'group_id' => $groupId,
                 ]
             );
 
@@ -528,6 +549,22 @@ class UploadController extends BaseApiController
      * @notes 获取缩略图配置选项
      * @return array
      */
+    /**
+     * 上传时带的分组必须属于当前用户和人设。未分组传 0。
+     */
+    private function resolveUploadGroupId(int $personaId, int $keepOriginal = Material::KEEP_ORIGINAL_NO): int
+    {
+        $groupId = max(0, (int)$this->request->post('group_id/d', 0));
+        // 这次上传不入库到人设时，分组留给后面的手动添加。没有人设就无法核对分组，不能据此拒绝文件。
+        if ($groupId <= 0 || $personaId <= 0) {
+            return 0;
+        }
+        if (!MaterialGroupLogic::owns($this->userId, $personaId, $groupId, $keepOriginal)) {
+            throw new Exception('分组不存在');
+        }
+        return $groupId;
+    }
+
     private function getThumbnailOptions(): array
     {
         $options = [];

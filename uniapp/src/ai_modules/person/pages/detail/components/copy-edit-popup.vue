@@ -1,7 +1,7 @@
 <template>
     <popup-bottom
         v-model="show"
-        height="72%"
+        :height="isPublish ? '72%' : '92%'"
         border-radius="48"
         custom-class="bg-white"
         :z-index="5002"
@@ -14,7 +14,7 @@
                 <view class="flex-1 min-w-0">
                     <text class="text-[34rpx] font-semibold text-[#202937]">{{ popupTitle }}</text>
                     <text class="block mt-[8rpx] text-[24rpx] text-[#647184] leading-[36rpx]">
-                        {{ copyTypeLabel }} · {{ isNews ? "标题内容必填" : "至少填写一项内容" }}
+                        {{ copyTypeLabel }} · {{ fieldHint }}
                     </text>
                 </view>
                 <view class="copy-close active:opacity-70" @click="emit('update:modelValue', false)">
@@ -80,6 +80,53 @@
                                     confirm-type="done" />
                             </view>
                         </view>
+
+                        <template v-if="!isPublish">
+                            <view class="copy-field">
+                                <view class="copy-label-row">
+                                    <text class="copy-label">发布标题</text>
+                                    <text class="copy-count">{{ localForm.publish_title.length }}/{{ pairLimits.title }}</text>
+                                </view>
+                                <view class="copy-input-wrap">
+                                    <input
+                                        v-model="localForm.publish_title"
+                                        :maxlength="pairLimits.title"
+                                        class="copy-input"
+                                        placeholder="可以不填"
+                                        placeholder-style="color: #647184"
+                                        confirm-type="done" />
+                                </view>
+                            </view>
+                            <view class="copy-field">
+                                <view class="copy-label-row">
+                                    <text class="copy-label">发布正文</text>
+                                    <text class="copy-count">{{ localForm.publish_content.length }}/{{ pairLimits.content }}</text>
+                                </view>
+                                <view class="copy-textarea-wrap">
+                                    <textarea
+                                        v-model="localForm.publish_content"
+                                        :maxlength="pairLimits.content"
+                                        class="copy-textarea"
+                                        placeholder="可以不填"
+                                        placeholder-style="color: #647184" />
+                                </view>
+                            </view>
+                            <view class="copy-field">
+                                <view class="copy-label-row">
+                                    <text class="copy-label">话题</text>
+                                    <text class="copy-count">{{ localForm.publish_topic.length }}/{{ pairLimits.topic }}</text>
+                                </view>
+                                <view class="copy-input-wrap">
+                                    <input
+                                        v-model="localForm.publish_topic"
+                                        :maxlength="pairLimits.topic"
+                                        class="copy-input"
+                                        placeholder="可以不填，多个话题用空格分隔"
+                                        placeholder-style="color: #647184"
+                                        confirm-type="done" />
+                                </view>
+                            </view>
+                        </template>
                     </scroll-view>
                 </view>
                 <view class="copy-footer">
@@ -92,7 +139,16 @@
 
 <script setup lang="ts">
 import { computed, reactive, watch } from "vue";
-import { copyDriveTypes, getCopyLimits, isNewsCopy, isPublishCopy, type CopyFormData } from "../hooks/useCopyLibrary";
+import {
+    COPY_PUBLISH_CONTENT_LIMIT,
+    COPY_TITLE_LIMIT,
+    COPY_TOPIC_LIMIT,
+    copyDriveTypes,
+    getCopyLimits,
+    isNewsCopy,
+    isPublishCopy,
+    type CopyFormData,
+} from "../hooks/useCopyLibrary";
 
 const props = defineProps<{
     modelValue: boolean;
@@ -106,7 +162,15 @@ const emit = defineEmits<{
     (event: "confirm", value: CopyFormData): void;
 }>();
 
-const localForm = reactive<CopyFormData>({ id: undefined, title: "", content: "", topic: "" });
+const localForm = reactive<CopyFormData>({
+    id: undefined,
+    title: "",
+    content: "",
+    topic: "",
+    publish_title: "",
+    publish_content: "",
+    publish_topic: "",
+});
 
 const show = computed({
     get: () => props.modelValue,
@@ -123,6 +187,11 @@ const copyTypeLabel = computed(() =>
 );
 
 const popupTitle = computed(() => (localForm.id ? "编辑文案" : "新增文案"));
+const pairLimits = { title: COPY_TITLE_LIMIT, content: COPY_PUBLISH_CONTENT_LIMIT, topic: COPY_TOPIC_LIMIT };
+const fieldHint = computed(() => {
+    if (isPublish.value) return "至少填写一项内容";
+    return isNews.value ? "标题内容必填，发布文案可以不填" : "至少填写一项内容，发布文案可以不填";
+});
 
 watch(
     () => props.modelValue,
@@ -132,6 +201,9 @@ watch(
         localForm.title = props.form?.title ?? "";
         localForm.content = props.form?.content ?? "";
         localForm.topic = props.form?.topic ?? "";
+        localForm.publish_title = props.form?.publish_title ?? "";
+        localForm.publish_content = props.form?.publish_content ?? "";
+        localForm.publish_topic = props.form?.publish_topic ?? "";
     },
     { immediate: true },
 );
@@ -151,7 +223,15 @@ const handleConfirm = (): void => {
         return;
     }
 
-    emit("confirm", { id: localForm.id, title, content: isNews.value ? "" : content, topic });
+    emit("confirm", {
+        id: localForm.id,
+        title,
+        content: isNews.value ? "" : content,
+        topic: isPublish.value ? topic : "",
+        publish_title: isPublish.value ? "" : localForm.publish_title.trim(),
+        publish_content: isPublish.value ? "" : localForm.publish_content.trim(),
+        publish_topic: isPublish.value ? "" : localForm.publish_topic.trim(),
+    });
 };
 </script>
 

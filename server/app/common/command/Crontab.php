@@ -57,7 +57,7 @@ class Crontab extends Command
         }
     }
 
-    public static function start($item)
+    public static function start(array $item)
     {
         // 单任务互斥锁：last_time 要等任务跑完才写回，一个跑 5 分钟的任务会被后面 4 次 crontab 调度
         // 各再拉起一份并行跑（重复扣费 / 重复发起合成）。按任务加锁而不是整个 crontab 一把锁，
@@ -143,7 +143,7 @@ class Crontab extends Command
         }
     }
 
-    private static function releaseLock($lock): void
+    private static function releaseLock(?array $lock): void
     {
         if (!is_array($lock)) {
             return;

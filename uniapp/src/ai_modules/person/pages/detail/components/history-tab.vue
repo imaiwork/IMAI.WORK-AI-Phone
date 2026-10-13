@@ -147,12 +147,20 @@
                                 <text>下载视频</text>
                             </view>
                             <view
+                                v-if="item.status === state.videoSuccess && publishContent(item)"
+                                class="hist-action"
+                                @click.stop="actions.copyPublishCopy(item)"
+                            >
+                                <u-icon name="file-text" color="#0761D9" size="22"></u-icon>
+                                <text>发布文案</text>
+                            </view>
+                            <view
                                 v-if="item.status === state.videoSuccess"
                                 class="hist-action"
                                 @click.stop="actions.copyVideoText(item)"
                             >
                                 <u-icon name="file-text" color="#0761D9" size="22"></u-icon>
-                                <text>复制文案</text>
+                                <text>口播文案</text>
                             </view>
                             <view
                                 class="hist-action"
@@ -372,11 +380,15 @@ const props = defineProps<{
         viewFailReason: (item: any) => void
         retryRecord: (item: any) => void
         downloadVideo: (item: any) => void
+        copyPublishCopy: (item: any) => void
         copyVideoText: (item: any) => void
     }
 }>()
 
 const isCloudMode = computed(() => isCloudRunMode(props.state.runMode))
+
+const publishContent = (item: any) =>
+    String(item?.publish_title || "").trim() || String(item?.publish_content || "").trim()
 </script>
 
 <style scoped lang="scss">
@@ -431,7 +443,11 @@ const isCloudMode = computed(() => isCloudRunMode(props.state.runMode))
 }
 
 .hist-actions--video {
-    @apply px-[32rpx] pb-[32rpx];
+    @apply flex-nowrap px-[20rpx] pb-[32rpx] gap-[4rpx];
+}
+
+.hist-actions--video .hist-action {
+    @apply px-[6rpx] gap-[6rpx];
 }
 
 .hist-action {

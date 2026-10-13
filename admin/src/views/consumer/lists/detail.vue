@@ -208,7 +208,7 @@
                 @click="BlackList(2, formData.id, formData.nickname)">
                 解除拉黑
             </el-button>
-            <el-button v-perms="['user.user/rePassword']" @click="resetPassword"> 重置密码 </el-button>
+            <el-button v-perms="['user.user/editPas']" @click="resetPassword"> 重置密码 </el-button>
         </el-card>
         <el-card class="mt-2 !border-none" shadow="never">
             <div>

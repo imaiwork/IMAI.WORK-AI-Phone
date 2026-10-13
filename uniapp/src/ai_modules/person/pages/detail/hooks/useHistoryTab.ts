@@ -343,6 +343,20 @@ export const useHistoryTab = (
         }
     };
 
+    /** 复制发布文案：标题、正文、话题各占一行，空的跳过。 */
+    const handleCopyPublishCopy = (item: any) => {
+        const text = [item?.publish_title, item?.publish_content, item?.publish_topic]
+            .map((part) => String(part || "").trim())
+            .filter(Boolean)
+            .join("\n");
+        if (!text) {
+            uni.showToast({ title: "这条视频没有发布文案", icon: "none" });
+            return;
+        }
+        const { copy } = useCopy();
+        copy(text);
+    };
+
     /** 复制口播文案，口径与视频详情弹窗的文案块一致 */
     const handleCopyVideoText = (item: any) => {
         const text = String(item?.msg || item?.title || "").trim();
@@ -495,6 +509,7 @@ export const useHistoryTab = (
         getRecordStatusLabel,
         getVideoTagList,
         getImageUrls,
+        handleCopyPublishCopy,
         handleCopyVideoText,
         handleDeleteImageRecord,
         handleDeleteVideoRecord,

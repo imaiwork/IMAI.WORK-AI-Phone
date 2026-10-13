@@ -4,7 +4,7 @@
   "usingComponents": {
     "u-navbar": "../../../../uni_modules/vk-uview-ui/components/u-navbar/u-navbar",
     "u-switch": "../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
-    "tokens-cost": "../../components/tokens-cost/tokens-cost",
+    "tokens-cost": "../../../../components/tokens-cost/tokens-cost",
     "play-section-title": "../../components/play-video/play-section-title",
     "play-template-card": "../../components/play-video/play-template-card",
     "play-image-upload": "../../components/play-video/play-image-upload",

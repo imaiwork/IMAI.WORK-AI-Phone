@@ -104,7 +104,6 @@
                 <textarea
                     v-model="step.confirmContent"
                     maxlength="1000"
-                    :show-confirm-bar="false"
                     :hold-keyboard="true"
                     :adjust-position="false"
                     :cursor-spacing="120"
@@ -152,6 +151,7 @@
                                 placeholder="标签名"
                                 placeholder-style="color:#d1d5db"
                                 style="font-size: 22rpx; color: #0065fb; min-width: 80rpx; max-width: 200rpx"
+                                @focus="onFocus"
                                 @input="onEditInput"
                                 @blur="onEditConfirm(step, hi)"
                                 @confirm="onEditConfirm(step, hi)" />
@@ -188,6 +188,7 @@
                             placeholder="输入标签"
                             placeholder-style="color:#d1d5db;font-size:22rpx"
                             style="font-size: 22rpx; color: #0065fb; min-width: 80rpx; max-width: 200rpx"
+                            @focus="onFocus"
                             @input="onAddInput"
                             @blur="onAddConfirm(step)"
                             @confirm="onAddConfirm(step)" />
@@ -199,11 +200,11 @@
                 </text>
             </view>
 
-            <view class="flex px-[20rpx] pb-[20rpx] pt-[16rpx] gap-[16rpx]">
+            <view v-if="!dockActions" class="flex px-[20rpx] pb-[20rpx] pt-[16rpx] gap-[16rpx]">
                 <view
                     v-if="step.rejectLabel"
                     class="flex-1 h-[80rpx] flex items-center justify-center gap-[8rpx] rounded-[16rpx] bg-[#f3f4f6] border border-solid border-[#e5e7eb]"
-                    @click="emit('reject', step)">
+                    @click.stop="emit('reject', step)">
                     <u-icon name="reload" color="#6b7280" size="24"></u-icon>
                     <text class="text-xs font-medium text-[#6b7280]">
                         {{ step.rejectLabel }}
@@ -215,7 +216,7 @@
                         background: linear-gradient(135deg, #0065fb, #3d8bfc);
                         box-shadow: 0 4px 16px rgba(0, 101, 251, 0.3);
                     "
-                    @click="emit('confirm', step)">
+                    @click.stop="emit('confirm', step)">
                     <text class="text-xs font-bold text-white">
                         {{ step.confirmLabel || "确认" }}
                     </text>
@@ -271,9 +272,12 @@ const props = withDefaults(
     defineProps<{
         step: Step;
         failReason?: string;
+        /** 键盘弹起时，确认按钮改由页面抬到键盘上方，卡片里这份先藏起来 */
+        dockActions?: boolean;
     }>(),
     {
         failReason: "",
+        dockActions: false,
     },
 );
 
@@ -345,8 +349,8 @@ const onFocus = () => {
 };
 
 const onBlur = () => {
+    // 不在这里主动收键盘。点「确认文案」会先 blur，立刻 hideKeyboard 会把按钮从手指底下抽走
     emit("blur");
-    uni.hideKeyboard?.();
 };
 
 const onClearContent = () => {

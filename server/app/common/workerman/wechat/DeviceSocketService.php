@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace app\common\workerman\wechat;
 
+use Workerman\Timer;
 use Workerman\Worker;
 use Workerman\Connection\TcpConnection;
 use app\common\workerman\wechat\exceptions\ResponseException;
@@ -46,6 +47,11 @@ class DeviceSocketService
         $this->withChannel('wechat_socket')->withLevel('info')->withTitle('Device Socket worker started')->withContext([
             'pid' => getmypid()
         ])->log();
+
+        // 常驻进程里循环引用的对象（EasyWeChat 等 SDK）只有 GC 周期回收才释放，连带 fd 一起漏，定期强制回收
+        Timer::add(60, static function (): void {
+            gc_collect_cycles();
+        });
     }
 
     /**

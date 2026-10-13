@@ -17,7 +17,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-5 gap-4">
+                <div class="grid grid-cols-6 gap-4">
                     <div class="filter-item">
                         <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">执行设备</div>
                         <ElSelect
@@ -39,11 +39,27 @@
                     <div class="filter-item">
                         <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">添加渠道</div>
                         <ElSelect v-model="queryParams.channel" class="custom-select" placeholder="所有渠道" clearable>
-                            <ElOption label="小红书" :value="AppTypeEnum.XHS"></ElOption>
-                            <ElOption label="视频号" :value="AppTypeEnum.SPH"></ElOption>
-                            <ElOption label="微信" :value="2"></ElOption>
-                            <ElOption label="抖音" :value="AppTypeEnum.DOUYIN"></ElOption>
-                            <ElOption label="快手" :value="AppTypeEnum.KUAISHOU"></ElOption>
+                            <ElOption
+                                v-for="item in channelOptions"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value"></ElOption>
+                        </ElSelect>
+                    </div>
+
+                    <div class="filter-item">
+                        <div class="text-xs font-medium text-tx-placeholder mb-1.5 ml-1">线索来源</div>
+                        <ElSelect
+                            v-model="queryParams.lead_source"
+                            class="custom-select"
+                            placeholder="全部来源"
+                            filterable
+                            clearable>
+                            <ElOption
+                                v-for="item in leadSourceOptions"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value"></ElOption>
                         </ElSelect>
                     </div>
 
@@ -54,9 +70,11 @@
                             class="custom-select"
                             placeholder="所有类型"
                             clearable>
-                            <ElOption label="私信聊天" :value="ExecTypeEnum.PRIVATE_CHAT"></ElOption>
-                            <ElOption label="自动爬取" :value="ExecTypeEnum.CRAWL"></ElOption>
-                            <ElOption label="自动私信" :value="ExecTypeEnum.AUTO_PRIVATE_CHAT"></ElOption>
+                            <ElOption
+                                v-for="item in execTypeOptions"
+                                :key="item.value"
+                                :label="item.label"
+                                :value="item.value"></ElOption>
                         </ElSelect>
                     </div>
 
@@ -103,6 +121,15 @@
                     <template #default="{ row }">
                         <span class="px-2 py-0.5 rounded text-xs font-medium" :class="getAppTypeClass(row.channel)">
                             {{ getAppTypeName(row.channel) }}
+                        </span>
+                    </template>
+                </ElTableColumn>
+
+                <ElTableColumn label="线索来源" min-width="160" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        <span
+                            class="text-tx-regular text-xs bg-gray-50 px-2 py-0.5 rounded border border-br-extra-light">
+                            {{ getLeadSourceName(row) }}
                         </span>
                     </template>
                 </ElTableColumn>
@@ -191,12 +218,41 @@ enum ExecTypeEnum {
     AUTO_PRIVATE_CHAT = "3",
 }
 
+const LEAD_SOURCE_CRAWLING = "crawling";
+const LEAD_SOURCE_DY_SEARCH = "dy_search";
+
+const channelOptions = [
+    { label: "小红书", value: AppTypeEnum.XHS },
+    { label: "视频号", value: AppTypeEnum.SPH },
+    { label: "微信", value: 2 },
+    { label: "抖音", value: AppTypeEnum.DOUYIN },
+    { label: "快手", value: AppTypeEnum.KUAISHOU },
+];
+
+const execTypeOptions = [
+    { label: "私信聊天", value: ExecTypeEnum.PRIVATE_CHAT },
+    { label: "自动爬取", value: ExecTypeEnum.CRAWL },
+    { label: "自动私信", value: ExecTypeEnum.AUTO_PRIVATE_CHAT },
+];
+
+const leadSourceOptions = [
+    { label: "视频号获客", value: LEAD_SOURCE_CRAWLING },
+    { label: "抖音搜寻获客", value: LEAD_SOURCE_DY_SEARCH },
+    ...channelOptions.flatMap((channel) =>
+        execTypeOptions.map((execType) => ({
+            label: `${channel.label}·${execType.label}`,
+            value: `ch_${channel.value}_ex_${execType.value}`,
+        }))
+    ),
+];
+
 const nuxtApp = useNuxtApp();
 
 const queryParams = reactive({
     device_code: "",
     wechat_no: "",
     channel: "",
+    lead_source: "",
     exec_type: "",
     name: "",
     status: "",
@@ -229,15 +285,38 @@ const { optionsData } = useDictOptions<{
     },
 });
 
-const getAppTypeName = (account_type: number) => {
-    const types = {
-        [AppTypeEnum.SPH]: "视频号",
-        2: "微信",
-        [AppTypeEnum.XHS]: "小红书",
-        [AppTypeEnum.DOUYIN]: "抖音",
-        [AppTypeEnum.KUAISHOU]: "快手",
-    };
-    return types[account_type] || "-";
+const getAppTypeName = (accountType: number | string) => {
+    return channelOptions.find((item) => item.value == accountType)?.label || "-";
+};
+
+const getExecTypeName = (execType: number | string) => {
+    return execTypeOptions.find((item) => item.value == execType)?.label || "-";
+};
+
+const toTaskId = (value: number | string | null | undefined) => {
+    const id = Number(value);
+    return Number.isFinite(id) ? id : 0;
+};
+
+const getLeadSourceName = (row: Record<string, any>) => {
+    if (toTaskId(row.crawling_task_id) > 0) {
+        return "视频号获客";
+    }
+    if (toTaskId(row.dy_search_task_id) > 0) {
+        return "抖音搜寻获客";
+    }
+    const channelName = getAppTypeName(row.channel);
+    const execTypeName = getExecTypeName(row.exec_type);
+    if (channelName !== "-" && execTypeName !== "-") {
+        return `${channelName}·${execTypeName}`;
+    }
+    if (channelName !== "-") {
+        return channelName;
+    }
+    if (execTypeName !== "-") {
+        return execTypeName;
+    }
+    return "-";
 };
 
 const getStatusColor = (status: number | string) => {

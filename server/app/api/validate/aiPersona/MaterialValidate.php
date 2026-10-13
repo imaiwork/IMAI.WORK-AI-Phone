@@ -18,6 +18,7 @@ class MaterialValidate extends BaseValidate
         'use_status' => 'in:0,1,2',
         'publish_mode' => 'in:1,2',
         'keep_original' => 'in:0,1',
+        'group_id' => 'number',
         'items' => 'require|array',
         'ids' => 'require|array',
         'id' => 'require|number',
@@ -36,6 +37,7 @@ class MaterialValidate extends BaseValidate
         'use_status.in' => '使用状态值只能是0、1或2',
         'publish_mode.in' => '发布模式值只能是1或2',
         'keep_original.in' => '原图标记只能是0或1',
+        'group_id.number' => '分组ID必须是数字',
         'items.require' => '批量数据是必填项',
         'items.array' => '批量数据必须是数组',
         'ids.require' => '删除ID是必填项',
@@ -60,12 +62,12 @@ class MaterialValidate extends BaseValidate
 
     public function sceneAdd()
     {
-        return $this->only(['persona_id', 'material_name', 'material_type', 'file_url', 'thumbnail_url', 'duration', 'width', 'height', 'use_status', 'publish_mode', 'keep_original']);
+        return $this->only(['persona_id', 'material_name', 'material_type', 'file_url', 'thumbnail_url', 'duration', 'width', 'height', 'use_status', 'publish_mode', 'keep_original', 'group_id']);
     }
 
     public function sceneAddBatch()
     {
-        return $this->only(['persona_id', 'items']);
+        return $this->only(['persona_id', 'items', 'group_id']);
     }
 
     public function sceneUpdate()
@@ -86,6 +88,11 @@ class MaterialValidate extends BaseValidate
     public function sceneBatchDelete()
     {
         return $this->only(['ids']);
+    }
+
+    public function sceneBatchUpdate()
+    {
+        return $this->only(['persona_id', 'ids', 'group_id']);
     }
 
     public function sceneDeleteFailedSlices()

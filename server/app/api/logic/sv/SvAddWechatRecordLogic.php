@@ -34,6 +34,10 @@ class SvAddWechatRecordLogic extends SvBaseLogic
                 throw new \Exception('请勿重复执行', 400);
             }
 
+            if (in_array((int)$record->status, [2, SvAddWechatRecord::STATUS_RESULT_UNKNOWN], true)) {
+                throw new \Exception('上次添加结果尚未确认，请先核实设备记录，避免重复添加', 400);
+            }
+
             if ((int)($record->dy_search_task_id ?? 0) > 0) {
                 return self::retryDySearch($record);
             }

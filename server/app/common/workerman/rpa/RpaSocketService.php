@@ -11,6 +11,7 @@ use app\common\workerman\rpa\Routing\HandlerRegistry;
 use app\common\workerman\rpa\Support\ChannelBus;
 use app\common\workerman\rpa\Support\ConnectionRepository;
 use app\common\workerman\rpa\Support\DeviceIndex;
+use app\common\workerman\rpa\Support\ProcessFdLimit;
 use app\common\workerman\rpa\Validator\MessageValidator;
 use app\common\workerman\rpa\Tool\ToolUtil;
 use app\common\workerman\rpa\Service\DeviceUnbindService;
@@ -333,6 +334,12 @@ class RpaSocketService
         Timer::add(10, function () use ($worker): void {
             $this->cleanupStaleHandshakeConnections($worker);
             $this->checkDeviceHeartbeats($worker);
+        });
+
+        // EasyWeChat 等 SDK 的对象图带循环引用，常驻进程里引用计数放不掉，连带 curl 句柄和连接一起漏 fd
+        // （每发一条小程序通知漏 3 个）；PHP 自动 GC 要攒到 1 万个 root 才触发，攒不到就先把 fd 用光，必须定期强制回收
+        Timer::add(60, static function (): void {
+            gc_collect_cycles();
         });
     }
 
@@ -753,6 +760,7 @@ class RpaSocketService
 
     private static int $socketLogFailCount = 0;
     private static int $socketLogFailThreshold = 3;
+    // 仅在取不到进程 soft 上限时作兜底，实际阈值见 ProcessFdLimit::logThresholds()
     private static int $socketLogFdThreshold = 3000;
     private static int $socketLogFdRecoverThreshold = 2500;
     private static int $socketLogFdCheckInterval = 180;
@@ -787,8 +795,9 @@ class RpaSocketService
                 return true;
             }
 
+            [, $recoverThreshold] = ProcessFdLimit::logThresholds(self::$socketLogFdThreshold, self::$socketLogFdRecoverThreshold);
             $count = self::getSocketFdCount();
-            if ($count !== null && $count < self::$socketLogFdRecoverThreshold) {
+            if ($count !== null && $count < $recoverThreshold) {
                 $this->isWriteLog = true;
                 self::$socketLogDisabledAt = 0;
                 self::$socketLogFailCount = 0;
@@ -805,8 +814,9 @@ class RpaSocketService
         }
         self::$socketLogLastFdCheckAt = $now;
 
+        [$disableThreshold] = ProcessFdLimit::logThresholds(self::$socketLogFdThreshold, self::$socketLogFdRecoverThreshold);
         $count = self::getSocketFdCount();
-        if ($count !== null && $count >= self::$socketLogFdThreshold) {
+        if ($count !== null && $count >= $disableThreshold) {
             $this->isWriteLog = false;
             self::$socketLogDisabledAt = time();
             fwrite(STDERR, "[socket] fd 已接近上限 ({$count})，自动关闭 socket 日志" . PHP_EOL);

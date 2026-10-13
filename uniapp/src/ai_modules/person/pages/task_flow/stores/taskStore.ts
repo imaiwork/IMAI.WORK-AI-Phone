@@ -277,6 +277,20 @@ export const taskConfig: Record<TaskScene, TaskConfigItem> = {
 export const taskConfigList: TaskConfigItem[] = Object.values(taskConfig).sort((a, b) => a.scene - b.scene);
 export const taskLabelList: string[] = taskConfigList.map((c) => c.label);
 
+// ─── 0-6 点固定创作时段 ────────────────────────────────────────
+
+/** 固定创作时段专用节点：后端下发的锁死任务，不参与「添加任务」可选列表，故与 TaskScene 分开维护 */
+export enum FixedSlotScene {
+    HOT_COPY = 16, // 爆款仿写
+    PRECISE_GET_CUSTOMER = 17, // 精准获客
+}
+
+/** 固定时段任务描述：后端 scene → 卡片说明文案 */
+export const FIXED_SLOT_TASK_DESC: Record<number, string> = {
+    [FixedSlotScene.HOT_COPY]: "抓取同赛道爆款内容，AI 仿写成新文案",
+    [FixedSlotScene.PRECISE_GET_CUSTOMER]: "对已发布视频批量追加 @，触达昨日意向用户",
+};
+
 /** 将接口场景列表与本地平台配置合并；无平台配置、平台全部关闭的场景跳过 */
 export const buildSelectableTaskConfigList = (scenes: AddableSceneItem[]): TaskConfigItem[] => {
     const result: TaskConfigItem[] = [];

@@ -77,6 +77,7 @@ class ChannelBus
 
     private static int $socketLogFailCount = 0;
     private static int $socketLogFailThreshold = 3;
+    // 仅在取不到进程 soft 上限时作兜底，实际阈值见 ProcessFdLimit::logThresholds()
     private static int $socketLogFdThreshold = 3000;
     private static int $socketLogFdRecoverThreshold = 2500;
     private static int $socketLogFdCheckInterval = 180;
@@ -105,8 +106,9 @@ class ChannelBus
             $now = time();
             if ($now - self::$socketLogLastFdCheckAt >= self::$socketLogFdCheckInterval) {
                 self::$socketLogLastFdCheckAt = $now;
+                [$disableThreshold] = ProcessFdLimit::logThresholds(self::$socketLogFdThreshold, self::$socketLogFdRecoverThreshold);
                 $count = self::getSocketFdCount();
-                if ($count !== null && $count >= self::$socketLogFdThreshold) {
+                if ($count !== null && $count >= $disableThreshold) {
                     self::$socketLogFdLimitReached = true;
                     self::$socketLogDisabledAt = time();
                     fwrite(STDERR, "[channel] fd 已接近上限 ({$count})，自动关闭 channel 内部日志" . PHP_EOL);
@@ -126,8 +128,9 @@ class ChannelBus
             return true;
         }
 
+        [, $recoverThreshold] = ProcessFdLimit::logThresholds(self::$socketLogFdThreshold, self::$socketLogFdRecoverThreshold);
         $count = self::getSocketFdCount();
-        if ($count !== null && $count < self::$socketLogFdRecoverThreshold) {
+        if ($count !== null && $count < $recoverThreshold) {
             self::$socketLogFdLimitReached = false;
             self::$socketLogFailCount = 0;
             self::$socketLogDisabledAt = 0;

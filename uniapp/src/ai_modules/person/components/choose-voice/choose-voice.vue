@@ -52,7 +52,7 @@
                         @query="queryList">
                         <view class="voice-list py-[24rpx] px-[32rpx] flex flex-col gap-[16rpx]">
                             <navigator
-                                :url="`/ai_modules/digital_human/pages/tone_clone/tone_clone?model_version=${modelVersion}`"
+                                :url="`/ai_modules/digital_human_create/pages/tone_clone/tone_clone?model_version=${modelVersion}`"
                                 hover-class="none"
                                 class="voice-clone flex items-center gap-x-[24rpx] rounded-[24rpx] p-[32rpx] border-[2rpx] border-dashed border-[#C5D9FF] bg-[#F0F7FF] active:opacity-70">
                                 <view

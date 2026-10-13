@@ -1015,7 +1015,7 @@ class DySearchIngestService
         $existing = SvAddWechatRecord::where('user_id', $userId)
             ->where('reg_wechat', $contact)
             ->findOrEmpty();
-        if (!$existing->isEmpty() && in_array((int)$existing->status, [1, 2, 4, 5, 6], true)) {
+        if (!$existing->isEmpty() && in_array((int)$existing->status, [1, 2, 4, 5, 6, SvAddWechatRecord::STATUS_RESULT_UNKNOWN], true)) {
             self::logEvent('加微号已存在，跳过该号仍保留客资', [
                 'task_id' => (int)$task->id,
                 'device' => $deviceCode,

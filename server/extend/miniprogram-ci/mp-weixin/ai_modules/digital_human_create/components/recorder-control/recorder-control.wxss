@@ -1,0 +1,1 @@
+.recorder-panel.data-v-6fd51e26{position:relative;display:flex;height:100%;flex-direction:column;background-color:var(--color-white, #ffffff)}@keyframes pulse-6fd51e26{0%{transform:scale(1);opacity:1}50%{transform:scale(1.2);opacity:.7}to{transform:scale(1);opacity:1}}.animate-pulse.data-v-6fd51e26{animation:pulse-6fd51e26 1.5s infinite ease-in-out}

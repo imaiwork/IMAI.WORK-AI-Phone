@@ -11,19 +11,64 @@ function sanitizeFileName(name: string): string {
     return cleaned.slice(0, 80) || "PPT";
 }
 
-async function imageUrlToDataUrl(url: string): Promise<string> {
-    if (url.startsWith("data:")) return url;
+/**
+ * 产物存在主站本地盘时，后端用 app_host 拼图片 URL；OEM 域名下访问即跨域，
+ * nginx 直出的静态文件不带 CORS 头，fetch 会直接抛 Failed to fetch。
+ * OEM 域名与主站是同一台服务器、同一个 public 根，换成当前域同路径即可取到同一文件。
+ */
+function resolveSameOriginFallback(url: string): { host: string; url: string } | null {
+    try {
+        const target = new URL(url, window.location.href);
+        if (target.origin === window.location.origin) return null;
+        return {
+            host: target.host,
+            url: `${window.location.origin}${target.pathname}${target.search}`,
+        };
+    } catch {
+        return null;
+    }
+}
+
+/** 已确认要走当前域回退的图片主机，避免每一页都先撞一次跨域失败、白下一遍图 */
+const sameOriginFallbackHosts = new Set<string>();
+
+async function fetchImageBlob(url: string): Promise<Blob> {
     const res = await fetch(url, { mode: "cors", credentials: "omit" });
     if (!res.ok) {
-        throw new Error(`图片拉取失败(${res.status})`);
+        throw new Error(`HTTP ${res.status}`);
     }
     const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
+    // 站点对不存在的 /uploads 路径会落到 PHP 返回 200 + JSON，不能只看 res.ok
+    const type = (blob.type || "").toLowerCase();
+    if (type.startsWith("text/") || type.includes("json")) {
+        throw new Error("非图片响应");
+    }
+    return blob;
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result || ""));
         reader.onerror = () => reject(new Error("图片读取失败"));
         reader.readAsDataURL(blob);
     });
+}
+
+async function imageUrlToDataUrl(url: string): Promise<string> {
+    if (url.startsWith("data:")) return url;
+    const fallback = resolveSameOriginFallback(url);
+    if (fallback && sameOriginFallbackHosts.has(fallback.host)) {
+        return blobToDataUrl(await fetchImageBlob(fallback.url));
+    }
+    try {
+        return blobToDataUrl(await fetchImageBlob(url));
+    } catch (e) {
+        if (!fallback) throw e;
+        const blob = await fetchImageBlob(fallback.url);
+        sameOriginFallbackHosts.add(fallback.host);
+        return blobToDataUrl(blob);
+    }
 }
 
 /**
@@ -47,8 +92,15 @@ export async function exportSlidesToPptx(
     pptx.author = "IMAI";
     pptx.title = topic;
 
-    for (const s of ready) {
-        const data = await imageUrlToDataUrl(s.imageUrl!);
+    for (const [idx, s] of ready.entries()) {
+        let data: string;
+        try {
+            data = await imageUrlToDataUrl(s.imageUrl!);
+        } catch (e: any) {
+            // fetch 的网络/跨域失败只有一句英文 Failed to fetch，换成用户看得懂的提示
+            const reason = e instanceof TypeError ? "网络或跨域受限" : e?.message || "未知错误";
+            throw new Error(`第 ${s.page ?? idx + 1} 页图片拉取失败（${reason}），请重新生成该页后再导出`);
+        }
         const slide = pptx.addSlide();
         slide.addImage({
             data,

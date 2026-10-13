@@ -1750,6 +1750,7 @@ class TeamLogic extends BaseLogic
             }
             $resolvedProject = realpath($projectDir) ?: $projectDir;
             $resolvedKey = realpath($privateKeyPath) ?: $privateKeyPath;
+            MnpCiService::pruneStaleFiles($resolvedProject);
             $data = [
                 'appid'          => $appid,
                 'version'        => $params['upload_version'] ?? ConfigService::get('mnp_setting', 'app_version', '2.0.0', $tid),
@@ -2136,15 +2137,20 @@ class TeamLogic extends BaseLogic
             if (!empty($params['mnp']) && is_array($params['mnp'])) {
                 // OEM 小程序 AppID 不可占用主站渠道配置(否则 check/resolve 会把主站小程序解析成 OEM)
                 if (array_key_exists('app_id', $params['mnp'])) {
+                    $params['mnp']['app_id'] = trim((string)$params['mnp']['app_id']);
                     self::assertMnpAppIdNotMainSite((string)$params['mnp']['app_id']);
                 }
                 // app_secret 已脱敏不回传:仅在前端明确填了新值时才更新,空值不覆盖(同 private_key)
-                if (array_key_exists('app_secret', $params['mnp']) && (string)$params['mnp']['app_secret'] !== '') {
-                    ConfigService::set('mnp_setting', 'app_secret', (string)$params['mnp']['app_secret'], $tid);
+                if (array_key_exists('app_secret', $params['mnp']) && trim((string)$params['mnp']['app_secret']) !== '') {
+                    ConfigService::set('mnp_setting', 'app_secret', trim((string)$params['mnp']['app_secret']), $tid);
                 }
                 foreach (['app_id', 'original_id', 'name', 'audit'] as $k) {
                     if (array_key_exists($k, $params['mnp'])) {
-                        ConfigService::set('mnp_setting', $k, (string)$params['mnp'][$k], $tid);
+                        $v = (string)$params['mnp'][$k];
+                        if ($k === 'app_id') {
+                            $v = trim($v);
+                        }
+                        ConfigService::set('mnp_setting', $k, $v, $tid);
                     }
                 }
                 if (array_key_exists('qr_code', $params['mnp'])) {

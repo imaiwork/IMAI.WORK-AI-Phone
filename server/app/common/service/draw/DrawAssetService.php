@@ -9,6 +9,7 @@ use app\common\model\draw\DrawAsset;
 use app\common\model\draw\DrawTask;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
+use app\common\service\storage\Driver as StorageDriver;
 use app\common\service\VideoInfoService;
 use think\facade\Log;
 
@@ -41,7 +42,7 @@ class DrawAssetService
 
             $downloadType = $task->media_type === DrawEnum::MEDIA_VIDEO ? 'video' : 'image';
             if ($kind === 'b64') {
-                $fileUrl = $this->saveBase64Image($value, (string)($source['mime'] ?? 'image/png'));
+                $fileUrl = $this->saveBase64Image($value, (string)($source['mime'] ?? 'image/png'), $storage);
                 $sourceUrl = '';
             } else {
                 $fileUrl = FileService::downloadFileBySource($value, $downloadType);
@@ -77,9 +78,12 @@ class DrawAssetService
     }
 
     /**
-     * 将 base64 / data URI 图片写入本地，返回相对路径
+     * 将 base64 / data URI 图片落盘，返回相对路径。
+     * 站点配了第三方存储时与 URL 产物（downloadFileBySource）保持一致：上传后删掉本地副本，
+     * 否则 getFileUrl 本地优先会一直拼主站 app_host 域名，OEM 域名下前端跨域拉图会被 CORS 拦下。
+     * 上传失败则保留本地文件，不让任务因此失败。
      */
-    private function saveBase64Image(string $raw, string $mime = 'image/png'): string
+    private function saveBase64Image(string $raw, string $mime = 'image/png', string $storage = 'local'): string
     {
         if (str_starts_with($raw, 'data:')) {
             if (!preg_match('#^data:([^;]+);base64,(.+)$#s', $raw, $m)) {
@@ -112,6 +116,32 @@ class DrawAssetService
         $absolute = rtrim((string)$directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
         if (file_put_contents($absolute, $binary) === false) {
             throw new \Exception('写入图片失败');
+        }
+
+        if ($storage === '' || $storage === 'local') {
+            return $relativePath;
+        }
+
+        try {
+            $driver = new StorageDriver([
+                'default' => $storage,
+                'engine'  => ConfigService::get('storage'),
+            ]);
+            $driver->setUploadFileByReal($absolute);
+            $savedName = $driver->upload($relativeDir) ? (string)$driver->getFileName() : '';
+            if ($savedName !== '') {
+                @unlink($absolute);
+                return $relativeDir . '/' . $savedName;
+            }
+            Log::warning('draw b64 asset upload failed, keep local copy: ' . (string)$driver->getError(), [
+                'storage' => $storage,
+                'path'    => $relativePath,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('draw b64 asset upload failed, keep local copy: ' . $e->getMessage(), [
+                'storage' => $storage,
+                'path'    => $relativePath,
+            ]);
         }
 
         return $relativePath;

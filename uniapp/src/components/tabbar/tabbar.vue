@@ -47,7 +47,7 @@ enum TabbarLinkType {
 const WEBVIEW_PAGE = "/packages/pages/webview/webview";
 /** 主包启动壳；真实首页在分包 */
 const LAUNCH_HOME_PATH = "/pages/index/index";
-const REAL_HOME_PATH = "/packages/pages/home/home";
+const REAL_HOME_PATH = "/packages_core/pages/home/home";
 
 const normalizePath = (path = "") => {
     if (!path) return "";
@@ -81,7 +81,7 @@ const DEFAULT_TABBAR: TabbarItem[] = [
         iconPath: ChatIcon,
         selectedIconPath: ChatSelectedIcon,
         text: "AI助手",
-        link: { path: "/packages/pages/chat/chat" },
+        link: { path: "/packages_core/pages/chat/chat" },
     },
     {
         iconPath: CreativeIcon,

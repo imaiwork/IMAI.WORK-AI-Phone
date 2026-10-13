@@ -262,7 +262,7 @@ export default {
             } else {
                 this.isHome
                     ? uni.$u.route({
-                          url: "/packages/pages/home/home",
+                          url: "/packages_core/pages/home/home",
                           type: "reLaunch",
                       })
                     : uni.navigateBack();

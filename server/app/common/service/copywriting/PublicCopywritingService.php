@@ -5,6 +5,7 @@ namespace app\common\service\copywriting;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\copywriting\PublicCopywriting;
+use app\api\logic\auto\AutoDeviceSettingLogic;
 
 class PublicCopywritingService
 {
@@ -425,6 +426,11 @@ class PublicCopywritingService
         $title = self::rewrite((string)$tpl['title'], $map);
         $content = self::rewrite((string)($tpl['content'] ?? ''), $map);
         $topic = self::rewrite((string)($tpl['topic'] ?? ''), $map);
+        if ((int)($tpl['ui_type'] ?? self::UI_TYPE_READY) === self::UI_TYPE_FRAME) {
+            $generated = self::generateFrameCopy($userId, $content, (int)$tpl['driver_type'], $map);
+            $title = $generated['title'];
+            $content = $generated['content'];
+        }
         if ((int)$tpl['library_type'] === AiPersonaCopywritingLibrary::LIBRARY_TYPE_VIDEO_DRIVER
             && (int)$tpl['driver_type'] === AiPersonaCopywritingLibrary::DRIVER_TYPE_NEWS) {
             $title = $content !== '' ? $content : $title;
@@ -450,6 +456,47 @@ class PublicCopywritingService
             'create_time' => $now,
             'update_time' => $now,
         ];
+    }
+
+    private static function generateFrameCopy(int $userId, string $frame, int $driverType, array $map): array
+    {
+        $frame = trim($frame);
+        if ($frame === '') {
+            throw new \RuntimeException('提示词框架内容为空');
+        }
+        $sn = 5;
+        $length = 80;
+        if ($driverType === AiPersonaCopywritingLibrary::DRIVER_TYPE_NEWS) {
+            $sn = 2;
+            $length = 80;
+        } elseif ($driverType === AiPersonaCopywritingLibrary::DRIVER_TYPE_ORAL) {
+            $sn = 0;
+            $length = 100;
+        }
+        $persona = sprintf(
+            "姓名：%s\n行业：%s\n所在地：%s\n主要服务：%s\n目标客户：%s\n卖点：%s",
+            (string)($map['name'] ?? ''),
+            (string)($map['industry'] ?? ''),
+            (string)($map['city'] ?? ''),
+            (string)($map['service'] ?? ''),
+            (string)($map['customers'] ?? ''),
+            (string)($map['selling'] ?? '')
+        );
+        $result = AutoDeviceSettingLogic::copywriting([
+            'keywords' => $frame,
+            'number' => 1,
+            'sn' => $sn,
+            'length' => $length,
+            'persona' => $persona,
+            'original' => '',
+            'voice' => '',
+            'hook' => '',
+        ], $userId, 6);
+        $content = trim((string)($result['content'][0] ?? ''));
+        if ($content === '') {
+            throw new \RuntimeException('提示词框架生成文案失败');
+        }
+        return ['title' => self::autoTitle($content), 'content' => $content];
     }
 
     public static function rewrite(string $text, array $persona): string

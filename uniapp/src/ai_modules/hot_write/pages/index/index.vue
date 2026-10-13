@@ -818,7 +818,7 @@ const handleCreate = async () => {
 
 const onPrePublish = (task: any) => {
     uni.$u.route({
-        url: "/ai_modules/digital_human/pages/montage_publish/montage_publish",
+        url: "/ai_modules/digital_human_create/pages/montage_publish/montage_publish",
         params: {
             task_id: JSON.stringify([task.id]),
             source: ManualPublishSourceEnum.HOT_WRITE,

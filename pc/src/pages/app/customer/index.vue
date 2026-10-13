@@ -18,7 +18,7 @@ import { SidebarTypeEnum } from "./_enums";
 const { sidebar, sidebarIndex, getComponents, getSliderIndex } = useSidebar();
 
 sidebar.value = [
-    { name: "采集任务", components: markRaw(CreateTask), type: SidebarTypeEnum.AUTO_GET_CUSTOMER },
+    { name: "采集任务", components: markRaw(CreateTask), type: SidebarTypeEnum.AUTO_GET_CUSTOMER},
     { name: "评论获客", components: "", type: SidebarTypeEnum.COMMENT_GET_CUSTOMER, disabled: true },
     { name: "私信获客", components: "", type: SidebarTypeEnum.MESSAGE_GET_CUSTOMER, disabled: true },
     { name: "采集加微", components: markRaw(AutoAddWechat), type: SidebarTypeEnum.AUTO_ADD_WECHAT },

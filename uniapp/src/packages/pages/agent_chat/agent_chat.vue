@@ -439,7 +439,7 @@ const resetChatState = () => {
 // ─────────────────────────────────────────────
 const handleBack = () => {
     if (isFromShare.value) {
-        uni.$u.route({ url: "/packages/pages/chat/chat", type: "redirect" });
+        uni.$u.route({ url: "/packages_core/pages/chat/chat", type: "redirect" });
         return;
     }
     handleChatClose();

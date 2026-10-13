@@ -870,6 +870,7 @@ class GeoLogic extends BaseLogic
                 ->whereOr('price', '<=', 0)
                 ->whereOr('platform_code', 'in', ['wechat_oa', 'cnblogs', 'baijiahao', 'yuque']);
         });
+        $q->where('provider_code', '<>', 'sph');
         if (!empty($filter['category'])) $q->where('category', $filter['category']);
         if (!empty($filter['type'])) $q->where('type', $filter['type']);
         if (!empty($filter['can_geo_rank'])) $q->where('can_geo_rank', 1);

@@ -55,8 +55,32 @@
                 </text>
             </view>
 
+            <view v-if="state.publishMode === 1" class="mb-[26rpx]">
+                <view class="lib-seg">
+                    <view
+                        class="lib-seg-item"
+                        :class="state.materialFolderView === 'all' ? 'lib-seg-item--on' : ''"
+                        @click="actions.switchMaterialScope('all')">
+                        <text class="lib-seg-label">全部</text>
+                    </view>
+                    <view
+                        class="lib-seg-item"
+                        :class="state.materialFolderView === 'groups' ? 'lib-seg-item--on' : ''"
+                        @click="actions.switchMaterialScope('groups')">
+                        <text class="lib-seg-label">分组</text>
+                    </view>
+                </view>
+            </view>
+            <view
+                v-if="state.publishMode === 1 && state.materialFolderId !== null"
+                class="mat-folder-back active:opacity-70"
+                @click="actions.backMaterialFolder()">
+                <u-icon name="arrow-left" color="#0761D9" size="28"></u-icon>
+                <text class="line-clamp-1">{{ state.materialFolderName || "未分组" }}</text>
+            </view>
+
             <view class="material-toolbar">
-                <view class="material-toolbar-filters">
+                <view v-if="!state.showingMaterialGroupList" class="material-toolbar-filters">
                     <view
                         v-for="(filter, index) in state.materialFilters"
                         :key="filter.name"
@@ -71,8 +95,36 @@
                 </view>
             </view>
 
+            <view v-if="state.showingMaterialGroupList" class="mat-group-list">
+                <view class="mat-group-create active:opacity-70" @click="openGroupName()">
+                    <u-icon name="plus" color="#0761D9" size="28"></u-icon>
+                    <text>新建分组</text>
+                </view>
+                <view
+                    v-for="folder in state.materialFolders"
+                    :key="folder.id"
+                    class="mat-group-row active:opacity-70"
+                    @click="actions.openMaterialFolder(folder)">
+                    <view class="min-w-0 flex-1">
+                        <text class="mat-group-name line-clamp-1">{{ folder.name }}</text>
+                        <text class="mat-group-count">{{ folder.material_count }} 个素材</text>
+                    </view>
+                    <view class="mat-group-manage active:opacity-70" @click.stop="manageMaterialGroup(folder)">
+                        <text>管理</text>
+                    </view>
+                </view>
+                <view
+                    class="mat-group-row active:opacity-70"
+                    @click="actions.openMaterialFolder({ id: 0, name: '未分组' })">
+                    <view class="min-w-0 flex-1">
+                        <text class="mat-group-name">未分组</text>
+                        <text class="mat-group-count">{{ state.ungroupedCount }} 个素材</text>
+                    </view>
+                </view>
+            </view>
+
             <view
-                v-if="state.publishMode === 1 && state.hasOverusedMaterial"
+                v-if="state.publishMode === 1 && !state.showingMaterialGroupList && state.hasOverusedMaterial"
                 class="bg-[#FFF7ED] rounded-[28rpx] px-[26rpx] py-[22rpx] flex gap-[16rpx] mb-[18rpx] border border-solid border-[#FED7AA]">
                 <u-icon name="warning" color="#F97316" size="28" class="shrink-0 mt-[2rpx]"></u-icon>
                 <text class="text-xs text-[#EA580C] leading-relaxed">
@@ -81,7 +133,7 @@
             </view>
 
             <view
-                v-if="state.publishMode === 1 && !state.hasSlicingMaterial && state.failedMaterialCount > 0"
+                v-if="state.publishMode === 1 && !state.showingMaterialGroupList && !state.hasSlicingMaterial && state.failedMaterialCount > 0"
                 class="bg-[#FFEAEC] rounded-[28rpx] px-[26rpx] py-[22rpx] flex items-center gap-[16rpx] mb-[18rpx] border border-solid border-[#FCA5A5]">
                 <u-icon name="close-circle" color="#F56C6C" size="28" class="shrink-0"></u-icon>
                 <text class="flex-1 min-w-0 text-xs text-[#CC2330] leading-relaxed">
@@ -98,13 +150,14 @@
             <slice-progress
                 v-if="
                     state.publishMode === 1 &&
+                    !state.showingMaterialGroupList &&
                     state.materialFilters[state.activeMaterialFilter]?.value !== 2 &&
                     state.hasSlicingTask &&
                     (state.hasSlicingMaterial || state.failedMaterialCount === 0)
                 "
                 :statistics="state.sliceStatistics" />
 
-            <view v-if="state.materialList.length" class="resource-grid">
+            <view v-if="!state.showingMaterialGroupList && state.materialList.length" class="resource-grid">
                 <view
                     v-for="item in state.materialList"
                     :key="item.id"
@@ -290,7 +343,7 @@
 
             <!-- 空态是这一步的操作台：说清要传到什么程度、什么样的能用 -->
             <resource-empty-state
-                v-else-if="!state.materialLoading && state.materialList.length === 0"
+                v-else-if="!state.showingMaterialGroupList && !state.materialLoading && state.materialList.length === 0"
                 :icon="state.publishMode === 1 ? 'play-circle' : 'play-right-fill'"
                 :title="state.publishMode === 1 ? '先准备一组剪辑素材' : '添加可直接使用的成品'"
                 :description="
@@ -307,7 +360,7 @@
                     </view>
                 </template>
             </resource-empty-state>
-            <view class="py-[24rpx] flex items-center justify-center gap-[12rpx]">
+            <view v-if="!state.showingMaterialGroupList" class="py-[24rpx] flex items-center justify-center gap-[12rpx]">
                 <u-loading v-if="state.materialLoading" mode="circle" size="28" color="#999999"></u-loading>
                 <text v-if="state.materialLoading" class="text-xs text-[#999999]">加载中...</text>
                 <text
@@ -341,6 +394,12 @@
                         class="text-xs text-[#999999] bg-[#F4F6FA] border border-solid border-[#E2E2E2] rounded-full px-[30rpx] py-[14rpx]"
                         @click="actions.cancelBatchDelete()">
                         取消
+                    </view>
+                    <view
+                        v-if="state.publishMode === 1"
+                        class="text-xs text-[#0761D9] bg-[#E8F1FF] rounded-full px-[30rpx] py-[14rpx]"
+                        @click="openMoveSheet()">
+                        移动至
                     </view>
                     <view
                         class="text-xs text-white bg-[#F56C6C] rounded-full px-[30rpx] py-[14rpx]"
@@ -692,6 +751,29 @@
                                 {{ tag }}
                             </text>
                         </view>
+                        <view
+                            v-if="!isPublishCopy(item.library_type) && hasPairedPublish(item)"
+                            class="mt-[12rpx] rounded-[16rpx] bg-[#F7F9FC] px-[16rpx] py-[12rpx]">
+                            <text class="block text-[22rpx] text-[#8A97A8]">发布文案</text>
+                            <text
+                                v-if="item.publish_title"
+                                class="block mt-[6rpx] text-[26rpx] text-[#334155] break-all line-clamp-2">
+                                {{ item.publish_title }}
+                            </text>
+                            <text
+                                v-if="item.publish_content"
+                                class="block mt-[6rpx] text-[24rpx] text-[#647184] leading-[1.5] break-all line-clamp-2">
+                                {{ item.publish_content }}
+                            </text>
+                            <view v-if="topicTags(item.publish_topic || '').length" class="flex flex-wrap gap-[10rpx] mt-[8rpx]">
+                                <text
+                                    v-for="(tag, i) in topicTags(item.publish_topic || '')"
+                                    :key="i"
+                                    class="text-[24rpx] leading-[1.65] text-[#647184]">
+                                    {{ tag }}
+                                </text>
+                            </view>
+                        </view>
                         <view v-if="!state.copyBatchMode" class="flex items-center gap-[20rpx] mt-[8rpx]">
                             <view class="resource-button resource-button--text active:opacity-70" @click.stop="actions.copyText(item)">
                                 <text class="resource-button-label">复制</text>
@@ -741,7 +823,7 @@
                     <u-icon :name="copyTipExpanded ? 'arrow-up' : 'arrow-down'" color="#647184" size="22"></u-icon>
                 </view>
                 <text v-if="copyTipExpanded" class="resource-meta block">
-                    “视频驱动文案”用于 AI 生成视频时驱动画面与口播；“发布文案”用于发布到平台的标题、正文与话题。
+                    “视频驱动文案”用于生成视频。同一行可以带一份发布文案，生成时会一起用上；没带的仍走发布文案库、自定义或 AI。“发布文案”是独立库，只在这条视频没有配对时使用。
                 </text>
             </view>
 
@@ -780,6 +862,56 @@
             :material-kind="state.materialKind"
             :publish-mode="state.publishMode"
             :material-min="state.materialMin" />
+        <u-popup v-model="showGroupNamePopup" mode="center" width="86%" border-radius="24">
+            <view class="mat-name-popup">
+                <text class="mat-name-title">{{ editingGroupId ? "修改名称" : "新建分组" }}</text>
+                <input
+                    v-model="groupNameDraft"
+                    class="mat-name-input"
+                    maxlength="30"
+                    placeholder="分组名称，最多 30 个字"
+                    confirm-type="done"
+                    @confirm="submitGroupName" />
+                <view class="mat-name-actions">
+                    <view class="mat-name-btn" @click="showGroupNamePopup = false">取消</view>
+                    <view class="mat-name-btn mat-name-btn--on" @click="submitGroupName">确定</view>
+                </view>
+            </view>
+        </u-popup>
+        <u-popup v-model="showUploadGroupSheet" mode="bottom" border-radius="24" :safe-area-inset-bottom="true">
+            <view class="mat-move-sheet">
+                <text class="mat-name-title">保存到分组</text>
+                <scroll-view scroll-y class="mat-move-list">
+                    <view
+                        v-for="folder in state.materialFolders"
+                        :key="folder.id"
+                        class="mat-move-row active:opacity-70"
+                        @click="chooseUploadGroup(folder.id)">
+                        <text class="line-clamp-1">{{ folder.name }}</text>
+                    </view>
+                    <view class="mat-move-row active:opacity-70" @click="chooseUploadGroup(0)">
+                        <text>未分组</text>
+                    </view>
+                </scroll-view>
+            </view>
+        </u-popup>
+        <u-popup v-model="showMoveSheet" mode="bottom" border-radius="24" :safe-area-inset-bottom="true">
+            <view class="mat-move-sheet">
+                <text class="mat-name-title">移动至</text>
+                <scroll-view scroll-y class="mat-move-list">
+                    <view
+                        v-for="folder in state.materialFolders"
+                        :key="folder.id"
+                        class="mat-move-row active:opacity-70"
+                        @click="chooseMoveTarget(folder.id)">
+                        <text class="line-clamp-1">{{ folder.name }}</text>
+                    </view>
+                    <view class="mat-move-row active:opacity-70" @click="chooseMoveTarget(0)">
+                        <text>未分组</text>
+                    </view>
+                </scroll-view>
+            </view>
+        </u-popup>
     </view>
 </template>
 
@@ -828,6 +960,12 @@ const props = defineProps<{
         squareJoinedIds?: number[];
         materialLoading: boolean;
         materialFinished: boolean;
+        materialFolderView: "all" | "groups";
+        materialFolderId: number | null;
+        materialFolderName: string;
+        materialFolders: { id: number; name: string; material_count: number }[];
+        ungroupedCount: number;
+        showingMaterialGroupList: boolean;
         hasOverusedMaterial: boolean;
         failedMaterialCount: number;
         hasSlicingMaterial: boolean;
@@ -869,8 +1007,16 @@ const props = defineProps<{
         closePublicCopyPicker: () => void;
         switchMaterialTab: (tab: MaterialTabEnum) => void;
         switchPublishMode: (mode: PublishMode) => void;
+        switchMaterialScope: (view: "all" | "groups") => void;
+        openMaterialFolder: (folder: { id: number; name: string }) => void;
+        backMaterialFolder: () => void;
+        saveMaterialGroup: (name: string, id?: number) => Promise<boolean>;
+        deleteMaterialGroup: (id: number) => void;
+        moveMaterials: (groupId: number) => Promise<boolean>;
+        loadMaterialGroups: () => Promise<void>;
         switchMaterialKind: (kind: MaterialKindEnum) => void;
         upload: () => void;
+        uploadToGroup: (groupId: number) => void;
         openDirectUpload: () => void;
         uploadMusic: () => void;
         toggleMusicBatch: () => void;
@@ -915,6 +1061,11 @@ const props = defineProps<{
 }>();
 
 const showLibrarySetting = ref(false);
+const showGroupNamePopup = ref(false);
+const groupNameDraft = ref("");
+const editingGroupId = ref(0);
+const showMoveSheet = ref(false);
+const showUploadGroupSheet = ref(false);
 const showMaterialRequirements = ref(false);
 const showCopyActionSheet = ref(false);
 const showMaterialActionSheet = ref(false);
@@ -923,6 +1074,9 @@ const localOverlayVisible = computed(
         Boolean(props.squarePickerVisible) ||
         Boolean(props.publicCopyPickerVisible) ||
         showLibrarySetting.value ||
+        showGroupNamePopup.value ||
+        showMoveSheet.value ||
+        showUploadGroupSheet.value ||
         showMaterialRequirements.value ||
         showCopyActionSheet.value ||
         showMaterialActionSheet.value ||
@@ -961,6 +1115,8 @@ const musicExtLabel = (url = ""): string => {
 const isCopyNews = computed(() => isNewsCopy(props.state.copyTab, props.state.copyDriveType));
 const isCopyPublish = computed(() => isPublishCopy(props.state.copyTab));
 const topicTags = (topic: string): string[] => (topic ? topic.split(/\s+/).filter(Boolean) : []);
+const hasPairedPublish = (item: { publish_title?: string; publish_content?: string; publish_topic?: string }): boolean =>
+    Boolean(item.publish_title || item.publish_content || item.publish_topic);
 const currentCopyTitle = computed(
     () => isCopyPublish.value
         ? "发布文案"
@@ -970,15 +1126,96 @@ const currentCopyTitle = computed(
 /** 文案说明默认收起，避免与多层筛选抢首屏 */
 const copyTipExpanded = ref(false);
 
+const openGroupName = (folder?: { id: number; name: string }): void => {
+    editingGroupId.value = folder?.id || 0;
+    groupNameDraft.value = folder?.name || "";
+    showGroupNamePopup.value = true;
+};
+
+const submitGroupName = async (): Promise<void> => {
+    const ok = await props.actions.saveMaterialGroup(groupNameDraft.value, editingGroupId.value);
+    if (ok) showGroupNamePopup.value = false;
+};
+
+const manageMaterialGroup = (folder: { id: number; name: string }): void => {
+    showMaterialActionSheet.value = true;
+    uni.showActionSheet({
+        itemList: ["修改名称", "删除分组"],
+        complete: () => {
+            showMaterialActionSheet.value = false;
+        },
+        success: ({ tapIndex }) => {
+            if (tapIndex === 0) {
+                openGroupName(folder);
+                return;
+            }
+            uni.showModal({
+                title: "删除分组",
+                content: "分组里的素材会回到未分组，文件不会删除。",
+                confirmColor: "#F56C6C",
+                confirmText: "删除",
+                success: ({ confirm }) => {
+                    if (confirm) props.actions.deleteMaterialGroup(folder.id);
+                },
+            });
+        },
+    });
+};
+
+const openMoveSheet = async (): Promise<void> => {
+    if (!props.state.selectedMaterialCount) {
+        uni.$u.toast("请选择要移动的素材");
+        return;
+    }
+    await props.actions.loadMaterialGroups();
+    showMoveSheet.value = true;
+};
+
+const chooseMoveTarget = async (groupId: number): Promise<void> => {
+    const ok = await props.actions.moveMaterials(groupId);
+    if (ok) showMoveSheet.value = false;
+};
+
+const chooseUploadGroup = (groupId: number): void => {
+    showUploadGroupSheet.value = false;
+    props.actions.uploadToGroup(groupId);
+};
+
 const handleMaterialActions = (): void => {
     const items: { label: string; run: () => void }[] = [];
-    if (!props.state.batchDeleteMode && props.state.publishMode === 1) {
+    if (
+        !props.state.batchDeleteMode &&
+        props.state.publishMode === 1 &&
+        props.state.materialFolderView === "all"
+    ) {
         items.push({ label: "从素材库广场添加", run: () => props.actions.openSquarePicker() });
     }
     if (!props.state.batchDeleteMode) {
-        items.push({ label: "上传", run: () => props.actions.upload() });
+        items.push({
+            label: "上传",
+            run: () => {
+                if (!props.state.showingMaterialGroupList) {
+                    props.actions.upload();
+                    return;
+                }
+                props.actions.loadMaterialGroups().finally(() => {
+                    showUploadGroupSheet.value = true;
+                });
+            },
+        });
     }
-    if (props.state.publishMode === 1 && props.state.materialList.length) {
+    if (
+        props.state.publishMode === 1 &&
+        !props.state.showingMaterialGroupList &&
+        !props.state.batchDeleteMode &&
+        props.state.materialList.length
+    ) {
+        items.push({
+            label: "批量移动至分组",
+            run: () => props.actions.toggleBatchDelete(),
+        });
+    }
+    if (props.state.publishMode === 1 && !props.state.showingMaterialGroupList && props.state.materialList.length) {
         items.push({
             label: props.state.batchDeleteMode ? "退出批量删除" : "批量删除",
             run: () => props.actions.toggleBatchDelete(),
@@ -1210,6 +1447,76 @@ const handleCopyManage = (): void => {
 .mat-gap {
     @apply flex items-center justify-between gap-[24rpx] px-[24rpx] py-[20rpx] rounded-[20rpx]
         bg-[#FFF8EB] border-[2rpx] border-solid border-[#F3E5C8] text-[24rpx] text-[#936114];
+}
+
+.mat-folder-back {
+    @apply flex items-center gap-[8rpx] mb-[20rpx] text-[28rpx] font-[650] text-[#0761D9];
+}
+
+.mat-group-list {
+    @apply flex flex-col gap-[16rpx] mb-[20rpx];
+}
+
+.mat-group-create {
+    @apply min-h-[88rpx] px-[24rpx] rounded-[20rpx] flex items-center justify-center gap-[8rpx] text-[26rpx] text-[#0761D9] bg-[#E8F1FF];
+}
+
+.mat-group-row {
+    @apply min-h-[108rpx] px-[24rpx] py-[18rpx] rounded-[20rpx] flex items-center gap-[16rpx] bg-white border-[2rpx] border-solid border-[#E1E7EF];
+}
+
+.mat-group-name {
+    @apply block text-[28rpx] text-[#26364E];
+}
+
+.mat-group-count {
+    @apply block mt-[6rpx] text-[22rpx] text-[#748297];
+}
+
+.mat-group-manage {
+    @apply shrink-0 px-[22rpx] py-[10rpx] rounded-full text-[24rpx] text-[#0761D9] bg-[#E8F1FF];
+}
+
+.mat-name-popup,
+.mat-move-sheet {
+    @apply px-[32rpx] pt-[36rpx] pb-[28rpx];
+}
+
+.mat-name-title {
+    @apply block text-center text-[30rpx] font-[650] text-[#26364E];
+}
+
+.mat-name-input {
+    @apply mt-[28rpx] h-[80rpx] px-[20rpx] rounded-[16rpx] bg-[#F4F6FA] text-[28rpx];
+}
+
+.mat-name-actions {
+    @apply mt-[28rpx] flex gap-[16rpx];
+}
+
+.mat-name-btn {
+    @apply flex-1 h-[80rpx] rounded-full flex items-center justify-center text-[28rpx] text-[#607087] bg-[#F4F6FA];
+}
+
+.mat-name-btn--on {
+    @apply text-white bg-[#0761D9];
+}
+
+.mat-move-list {
+    margin-top: 12rpx;
+    max-height: 60vh;
+    background: transparent;
+    border: none;
+}
+
+.mat-move-row {
+    display: flex;
+    align-items: center;
+    min-height: 88rpx;
+    font-size: 30rpx;
+    color: #26364e;
+    background: transparent;
+    border: none;
 }
 
 .lib-seg {

@@ -1061,7 +1061,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
     /**
      * 创建任务逻辑
      */
-    protected static function createImitationVideoTask($device, $persona, $config, $groupedData, $rewrittenText, $title, $taskType, $source, int $isDowngrade = 0, $materialKeywords = null, $execTime = '', string $publishTopic = '')
+    protected static function createImitationVideoTask($device, $persona, $config, $groupedData, $rewrittenText, $title, $taskType, $source, int $isDowngrade = 0, $materialKeywords = null, $execTime = '', string $publishTopic = '', array $pairedPublish = [])
     {
         // 注:转码就绪/分辨率门禁已下沉到 ShanjianVideoTaskLogic::compositeVideoCron 下发闪剪前统一把关。
         // 这里只负责建 task(status=0,创作记录显示"生成中"),转码完成后由 cron 自动下发。
@@ -1156,6 +1156,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
             if ($device instanceof CloudSvDevice) {
                 $extradata = ShanjianVideoTask::mergePublishCopy($extradata, '', '', '');
             }
+            $extradata = self::applyPairedPublish($extradata, $pairedPublish);
             if (empty($voiceId) && $taskType != 4) throw new \Exception('未绑定有效音色');
 
             // MiniMax 仅数字人口播(1)/素材混剪(3)需要；新闻体(4)不走音频合成
@@ -1452,6 +1453,19 @@ class CopywritingImitationLogic extends BasePersonaLogic
     }
 
     /**
+     * 视频文案带了发布标题或正文时，写成片快照。两边都空则不覆盖，云端之后仍按原规则生成。
+     */
+    protected static function applyPairedPublish(array $extra, array $paired): array
+    {
+        $title = trim((string)($paired['title'] ?? ''));
+        $content = trim((string)($paired['content'] ?? ''));
+        if ($title === '' && $content === '') {
+            return $extra;
+        }
+        return ShanjianVideoTask::mergePublishCopy($extra, $title, $content, (string)($paired['topic'] ?? ''));
+    }
+
+    /**
      * 创建失败的视频合成任务记录（Setting + Task）
      */
     public static function createFailedSynthesisTask($device, $persona, int $taskType, string $remark, array $options = []): ?array
@@ -1491,6 +1505,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
             if ($device instanceof CloudSvDevice) {
                 $extradata = ShanjianVideoTask::mergePublishCopy($extradata, '', '', '');
             }
+            $extradata = self::applyPairedPublish($extradata, (array)($options['paired_publish'] ?? []));
 
             $settingName = $namePrefix . '-' . mb_substr($title, 0, 8) . '-' . date('YmdHis') . '-' . $typeName;
             $setting = ShanjianVideoSetting::create([

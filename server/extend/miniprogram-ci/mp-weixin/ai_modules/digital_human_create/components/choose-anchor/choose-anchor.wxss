@@ -1,0 +1,1 @@
+.rotate-anim.data-v-da3bfc23{animation:spin-da3bfc23 1s linear infinite}@keyframes spin-da3bfc23{0%{transform:rotate(0)}to{transform:rotate(360deg)}}

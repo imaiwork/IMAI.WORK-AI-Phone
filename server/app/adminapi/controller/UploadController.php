@@ -127,6 +127,20 @@ class UploadController extends BaseAdminController
                         echo json_encode($result);
                         exit;
                     }
+                    // 重新上传时先清空旧的 mp-weixin，否则被删掉/挪走的页面会一直残留在目录里，
+                    // 微信按目录实际文件算分包体积（不看 app.json），残留越多越容易撞 2048KB 上限。
+                    // 只清 mp-weixin 这一个目录，private.*.key / node_modules / upload.js 都在它外面。
+                    $hasMpWeixin = false;
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        if (strncmp($zip->getNameIndex($i), 'mp-weixin/', 10) === 0) {
+                            $hasMpWeixin = true;
+                            break;
+                        }
+                    }
+                    $mpWeixinDir = $extractDir . 'mp-weixin';
+                    if ($hasMpWeixin && is_dir($mpWeixinDir)) {
+                        del_target_dir($mpWeixinDir, true);
+                    }
                     // 开始解压
                     $extractedFiles = [];
                     $errorCount = 0;

@@ -578,13 +578,13 @@ import config from "@/config";
 import { getUserChatConfig, saveUserChatConfig } from "@/api/chat";
 import { getAllAgentList as getAgentListApi, getAgentDetail } from "@/api/agent";
 import { getRect, setFormData } from "@/utils/util";
-import { useStableTextareaAutoHeight } from "@/packages/pages/chat/composables/useStableTextareaAutoHeight";
-import { useKeyboardSpacer } from "@/packages/pages/chat/composables/useKeyboardSpacer";
-import { useUploadMisfireGuard } from "@/packages/pages/chat/composables/useStudioGuards";
+import { useStableTextareaAutoHeight } from "@/hooks/useStableTextareaAutoHeight";
+import { useKeyboardSpacer } from "@/hooks/useKeyboardSpacer";
+import { useUploadMisfireGuard } from "@/hooks/useStudioGuards";
 import { useAppStore } from "@/stores/app";
 import { ModelIdEnum } from "@/enums/appEnums";
-import FileItem from "./components/file-item.vue";
-import MountPopup from "./components/mount-popup.vue";
+import FileItem from "@/components/chat-record-item/file-item.vue";
+import MountPopup from "@/components/mount-popup/mount-popup.vue";
 import { useUserStore } from "@/stores/user";
 import {
     AGENT_UNAVAILABLE_TIP,

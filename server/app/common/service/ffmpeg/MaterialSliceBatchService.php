@@ -227,6 +227,9 @@ class MaterialSliceBatchService
      */
     public function startFromFile(int $userId, int $fileId, int $personaId, string $scene, array $extra = []): array
     {
+        if ((int)($extra['group_id'] ?? 0) <= 0) {
+            $extra['group_id'] = max(0, (int)File::where('id', $fileId)->value('group_id'));
+        }
         $quote = $this->quote($userId, [
             'persona_id' => $personaId,
             'scene' => $scene,
@@ -283,6 +286,7 @@ class MaterialSliceBatchService
                 'batch_no' => $batchNo,
                 'user_id' => $userId,
                 'persona_id' => $personaId,
+                'group_id' => max(0, (int)($extra['group_id'] ?? 0)),
                 'scene' => $scene,
                 'process_mode' => $mode,
                 'status' => VideoSlice::STATUS_PENDING,
@@ -387,6 +391,7 @@ class MaterialSliceBatchService
                 // 转码阶段已截到封面则不再强制重截；否则兜底再截
                 'ensure_thumbnail' => $thumbnailUrl === '',
                 'keep_original' => Material::KEEP_ORIGINAL_NO,
+                'group_id' => max(0, (int)($extra['group_id'] ?? 0)),
             ]
         );
 
@@ -937,6 +942,7 @@ class MaterialSliceBatchService
             'source_video_id' => (int)$slice->original_video_id,
             'slice_status' => Material::SLICE_STATUS_FAILED,
             'slice_batch_id' => $batchId,
+            'group_id' => max(0, (int)($slice->group_id ?? 0)),
             'update_time' => $now,
         ];
 
@@ -1010,6 +1016,7 @@ class MaterialSliceBatchService
                         // 仍保持 use_status=禁用，整批 publishBatch 后再启用
                         'slice_status' => Material::SLICE_STATUS_SUCCESS,
                         'slice_batch_id' => (int)$slice->id,
+                        'group_id' => max(0, (int)($slice->group_id ?? 0)),
                         'create_time' => time(),
                         'update_time' => time(),
                     ]);

@@ -134,6 +134,14 @@
                         </template>
                     </ElTableColumn>
 
+                    <ElTableColumn label="绑定CDK" min-width="220" show-overflow-tooltip>
+                        <template #default="{ row }">
+                            <span class="text-[13px] font-medium text-[#64748B] break-all">{{
+                                row.auth_code || "-"
+                            }}</span>
+                        </template>
+                    </ElTableColumn>
+
                     <ElTableColumn label="授权状态" width="260">
                         <template #default="{ row }">
                             <div class="flex items-center justify-center gap-2" @click.stop>

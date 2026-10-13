@@ -14,7 +14,7 @@
 	],
 	"subPackages": [
 		{
-			"root": "packages",
+			"root": "packages_core",
 			"pages": [
 				{
 					"path": "pages/home/home",
@@ -27,6 +27,23 @@
 						"share": true
 					}
 				},
+				{
+					"path": "pages/chat/chat",
+					"style": {
+						"navigationBarTitleText": "",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"share": true
+					}
+				}
+			]
+		},
+		{
+			"root": "packages",
+			"pages": [
 				{
 					"path": "pages/avatar_cropper/avatar_cropper",
 					"style": {
@@ -128,18 +145,6 @@
 					},
 					"meta": {
 						"auth": true
-					}
-				},
-				{
-					"path": "pages/chat/chat",
-					"style": {
-						"navigationBarTitleText": "",
-						"enablePullDownRefresh": false,
-						"navigationStyle": "custom",
-						"disableScroll": true
-					},
-					"meta": {
-						"share": true
 					}
 				},
 				{
@@ -506,28 +511,6 @@
 					}
 				},
 				{
-					"path": "pages/szr_create/szr_create",
-					"style": {
-						"navigationBarTitleText": "数字人纯口播视频"
-					},
-					"meta": {
-						"share": true,
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/tone_clone/tone_clone",
-					"style": {
-						"navigationBarTitleText": "音频克隆",
-						"enablePullDownRefresh": false,
-						"navigationStyle": "custom",
-						"disableScroll": true
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
 					"path": "pages/audio_manage/audio_manage",
 					"style": {
 						"navigationBarTitleText": "音频管理"
@@ -558,42 +541,9 @@
 					}
 				},
 				{
-					"path": "pages/szr_copywriter/szr_copywriter",
-					"style": {
-						"navigationBarTitleText": "数字人口播文案",
-						"disableScroll": true,
-						"navigationStyle": "custom"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/szr_ai_copywriter/szr_ai_copywriter",
-					"style": {
-						"navigationBarTitleText": "AI生成文案",
-						"navigationBarBackgroundColor": "#F9FAFB"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
 					"path": "pages/styles_choose/styles_choose",
 					"style": {
 						"navigationBarTitleText": "剪辑风格选择"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/montage_create/montage_create",
-					"style": {
-						"navigationBarTitleText": "智能数字人",
-						"enablePullDownRefresh": false,
-						"navigationStyle": "custom",
-						"disableScroll": true
 					},
 					"meta": {
 						"auth": true
@@ -626,6 +576,84 @@
 					"path": "pages/anchor_auth_camera/anchor_auth_camera",
 					"style": {
 						"navigationBarTitleText": "授权视频",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/choose_create_type/choose_create_type",
+					"style": {
+						"navigationBarTitleText": "选择视频类型",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					}
+				},
+				{
+					"path": "pages/music_choose/music_choose",
+					"style": {
+						"navigationBarTitleText": "背景音乐"
+					},
+					"meta": {
+						"auth": true
+					}
+				}
+			]
+		},
+		{
+			"root": "ai_modules/digital_human_create",
+			"pages": [
+				{
+					"path": "pages/szr_create/szr_create",
+					"style": {
+						"navigationBarTitleText": "数字人纯口播视频"
+					},
+					"meta": {
+						"share": true,
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/tone_clone/tone_clone",
+					"style": {
+						"navigationBarTitleText": "音频克隆",
+						"enablePullDownRefresh": false,
+						"navigationStyle": "custom",
+						"disableScroll": true
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/szr_copywriter/szr_copywriter",
+					"style": {
+						"navigationBarTitleText": "数字人口播文案",
+						"disableScroll": true,
+						"navigationStyle": "custom"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/szr_ai_copywriter/szr_ai_copywriter",
+					"style": {
+						"navigationBarTitleText": "AI生成文案",
+						"navigationBarBackgroundColor": "#F9FAFB"
+					},
+					"meta": {
+						"auth": true
+					}
+				},
+				{
+					"path": "pages/montage_create/montage_create",
+					"style": {
+						"navigationBarTitleText": "智能数字人",
 						"enablePullDownRefresh": false,
 						"navigationStyle": "custom",
 						"disableScroll": true
@@ -694,15 +722,6 @@
 					},
 					"meta": {
 						"auth": true
-					}
-				},
-				{
-					"path": "pages/choose_create_type/choose_create_type",
-					"style": {
-						"navigationBarTitleText": "选择视频类型",
-						"enablePullDownRefresh": false,
-						"navigationStyle": "custom",
-						"disableScroll": true
 					}
 				},
 				{
@@ -788,15 +807,6 @@
 					"path": "pages/sora_role_library/sora_role_library",
 					"style": {
 						"navigationBarTitleText": "角色库"
-					},
-					"meta": {
-						"auth": true
-					}
-				},
-				{
-					"path": "pages/music_choose/music_choose",
-					"style": {
-						"navigationBarTitleText": "背景音乐"
 					},
 					"meta": {
 						"auth": true
@@ -1818,9 +1828,9 @@
 			"router-navigate": "uniapp-router-next/components/router-navigate/router-navigate.vue",
 			"^(?!z-paging-refresh|z-paging-load-more)z-paging(.*)": "z-paging/components/z-paging$1/z-paging$1.vue",
 			"chat-scroll-view": "@/packages/components/chat-scroll-view/chat-scroll-view.vue",
-			"chat-record-item": "@/packages/components/chat-record-item/chat-record-item.vue",
-			"mp-html": "@/packages/uni_modules/mp-html/components/mp-html/mp-html.vue",
-			"ua-markdown": "@/packages/components/ua-markdown/ua-markdown.vue"
+			"chat-record-item": "@/components/chat-record-item/chat-record-item.vue",
+			"mp-html": "@/uni_modules/mp-html/components/mp-html/mp-html.vue",
+			"ua-markdown": "@/components/ua-markdown/ua-markdown.vue"
 		}
 	}
 }

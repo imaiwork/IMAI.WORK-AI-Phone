@@ -4,6 +4,15 @@
 
 | 变更日期 | 文件 | 变更人 | 变更说明 |
 | --- | --- | --- | --- |
+| 2026-10-10 | `src/ai_modules/person/pages/task_flow/task_flow.vue` | my | 24h自动任务流：0-6 点固定任务从早间任务内拆出，独立成一张分组卡片排在早间任务之前；早间任务时段收敛为 06:00-12:00，不再与固定时段重叠。 |
+| 2026-10-10 | `src/ai_modules/person/pages/task_flow/components/task-group.vue` | my | 任务卡片标题下新增一行说明文案；固定时段任务不展示左侧时间列（时间由分组头统一表达），「立即演示」一行随之左对齐。 |
+| 2026-10-10 | `src/ai_modules/person/pages/task_flow/stores/taskStore.ts` | my | 新增固定时段节点枚举 `FixedSlotScene`（爆款仿写 16、精准获客 17）与文案映射 `FIXED_SLOT_TASK_DESC`；独立于 `TaskScene` 维护，避免污染「添加任务」可选列表。 |
+| 2026-10-10 | `src/ai_modules/device/pages/choose_task_type/choose_task_type.vue` | my | 手动任务类型页隐藏发布朋友圈、自动加好友、朋友圈互动、个微接管四个入口，改用 `hidden` 标记过滤，条目代码保留待恢复。 |
+| 2026-10-10 | `src/ai_modules/device/pages/account_choose/account_choose.vue` | my | 账号选择页注释掉「微信」平台 Tab，代码保留待恢复。 |
+| 2026-10-10 | `src/ai_modules/hot_write/pages/detail/detail.vue` | my | 爆款复刻视频详情：键盘弹起时把「确认文案」抬到键盘上沿，避免被键盘挡住且点击被输入框失焦吞掉。 |
+| 2026-10-10 | `src/ai_modules/hot_write/pages/detail/components/step-content.vue` | my | 确认文案卡片在键盘弹起时隐藏卡片内按钮，改由页面确认条承接；标签输入聚焦也通知页面。 |
+| 2026-10-10 | `src/ai_modules/hot_write/pages/detail/components/image-text-detail.vue` | my | 图文复刻编辑标题/正文时，底部确认按钮按键盘高度上移，点击不再被键盘挡住。 |
+| 2026-10-10 | `src/ai_modules/hot_write/hooks/usePageKeyboardInset.ts` | my | 新增页面级键盘高度读取，供爆款复刻确认按钮避开键盘。 |
 | 2026-09-23 | `src/ai_modules/hotspot/pages/index/components/flow-popup.vue` | my | 主按钮费用角标改为固定高度并与文案垂直居中，避开小程序 button 不吃 flex 对齐。 |
 | 2026-09-23 | `src/ai_modules/hotspot/pages/index/components/flow-popup.vue` | my | 热点流程底部「更新入库」和主按钮收成 72rpx 高、24rpx 字；主文案单行显示，过长末尾省略。 |
 | 2026-09-23 | `src/ai_modules/hotspot/pages/index/components/flow-popup.vue` | my | 高级设置置灰时清空口播文案（含已回放内容），并在落缓存前清掉，避免下次打开再出现。 |

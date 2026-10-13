@@ -30,7 +30,10 @@ class CopywritingLibraryLists extends BaseApiDataLists implements ListsSearchInt
                 $query->where(function ($q) use ($keyword) {
                     $q->whereLike('title', '%' . $keyword . '%')
                         ->whereOr('content', 'like', '%' . $keyword . '%')
-                        ->whereOr('topic', 'like', '%' . $keyword . '%');
+                        ->whereOr('topic', 'like', '%' . $keyword . '%')
+                        ->whereOr('publish_title', 'like', '%' . $keyword . '%')
+                        ->whereOr('publish_content', 'like', '%' . $keyword . '%')
+                        ->whereOr('publish_topic', 'like', '%' . $keyword . '%');
                 });
             })
             ->order(['sort' => 'desc', 'id' => 'desc'])
@@ -86,7 +89,10 @@ class CopywritingLibraryLists extends BaseApiDataLists implements ListsSearchInt
                 $query->where(function ($q) use ($keyword) {
                     $q->whereLike('title', '%' . $keyword . '%')
                         ->whereOr('content', 'like', '%' . $keyword . '%')
-                        ->whereOr('topic', 'like', '%' . $keyword . '%');
+                        ->whereOr('topic', 'like', '%' . $keyword . '%')
+                        ->whereOr('publish_title', 'like', '%' . $keyword . '%')
+                        ->whereOr('publish_content', 'like', '%' . $keyword . '%')
+                        ->whereOr('publish_topic', 'like', '%' . $keyword . '%');
                 });
             })
             ->count();

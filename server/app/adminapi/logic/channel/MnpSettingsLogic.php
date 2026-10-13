@@ -111,6 +111,9 @@ class MnpSettingsLogic extends BaseLogic
                 throw new Exception('请先设置小程序上传私钥');
             }
 
+            // 清掉上一版残留文件，否则会被微信算进分包体积
+            MnpCiService::pruneStaleFiles(realpath('../extend/miniprogram-ci/mp-weixin'));
+
             //更换小程序域名
             $baseUrl = '../extend/miniprogram-ci/mp-weixin/config/index.js';
             $baseUrlData = file_get_contents($baseUrl);

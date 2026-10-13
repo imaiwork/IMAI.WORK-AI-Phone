@@ -92,7 +92,7 @@ const APP_JSON_EXAMPLE = `{
 // 小程序页面链接列表
 const MP_PAGES: { name: string; path: string }[] = [
     { name: "AI手机", path: "/pages/index/index" },
-    { name: "AI助手", path: "/packages/pages/chat/chat" },
+    { name: "AI助手", path: "/packages_core/pages/chat/chat" },
     { name: "AI创作", path: "/ai_modules/digital_human/pages/index/index" },
     { name: "我的", path: "/packages/pages/user/user" },
     { name: "AI手机管理", path: "/ai_modules/device/pages/index/index" },

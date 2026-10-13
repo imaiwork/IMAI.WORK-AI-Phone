@@ -191,11 +191,22 @@
 
                     <template v-else>
                         <task-group
+                            v-if="fixedSlotTasks.length > 0"
+                            title="固定任务"
+                            time-range="00:00 - 06:00"
+                            dot-color="#94A3B8"
+                            :tasks="fixedSlotTasks"
+                            :is-editable="false"
+                            :collapsed="collapsedGroups.fixedSlot"
+                            @demo="handleDemoTask"
+                            @toggle="toggleGroup('fixedSlot')" />
+
+                        <task-group
                             ref="morningGroupRef"
                             title="早间任务"
-                            time-range="00:00 - 12:00"
+                            time-range="06:00 - 12:00"
                             dot-color="#FB923C"
-                            :tasks="morningTasks"
+                            :tasks="morningRestTasks"
                             :is-editable="canEditTasks"
                             :collapsed="collapsedGroups.morning"
                             @delete="handleDeleteTask"
@@ -589,6 +600,11 @@ import {
 const SCENE_VIDEO_PUBLISH = 5;
 const MINUTES_PER_PLATFORM = 10;
 const FORBIDDEN_ZONE_END_MINS = 0; // 06:00 禁止排期区（分钟）
+// 0-6 点固定创作时段的分组边界。与上方「禁止排期」校验是两回事，各自独立，不要合并成一组常量
+const FIXED_SLOT_START_MINS = 0;
+const FIXED_SLOT_END_MINS = 360; // 06:00
+const NOON_MINS = 720; // 12:00
+const EVENING_START_MINS = 1080; // 18:00
 const DEFAULT_START_TIME = "08:00";
 const DEFAULT_END_TIME = minsToTime(timeToMins(DEFAULT_START_TIME) + MINUTES_PER_PLATFORM); // "08:10"
 const DEFAULT_TEMPLATE_NAME = "自定义任务流";
@@ -718,24 +734,16 @@ const showCurrentAddButton = computed(
 );
 
 // ─── 计算属性 ──────────────────────────────────────────────────
-const morningTasks = computed(() =>
-    displayTasks.value.filter((t) => {
-        const mins = timeToMins(t.time.split("-")[0]);
-        return mins >= FORBIDDEN_ZONE_END_MINS && mins < 720;
-    }),
-);
-const afternoonTasks = computed(() =>
-    displayTasks.value.filter((t) => {
-        const mins = timeToMins(t.time.split("-")[0]);
-        return mins >= 720 && mins < 1080;
-    }),
-);
-const eveningTasks = computed(() =>
-    displayTasks.value.filter((t) => {
-        const mins = timeToMins(t.time.split("-")[0]);
-        return mins >= 1080;
-    }),
-);
+const taskStartMins = (task: TaskItem): number => timeToMins(task.time.split("-")[0]);
+const tasksInRange = (from: number, to = Number.POSITIVE_INFINITY) =>
+    displayTasks.value.filter((t) => taskStartMins(t) >= from && taskStartMins(t) < to);
+
+/** 0-6 点固定任务：后端预设的锁死节点，独立成组排在早间任务之前 */
+const fixedSlotTasks = computed(() => tasksInRange(FIXED_SLOT_START_MINS, FIXED_SLOT_END_MINS));
+/** 早间任务：6-12 点可排期任务（0-6 点已被固定任务独占） */
+const morningRestTasks = computed(() => tasksInRange(FIXED_SLOT_END_MINS, NOON_MINS));
+const afternoonTasks = computed(() => tasksInRange(NOON_MINS, EVENING_START_MINS));
+const eveningTasks = computed(() => tasksInRange(EVENING_START_MINS));
 
 /** 添加：仅可添加类型；编辑：可添加类型 + 当前已关闭类型（仅当前弹窗临时合并） */
 const modalTaskConfigList = computed(() => {
@@ -785,6 +793,7 @@ const collapsedGroups = reactive<Record<string, boolean>>({
     morning: false,
     afternoon: false,
     evening: false,
+    fixedSlot: false,
 });
 const toggleGroup = (key: string) => {
     collapsedGroups[key] = !collapsedGroups[key];

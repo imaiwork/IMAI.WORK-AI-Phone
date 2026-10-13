@@ -73,6 +73,10 @@
                             class="form-tips text-success">
                             ✓ AppSecret 已配置
                         </div>
+                        <div class="form-tips">
+                            重置 AppSecret 后，请到微信公众平台「开发管理 → 开发设置」把服务器出口 IP 加入 IP
+                            白名单，否则小程序一键登录会授权失败。
+                        </div>
                     </el-form-item>
                     <el-form-item label="上传私钥">
                         <el-input

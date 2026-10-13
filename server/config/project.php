@@ -1,8 +1,8 @@
 <?php
 return [
     // 系统版本号
-    'version'               => 'v2.13.3',
-    'version_number'           => '21303',
+    'version'                  => 'v2.13.5',
+    'version_number'           => '21305',
     // 官网
     'website'               => [
         'name'        => env('project.web_name', ''), // 网站名称
@@ -201,7 +201,7 @@ return [
                 'name'       => 'AI助手',
                 'selected'   => 'static/images/mp/tabbs/chat_s.png',
                 'unselected' => 'static/images/mp/tabbs/chat.png',
-                'link'       => ['path' => '/packages/pages/chat/chat', 'name' => 'AI助手', 'type' => 'page'],
+                'link'       => ['path' => '/packages_core/pages/chat/chat', 'name' => 'AI助手', 'type' => 'page'],
                 'is_show'    => 1,
             ],
             [

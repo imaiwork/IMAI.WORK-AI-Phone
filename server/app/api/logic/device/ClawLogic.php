@@ -154,7 +154,7 @@ class ClawLogic extends ApiLogic
         }
     }
 
-    public static function setAccount(array $params, int $userId = 0)
+    public static function setAccount(array $params)
     {
         $startedAt = microtime(true);
         $traceId = str_replace('.', '', uniqid('sa_', true));
@@ -181,9 +181,6 @@ class ClawLogic extends ApiLogic
             if (!isset($params['accounts']) || empty($params['accounts'])) {
                 throw new \Exception('账号不能为空');
             }
-            if ($userId <= 0) {
-                throw new \Exception('请先登录');
-            }
 
             $deviceCode = (string)$params['device_code'];
             $params['accounts'] = self::normalizeAccounts($params['accounts']);
@@ -205,9 +202,9 @@ class ClawLogic extends ApiLogic
 
             $lockStartedAt = microtime(true);
             $device = SvDevice::where('device_code', $deviceCode)
-                ->where('user_id', $userId)
                 ->lock(true)
                 ->findOrEmpty();
+            $userId = (int)$device->user_id;
             $lockWaitMs = (int)round((microtime(true) - $lockStartedAt) * 1000);
             if ($device->isEmpty()) {
                 throw new \Exception('设备不存在');

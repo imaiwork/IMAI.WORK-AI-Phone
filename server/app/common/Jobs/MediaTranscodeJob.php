@@ -801,7 +801,7 @@ class MediaTranscodeJob
     {
         try {
             $file = File::where('id', $fileId)
-                ->field('id,type,persona_id,scene,slice_mode,source_id,name,duration')
+                ->field('id,type,persona_id,group_id,scene,slice_mode,source_id,name,duration')
                 ->findOrEmpty();
             if ($file->isEmpty()) {
                 return;
@@ -860,6 +860,7 @@ class MediaTranscodeJob
                     'thumbnail_url' => $thumbnailUrl,
                     'ensure_thumbnail' => $thumbnailUrl === '',
                     'keep_original' => 0,
+                    'group_id' => max(0, (int)($file->group_id ?? 0)),
                 ]
             );
 
@@ -885,7 +886,7 @@ class MediaTranscodeJob
     {
         try {
             $file = File::where('id', $fileId)
-                ->field('id,type,persona_id,scene,slice_mode,source_id,uri,duration')
+                ->field('id,type,persona_id,group_id,scene,slice_mode,source_id,uri,duration')
                 ->findOrEmpty();
             if ($file->isEmpty()) {
                 return;
@@ -923,6 +924,7 @@ class MediaTranscodeJob
                     'thumbnail_url' => (string)($meta['thumbnail_url'] ?? ''),
                     'width' => (int)($meta['width'] ?? 0),
                     'height' => (int)($meta['height'] ?? 0),
+                    'group_id' => max(0, (int)($file->group_id ?? 0)),
                 ]
             );
             if (!empty($result['skipped_slice'])) {

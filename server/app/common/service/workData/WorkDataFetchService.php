@@ -35,7 +35,6 @@ class WorkDataFetchService
         }
 
         $ttl = (int)config('work_data.cache_ttl', 3600);
-        $negTtl = (int)config('work_data.negative_cache_ttl', 120);
         $refreshInterval = (int)config('work_data.refresh_min_interval', 60);
         $lockWait = (int)config('work_data.lock_wait_seconds', 15);
 
@@ -185,7 +184,7 @@ class WorkDataFetchService
             ));
             return $payload;
         } catch (WorkDataException $e) {
-            $failureTtl = self::negativeTtl($e->getMessage(), $negTtl);
+            $failureTtl = self::negativeTtl($e->getMessage());
             if ($failureTtl > 0) {
                 WorkDataCache::setNegative($platform, $account, $e->getMessage(), $failureTtl);
             }
@@ -210,18 +209,21 @@ class WorkDataFetchService
      * 「查无结果」照样计费，站长这边还一分钱收不到。生产上单个绑错的账号一天能重查 450 次，
      * 所以这类失败要记长 TTL；手动刷新（$refresh=true）本来就绕过负缓存，改绑后能立刻生效。
      *
-     * 其余失败（上游临时故障等）沿用原来的口径：不记，等它自愈。
+     * 其余失败是上游临时故障（超时/限流/返回不完整）：定时同步是每分钟一次的 cron，
+     * 失败不记缓存就会每分钟重查一次，中台每次照样向站长计费，而取数失败时用户一分算力没扣，
+     * 这笔钱全由站长垫。这类失败也记 negative_cache_ttl_transient（默认 1 小时），
+     * 把重查间隔压到与成功取数一致——「失败就等一小时再取」。
      */
-    private static function negativeTtl(string $msg, int $defaultTtl): int
+    private static function negativeTtl(string $msg): int
     {
-        if (!self::isNegative($msg)) {
-            return 0;
+        if (self::isNegative($msg)) {
+            $permanent = (int)config('work_data.negative_cache_ttl_permanent', 21600);
+            return $permanent > 0 ? $permanent : (int)config('work_data.negative_cache_ttl', 120);
         }
-        $permanent = (int)config('work_data.negative_cache_ttl_permanent', 21600);
-        return $permanent > 0 ? $permanent : $defaultTtl;
+        return (int)config('work_data.negative_cache_ttl_transient', 3600);
     }
 
-    private static function canAutoSync($persona): bool
+    private static function canAutoSync(mixed $persona): bool
     {
         return (int)($persona['work_data_auto_sync'] ?? 0) === 1
             && (int)($persona['status'] ?? 0) === AiPersona::STATUS_ENABLED;

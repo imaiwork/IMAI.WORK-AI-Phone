@@ -1,1 +1,0 @@
-import{r as t}from"./index.bed99409.js";function o(){return t.get({url:"/setting.autoTaskScene/getConfig"})}function s(e){return t.post({url:"/setting.autoTaskScene/setConfig",data:e})}export{o as g,s};

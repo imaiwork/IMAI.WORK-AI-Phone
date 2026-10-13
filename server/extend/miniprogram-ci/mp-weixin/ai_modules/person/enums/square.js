@@ -1,0 +1,1 @@
+"use strict";var r=(r=>(r[r.VIDEO=1]="VIDEO",r[r.IMAGE=2]="IMAGE",r))(r||{}),s=(r=>(r.SQUARE="square",r))(s||{});exports.SquareKindEnum=r,exports.SquareSourceEnum=s,exports.isSquareMaterial=r=>"square"===r.source||String(r.list_id||r.id||"").startsWith("sq-");

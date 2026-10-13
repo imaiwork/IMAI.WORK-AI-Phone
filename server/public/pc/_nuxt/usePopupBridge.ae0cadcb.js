@@ -1,0 +1,1 @@
+import{ab as l,r as n}from"./entry.93f3db6b.js";function f(o){const e=n(null);return l(o,a=>{var p,u;a?(p=e.value)==null||p.open():(u=e.value)==null||u.close()}),{popupRef:e,onPopupClose:()=>{o.value&&(o.value=!1)}}}export{f as usePopupBridge};

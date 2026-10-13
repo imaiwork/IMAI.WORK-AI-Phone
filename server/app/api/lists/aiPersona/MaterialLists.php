@@ -3,13 +3,13 @@
 namespace app\api\lists\aiPersona;
 
 use app\api\lists\BaseApiDataLists;
+use app\api\logic\aiPersona\MaterialGroupLogic;
 use app\api\logic\shanjian\ShanjianVideoSettingLogic;
 use app\common\lists\ListsExtendInterface;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
-use think\facade\Cache as FacadeCache;
 
 class MaterialLists extends BaseApiDataLists implements ListsSearchInterface, ListsExtendInterface
 {
@@ -118,6 +118,7 @@ class MaterialLists extends BaseApiDataLists implements ListsSearchInterface, Li
         $where = array_values($where);
 
         $query = Material::where($where);
+        $this->applyGroupFilter($query);
 
         if ($hasUseStatusFilter || $hasSliceStatusFilter) {
             return $query;
@@ -125,5 +126,29 @@ class MaterialLists extends BaseApiDataLists implements ListsSearchInterface, Li
 
         // 默认可见范围收在 Material::applyDefaultVisible，配置清单的素材计数复用同一份条件
         return Material::applyDefaultVisible($query);
+    }
+
+    /**
+     * 不传 group_id = 全部。0 = 未分组。大于 0 必须是当前用户这个人设的分组。
+     */
+    private function applyGroupFilter($query): void
+    {
+        if (!array_key_exists('group_id', $this->params) || $this->params['group_id'] === '' || $this->params['group_id'] === null) {
+            return;
+        }
+        $groupId = (int)$this->params['group_id'];
+        $personaId = (int)($this->params['persona_id'] ?? 0);
+        $keepOriginal = null;
+        if (array_key_exists('keep_original', $this->params)
+            && $this->params['keep_original'] !== ''
+            && $this->params['keep_original'] !== null
+        ) {
+            $keepOriginal = (int)$this->params['keep_original'] === 1 ? 1 : 0;
+        }
+        if ($groupId > 0 && !MaterialGroupLogic::owns($this->userId, $personaId, $groupId, $keepOriginal)) {
+            $query->where('id', 0);
+            return;
+        }
+        $query->where('group_id', max(0, $groupId));
     }
 }

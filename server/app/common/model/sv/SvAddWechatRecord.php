@@ -7,6 +7,8 @@ use app\common\service\FileService;
 use think\model\concern\SoftDelete;
 class SvAddWechatRecord extends BaseModel {
 
+    public const STATUS_RESULT_UNKNOWN = 7;
+
     use SoftDelete;
 
     protected $deleteTime = 'delete_time';

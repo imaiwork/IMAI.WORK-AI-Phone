@@ -25,14 +25,30 @@ class WeChatConfigService
     {
         return [
             // team_id=0 主站小程序;>0 为团队(OEM)独立小程序,按租户隔离凭证
-            'app_id' => ConfigService::get('mnp_setting', 'app_id', '', $teamId),
-            'secret' => ConfigService::get('mnp_setting', 'app_secret', '', $teamId),
+            // 直接读库内原文:ConfigService::get 会 json_decode,纯数字 AppSecret 会被变成浮点丢掉
+            'app_id' => self::mnpRaw('app_id', $teamId),
+            'secret' => self::mnpRaw('app_secret', $teamId),
             'response_type' => 'array',
             'log' => [
                 'level' => 'debug',
                 'file' => app()->getRootPath() . 'runtime/wechat/' . date('Ym') . '/' . date('d') . '.log'
             ],
         ];
+    }
+
+
+    /**
+     * 小程序凭证按原文读取并去掉首尾空白(粘贴常带换行,微信会判密钥无效)
+     */
+    private static function mnpRaw(string $name, int $teamId): string
+    {
+        $value = \app\common\model\Config::where([
+            'type' => 'mnp_setting',
+            'name' => $name,
+            'team_id' => $teamId,
+        ])->value('value');
+
+        return trim((string)$value);
     }
 
 

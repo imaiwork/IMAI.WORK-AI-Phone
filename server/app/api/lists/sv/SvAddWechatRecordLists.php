@@ -52,11 +52,13 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
                 $this->searchWhere[] = ['status', '=', $this->request->get('status', 0)];
             }
         }
-        return SvAddWechatRecord::field('*')
+        $query = SvAddWechatRecord::field('*')
             ->where($this->searchWhere)
              ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
                 $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
-            })
+            });
+        $this->applyLeadSourceFilter($query);
+        return $query
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
@@ -108,12 +110,41 @@ class SvAddWechatRecordLists extends BaseApiDataLists implements ListsSearchInte
                 $this->searchWhere[] = ['status', '=', $this->request->get('status', 0)];
             }
         }
-        return SvAddWechatRecord::field('id')
+        $query = SvAddWechatRecord::field('id')
             ->where($this->searchWhere)
              ->when($this->request->get('start_time') && $this->request->get('end_time'), function ($query) {
                 $query->whereBetween('create_time', [strtotime($this->request->get('start_time')), strtotime($this->request->get('end_time'))]);
-            })
-            ->count();
+            });
+        $this->applyLeadSourceFilter($query);
+        return $query->count();
+    }
+
+    /**
+     * 线索来源与列表展示规则一致，列表和总数共用。
+     * crawling：视频号获客；dy_search：抖音搜寻获客；ch_{channel}_ex_{exec}：两个任务 ID 都为 0。
+     */
+    private function applyLeadSourceFilter($query): void
+    {
+        $leadSource = trim((string)$this->request->get('lead_source', ''));
+        if ($leadSource === 'crawling') {
+            $query->whereRaw('IFNULL(crawling_task_id, 0) > 0');
+            return;
+        }
+        if ($leadSource === 'dy_search') {
+            $query->whereRaw('IFNULL(crawling_task_id, 0) = 0 AND IFNULL(dy_search_task_id, 0) > 0');
+            return;
+        }
+        if (!preg_match('/^ch_(\d+)_ex_(\d+)$/', $leadSource, $matches)) {
+            return;
+        }
+        $channel = (int)$matches[1];
+        $execType = (int)$matches[2];
+        if (!in_array($channel, [1, 2, 3, 4, 5], true) || !in_array($execType, [1, 2, 3], true)) {
+            return;
+        }
+        $query->whereRaw('IFNULL(crawling_task_id, 0) = 0 AND IFNULL(dy_search_task_id, 0) = 0')
+            ->where('channel', $channel)
+            ->where('exec_type', $execType);
     }
 
 

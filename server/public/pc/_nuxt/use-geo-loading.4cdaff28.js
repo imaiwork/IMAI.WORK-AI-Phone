@@ -1,1 +1,0 @@
-import{r as o}from"./entry.91cf0653.js";function d(){const t=o(!1);let n=0;return{contentLoading:t,beginLoad:()=>{const e=++n;return t.value=!0,e},isLatest:e=>e===n,endLoad:e=>{e===n&&(t.value=!1)}}}export{d as useGeoLoading};

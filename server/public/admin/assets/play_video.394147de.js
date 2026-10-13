@@ -1,1 +1,0 @@
-import{r as t}from"./index.bed99409.js";function l(e){return t.get({url:"/playVideo.playVideoTask/lists",params:e})}function s(e){return t.get({url:"/playVideo.playVideoTemplate/lists",params:e})}function i(e){return t.post({url:"/playVideo.playVideoTemplate/changeStatus",params:e})}export{s as a,i as c,l as g};

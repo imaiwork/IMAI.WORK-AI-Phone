@@ -1,1 +1,1 @@
-.sec-t.data-v-6741ece3{display:flex;align-items:center;gap:12rpx;font-size:30rpx;font-weight:800;--tw-text-opacity: 1;color:rgba(29, 33, 41, var(--tw-text-opacity, 1))}.sec-t.data-v-6741ece3:before{content:"";width:8rpx;height:30rpx;border-radius:4rpx;background:#2680f7}
+.sec-t.data-v-6741ece3{display:flex;align-items:center;gap:12rpx;font-size:30rpx;font-weight:800;--tw-text-opacity: 1;color:rgb(29 33 41 / var(--tw-text-opacity))}.sec-t.data-v-6741ece3:before{content:"";width:8rpx;height:30rpx;border-radius:4rpx;background:#2680f7}

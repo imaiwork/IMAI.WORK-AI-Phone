@@ -9,7 +9,7 @@
     "u-switch": "../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
     "tabbar": "../../../components/tabbar/tabbar",
     "popup-bottom": "../../../components/popup-bottom/popup-bottom",
-    "mp-html": "../../uni_modules/mp-html/components/mp-html/mp-html",
+    "mp-html": "../../../uni_modules/mp-html/components/mp-html/mp-html",
     "update-user-info": "../login/components/update-user-info",
     "add-phone-popup": "../../../components/add-phone-popup/add-phone-popup",
     "membership-subscription-popup": "./components/popups/membership-subscription-popup",

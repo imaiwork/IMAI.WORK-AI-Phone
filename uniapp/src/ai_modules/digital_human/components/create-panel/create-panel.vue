@@ -127,7 +127,7 @@
 import { useUserStore } from "@/stores/user";
 import { formatAudioTime } from "@/utils/util";
 import { TokensSceneEnum } from "@/enums/appEnums";
-import { CreateTypeEnum } from "@/ai_modules/digital_human/enums";
+import { CreateTypeEnum } from "@/enums/digitalHuman";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 
 const userStore = useUserStore();

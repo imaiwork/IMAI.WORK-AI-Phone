@@ -37,7 +37,7 @@
 <script setup lang="ts">
 import { uploadFile } from "@/api/app";
 import { formatAudioTime } from "@/utils/util";
-import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useAppStore } from "@/stores/app";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 

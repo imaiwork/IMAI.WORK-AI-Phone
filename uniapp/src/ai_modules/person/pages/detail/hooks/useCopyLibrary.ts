@@ -34,6 +34,9 @@ export interface CopyItem {
     title: string;
     content: string;
     topic: string;
+    publish_title?: string;
+    publish_content?: string;
+    publish_topic?: string;
     source?: number;
     source_id?: number;
     source_version?: number;
@@ -55,6 +58,9 @@ export interface CopyFormData {
     title: string;
     content: string;
     topic: string;
+    publish_title: string;
+    publish_content: string;
+    publish_topic: string;
 }
 
 export const copyTabs = [
@@ -231,7 +237,14 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
     };
 
     const handleOpenAddCopy = (): void => {
-        editingCopy.value = { title: "", content: "", topic: "" };
+        editingCopy.value = {
+            title: "",
+            content: "",
+            topic: "",
+            publish_title: "",
+            publish_content: "",
+            publish_topic: "",
+        };
         showCopyEdit.value = true;
     };
 
@@ -241,6 +254,9 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
             title: item.title ?? "",
             content: item.content ?? "",
             topic: item.topic ?? "",
+            publish_title: item.publish_title ?? "",
+            publish_content: item.publish_content ?? "",
+            publish_topic: item.publish_topic ?? "",
         };
         showCopyEdit.value = true;
     };
@@ -253,6 +269,9 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
             title: form.title,
             content: form.content,
             topic: form.topic,
+            publish_title: form.publish_title,
+            publish_content: form.publish_content,
+            publish_topic: form.publish_topic,
             sort: 0,
             status: 1,
         };
@@ -274,7 +293,16 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
     };
 
     const handleCopyText = (item: CopyItem): void => {
-        const text = [item.title, item.content, item.topic].filter(Boolean).join("\n");
+        const text = [
+            item.title,
+            item.content,
+            item.topic,
+            item.publish_title,
+            item.publish_content,
+            item.publish_topic,
+        ]
+            .filter(Boolean)
+            .join("\n");
         if (!text) {
             uni.showToast({ title: "没有可复制的内容", icon: "none", duration: 2000 });
             return;
@@ -380,7 +408,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
     const handleCopyAgentSelected = (res: any): void => {
         showChooseCopyAgent.value = false;
         uni.$u.route({
-            url: "/ai_modules/digital_human/pages/ai_copywriter/ai_copywriter",
+            url: "/ai_modules/digital_human_create/pages/ai_copywriter/ai_copywriter",
             params: {
                 agentData: JSON.stringify(res.data),
                 montageType: COPY_MONTAGE_TYPE[currentDriverType.value],

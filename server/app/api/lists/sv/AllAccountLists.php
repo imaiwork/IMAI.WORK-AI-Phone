@@ -20,6 +20,15 @@ use app\common\model\kb\KbRobot;
  */
 class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
 {
+    /**
+     * 暂时隐藏微信账号：sv_account 的 type=1（微信(视频号)）与 ai_wechat 个微合并段同属微信，
+     * 一并关闭。恢复展示时改回 true 即可，两处判断同时生效。
+     */
+    private const SHOW_WECHAT_ACCOUNT = false;
+
+    /** 微信(视频号)在 sv_account.type 里的取值 */
+    private const TYPE_WECHAT = 1;
+
     private ?array $mergedAccounts = null;
 
     public function setSearch(): array
@@ -46,7 +55,9 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
      */
     private function mergeWechat(): bool
     {
-        return $this->userId > 0 && (int)$this->request->get('type', 0) === 1;
+        return self::SHOW_WECHAT_ACCOUNT
+            && $this->userId > 0
+            && (int)$this->request->get('type', 0) === self::TYPE_WECHAT;
     }
 
     /**
@@ -143,6 +154,10 @@ class AllAccountLists extends BaseApiDataLists implements ListsSearchInterface
             ->leftJoin('sv_device d', 'd.device_code = w.device_code and d.user_id = w.user_id')
             ->leftJoin('sv_setting s', 's.account = w.account and s.user_id = w.user_id')
             ->where($this->searchWhere);
+
+        if (!self::SHOW_WECHAT_ACCOUNT) {
+            $query->where('w.type', '<>', self::TYPE_WECHAT);
+        }
 
         if ($this->userId > 0) {
             $query->where('w.user_id', $this->userId);

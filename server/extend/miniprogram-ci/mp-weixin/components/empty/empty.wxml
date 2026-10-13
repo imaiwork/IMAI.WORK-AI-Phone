@@ -1,1 +1,1 @@
-<view class="w-full flex flex-col items-center justify-center"><image src="/static/images/common/empty.png" style="{{'width:' + a + ';' + ('height:' + b)}}"></image><text class="text-_b22rpx_B text-_b_h969EA9_B max-w-_b60_v_B text-center leading-_b1_d5_B">{{c}}</text></view>
+<view class="w-full flex flex-col items-center justify-center"><image src="/static/images/common/empty.png" style="{{'width:' + a + ';' + ('height:' + b)}}"></image><text class="text-_22rpx_ text-_h969EA9_ max-w-_60p_ text-center leading-_1d5_">{{c}}</text></view>

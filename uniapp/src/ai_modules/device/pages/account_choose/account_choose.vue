@@ -194,7 +194,7 @@ const { platform } = useDevice()
 
 const tabs = ref<any[]>([
     { value: 0, label: '全部' },
-    { value: AppTypeEnum.SPH, label: '微信', icon: platform.value[AppTypeEnum.SPH].activeIcon },
+    // { value: AppTypeEnum.SPH, label: '微信', icon: platform.value[AppTypeEnum.SPH].activeIcon },
     { value: AppTypeEnum.XHS, label: '小红书', icon: platform.value[AppTypeEnum.XHS].activeIcon },
     {
         value: AppTypeEnum.DOUYIN,

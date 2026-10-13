@@ -1,1 +1,1 @@
-"use strict";var r=(r=>(r.SOCIAL="sv",r.CIRCLE="circle",r))(r||{});exports.PublishSourceEnum=r;
+"use strict";var o=(o=>(o.SOCIAL="sv",o.CIRCLE="circle",o.CLOUD="cloud",o))(o||{}),e=(o=>(o.CREATION_VIDEO="creation_video",o.PUZZLE="puzzle",o.HOT_WRITE="hot_write",o.HOTSPOT="hotspot",o.CLOUD_VIDEO="cloud_video",o))(e||{});exports.ManualPublishSourceEnum=e,exports.PublishSourceEnum=o;

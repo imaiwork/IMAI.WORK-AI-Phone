@@ -4,9 +4,15 @@
   ],
   "subPackages": [
     {
-      "root": "packages",
+      "root": "packages_core",
       "pages": [
         "pages/home/home",
+        "pages/chat/chat"
+      ]
+    },
+    {
+      "root": "packages",
+      "pages": [
         "pages/avatar_cropper/avatar_cropper",
         "pages/webview/webview",
         "pages/agent/agent",
@@ -17,7 +23,6 @@
         "pages/knowledge_search_test/knowledge_search_test",
         "pages/knowledge_upload/knowledge_upload",
         "pages/knowledge_doc_segments/knowledge_doc_segments",
-        "pages/chat/chat",
         "pages/user/user",
         "pages/site_closed/site_closed",
         "pages/team/team",
@@ -57,25 +62,31 @@
         "pages/play_video_face/play_video_face",
         "pages/play_video_dance/play_video_dance",
         "pages/play_video_clip/play_video_clip",
-        "pages/szr_create/szr_create",
-        "pages/tone_clone/tone_clone",
         "pages/audio_manage/audio_manage",
         "pages/audio_choose/audio_choose",
         "pages/clone_manage/clone_manage",
-        "pages/szr_copywriter/szr_copywriter",
-        "pages/szr_ai_copywriter/szr_ai_copywriter",
         "pages/styles_choose/styles_choose",
-        "pages/montage_create/montage_create",
         "pages/anchor_create/anchor_create",
         "pages/anchor_auth_video/anchor_auth_video",
         "pages/anchor_auth_camera/anchor_auth_camera",
+        "pages/choose_create_type/choose_create_type",
+        "pages/music_choose/music_choose"
+      ]
+    },
+    {
+      "root": "ai_modules/digital_human_create",
+      "pages": [
+        "pages/szr_create/szr_create",
+        "pages/tone_clone/tone_clone",
+        "pages/szr_copywriter/szr_copywriter",
+        "pages/szr_ai_copywriter/szr_ai_copywriter",
+        "pages/montage_create/montage_create",
         "pages/montage_copywriter/montage_copywriter",
         "pages/ai_copywriter/ai_copywriter",
         "pages/montage_publish/montage_publish",
         "pages/montage_publish_record/montage_publish_record",
         "pages/montage_publish_video/montage_publish_video",
         "pages/montage_works/montage_works",
-        "pages/choose_create_type/choose_create_type",
         "pages/sora_create/sora_create",
         "pages/sora_ai_copywriter/sora_ai_copywriter",
         "pages/montage_person_create/montage_person_create",
@@ -84,7 +95,6 @@
         "pages/montage_news_create/montage_news_create",
         "pages/sora_create_role/sora_create_role",
         "pages/sora_role_library/sora_role_library",
-        "pages/music_choose/music_choose",
         "pages/montage_styles_choose/montage_styles_choose",
         "pages/platform_publish/platform_publish",
         "pages/platform_publish_works/platform_publish_works",

@@ -8,7 +8,7 @@ const ts = require('typescript')
 const { parse } = require('@vue/compiler-sfc')
 
 const root = resolve(__dirname, '..')
-const file = process.argv[2] || resolve(root, 'src/packages/pages/chat/components/workbench-chat-scroll.vue')
+const file = process.argv[2] || resolve(root, 'src/packages_core/pages/chat/components/workbench-chat-scroll.vue')
 const source = parse(readFileSync(file, 'utf8')).descriptor
 const ast = (text) => ts.createSourceFile('check.ts', text, ts.ScriptTarget.Latest, true)
 function find(node, predicate) {

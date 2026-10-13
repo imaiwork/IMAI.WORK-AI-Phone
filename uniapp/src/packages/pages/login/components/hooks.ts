@@ -207,7 +207,7 @@ export function useLoginWay() {
             });
             setTimeout(() => {
                 uni.$u.route({
-                    url: "/packages/pages/home/home",
+                    url: "/packages_core/pages/home/home",
                     type: "redirect",
                 });
             }, 3000);
@@ -258,7 +258,7 @@ export function useLoginWay() {
                 router.switchTab(cache.get(BACK_URL));
             }
         } else {
-            router.reLaunch("/packages/pages/home/home");
+            router.reLaunch("/packages_core/pages/home/home");
         }
         cache.remove(BACK_URL);
         // #endif

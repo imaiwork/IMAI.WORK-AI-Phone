@@ -229,7 +229,7 @@ import {
 } from "@/api/digital_human";
 import { DigitalHumanModelVersionEnum, DigitalHumanModelVersionEnumMap } from "@/enums/appEnums";
 import { useAudio } from "@/hooks/useAudio";
-import { ModeTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ModeTypeEnum } from "@/enums/digitalHuman";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 import AnchorVideo from "@/ai_modules/digital_human/components/anchor-video/anchor-video.vue";
 
@@ -394,7 +394,7 @@ const toClone = () => {
             url: "/ai_modules/digital_human/pages/anchor_create/anchor_create?type=anchor",
         });
     } else {
-        uni.$u.route({ url: "/ai_modules/digital_human/pages/tone_clone/tone_clone?type=voice" });
+        uni.$u.route({ url: "/ai_modules/digital_human_create/pages/tone_clone/tone_clone?type=voice" });
     }
 };
 

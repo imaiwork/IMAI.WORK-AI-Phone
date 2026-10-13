@@ -1,1 +1,0 @@
-import{E as s}from"./el-empty.b62eef51.js";import{d as n,o as r,c as i,w as p,ah as a}from"./entry.91cf0653.js";const d=n({__name:"geo-empty",props:{description:{}},setup(e){return(o,c)=>{const t=s;return r(),i(t,{description:e.description,"image-size":80},{default:p(()=>[a(o.$slots,"action")]),_:3},8,["description"])}}});export{d as _};

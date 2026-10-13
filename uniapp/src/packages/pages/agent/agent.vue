@@ -526,7 +526,7 @@ const handleSelectAgent = (item: any) => {
     if (currAgentType.value == 1) {
         // 通用智能体
         uni.$u.route({
-            url: "/packages/pages/home/home",
+            url: "/packages_core/pages/home/home",
             params: {
                 agent_name: item.name,
                 agent_id: item.id,

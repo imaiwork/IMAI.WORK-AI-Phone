@@ -1,1 +1,1 @@
-.track-node-active.data-v-166dfe23:before{position:absolute;top:0px;right:0px;bottom:0px;left:0px;background-color:var(--color-primary, #0065FB);opacity:.08;content:""}
+.track-node-active.data-v-166dfe23:before{position:absolute;inset:0px;background-color:var(--color-primary, #0065FB);opacity:.08;content:""}

@@ -8,7 +8,7 @@
                 @click="emit('cost')"
             >
                 <image
-                    src="@/ai_modules/digital_human/static/icons/star.svg"
+                    src="@/static/images/digital_human/star.svg"
                     class="w-[36rpx] h-[36rpx]"
                 />
                 <text class="text-[20rpx] text-[#9CA3AF] font-medium">算力消耗</text>

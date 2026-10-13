@@ -100,7 +100,7 @@
 </template>
 <script setup lang="ts">
 import { shanjianAnchorAuthorizedList } from "@/api/digital_human";
-import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import VideoPreview from "@/components/video-preview/video-preview.vue";
 

@@ -123,6 +123,7 @@ class UploadService
         int $personaId = 0,
         string $sliceModule = '',
         string $scene = 'persona',
+        int $groupId = 0,
     ): array {
         return self::executeUpload([
             'cid' => $cid,
@@ -140,6 +141,7 @@ class UploadService
             'persona_id' => $personaId,
             'sliceModule' => $sliceModule,
             'scene' => $scene,
+            'group_id' => $groupId,
         ]);
     }
 
@@ -596,6 +598,7 @@ class UploadService
                 'source_id'   => $params['sourceId'],
                 'slice_mode'  => $sliceModeFlag,
                 'persona_id'  => (int)($params['personaId'] ?? 0),
+                'group_id'    => (int)($params['groupId'] ?? 0),
                 'scene'       => (string)($params['scene'] ?? 'persona'),
                 'process_channel' => $uploadChannel,
                 'duration'    => round(max(0, $uploadDuration), 2),
@@ -1103,6 +1106,7 @@ class UploadService
             'custom_specs' => $options['custom_specs'] ?? null,
             'sliceModule' => $options['sliceModule'] ?? $options['module'] ?? '',
             'personaId' => $options['persona_id'] ?? $options['personaId'] ?? $options['character_ip_id'] ?? 0,
+            'groupId' => max(0, (int)($options['group_id'] ?? $options['groupId'] ?? 0)),
             'userId' => $options['user_id'] ?? $options['userId'] ?? 0,
             'scene' => in_array(($options['scene'] ?? 'persona'), ['ai_creation', 'persona'], true)
                 ? ($options['scene'] ?? 'persona')

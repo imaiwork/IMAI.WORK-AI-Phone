@@ -184,20 +184,18 @@ class CopywritingLibraryLogic extends ApiLogic
             $spreadsheet = SpreadsheetService::load($tempFile);
             $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, true);
 
-            $expectedHeaders = self::expectedHeaders((int)$params['library_type'], (int)$params['driver_type']);
-            $headerErrors = self::validateHeaders($rows[4] ?? [], $expectedHeaders);
-            $startRow = 5;
-            $warnings = [];
-            if (!empty($headerErrors)) {
-                if ((int)$params['driver_type'] === AiPersonaCopywritingLibrary::DRIVER_TYPE_NEWS
-                    && !self::containsExpectedHeader($rows[4] ?? [], $expectedHeaders)) {
-                    $startRow = 1;
-                    $warnings[] = '未检测到模板表头，已按每行一组新闻标题导入';
-                } else {
-                    self::setError(implode('；', $headerErrors));
-                    return false;
-                }
+            $layout = self::resolveImportLayout(
+                (int)$params['library_type'],
+                (int)$params['driver_type'],
+                $rows[4] ?? []
+            );
+            if ($layout['error'] !== '') {
+                self::setError($layout['error']);
+                return false;
             }
+            $startRow = $layout['start_row'];
+            $warnings = $layout['warnings'];
+            $params['_import_layout'] = $layout['layout'];
 
             $success = 0;
             $fail = 0;
@@ -755,8 +753,24 @@ class CopywritingLibraryLogic extends ApiLogic
         $content = self::cleanText($params['content'] ?? '');
         $topic = self::cleanText($params['topic'] ?? '');
 
+        $publishTitle = self::cleanText($params['publish_title'] ?? '');
+        $publishContent = self::cleanText($params['publish_content'] ?? '');
+        $publishTopic = self::cleanText($params['publish_topic'] ?? '');
+        if (mb_strlen($publishTitle) > 2000) {
+            throw new \Exception('发布标题长度不能超过2000个字符');
+        }
+        if (mb_strlen($publishContent) > 10000) {
+            throw new \Exception('发布正文长度不能超过10000个字符');
+        }
+        if (mb_strlen($publishTopic) > 1000) {
+            throw new \Exception('发布话题长度不能超过1000个字符');
+        }
+
         if ($libraryType === AiPersonaCopywritingLibrary::LIBRARY_TYPE_PUBLISH) {
             $driverType = AiPersonaCopywritingLibrary::DRIVER_TYPE_NONE;
+            $publishTitle = '';
+            $publishContent = '';
+            $publishTopic = '';
             if ($title === '' && $content === '' && $topic === '') {
                 throw new \Exception('发布文案标题、内容、话题至少填写一项');
             }
@@ -788,6 +802,9 @@ class CopywritingLibraryLogic extends ApiLogic
             'title' => $title,
             'content' => $content,
             'topic' => $topic,
+            'publish_title' => $publishTitle,
+            'publish_content' => $publishContent,
+            'publish_topic' => $publishTopic,
             'source' => $source,
             'sort' => (int)($params['sort'] ?? 0),
             'status' => isset($params['status']) ? (int)$params['status'] : AiPersonaCopywritingLibrary::STATUS_ENABLED,
@@ -802,6 +819,7 @@ class CopywritingLibraryLogic extends ApiLogic
     {
         $libraryType = (int)$params['library_type'];
         $driverType = (int)$params['driver_type'];
+        $layout = (string)($params['_import_layout'] ?? '');
 
         if ($libraryType === AiPersonaCopywritingLibrary::LIBRARY_TYPE_PUBLISH) {
             $raw = [
@@ -813,6 +831,20 @@ class CopywritingLibraryLogic extends ApiLogic
                 'topic' => self::cleanText($row['C'] ?? ''),
                 'create_time' => $now,
             ];
+        } elseif ($layout === 'paired_news') {
+            $titles = self::splitNewsTitleCell(self::cleanText($row['A'] ?? ''));
+            $raw = [
+                'persona_id' => $params['persona_id'],
+                'library_type' => $libraryType,
+                'driver_type' => $driverType,
+                'title' => implode("\n", $titles),
+                'content' => '',
+                'topic' => '',
+                'publish_title' => self::cleanText($row['B'] ?? ''),
+                'publish_content' => self::cleanText($row['C'] ?? ''),
+                'publish_topic' => self::cleanText($row['D'] ?? ''),
+                'create_time' => $now,
+            ];
         } elseif ($driverType === AiPersonaCopywritingLibrary::DRIVER_TYPE_NEWS) {
             $titles = self::parseNewsTitlesFromRow($row);
             $raw = [
@@ -822,6 +854,19 @@ class CopywritingLibraryLogic extends ApiLogic
                 'title' => implode("\n", $titles),
                 'content' => '',
                 'topic' => '',
+                'create_time' => $now,
+            ];
+        } elseif ($layout === 'paired_drive') {
+            $raw = [
+                'persona_id' => $params['persona_id'],
+                'library_type' => $libraryType,
+                'driver_type' => $driverType,
+                'title' => self::cleanText($row['A'] ?? ''),
+                'content' => self::cleanText($row['B'] ?? ''),
+                'topic' => '',
+                'publish_title' => self::cleanText($row['C'] ?? ''),
+                'publish_content' => self::cleanText($row['D'] ?? ''),
+                'publish_topic' => self::cleanText($row['E'] ?? ''),
                 'create_time' => $now,
             ];
         } else {
@@ -845,9 +890,69 @@ class CopywritingLibraryLogic extends ApiLogic
             return ['A' => '视频发布标题', 'B' => '视频发布正文内容', 'C' => '视频话题'];
         }
         if ($driverType === AiPersonaCopywritingLibrary::DRIVER_TYPE_NEWS) {
-            return ['A' => '标题1', 'B' => '标题2', 'C' => '标题3', 'D' => '标题4', 'E' => '标题5', 'F' => '标题6'];
+            return ['A' => '视频制作内容', 'B' => '视频发布标题', 'C' => '视频发布正文内容', 'D' => '视频话题'];
         }
-        return ['A' => '视频制作标题', 'B' => '视频制作口播内容'];
+        return [
+            'A' => '视频制作标题',
+            'B' => '视频制作口播内容',
+            'C' => '视频发布标题',
+            'D' => '视频发布正文内容',
+            'E' => '视频话题',
+        ];
+    }
+
+    /**
+     * 新表一行视频文案配一行发布文案。旧表头仍可导入，只是没有配对。
+     *
+     * @return array{layout:string,start_row:int,warnings:array,error:string}
+     */
+    private static function resolveImportLayout(int $libraryType, int $driverType, array $headerRow): array
+    {
+        $blank = ['layout' => '', 'start_row' => 5, 'warnings' => [], 'error' => ''];
+        if ($libraryType === AiPersonaCopywritingLibrary::LIBRARY_TYPE_PUBLISH) {
+            $expected = self::expectedHeaders($libraryType, $driverType);
+            $errors = self::validateHeaders($headerRow, $expected);
+            if ($errors !== []) {
+                $blank['error'] = implode('；', $errors);
+                return $blank;
+            }
+            $blank['layout'] = 'publish';
+            return $blank;
+        }
+
+        if ($driverType === AiPersonaCopywritingLibrary::DRIVER_TYPE_NEWS) {
+            $paired = self::expectedHeaders($libraryType, $driverType);
+            if (self::validateHeaders($headerRow, $paired) === []) {
+                $blank['layout'] = 'paired_news';
+                return $blank;
+            }
+            $legacy = ['A' => '标题1', 'B' => '标题2', 'C' => '标题3', 'D' => '标题4', 'E' => '标题5', 'F' => '标题6'];
+            if (self::validateHeaders($headerRow, $legacy) === []) {
+                $blank['layout'] = 'legacy_news';
+                return $blank;
+            }
+            if (!self::containsExpectedHeader($headerRow, $paired) && !self::containsExpectedHeader($headerRow, $legacy)) {
+                $blank['layout'] = 'loose_news';
+                $blank['start_row'] = 1;
+                $blank['warnings'] = ['未检测到模板表头，已按每行一组新闻标题导入'];
+                return $blank;
+            }
+            $blank['error'] = implode('；', self::validateHeaders($headerRow, $paired));
+            return $blank;
+        }
+
+        $paired = self::expectedHeaders($libraryType, $driverType);
+        if (self::validateHeaders($headerRow, $paired) === []) {
+            $blank['layout'] = 'paired_drive';
+            return $blank;
+        }
+        $legacy = ['A' => '视频制作标题', 'B' => '视频制作口播内容'];
+        if (self::validateHeaders($headerRow, $legacy) === []) {
+            $blank['layout'] = 'legacy_drive';
+            return $blank;
+        }
+        $blank['error'] = implode('；', self::validateHeaders($headerRow, $paired));
+        return $blank;
     }
 
     private static function validateHeaders(array $row, array $expected): array
@@ -891,7 +996,10 @@ class CopywritingLibraryLogic extends ApiLogic
             ->where('driver_type', (int)$data['driver_type'])
             ->where('title', (string)$data['title'])
             ->where('content', (string)$data['content'])
-            ->where('topic', (string)$data['topic']);
+            ->where('topic', (string)$data['topic'])
+            ->where('publish_title', (string)($data['publish_title'] ?? ''))
+            ->where('publish_content', (string)($data['publish_content'] ?? ''))
+            ->where('publish_topic', (string)($data['publish_topic'] ?? ''));
         if ($excludeId > 0) {
             $query->where('id', '<>', $excludeId);
         }
@@ -907,6 +1015,9 @@ class CopywritingLibraryLogic extends ApiLogic
             (string)$data['title'],
             (string)$data['content'],
             (string)$data['topic'],
+            (string)($data['publish_title'] ?? ''),
+            (string)($data['publish_content'] ?? ''),
+            (string)($data['publish_topic'] ?? ''),
         ]);
     }
 
@@ -926,7 +1037,7 @@ class CopywritingLibraryLogic extends ApiLogic
         if (empty($titles)) {
             throw new \Exception('新闻体标题必须填写');
         }
-        return implode("\n", array_slice($titles, 0, 6));
+        return implode("\n", $titles);
     }
 
     private static function parseNewsTitlesFromRow(array $row): array
@@ -952,8 +1063,7 @@ class CopywritingLibraryLogic extends ApiLogic
             $titles = self::splitNewsTitleCell($columnValues[0]);
         }
 
-        $titles = array_values(array_filter(array_map([self::class, 'cleanText'], $titles), static fn($value) => $value !== ''));
-        return array_slice($titles, 0, 6);
+        return array_values(array_filter(array_map([self::class, 'cleanText'], $titles), static fn($value) => $value !== ''));
     }
 
     private static function splitNewsTitleCell(string $value): array
@@ -966,19 +1076,9 @@ class CopywritingLibraryLogic extends ApiLogic
         $titles = [];
         foreach (preg_split('/\r\n|\r|\n/', $value) as $line) {
             $line = self::cleanText($line);
-            if ($line === '') {
-                continue;
+            if ($line !== '') {
+                $titles[] = $line;
             }
-            if (preg_match('/[,，、;；]/u', $line)) {
-                foreach (preg_split('/[,，、;；]+/u', $line) as $part) {
-                    $part = self::cleanText($part);
-                    if ($part !== '') {
-                        $titles[] = $part;
-                    }
-                }
-                continue;
-            }
-            $titles[] = $line;
         }
 
         return $titles;

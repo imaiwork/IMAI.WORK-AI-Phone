@@ -111,6 +111,20 @@ class MaterialController extends BaseApiController
         }
     }
 
+    public function batchUpdate()
+    {
+        try {
+            $params = (new MaterialValidate())->post()->goCheck('batchUpdate');
+            $result = MaterialLogic::batchUpdateGroup($params);
+            if ($result) {
+                return $this->success('已移动', MaterialLogic::getReturnData());
+            }
+            return $this->fail(MaterialLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
     public function lists()
     {
         return $this->dataLists(new MaterialLists());

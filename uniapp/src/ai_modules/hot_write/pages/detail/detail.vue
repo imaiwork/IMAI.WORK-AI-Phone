@@ -2,6 +2,7 @@
     <image-text-detail
         v-if="!isLoading && isImageText"
         :detail="taskDetail"
+        :keyboard-height="keyboardHeight"
         @refresh="refreshImageTextDetail"
         @publish="onPublishImageText" />
 
@@ -23,7 +24,11 @@
             </view>
         </view>
 
-        <scroll-view scroll-y class="w-full grow min-h-0">
+        <scroll-view
+            scroll-y
+            class="w-full grow min-h-0"
+            :scroll-into-view="keyboardScrollInto"
+            scroll-with-animation>
             <view class="pb-[400rpx]">
                 <template v-if="isLoading">
                     <view
@@ -154,7 +159,7 @@
                     </view>
 
                     <view class="flex flex-col px-[24rpx]">
-                        <view v-for="(step, index) in groupA" :key="step.id" class="flex">
+                        <view v-for="(step, index) in groupA" :id="stepAnchorId(step.id)" :key="step.id" class="flex">
                             <view class="flex flex-col items-center w-[60rpx] flex-shrink-0">
                                 <view
                                     class="w-[48rpx] h-[48rpx] rounded-[16rpx] flex items-center justify-center flex-shrink-0 z-10"
@@ -220,10 +225,10 @@
                                 <step-content
                                     :step="step"
                                     :fail-reason="failReason"
+                                    :dock-actions="keyboardConfirmStep?.id === step.id"
                                     @confirm="onConfirmGroupA"
                                     @reject="onReject"
-                                    @focus="onTextareaFocus"
-                                    @blur="onTextareaBlur" />
+                                    @focus="onTextareaFocus(step)" />
                             </view>
                         </view>
 
@@ -242,7 +247,7 @@
                         </view>
 
                         <template v-if="showGroupB">
-                            <view v-for="(step, index) in groupB" :key="step.id" class="flex">
+                            <view v-for="(step, index) in groupB" :id="stepAnchorId(step.id)" :key="step.id" class="flex">
                                 <view class="flex flex-col items-center w-[60rpx] flex-shrink-0">
                                     <view
                                         class="w-[48rpx] h-[48rpx] rounded-[16rpx] flex items-center justify-center flex-shrink-0 z-10"
@@ -314,11 +319,11 @@
                                         v-else
                                         :step="step"
                                         :fail-reason="failReason"
+                                        :dock-actions="keyboardConfirmStep?.id === step.id"
                                         @watch-video="onWatchVideo"
                                         @confirm="onConfirmGroupB"
                                         @reject="onReject"
-                                        @focus="onTextareaFocus"
-                                        @blur="onTextareaBlur" />
+                                        @focus="onTextareaFocus(step)" />
                                 </view>
                             </view>
                         </template>
@@ -326,6 +331,32 @@
                 </template>
             </view>
         </scroll-view>
+
+        <!-- 键盘弹起时确认条在滚动区外面，贴在键盘上沿，避免被键盘盖住，也避免点击被 blur 吞掉 -->
+        <view
+            v-if="keyboardConfirmStep"
+            class="flex-shrink-0 flex items-center gap-[16rpx] px-[24rpx] pt-[16rpx] pb-[16rpx] bg-white border-[0] border-t-[1rpx] border-solid border-[#F3F4F6]">
+            <view
+                v-if="keyboardConfirmStep.rejectLabel"
+                class="flex-1 h-[80rpx] flex items-center justify-center gap-[8rpx] rounded-[16rpx] bg-[#f3f4f6] border border-solid border-[#e5e7eb]"
+                @touchend.stop="onKeyboardReject"
+                @click.stop="onKeyboardReject">
+                <u-icon name="reload" color="#6b7280" size="24"></u-icon>
+                <text class="text-xs font-medium text-[#6b7280]">{{ keyboardConfirmStep.rejectLabel }}</text>
+            </view>
+            <view
+                class="flex-1 h-[80rpx] flex items-center justify-center rounded-[16rpx]"
+                style="
+                    background: linear-gradient(135deg, #0065fb, #3d8bfc);
+                    box-shadow: 0 4px 16px rgba(0, 101, 251, 0.3);
+                "
+                @touchend.stop="onKeyboardConfirm"
+                @click.stop="onKeyboardConfirm">
+                <text class="text-xs font-bold text-white">
+                    {{ keyboardConfirmStep.confirmLabel || "确认文案" }}
+                </text>
+            </view>
+        </view>
 
         <view
             v-if="isTaskFailed"
@@ -340,6 +371,7 @@
                 <text class="text-base font-semibold text-white">{{ retrying ? "重试中..." : "重新尝试" }}</text>
             </view>
         </view>
+        <view class="flex-shrink-0" :style="{ height: keyboardHeight + 'px' }"></view>
 
         <video-preview-v2 v-model:show="showVideoPreview" :video-url="videoUrl" />
     </view>
@@ -369,6 +401,7 @@ import {
 import StepContent from "./components/step-content.vue";
 import ImageTextDetail from "./components/image-text-detail.vue";
 import WashConfig from "./components/wash-config.vue";
+import { usePageKeyboardInset } from "@/ai_modules/hot_write/hooks/usePageKeyboardInset";
 
 type StepStatus = "done" | "running" | "confirm" | "pending" | "failed";
 type DoneType = "text" | "tags" | "content" | "kv";
@@ -572,6 +605,20 @@ const taskStatus = ref<"running" | "done" | "failed">("running");
 const isLoading = ref(true);
 const showGroupB = ref(false);
 const scrollTop = ref(0);
+const { keyboardHeight } = usePageKeyboardInset();
+/** 点确认时 touchend 和 click 会连着来，这段时间内只认第一次 */
+const KEYBOARD_TAP_LOCK_MS = 400;
+const activeConfirmStep = ref<Step | null>(null);
+const keyboardScrollInto = ref("");
+let keyboardTapLocked = false;
+
+const stepAnchorId = (id: number) => `hot-write-step-${id}`;
+
+const keyboardConfirmStep = computed(() => {
+    const step = activeConfirmStep.value;
+    if (keyboardHeight.value <= 0 || !step || step.status !== "confirm") return null;
+    return step;
+});
 const isImageText = computed(() => isImageTextTask(taskDetail.value));
 const isTaskFailed = computed(() => Number(taskDetail.value?.status) === HotWriteTaskStatus.FAIL);
 const failReason = computed(() => String(taskDetail.value?.remarks || "").trim() || "任务失败");
@@ -873,15 +920,43 @@ const scrollToBottom = () => {
     });
 };
 
-const onTextareaFocus = () => {};
+const onTextareaFocus = (step: Step) => {
+    activeConfirmStep.value = step;
+    keyboardScrollInto.value = "";
+    nextTick(() => {
+        keyboardScrollInto.value = stepAnchorId(step.id);
+    });
+};
 
-const onTextareaBlur = () => {
+// 不在输入框 blur 时撤掉确认条：点「确认文案」会先 blur，按钮若跟着消失，这次点击就落空
+watch(keyboardHeight, (height) => {
+    if (height <= 0) {
+        activeConfirmStep.value = null;
+        return;
+    }
+    if (activeConfirmStep.value?.status === "confirm") return;
+    activeConfirmStep.value = allSteps.value.find((item) => item.status === "confirm" && !item.washConfig) ?? null;
+});
+
+const runKeyboardAction = (handler: (step: Step) => void) => {
+    const step = activeConfirmStep.value;
+    if (!step || keyboardTapLocked || step.status !== "confirm") return;
+    keyboardTapLocked = true;
     setTimeout(() => {
-        scrollTop.value = scrollTop.value <= 0 ? 1 : scrollTop.value - 1;
-        nextTick(() => {
-            scrollTop.value = scrollTop.value + 1;
-        });
-    }, 300);
+        keyboardTapLocked = false;
+    }, KEYBOARD_TAP_LOCK_MS);
+    handler(step);
+};
+
+const onKeyboardConfirm = () => {
+    runKeyboardAction((step) => {
+        if (groupA.value.some((item) => item.id === step.id)) onConfirmGroupA(step);
+        else onConfirmGroupB(step);
+    });
+};
+
+const onKeyboardReject = () => {
+    runKeyboardAction(onReject);
 };
 
 const onWatchVideo = (step: Step) => {

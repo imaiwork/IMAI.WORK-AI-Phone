@@ -3,37 +3,32 @@
 
 namespace app\api\logic\aiPersona;
 
-use app\api\logic\ApiLogic;
 use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\common\enum\DeviceEnum;
-use app\common\model\sv\SvAccount;
-use app\common\model\sv\SvPublishSetting;
-use app\common\model\sv\SvPublishSettingAccount;
-use app\common\model\sv\SvPublishSettingDetail;
-use app\common\model\wechat\AiWechatCircleTaskConfig;
-use app\common\model\wechat\AiWechatCircleTask;
-
-use app\common\model\shanjian\ShanjianVideoTask;
-use app\common\model\aiPersona\Material;
-use app\common\model\aiPersona\MaterialUseLog;
-
-use app\common\model\sv\SvVideoTask;
-use app\common\model\sv\SvDeviceViralRecord;
-
-use app\common\model\sv\SvDevice;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryUseLog;
 use app\common\model\aiPersona\AiPersonaSynthesisCopywriting;
+use app\common\model\aiPersona\Material;
+use app\common\model\aiPersona\MaterialUseLog;
 use app\common\model\aiPersona\SynthesisConfig as AiPersonaSynthesisConfig;
+use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\model\sv\SvAccount;
+use app\common\model\sv\SvDevice;
+use app\common\model\sv\SvDeviceViralRecord;
+use app\common\model\sv\SvPublishSetting;
+use app\common\model\sv\SvPublishSettingAccount;
+use app\common\model\sv\SvPublishSettingDetail;
+use app\common\model\wechat\AiWechatCircleTask;
+use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\service\aiPersona\AiPersonaOptionService;
 use app\common\service\aiPersona\IdRoundRobinPicker;
+use app\common\service\aiPersona\LeastUsedPicker;
 use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\auto\AutoTaskSceneScheduleSyncService;
+use app\common\service\FileService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
 use think\facade\Cache;
 use think\facade\Db;
-use app\common\service\FileService;
-use app\api\logic\sv\ToolsLogic;
 
 /**
  * � 发布任务逻辑
@@ -63,6 +58,30 @@ class PublishLogic extends BasePersonaLogic
     {
         $config = AiPersona::getPlatformContentPublishConfig($persona['content_publish_config'], $platform);
         return (int)$config['generate_mode'] === AiPersona::CONTENT_GENERATE_MODE_CUSTOM;
+    }
+
+    /**
+     * 成片 extra 里已有配对发布文案时，各平台共用这一份。没有则返回 null，继续原来的规则。
+     */
+    private static function publishCopyFromVideoPair(ShanjianVideoTask $media): ?array
+    {
+        $extra = $media->extra;
+        if (!is_array($extra)) {
+            $extra = [];
+        }
+        $copy = ShanjianVideoTask::readPublishCopy($extra);
+        if ($copy['title'] === '' && $copy['content'] === '') {
+            return null;
+        }
+        return [
+            'code' => 10000,
+            'data' => [
+                'title' => $copy['title'],
+                'content' => $copy['content'],
+                'tag' => $copy['topic'],
+                'library_item_id' => 0,
+            ],
+        ];
     }
 
     private static function getPublishContentByConfig(
@@ -582,6 +601,32 @@ class PublishLogic extends BasePersonaLogic
             ->column('material_id');
     }
 
+    /**
+     * 内容发布下每条素材的累计使用次数（id => 次数），无日志的素材不在返回里，由调用方按 0 处理。
+     * 口径与 getUsedProductMaterialIds 一致：直发、内容发布场景、使用中或成功。
+     *
+     * @return array<int, int>
+     */
+    private static function getContentPublishUseCounts(int $userId, int $personaId): array
+    {
+        $rows = MaterialUseLog::where('user_id', $userId)
+            ->where('persona_id', $personaId)
+            ->where('publish_mode', Material::PUBLISH_MODE_DIRECT_SEND)
+            ->where('use_scene', MaterialUseLog::USE_SCENE_CONTENT_PUBLISH)
+            ->whereIn('use_status', [MaterialUseLog::USE_STATUS_USING, MaterialUseLog::USE_STATUS_SUCCESS])
+            ->field('material_id, COUNT(*) AS use_count')
+            ->group('material_id')
+            ->select()
+            ->toArray();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[(int)$row['material_id']] = (int)$row['use_count'];
+        }
+
+        return $counts;
+    }
+
     private static function recordAndRemoveUsedMaterials(
         SvDevice $device,
         array $materialIds,
@@ -673,20 +718,6 @@ class PublishLogic extends BasePersonaLogic
         foreach ($materials as $item) {
             if (!Material::hasUsableFileUrl($item)) {
                 continue;
-            }
-            // 仅随机 + 可重复：同设备短时间使用超过2次后跳过
-            if (
-                $useMode === AiPersonaSynthesisConfig::PRODUCT_USE_MODE_RANDOM
-                && $reuseMode === AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_REPEAT
-            ) {
-                $rediskey = 'material_' . $item['id'] . '_device_' . $device->device_code;
-                $deviceBindNum = \think\facade\Cache::store('redis')->get($rediskey);
-                if (empty($deviceBindNum)) {
-                    $deviceBindNum = 0;
-                }
-                if ($deviceBindNum > 2) {
-                    continue;
-                }
             }
             $result[] = $item;
         }
@@ -813,7 +844,16 @@ class PublishLogic extends BasePersonaLogic
                 );
                 $medias = self::pickMaterialsByUseMode($medias, $needCount, $useMode, $lastUsedId);
             } elseif ($mediaCount > $needCount) {
-                $medias = self::pickMaterialsByUseMode($medias, $needCount, $useMode);
+                if ($reuseMode === AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_REPEAT) {
+                    // 随机 + 可重复：按内容发布使用次数从少到多取用，同次数内随机，不设使用上限
+                    $medias = LeastUsedPicker::pick(
+                        $medias,
+                        $needCount,
+                        self::getContentPublishUseCounts((int)$device->user_id, (int)$device->persona_id)
+                    );
+                } else {
+                    $medias = self::pickMaterialsByUseMode($medias, $needCount, $useMode);
+                }
             }
 
 
@@ -1069,13 +1109,6 @@ class PublishLogic extends BasePersonaLogic
 
                 if ($slotCreated > 0) {
                     $mediaId = (int)(is_array($media) ? ($media['id'] ?? 0) : ($media->id ?? 0));
-                    if (
-                        $useMode === AiPersonaSynthesisConfig::PRODUCT_USE_MODE_RANDOM
-                        && $reuseMode === AiPersonaSynthesisConfig::PRODUCT_REUSE_MODE_REPEAT
-                    ) {
-                        $rediskey = 'material_' . $mediaId . '_device_' . $device->device_code;
-                        \think\facade\Cache::store('redis')->inc($rediskey);
-                    }
                     self::recordAndRemoveUsedMaterials($device, [$mediaId], $reuseMode, MaterialUseLog::USE_SCENE_CONTENT_PUBLISH, 0, $useMode);
                 }
             }
@@ -2288,13 +2321,16 @@ class PublishLogic extends BasePersonaLogic
 
         if ((int)$media->status === 3) {
             try {
-                $response = self::getPublishContentByConfig(
-                    $persona,
-                    $media->msg != '' ? $media->msg : '',
-                    $taskId,
-                    $device->user_id,
-                    AiPersona::PUBLISH_PLATFORM_XHS
-                );
+                $response = self::publishCopyFromVideoPair($media);
+                if ($response === null) {
+                    $response = self::getPublishContentByConfig(
+                        $persona,
+                        $media->msg != '' ? $media->msg : '',
+                        $taskId,
+                        $device->user_id,
+                        AiPersona::PUBLISH_PLATFORM_XHS
+                    );
+                }
             } catch (\Throwable $th) {
                 \think\facade\Log::channel('auto')->write('小红书图文视频兜底文案生成异常：' . $th->__toString(), 'create');
                 return false;
@@ -2553,13 +2589,16 @@ class PublishLogic extends BasePersonaLogic
 
                     if ((int)$media->status === 3) {
                         try {
-                            $response = self::getPublishContentByConfig(
-                                $persona,
-                                $media->msg != '' ? $media->msg : '',
-                                $taskId,
-                                $device->user_id,
-                                (int)$account['type']
-                            );
+                            $response = self::publishCopyFromVideoPair($media);
+                            if ($response === null) {
+                                $response = self::getPublishContentByConfig(
+                                    $persona,
+                                    $media->msg != '' ? $media->msg : '',
+                                    $taskId,
+                                    $device->user_id,
+                                    (int)$account['type']
+                                );
+                            }
                         } catch (\Throwable $th) {
                             \think\facade\Log::channel('auto')->write('24小时闪剪发布文案生成异常：' . $th->__toString(), 'create');
                             continue;

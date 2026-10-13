@@ -1,1 +1,1 @@
-<u-tabbar wx:if="{{c}}" bindchange="{{a}}" u-i="aed14364-0" bind:__l="__l" bindupdateModelValue="{{b}}" u-p="{{c}}"></u-tabbar>
+<u-tabbar wx:if="{{c}}" bindchange="{{a}}" u-i="38bff544-0" bind:__l="__l" bindupdateModelValue="{{b}}" u-p="{{c}}"></u-tabbar>

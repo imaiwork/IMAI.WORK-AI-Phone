@@ -424,7 +424,7 @@ class AutoVideoSynthesis extends Command
      * 爆款仿写：仅按设备当前绑定的 persona_id + device_code 取文案
      * 注：public 以便调试接口直接复用
      */
-    public function processImitationForDevice($device, AiPersonaSynthesisConfig $config, ?string $cacheKey = null): void
+    public function processImitationForDevice(SvDevice $device, AiPersonaSynthesisConfig $config, ?string $cacheKey = null): void
     {
         $today = date('Y-m-d');
         $deviceCode = (string)$device->device_code;

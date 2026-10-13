@@ -52,7 +52,7 @@ function createKeyboard() {
         return exports
     }
     const keyboardModule = load('hooks/useKeyboardHeight.ts')
-    const toolbarModule = load('packages/pages/chat/composables/useToolbarRevealGuard.ts')
+    const toolbarModule = load('hooks/useToolbarRevealGuard.ts')
     const keyboard = (keyboardModule.default || keyboardModule.useKeyboardHeight)()
     const toolbar = toolbarModule.useToolbarRevealGuard(
         vue.computed(() => keyboard.dynamicHeight.value > 0)

@@ -45,12 +45,12 @@
                             <view>
                                 <view @click="handlePlay(index)" v-if="playIndex != index">
                                     <image
-                                        src="@/ai_modules/digital_human/static/icons/play2.svg"
+                                        src="@/static/images/digital_human/play2.svg"
                                         class="w-[48rpx] h-[48rpx]"></image>
                                 </view>
                                 <view @click="handlePause(index)" v-else-if="isPlaying && playIndex == index">
                                     <image
-                                        src="@/ai_modules/digital_human/static/icons/stop.svg"
+                                        src="@/static/images/digital_human/stop.svg"
                                         class="w-[64rpx] h-[64rpx]"></image>
                                 </view>
                             </view>

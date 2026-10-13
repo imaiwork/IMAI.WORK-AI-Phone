@@ -438,7 +438,7 @@
 
 <script setup lang="ts">
 import { batchCloneAnchor } from "@/api/digital_human";
-import { CloneModeEnum, ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { CloneModeEnum, ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import requestCancel from "@/utils/request/cancel";
 import { useUserStore } from "@/stores/user";

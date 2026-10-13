@@ -4,7 +4,6 @@ namespace app\common\service\ffmpeg;
 
 use app\common\model\aiPersona\Material;
 use app\common\model\file\File;
-use app\common\service\ConfigService;
 use app\common\service\FileService;
 use think\facade\Log;
 
@@ -73,7 +72,14 @@ class MaterialService
             ->where('delete_time', null)
             ->when($userId > 0, fn ($query) => $query->where('user_id', $userId))
             ->findOrEmpty();
+        $wantGroupId = max(0, (int)($meta['group_id'] ?? 0));
         if (!$existing->isEmpty()) {
+            if ($wantGroupId > 0 && (int)$existing->group_id === 0) {
+                $existing->save([
+                    'group_id' => $wantGroupId,
+                    'update_time' => time(),
+                ]);
+            }
             $rawThumb = trim((string)$existing->getData('thumbnail_url'));
             // 已入库但缺封面：强制再截一帧补上
             if ($rawThumb === '' && $needThumb) {
@@ -106,6 +112,7 @@ class MaterialService
             'original_video_id' => $fileId,
             'source_video_id' => $fileId,
             'slice_status' => Material::SLICE_STATUS_NONE,
+            'group_id' => $wantGroupId,
         ]);
 
         return (int)$material->id;
@@ -499,6 +506,7 @@ class MaterialService
                 : Material::KEEP_ORIGINAL_NO,
             'source_video_id' => $originalVideoId,
             'slice_status' => (int)($params['slice_status'] ?? Material::SLICE_STATUS_NONE),
+            'group_id' => max(0, (int)($params['group_id'] ?? 0)),
             'create_time' => time(),
             'update_time' => time(),
         ]);

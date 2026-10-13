@@ -6,10 +6,10 @@ use app\api\logic\ApiLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
+use app\common\model\sv\SvDevice;
 use app\common\service\ffmpeg\MaterialService as VideoSliceMaterialService;
 use app\common\service\MusicDurationService;
 use app\common\service\OriginalMaterialSpec;
-use app\common\model\sv\SvDevice;
 use think\facade\Cache;
 use think\facade\Db;
 
@@ -50,6 +50,17 @@ class MaterialLogic extends ApiLogic
                 unset($params['keep_original']);
             }
             unset($params['material_kind'], $params['fps'], $params['codec'], $params['format_name']);
+            $groupId = self::resolveGroupId(
+                (int)$params['persona_id'],
+                (int)($params['group_id'] ?? 0),
+                (int)$params['publish_mode'],
+                (int)$params['material_type'],
+                (int)($params['keep_original'] ?? Material::KEEP_ORIGINAL_NO)
+            );
+            if ($groupId === false) {
+                return false;
+            }
+            $params['group_id'] = $groupId;
             if ($params['material_type'] === Material::MATERIAL_TYPE_MUSIC) {
                 $params['thumbnail_url'] = $params['thumbnail_url'] ?? '';
                 // 前端不取音频时长，服务端 ffprobe 补全后校验闪剪 300s 上限；
@@ -110,6 +121,7 @@ class MaterialLogic extends ApiLogic
                 self::setError('IP人设不存在');
                 return false;
             }
+            $batchGroupId = (int)($params['group_id'] ?? 0);
 
             $insertData = [];
             foreach ($items as $key => $item) {
@@ -148,6 +160,18 @@ class MaterialLogic extends ApiLogic
                     $itemData['keep_original'] = Material::KEEP_ORIGINAL_YES;
                     $itemData['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
                 }
+
+                $itemGroupId = self::resolveGroupId(
+                    (int)$params['persona_id'],
+                    (int)($item['group_id'] ?? $batchGroupId),
+                    $publishMode,
+                    $materialType,
+                    (int)($itemData['keep_original'] ?? Material::KEEP_ORIGINAL_NO)
+                );
+                if ($itemGroupId === false) {
+                    return false;
+                }
+                $itemData['group_id'] = $itemGroupId;
 
                 if ($materialType === Material::MATERIAL_TYPE_MUSIC) {
                     // 前端不取音频时长，服务端 ffprobe 补全后校验闪剪 300s 上限；
@@ -195,6 +219,64 @@ class MaterialLogic extends ApiLogic
             self::setError($th->getMessage());
             return false;
         }
+    }
+
+    public static function batchUpdateGroup(array $params): bool
+    {
+        try {
+            $personaId = (int)($params['persona_id'] ?? 0);
+            $persona = AiPersona::where('user_id', self::$uid)->where('id', $personaId)->findOrEmpty();
+            if ($persona->isEmpty()) {
+                self::setError('IP人设不存在');
+                return false;
+            }
+            $ids = array_values(array_unique(array_filter(array_map('intval', (array)($params['ids'] ?? [])))));
+            if (!$ids) {
+                self::setError('请选择要移动的素材');
+                return false;
+            }
+            $keepValues = Material::where('user_id', self::$uid)
+                ->where('persona_id', $personaId)
+                ->whereIn('id', $ids)
+                ->column('keep_original');
+            $keepValues = array_values(array_unique(array_map('intval', $keepValues)));
+            if (count($keepValues) > 1) {
+                self::setError('不同剪辑模式的素材不能放进同一个分组');
+                return false;
+            }
+            $groupId = self::resolveGroupId(
+                $personaId,
+                (int)($params['group_id'] ?? 0),
+                Material::PUBLISH_MODE_MAKE_VIDEO,
+                Material::MATERIAL_TYPE_VIDEO,
+                $keepValues[0] ?? Material::KEEP_ORIGINAL_NO
+            );
+            if ($groupId === false) {
+                return false;
+            }
+            $count = Material::where('user_id', self::$uid)
+                ->where('persona_id', $personaId)
+                ->where('publish_mode', Material::PUBLISH_MODE_MAKE_VIDEO)
+                ->whereIn('material_type', [Material::MATERIAL_TYPE_VIDEO, Material::MATERIAL_TYPE_IMAGE])
+                ->whereIn('id', $ids)
+                ->update([
+                    'group_id' => $groupId,
+                    'update_time' => time(),
+                ]);
+            self::$returnData = ['count' => (int)$count];
+            return true;
+        } catch (\Throwable $th) {
+            self::setError($th->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * @return int|false 0=未分组；false=分组不存在
+     */
+    private static function resolveGroupId(int $personaId, int $groupId, int $publishMode, int $materialType, int $keepOriginal = Material::KEEP_ORIGINAL_NO): int|false
+    {
+        return MaterialGroupLogic::resolveForMaterial(self::$uid, $personaId, $groupId, $publishMode, $materialType, $keepOriginal);
     }
 
     public static function update(array $params): bool

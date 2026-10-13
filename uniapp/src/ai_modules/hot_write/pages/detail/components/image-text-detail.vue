@@ -18,8 +18,12 @@
             </view>
         </view>
 
-        <scroll-view scroll-y class="w-full grow min-h-0">
-            <view class="px-[32rpx] pb-[240rpx]">
+        <scroll-view
+            scroll-y
+            class="w-full grow min-h-0"
+            :scroll-into-view="copyScrollInto"
+            scroll-with-animation>
+            <view class="px-[32rpx] pb-[240rpx]" :style="scrollPaddingStyle">
                 <view class="pt-[8rpx] pb-[16rpx]">
                     <text class="text-[32rpx] font-bold text-[#111827] leading-snug block">
                         {{ detail.title || "图文复刻任务" }}
@@ -102,7 +106,7 @@
                     </view>
                     <view class="card">
                         <template v-if="hasRewrittenCopy">
-                            <view class="flex items-center justify-between mb-[8rpx]">
+                            <view :id="COPY_TITLE_ANCHOR" class="flex items-center justify-between mb-[8rpx]">
                                 <text class="text-[22rpx] font-bold text-[#9CA3AF]">仿写后标题</text>
                                 <text v-if="isSelecting" class="text-[20rpx] text-[#9CA3AF]">
                                     {{ editTitle.length }}/60
@@ -116,8 +120,11 @@
                                 maxlength="60"
                                 :show-confirm-bar="false"
                                 :auto-height="true"
+                                :adjust-position="false"
+                                :hold-keyboard="true"
                                 placeholder="请输入标题"
-                                placeholder-style="color:#9CA3AF;font-size:26rpx" />
+                                placeholder-style="color:#9CA3AF;font-size:26rpx"
+                                @focus="onCopyFocus(COPY_TITLE_ANCHOR)" />
                             <text
                                 v-else
                                 class="text-[27rpx] font-bold text-[#111827] block break-words"
@@ -125,7 +132,7 @@
                                 {{ detail.title }}
                             </text>
 
-                            <view class="flex items-center justify-between mt-[20rpx] mb-[8rpx]">
+                            <view :id="COPY_BODY_ANCHOR" class="flex items-center justify-between mt-[20rpx] mb-[8rpx]">
                                 <text class="text-[22rpx] font-bold text-[#9CA3AF]">仿写后正文</text>
                                 <text v-if="isSelecting" class="text-[20rpx] text-[#9CA3AF]">
                                     {{ editContent.length }}/1000
@@ -139,8 +146,11 @@
                                 maxlength="1000"
                                 :show-confirm-bar="false"
                                 :auto-height="true"
+                                :adjust-position="false"
+                                :hold-keyboard="true"
                                 placeholder="请输入正文"
-                                placeholder-style="color:#9CA3AF;font-size:24rpx" />
+                                placeholder-style="color:#9CA3AF;font-size:24rpx"
+                                @focus="onCopyFocus(COPY_BODY_ANCHOR)" />
                             <text v-else class="text-[25rpx] text-[#4B5563] leading-relaxed block">
                                 {{ detail.rewritten_text || detail.publish_text || "-" }}
                             </text>
@@ -254,8 +264,8 @@
         </scroll-view>
 
         <view
-            class="fixed left-0 right-0 bottom-0 px-[32rpx] pt-[24rpx] bg-white border-t border-[#F3F4F6]"
-            style="padding-bottom: calc(28rpx + env(safe-area-inset-bottom)); z-index: 20">
+            class="fixed left-0 right-0 px-[32rpx] pt-[24rpx] bg-white border-t border-[#F3F4F6]"
+            :style="footerStyle">
             <view
                 v-if="isSelecting"
                 class="w-full py-[28rpx] rounded-full flex items-center justify-center gap-[16rpx]"
@@ -264,7 +274,8 @@
                     box-shadow: 0 10px 22px rgba(37, 99, 235, 0.32);
                 "
                 :class="submitting ? 'opacity-60' : ''"
-                @click="handleConfirm">
+                @touchend.stop="handleConfirm"
+                @click.stop="handleConfirm">
                 <u-loading v-if="submitting" mode="circle" size="28" color="#ffffff"></u-loading>
                 <text class="text-base font-semibold text-white">
                     {{ submitting ? "提交中..." : `确认无误，生成 ${selectedCount} 张图` }}
@@ -321,9 +332,21 @@ import {
     isWashTask,
 } from "@/ai_modules/hot_write/enums";
 
-const props = defineProps<{
-    detail: any;
-}>();
+const COPY_TITLE_ANCHOR = "hot-write-copy-title";
+const COPY_BODY_ANCHOR = "hot-write-copy-body";
+/** 点确认时 touchend 和 click 会连着来，这段时间内只认第一次 */
+const CONFIRM_TAP_LOCK_MS = 400;
+
+const props = withDefaults(
+    defineProps<{
+        detail: any;
+        /** 系统键盘高度，px。大于 0 时把底部确认条抬到键盘上方 */
+        keyboardHeight?: number;
+    }>(),
+    {
+        keyboardHeight: 0,
+    },
+);
 
 const emit = defineEmits<{
     (e: "refresh"): void;
@@ -335,6 +358,28 @@ const retrying = ref(false);
 const keepMap = ref<Record<number, boolean>>({});
 const editTitle = ref("");
 const editContent = ref("");
+const copyScrollInto = ref("");
+let confirmTapLocked = false;
+
+const footerStyle = computed(() => {
+    const keyboardOpen = props.keyboardHeight > 0;
+    return {
+        bottom: keyboardOpen ? `${props.keyboardHeight}px` : "0px",
+        paddingBottom: keyboardOpen ? "16rpx" : "calc(28rpx + env(safe-area-inset-bottom))",
+        zIndex: 30,
+    };
+});
+
+const scrollPaddingStyle = computed(() =>
+    props.keyboardHeight > 0 ? { paddingBottom: `calc(240rpx + ${props.keyboardHeight}px)` } : {},
+);
+
+const onCopyFocus = (anchorId: string) => {
+    copyScrollInto.value = "";
+    nextTick(() => {
+        copyScrollInto.value = anchorId;
+    });
+};
 
 const originalImages = computed(() =>
     Array.isArray(props.detail?.original_images) ? props.detail.original_images.filter(Boolean) : [],
@@ -554,7 +599,11 @@ const handlePreview = () => {
 };
 
 const handleConfirm = async () => {
-    if (submitting.value || !isSelecting.value) return;
+    if (confirmTapLocked || submitting.value || !isSelecting.value) return;
+    confirmTapLocked = true;
+    setTimeout(() => {
+        confirmTapLocked = false;
+    }, CONFIRM_TAP_LOCK_MS);
     const title = editTitle.value.trim();
     const rewrittenText = editContent.value.trim();
     if (!title) {

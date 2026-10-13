@@ -37,7 +37,9 @@
                     ]"
                     @click="canOperateTask(task) ? handleEdit(task) : undefined">
                     <view class="flex items-start gap-[20rpx]">
-                        <view class="flex flex-col items-start w-[86rpx] flex-shrink-0 pt-[4rpx]">
+                        <view
+                            v-if="!isFixedSlotTask(task)"
+                            class="flex flex-col items-start w-[86rpx] flex-shrink-0 pt-[4rpx]">
                             <text
                                 class="text-[28rpx] font-bold leading-none mb-[8rpx]"
                                 :class="isTaskMuted(task) ? 'text-[#B6BECC]' : 'text-[#2563EB]'">
@@ -48,7 +50,9 @@
                             </text>
                         </view>
 
-                        <view class="w-[2rpx] self-stretch min-h-[76rpx] bg-[#EDF0F5] flex-shrink-0" />
+                        <view
+                            v-if="!isFixedSlotTask(task)"
+                            class="w-[2rpx] self-stretch min-h-[76rpx] bg-[#EDF0F5] flex-shrink-0" />
 
                         <view class="flex flex-col gap-[10rpx] flex-1 min-w-0 pr-[8rpx]">
                             <view class="flex items-center gap-[8rpx] flex-wrap">
@@ -74,6 +78,11 @@
                                     <text class="text-[18rpx] text-[#9333EA]">跨晚间</text>
                                 </view>
                             </view>
+                            <text
+                                v-if="taskDesc(task)"
+                                class="text-[22rpx] text-[#9CA3AF] leading-relaxed line-clamp-2">
+                                {{ taskDesc(task) }}
+                            </text>
                             <view class="flex items-center gap-[10rpx] min-w-0">
                                 <view
                                     class="w-[12rpx] h-[12rpx] rounded-full flex-shrink-0"
@@ -94,7 +103,10 @@
                         </view>
                     </view>
 
-                    <view class="pl-[108rpx] flex items-center gap-[14rpx]" @click.stop>
+                    <view
+                        class="flex items-center gap-[14rpx]"
+                        :class="isFixedSlotTask(task) ? '' : 'pl-[108rpx]'"
+                        @click.stop>
                         <view
                             v-if="isDefaultLocked(task) || task.status === 1"
                             class="h-[64rpx] flex-1 min-w-0 flex items-center justify-center gap-[8rpx] px-[24rpx] rounded-full bg-[#EFF4FF] border border-solid border-[#D5E2FF] active:opacity-70"
@@ -121,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TaskItem } from "../stores/taskStore";
+import { FIXED_SLOT_TASK_DESC, type TaskItem } from "../stores/taskStore";
 
 const props = defineProps<{
     title: string;
@@ -139,6 +151,12 @@ const emit = defineEmits<{
     (e: "toggle-status", id: number, newStatus: number): void;
     (e: "toggle"): void;
 }>();
+
+/** 固定创作时段任务的说明文案，其余任务无描述 */
+const taskDesc = (task: TaskItem): string => FIXED_SLOT_TASK_DESC[task.scene] ?? "";
+
+/** 固定创作时段任务：时间由分组头 00:00 - 06:00 统一表达，卡片内不再重复时间列 */
+const isFixedSlotTask = (task: TaskItem): boolean => task.scene in FIXED_SLOT_TASK_DESC;
 
 const platformDotColors = [
     { keyword: "小红书", color: "#FF2442" },

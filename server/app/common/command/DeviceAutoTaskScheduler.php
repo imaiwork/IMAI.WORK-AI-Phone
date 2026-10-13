@@ -14,6 +14,7 @@ use app\common\model\sv\SvDeviceViral;
 use app\common\model\wechat\AiWechatCircleTask;
 use app\common\service\aiPersona\ViralRewriterDeadlineFallbackService;
 use app\common\service\sv\PublishTaskCloseService;
+use app\common\service\sv\AutoAddWechatResultService;
 use app\common\traits\DeviceAutoTaskTrait;
 use app\common\traits\DySearchTaskTrait;
 use app\common\traits\TaskExceptionTrait;
@@ -124,6 +125,7 @@ class DeviceAutoTaskScheduler extends Command
             $this->getFallbackService()->scanAndTrigger($currentTime, $this->isDev, $output);
 
             $startedAt = time();
+            AutoAddWechatResultService::expire($currentTime, (string)env('ADD_WECHAT.RECONCILE_DEVICE_CODE', ''));
             // 3. 检查超时未开始的任务 (status=0 且当前时间超过end_time)
             $this->checkTimeoutTasks($currentTime, $output, $startedAt);
             // 1. 检查需要开始执行的任务 (status=0 且当前时间在区间内)
@@ -1568,7 +1570,7 @@ class DeviceAutoTaskScheduler extends Command
                 $output->writeln("执行加微任务完成 - 设备: {$task->device_code}");
             }
             $task->status = DeviceEnum::TASK_STATUS_FINISHED;
-            $task->remark = '加微任务完成';
+            $task->remark = AutoAddWechatResultService::taskRemark($task);
             $task->update_time = time();
             $task->save();
             $this->updateDeviceStatus($task->device_code, DeviceEnum::DEVICE_STATUS_ONLINE);

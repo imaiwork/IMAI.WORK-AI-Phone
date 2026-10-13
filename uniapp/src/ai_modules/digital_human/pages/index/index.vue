@@ -246,7 +246,7 @@ import { getVideoCreationRecord } from "@/api/app";
 import { getPublicAnchorList, downloadShanjianVideoTask } from "@/api/digital_human";
 import { isReleaseVersion } from "@/utils/env";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
-import { ModeTypeEnum, VideoDownloadStatusEnum } from "@/ai_modules/digital_human/enums";
+import { ModeTypeEnum, VideoDownloadStatusEnum } from "@/enums/digitalHuman";
 import AnchorCloneIcon from "@/ai_modules/digital_human/static/icons/anchor_clone.svg";
 import ToneCloneIcon from "@/ai_modules/digital_human/static/icons/tone_clone.svg";
 import MeCreateIcon from "@/ai_modules/digital_human/static/icons/me_create.svg";
@@ -314,21 +314,21 @@ const showUtils = computed(() => {
 
 const pageMap: Record<string, string | (() => void)> = {
     [MenuKey.CHOOSE_CREATE_TYPE]: "/ai_modules/digital_human/pages/choose_create_type/choose_create_type",
-    [MenuKey.VIDEO_MIX]: "/ai_modules/digital_human/pages/montage_create/montage_create",
+    [MenuKey.VIDEO_MIX]: "/ai_modules/digital_human_create/pages/montage_create/montage_create",
     [MenuKey.ANCHOR]: `/ai_modules/digital_human/pages/clone_manage/clone_manage?type=${ModeTypeEnum.ANCHOR}&model_version=${DigitalHumanModelVersionEnum.CHANJING}`,
     [MenuKey.TONE]: `/ai_modules/digital_human/pages/clone_manage/clone_manage?type=${ModeTypeEnum.TONE}`,
     [MenuKey.TEXT_EXTRACT]: () => uni.$u.toast("敬请期待"),
     [MenuKey.ME_CLONE]: "/ai_modules/digital_human/pages/clone_manage/clone_manage",
     [MenuKey.ME_CREATE]: "/packages/pages/creation/creation",
     [MenuKey.MONTAGE_RECORD]: "/packages/pages/creation/creation",
-    [MenuKey.PLATFORM_PUBLISH]: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
-    [MenuKey.SORA]: "/ai_modules/digital_human/pages/sora_create/sora_create",
+    [MenuKey.PLATFORM_PUBLISH]: "/ai_modules/digital_human_create/pages/platform_publish_works/platform_publish_works",
+    [MenuKey.SORA]: "/ai_modules/digital_human_create/pages/sora_create/sora_create",
     [MenuKey.MATERIAL_LIBRARY]: "/packages/pages/material_library/material_library",
-    [MenuKey.FRAGMENT_MIX]: "/ai_modules/digital_human/pages/montage_storyboard_create/montage_storyboard_create",
+    [MenuKey.FRAGMENT_MIX]: "/ai_modules/digital_human_create/pages/montage_storyboard_create/montage_storyboard_create",
     [MenuKey.BOMB_COPY]: () => uni.$u.toast("敬请期待"),
     [MenuKey.IMAGE_CREATE]: "/ai_modules/drawing/pages/create_task/create_task",
-    [MenuKey.SCAN_PUBLISH_WORKS]: "/ai_modules/digital_human/pages/platform_publish_works/platform_publish_works",
-    [MenuKey.MONTAGE_MIX]: "/ai_modules/digital_human/pages/montage_create/montage_create",
+    [MenuKey.SCAN_PUBLISH_WORKS]: "/ai_modules/digital_human_create/pages/platform_publish_works/platform_publish_works",
+    [MenuKey.MONTAGE_MIX]: "/ai_modules/digital_human_create/pages/montage_create/montage_create",
     [MenuKey.HOT_WRITE]: "/ai_modules/hot_write/pages/index/index",
     [MenuKey.HOTSPOT]: "/ai_modules/hotspot/pages/index/index",
 };

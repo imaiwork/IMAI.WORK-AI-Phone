@@ -15,6 +15,9 @@ class CopywritingLibraryValidate extends BaseValidate
         'title' => 'max:2000',
         'content' => 'max:10000',
         'topic' => 'max:1000',
+        'publish_title' => 'max:2000',
+        'publish_content' => 'max:10000',
+        'publish_topic' => 'max:1000',
         'sort' => 'number',
         'status' => 'in:0,1',
         'items' => 'require|array',
@@ -34,6 +37,9 @@ class CopywritingLibraryValidate extends BaseValidate
         'title.max' => '标题长度不能超过2000个字符',
         'content.max' => '内容长度不能超过10000个字符',
         'topic.max' => '话题长度不能超过1000个字符',
+        'publish_title.max' => '发布标题长度不能超过2000个字符',
+        'publish_content.max' => '发布正文长度不能超过10000个字符',
+        'publish_topic.max' => '发布话题长度不能超过1000个字符',
         'sort.number' => '排序值必须是数字',
         'status.in' => '状态值不正确',
         'items.require' => '请填写要添加的文案',
@@ -44,7 +50,7 @@ class CopywritingLibraryValidate extends BaseValidate
 
     public function sceneAdd()
     {
-        return $this->only(['persona_id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'sort', 'status'])
+        return $this->only(['persona_id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'publish_title', 'publish_content', 'publish_topic', 'sort', 'status'])
             ->append('driver_type', 'require');
     }
 
@@ -56,7 +62,7 @@ class CopywritingLibraryValidate extends BaseValidate
 
     public function sceneUpdate()
     {
-        return $this->only(['id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'sort', 'status']);
+        return $this->only(['id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'publish_title', 'publish_content', 'publish_topic', 'sort', 'status']);
     }
 
     public function sceneDetail()

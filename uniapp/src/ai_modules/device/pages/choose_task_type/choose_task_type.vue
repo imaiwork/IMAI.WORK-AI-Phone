@@ -143,7 +143,7 @@ const menuMap: Record<number, any[]> = {
             desc: "自动/定时发布",
             color: "#0065fb",
             lightColor: "#EBF2FF",
-            platforms: ["小红书", "视频号", "抖音", "快手"],
+            platforms: ["小红书", "抖音", "快手"],
             key: CreateTypeEnum.IMAGE_PUBLISH,
             navUrl: "/ai_modules/device/pages/create_task/create_task?type=2",
         },
@@ -153,7 +153,7 @@ const menuMap: Record<number, any[]> = {
             desc: "自动/定时发布",
             color: "#7C4DFF",
             lightColor: "#F2EEFF",
-            platforms: ["小红书", "视频号", "抖音", "快手"],
+            platforms: ["小红书",  "抖音", "快手"],
             key: CreateTypeEnum.VIDEO_PUBLISH,
             navUrl: "/ai_modules/device/pages/create_task/create_task?type=1",
         },
@@ -165,6 +165,7 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["朋友圈"],
             key: CreateTypeEnum.CIRCLE,
+            hidden: true, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_circle/create_circle",
         },
     ],
@@ -178,6 +179,7 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["视频号"],
             key: CreateTypeEnum.CLUE_AUTO,
+            hidden: true,
             navUrl: "/ai_modules/sph/pages/create_task/create_task",
         },
         {
@@ -241,6 +243,7 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#FFF2E6",
             platforms: ["微信"],
             key: CreateTypeEnum.FRIEND_ADD,
+            hidden: true, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_add_wechat/create_add_wechat",
         },
         {
@@ -251,6 +254,7 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["朋友圈"],
             key: CreateTypeEnum.CIRCLE_INTERACT,
+            hidden: true, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_circle_interact/create_circle_interact",
         },
         {
@@ -284,6 +288,7 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["微信"],
             key: CreateTypeEnum.WECHAT_MSG,
+            hidden: true, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_wechat_private/create_wechat_private",
         },
     ],
@@ -302,7 +307,8 @@ const menuMap: Record<number, any[]> = {
     ],
 };
 
-const currentMenuList = computed(() => menuMap[activeTab.value] ?? []);
+/** hidden 的条目只在代码里保留，不渲染入口 */
+const currentMenuList = computed(() => (menuMap[activeTab.value] ?? []).filter((item) => !item.hidden));
 
 const previewUrl = ref("");
 const showPreview = ref(false);

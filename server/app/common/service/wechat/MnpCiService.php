@@ -60,6 +60,58 @@ class MnpCiService
     private const DEFAULT_MINIFY = true;
 
     /**
+     * 判定残留文件的时间容差(秒)
+     *
+     * 一次解压产出的全部文件 mtime 落在同一批次内，但慢机器上 PHP 逐个写 2800 个文件
+     * 可能拖好几分钟(2026-09-24 huoke 实测 7 分钟)，容差必须远大于这个量级；
+     * 而残留文件通常是几天到几个月前的版本留下的，1 小时足够把两者分开。
+     */
+    private const STALE_GRACE_SECONDS = 3600;
+
+    /**
+     * @notes 清掉小程序代码目录里上一版残留的文件
+     *
+     * 2026-09-28 之前后台「上传小程序代码」是把 zip 解压覆盖到旧目录上、从不清空，
+     * 被删掉/挪走的页面会一直躺在目录里；微信按目录实际文件算分包体积(不看 app.json)，
+     * 存量站点多个版本积累下来直接撞 2048KB 上限。UploadController 已改成解压前清空，
+     * 这里是给「zip 早已解压、只点一键上传」的存量站点兜底，不用再登服务器手动删。
+     *
+     * 以 app.js 的 mtime 为本次解压批次的基准(它在解压时写入、之后不会再被改写，
+     * 而 app.json / project.config.json / config/index.js 上传前都会被重写，不能当基准)。
+     *
+     * @param string $projectDir mp-weixin 目录(绝对路径)
+     * @return int 删除的文件数
+     */
+    public static function pruneStaleFiles(string $projectDir): int
+    {
+        $anchor = rtrim($projectDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'app.js';
+        if (!is_dir($projectDir) || !is_file($anchor)) {
+            return 0;
+        }
+        $threshold = filemtime($anchor) - self::STALE_GRACE_SECONDS;
+        $deleted = 0;
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($projectDir, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($iterator as $item) {
+            /** @var \SplFileInfo $item */
+            if ($item->isFile()) {
+                if ($item->getMTime() < $threshold && @unlink($item->getPathname())) {
+                    $deleted++;
+                }
+            } elseif ($item->isDir()) {
+                // 只会删空目录，非空的 rmdir 直接失败
+                @rmdir($item->getPathname());
+            }
+        }
+        if ($deleted > 0) {
+            \think\facade\Log::info("[mnp] 一键上传前清理上一版残留文件 {$deleted} 个: {$projectDir}");
+        }
+        return $deleted;
+    }
+
+    /**
      * @notes 拼装执行 upload.js 的 shell 命令(带并发与内存限制)
      * @param string $scriptPath upload.js 路径(相对或绝对，调用方自行保证可达)
      * @param string $jsonArg    传给脚本的 JSON 参数

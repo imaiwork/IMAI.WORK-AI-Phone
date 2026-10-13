@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-const REAL_HOME_PATH = "/packages/pages/home/home";
+const REAL_HOME_PATH = "/packages_core/pages/home/home";
 
 const buildHomeUrl = (query: Record<string, any> = {}) => {
     const params = Object.entries(query)

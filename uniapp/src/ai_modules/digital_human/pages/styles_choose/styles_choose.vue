@@ -29,11 +29,11 @@
                         <text class="w-[28rpx] h-[28rpx]">
                             <image
                                 v-if="isChoose(item.id)"
-                                src="@/ai_modules/digital_human/static/icons/radio_s.svg"
+                                src="@/static/images/digital_human/radio_s.svg"
                                 class="w-full h-full"></image>
                             <image
                                 v-else
-                                src="@/ai_modules/digital_human/static/icons/radio.svg"
+                                src="@/static/images/digital_human/radio.svg"
                                 class="w-full h-full"></image>
                         </text>
                     </view>
@@ -58,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 
 const { emit } = useEventBusManager();

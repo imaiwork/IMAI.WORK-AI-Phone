@@ -261,7 +261,9 @@
                         <div>
                             <div class="text-base font-[1000] text-slate-900">填写微信小程序凭证</div>
                             <p class="mt-1 text-[13px] text-slate-500 leading-normal max-w-[68ch]">
-                                在「微信公众平台 → 开发管理 → 开发设置」可找到 AppID、AppSecret、原始 ID。
+                                在「微信公众平台 → 开发管理 → 开发设置」可找到 AppID、AppSecret、原始 ID。重置
+                                AppSecret 后，必须在同一页把服务器出口 IP 加入 IP
+                                白名单，否则小程序一键登录会提示授权失败。
                             </p>
                         </div>
                     </div>

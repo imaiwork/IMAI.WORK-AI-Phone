@@ -23,11 +23,23 @@ class WeChatMnpService
     /** 所属团队 id(0=主站小程序;>0=OEM 团队独立小程序) */
     protected int $teamId = 0;
 
+    /**
+     * 按配置复用的 Application 实例,key = 配置 md5
+     * EasyWeChat 对象图带循环引用,workerman 常驻进程里每 new 一次就漏 3 个 fd(curl multi 的 socketpair + 到微信的长连接),
+     * 攒到进程上限后整个 worker 打不开任何文件/连接;按配置复用后同一配置只建一次,配置变了自然换新实例
+     * @var array<string, Application>
+     */
+    private static array $apps = [];
+
     public function __construct(int $teamId = 0)
     {
         $this->teamId = $teamId;
         $this->config = $this->getConfig();
-        $this->app = new Application($this->config);
+        $key = md5((string)json_encode($this->config));
+        if (!isset(self::$apps[$key])) {
+            self::$apps[$key] = new Application($this->config);
+        }
+        $this->app = self::$apps[$key];
     }
 
 
@@ -107,16 +119,84 @@ class WeChatMnpService
     /**
      * @notes 获取手机号
      * @param string $code
-     * @return \EasyWeChat\Kernel\HttpClient\Response|\Symfony\Contracts\HttpClient\ResponseInterface
-     * @throws \Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface
-     * @author 段誉
-     * @date 2023/2/27 11:46
+     * @return array
+     * @throws \Exception
      */
     public function getUserPhoneNumber(string $code)
     {
-        return $this->app->getClient()->postJson('wxa/business/getuserphonenumber', [
-            'code' => $code,
-        ]);
+        try {
+            // postJson 里就会去换 access_token;OEM 密钥错误或 IP 未加白名单时,微信在这一步直接拒绝
+            $response = $this->app->getClient()->postJson('wxa/business/getuserphonenumber', [
+                'code' => $code,
+            ]);
+            $data = $response->toArray(false);
+        } catch (\Throwable $e) {
+            \think\facade\Log::error('mnp phone token team=' . $this->teamId . ' ' . $e->getMessage());
+            throw new \Exception(self::humanizeAccessTokenError($e->getMessage()));
+        }
+
+        $errcode = (int)($data['errcode'] ?? 0);
+        if ($errcode !== 0) {
+            \think\facade\Log::error(
+                'mnp phone api team=' . $this->teamId . ' ' . json_encode($data, JSON_UNESCAPED_UNICODE)
+            );
+            throw new \Exception(self::humanizePhoneApiError($errcode, (string)($data['errmsg'] ?? '')));
+        }
+
+        return $data;
+    }
+
+
+    /**
+     * EasyWeChat 原文是 Failed to get access_token: {errcode,errmsg},小程序 toast 会截断成英文残句。
+     */
+    private static function humanizeAccessTokenError(string $message): string
+    {
+        if (!str_contains($message, 'Failed to get access_token')
+            && !str_contains($message, 'Failed to get stable access_token')) {
+            return $message;
+        }
+
+        $data = [];
+        $pos = strpos($message, '{');
+        if ($pos !== false) {
+            $decoded = json_decode(substr($message, $pos), true);
+            if (is_array($decoded)) {
+                $data = $decoded;
+            }
+        }
+
+        $errcode = (int)($data['errcode'] ?? 0);
+        $errmsg = (string)($data['errmsg'] ?? '');
+
+        if ($errcode === 40164 || str_contains($errmsg, 'not in whitelist') || str_contains($errmsg, 'invalid ip')) {
+            $ip = '';
+            if (preg_match('/invalid ip[:\s]+([0-9.]+)/i', $errmsg, $matches)) {
+                $ip = $matches[1];
+            }
+            return '服务器IP未加白名单' . ($ip !== '' ? '：' . $ip : '');
+        }
+        if ($errcode === 40125 || str_contains($errmsg, 'invalid appsecret')) {
+            return '小程序AppSecret不正确';
+        }
+        if ($errcode === 40013 || str_contains($errmsg, 'invalid appid')) {
+            return '小程序AppID不正确';
+        }
+
+        return '微信授权失败，请检查小程序配置';
+    }
+
+
+    private static function humanizePhoneApiError(int $errcode, string $errmsg): string
+    {
+        if (in_array($errcode, [40029, 40163], true) || str_contains($errmsg, 'invalid code')) {
+            return '微信授权已失效，请重试';
+        }
+        if ($errcode === 40013) {
+            return '小程序AppID不正确';
+        }
+
+        return '获取手机号码失败';
     }
 
 

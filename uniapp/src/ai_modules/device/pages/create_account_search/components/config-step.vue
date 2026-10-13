@@ -183,7 +183,7 @@
         </accordion-card>
 
         <!-- ── 识别到之后 ── -->
-        <accordion-card
+        <!-- <accordion-card
             title="自动添加好友"
             sub="识别到联系方式后生成加好友任务，按下方节奏执行"
             :value="summary.add.value"
@@ -249,10 +249,10 @@
                     已关闭。识别到的联系方式只存进客资库，不会自动去加。
                 </text>
             </view>
-        </accordion-card>
+        </accordion-card> -->
 
         <!-- ── 好友验证语 ── -->
-        <accordion-card
+        <!-- <accordion-card
             title="加好友备注内容"
             sub="好友验证语，随机取一条发"
             :value="summary.remark.value"
@@ -283,7 +283,7 @@
                     已关闭。发好友申请时不带验证语，通过率会低一些。
                 </text>
             </view>
-        </accordion-card>
+        </accordion-card> -->
     </view>
 </template>
 
@@ -400,11 +400,7 @@ const summary = computed(() => {
             warn: false
         },
         add:
-            formData.value.add_type !== 1
-                ? { value: '不自动加', warn: false }
-                : wechatNames.value
-                ? { value: wechatNames.value, warn: false }
-                : { value: '已开 · 未选微信', warn: true },
+            formData.value.add_type !== 1 ? { value: '不自动加', warn: false } : wechatNames.value ? { value: wechatNames.value, warn: false } : { value: '已开 · 未选微信', warn: true },
         remark: {
             value:
                 formData.value.add_remark_enable === 1

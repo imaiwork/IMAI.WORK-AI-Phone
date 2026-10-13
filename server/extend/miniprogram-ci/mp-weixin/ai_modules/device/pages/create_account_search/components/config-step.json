@@ -1,12 +1,8 @@
 {
   "component": true,
   "usingComponents": {
-    "u-switch": "../../../../../uni_modules/vk-uview-ui/components/u-switch/u-switch",
-    "data-select": "../../../../../components/data-select/data-select",
-    "u-input": "../../../../../uni_modules/vk-uview-ui/components/u-input/u-input",
     "accordion-card": "./accordion-card",
     "check-row": "./check-row",
-    "chip-list": "./chip-list",
-    "option-grid": "./option-grid"
+    "chip-list": "./chip-list"
   }
 }

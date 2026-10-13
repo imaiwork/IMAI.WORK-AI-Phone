@@ -261,7 +261,7 @@
 <script setup lang="ts">
 import { getMaterialLibraryList, addMaterialLibrary } from "@/api/material";
 import { getSystemMusicList } from "@/api/digital_human";
-import { ListenerTypeEnum } from "@/ai_modules/digital_human/enums";
+import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useUpload from "@/hooks/useUpload";
 import { useAudio } from "@/hooks/useAudio";

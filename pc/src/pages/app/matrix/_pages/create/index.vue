@@ -30,13 +30,13 @@ const createTabs = [
         type: PublishTaskTypeEnum.IMAGE,
         icon: CreateImage,
         title: "发布图文",
-        subTitle: "发布平台：小红书/视频号/快手",
+        subTitle: "发布平台：小红书/抖音/快手",
     },
     {
         type: PublishTaskTypeEnum.VIDEO,
         icon: CreateVideo,
         title: "发布视频",
-        subTitle: "发布平台：小红书/视频号/快手",
+        subTitle: "发布平台：小红书/抖音/快手",
     },
 ];
 const createType = ref(

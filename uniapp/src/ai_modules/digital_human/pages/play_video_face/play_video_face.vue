@@ -204,7 +204,7 @@
 <script setup lang="ts">
 import { onLoad } from '@dcloudio/uni-app'
 import { useLockFn } from '@/hooks/useLockFn'
-import TokensCost from '../../components/tokens-cost/tokens-cost.vue'
+import TokensCost from '@/components/tokens-cost/tokens-cost.vue'
 import PlaySectionTitle from '../../components/play-video/play-section-title.vue'
 import PlayTemplateCard from '../../components/play-video/play-template-card.vue'
 import PlayImageUpload from '../../components/play-video/play-image-upload.vue'
@@ -213,7 +213,7 @@ import PlayVoicePicker from '../../components/play-video/play-voice-picker.vue'
 import PlayBottomBar from '../../components/play-video/play-bottom-bar.vue'
 import PlayGenModal from '../../components/play-video/play-gen-modal.vue'
 import PlayPersonaPopup from '../../components/play-video/popups/play-persona-popup.vue'
-import { MontageTypeEnum } from '../../enums'
+import { MontageTypeEnum } from '@/enums/digitalHuman'
 import {
     FACE_IMAGE_MAX_MB,
     LEGAL_TEXT,

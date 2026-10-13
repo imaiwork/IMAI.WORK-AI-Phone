@@ -30,6 +30,8 @@
     "setup-checklist": "./components/setup-checklist",
     "viral-tab": "./components/viral-tab",
     "manual-import-popup": "./components/popups/manual-import-popup",
+    "square-picker-popup": "../../components/square-picker-popup/square-picker-popup",
+    "public-copy-picker-popup": "../../components/public-copy-picker-popup/public-copy-picker-popup",
     "cut-mode-popup": "./components/popups/cut-mode-popup"
   }
 }

@@ -42,6 +42,11 @@
                 </el-table-column>
                 <el-table-column label="昵称" prop="nickname" min-width="140" show-overflow-tooltip />
                 <el-table-column label="设备号" prop="device_code" min-width="180" />
+                <el-table-column label="绑定CDK" min-width="220" show-overflow-tooltip>
+                    <template #default="{ row }">
+                        {{ row.auth_code || "-" }}
+                    </template>
+                </el-table-column>
                 <el-table-column label="授权状态" min-width="130">
                     <template #default="{ row }">
                         <el-tag :type="getDeviceAuthStatusTag(row)" size="small">

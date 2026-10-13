@@ -1,1 +1,1 @@
-<view class="flex flex-col items-center justify-center"><image src="{{a}}" style="{{'width:' + b + ';' + ('height:' + c)}}"></image><view class="text-_b_hACABB9_B">{{d}}</view></view>
+<view class="flex flex-col items-center justify-center"><image src="{{a}}" style="{{'width:' + b + ';' + ('height:' + c)}}"></image><view class="text-_hACABB9_">{{d}}</view></view>

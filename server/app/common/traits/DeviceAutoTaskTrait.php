@@ -13,6 +13,7 @@ use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaTrafficConfig;
 use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvAddWechatRecord;
+use app\common\service\sv\AutoAddWechatResultService;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvCrawlingTaskDeviceBind;
 use app\common\model\sv\SvDevice;
@@ -814,6 +815,7 @@ trait DeviceAutoTaskTrait
                 //->where('t.auto_type', 1)
                 //->where('r.channel', 1)
                 ->where('r.status', 'in', [3, 4, 5])
+                ->orderRaw('CASE WHEN r.result = ? THEN 0 ELSE 1 END ASC', [AutoAddWechatResultService::QUEUED_RETRY_RESULT])
                 //->where('r.create_time', 'between', [strtotime(date('Y-m-d 00:00:00')), strtotime(date('Y-m-d 23:59:59'))])
                 ->order('r.channel desc, r.id desc')
                 ->limit(50)

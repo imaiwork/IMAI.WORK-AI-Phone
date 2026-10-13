@@ -82,7 +82,7 @@ class DySearchWechatVerifyService
             ->where('dy_search_task_id', '>', 0)
             ->where('status', self::ADD_STATUS_PENDING)
             ->order('id', 'asc')
-            ->limit(50)
+            ->limit(5)
             ->select();
         foreach ($rows as $row) {
             if ($deadline > 0 && time() >= $deadline) {
@@ -194,6 +194,7 @@ class DySearchWechatVerifyService
                 $status === self::ADD_STATUS_PENDING
                 || $status === 1
                 || $status === 2
+                || $status === SvAddWechatRecord::STATUS_RESULT_UNKNOWN
                 || ($status !== self::ADD_STATUS_VERIFYING && $status !== self::ADD_STATUS_INVALID && self::shouldDispatchStatus($status))
             ) {
                 return ['pending' => false, 'log' => $wechat . '加微记录已处理，跳过'];

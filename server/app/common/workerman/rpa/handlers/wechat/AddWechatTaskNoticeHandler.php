@@ -9,6 +9,7 @@ use app\common\model\sv\SvAddWechatRecord;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
 use app\common\model\sv\SvCrawlingManualTaskRecord;
+use app\common\service\sv\AutoAddWechatResultService;
 use app\common\workerman\rpa\WorkerEnum;
 
 
@@ -61,12 +62,29 @@ class AddWechatTaskNoticeHandler extends BaseMessageHandler
                 4 => '添加请求当前账号存在安全风险，暂时无法添加朋友',
             );
 
-            $record->image = $this->toolUtil->saveBase64ToImage($content['image'] ?? '', generate_unique_task_id(), 'wechat');
+            // 截图保存失败不能丢失设备已返回的添加结果。
+            try {
+                $record->image = $this->toolUtil->saveBase64ToImage($content['image'] ?? '', generate_unique_task_id(), 'wechat');
+            } catch (\Throwable $e) {
+                $this->setLog('加微结果截图保存失败 record_id=' . $record->id, 'add_wechat');
+            }
             $record->status = (int)$content['status'] === 0 ? 1 : 0;
             $record->result = $maps[$content['status']] ?? '未知状态：' . $content['status'];
             $record->update_time = time();
             $record->add_time = time();
-            $record->save();
+            if ($content['isManual'] == 0) {
+                if (!AutoAddWechatResultService::acceptResult($record, [
+                    'image' => $record->getData('image'),
+                    'status' => $record->status,
+                    'result' => $record->result,
+                    'update_time' => $record->getData('update_time'),
+                    'add_time' => $record->getData('add_time'),
+                ])) {
+                    return '添加微信记录已有结果，忽略重复回调';
+                }
+            } else {
+                $record->save();
+            }
 
             
             $this->setLog('记录:' .json_encode($record->toArray(), JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT), 'add_wechat');

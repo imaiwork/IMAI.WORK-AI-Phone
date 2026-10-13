@@ -928,7 +928,7 @@ const toCreatePublishTask = (type: "timer" | "qrcode") => {
         url:
             type == "timer"
                 ? "/ai_modules/device/pages/create_task/create_task?type=1"
-                : "/ai_modules/digital_human/pages/platform_publish/platform_publish",
+                : "/ai_modules/digital_human_create/pages/platform_publish/platform_publish",
         params: {
             source: ManualPublishSourceEnum.CREATION_VIDEO,
             ids: JSON.stringify(ids),
