@@ -73,8 +73,6 @@ export function useKeyboardSpacer(options: KeyboardSpacerOptions = {}) {
 
     return {
         keyboardOpen,
-        /** 系统键盘高度，单位 px，用来把输入条 fixed 到键盘上方 */
-        keyboardHeight: dynamicHeight,
         spacerHeight,
         showToolbar,
         guardToolbarAction,

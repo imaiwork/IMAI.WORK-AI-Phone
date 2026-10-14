@@ -40,13 +40,13 @@
                 style="background: linear-gradient(360deg, #eef0f6, transparent)">
             </view>
         </view>
+        <!-- 底栏始终留在文档流里由下方 spacer 顶起；键盘弹起瞬间切 fixed 会让 iOS 同层 textarea 失焦、键盘闪退 -->
         <view
             class="px-[20rpx] pt-1 relative z-[33] flex-shrink-0"
             :class="[
                 isHome ? 'bg-white chat-bottom-white pb-[16rpx]' : '',
-                keyboardOpen ? 'keyboard-dock' : isCoze || isStaff ? 'mb-[40rpx]' : isHome ? '' : 'mb-[20rpx]',
-            ]"
-            :style="keyboardOpen ? { bottom: keyboardHeight + 'px' } : {}">
+                isCoze || isStaff ? 'mb-[40rpx]' : isHome ? '' : 'mb-[20rpx]',
+            ]">
             <view class="relative z-[79] chat-bottom-box" @tap.stop>
                 <view class="flex flex-col">
                     <!-- 工具栏：键盘期折叠隐藏（不卸载，避免小程序把输入框那次点击补派发到工具栏）；收起后延迟展开防点穿 -->
@@ -1098,14 +1098,8 @@ const previousScrollTop = ref(0);
 const isProgrammaticScroll = ref(false);
 let scrollToLowerTimer: ReturnType<typeof setTimeout> | null = null;
 
-const {
-    keyboardOpen,
-    keyboardHeight,
-    spacerHeight,
-    showToolbar,
-    guardToolbarAction,
-    hideKeyboard,
-} = useKeyboardSpacer({
+const { keyboardOpen, spacerHeight, showToolbar, guardToolbarAction, hideKeyboard } =
+    useKeyboardSpacer({
         tabbarVisible: () => !!props.isHome,
         extraOffset: () => (props.isStaff ? 20 : 0),
     });
@@ -1337,16 +1331,6 @@ defineExpose({
 </script>
 
 <style lang="scss" scoped>
-.keyboard-dock {
-    position: fixed;
-    left: 0;
-    right: 0;
-    z-index: 80;
-    background: #eef0f6;
-}
-.keyboard-dock.chat-bottom-white {
-    background: #fff;
-}
 .chat-bottom-white {
     box-shadow: 0 -2rpx 16rpx rgba(0, 0, 0, 0.05);
 }
