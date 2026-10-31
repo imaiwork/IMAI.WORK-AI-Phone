@@ -48,6 +48,8 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
                 'status' => (string)$row->status,
                 'dispatch_status' => (string)($options['dispatch_status'] ?? 'pending'),
                 'retry_seq' => (int)($options['retry_seq'] ?? 0),
+                // 素材时长缺口（秒）：>0 表示收口后仍不足，成片会重复使用画面
+                'material_gap_sec' => (float)(($options['material_gate'] ?? [])['gap_sec'] ?? 0),
                 'error' => (string)$row->error,
                 'video_url' => TaskService::formatVideoUrl((string)$row->getData('video_url')),
                 'shanjian_video_task_id' => (int)$row->shanjian_video_task_id,
@@ -106,6 +108,11 @@ class TaskLists extends BaseAdminDataLists implements ListsSearchInterface
             } else {
                 $query->whereIn('user_id', $userIds);
             }
+        }
+
+        // 只看「画面循环压力大」的任务：下发收口后素材时长缺口>0（options_json.material_gate 由 VideoService 回写）
+        if (trim((string)($this->params['material_gap'] ?? '')) === '1') {
+            $query->whereRaw("JSON_EXTRACT(options_json, '$.material_gate.gap_sec') > 0");
         }
 
         $startTime = trim((string)($this->params['start_time'] ?? ''));

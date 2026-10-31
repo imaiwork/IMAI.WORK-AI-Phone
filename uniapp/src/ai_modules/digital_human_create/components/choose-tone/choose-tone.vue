@@ -427,10 +427,6 @@ const getToneAudioUrl = (item: any) => {
 };
 
 const toggleAudioPlayback = async (item: any) => {
-    if (!item.voice_urls) {
-        uni.$u.toast("当前音频不支持试听");
-        return;
-    }
     if (isPlaying.value && isChooseAudio(item.voice_id)) {
         pause();
         return;
@@ -440,6 +436,7 @@ const toggleAudioPlayback = async (item: any) => {
         // 无音频时必须停掉上一条，避免继续播旧源
         pauseAll();
         currVoiceId.value = null;
+        uni.$u.toast("当前音频不支持试听");
         return;
     }
     if (isPlaying.value) pauseAll();

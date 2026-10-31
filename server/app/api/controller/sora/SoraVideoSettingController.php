@@ -4,6 +4,7 @@
 namespace app\api\controller\sora;
 
 use app\api\controller\BaseApiController;
+use app\api\logic\sora\SoraPromptLogic;
 use app\api\logic\sora\SoraVideoSettingLogic;
 use app\api\validate\sora\SoraVideoTaskSettingValidate;
 use think\exception\HttpResponseException;
@@ -98,6 +99,24 @@ class SoraVideoSettingController extends BaseApiController
     }
 
 
+
+    /**
+     * @desc AI 帮写提示词（Seedance 镜头级提示词）
+     * @return \think\response\Json
+     */
+    public function prompt()
+    {
+        try {
+            $params = $this->request->post();
+            $result = SoraPromptLogic::prompt($params);
+            if ($result) {
+                return $this->data(SoraPromptLogic::getReturnData());
+            }
+            return $this->fail(SoraPromptLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
 
     /**
      * @desc 重新生成视频

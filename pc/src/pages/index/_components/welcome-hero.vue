@@ -456,7 +456,7 @@ const modeTabs: ModeTab[] = [
         key: "map",
         label: "地图获客",
         icon: "el-icon-LocationFilled",
-        placeholder: "告诉我你想找什么商家，例如：帮我找北京东城区的咖啡店",
+        placeholder: "告诉我你想找什么商家，例如：深圳市宝安区的咖啡店",
     },
     {
         key: "video",
@@ -1777,8 +1777,8 @@ function onNewDrawSession() {
     inputText.value = "";
 }
 function onPickCat(name: string) {
-    inputText.value = `帮我找${name}的商家`;
-    lockSend();
+    // 只回填搜索词，让用户自行修改后再点发送
+    inputText.value = `深圳市梧桐岛周边${name}`;
 }
 function onFetchMore() {
     // 续页走组件内 continueFetchAll:会带 query + page(=next_page)

@@ -236,6 +236,7 @@
         <upload-category-panel
             v-model="showUploadCategoryPanel"
             plain
+            album-last
             :title="uploadPanelTitle"
             :show-categories="uploadCategoryShowCategories"
             :tip="uploadCategoryTip"
@@ -250,6 +251,7 @@
             :mode="materialType"
             :type="chooseMaterialContentType"
             :limit="replaceMaterialIndex === -1 ? 9 : 1"
+            :unlimited-by-group="replaceMaterialIndex === -1"
             @select="handleSelectMaterial" />
         <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
         <keyword-edit-popup
@@ -806,6 +808,7 @@ const {
     viralList,
     viralPlatformCounts,
     viralPlatformTabs,
+    viralCopywritingSource,
 } = useViralTab();
 
 const {
@@ -903,6 +906,7 @@ const {
     handleCancelBatchDelete,
     handleConfirmBatchDelete,
     handleDeleteFailedSlices,
+    handleCleanOverUsedMaterial,
     handleConfirmCutMode,
     handleDirectMaterialFilter,
     handleMaterialFilter,
@@ -945,6 +949,8 @@ const {
     handleToggleMaterialSelected,
     handleToggleSelectAll,
     hasOverusedMaterial,
+    materialCleanThreshold,
+    showCleanButton,
     hasSlicingMaterial,
     hasSlicingTask,
     isAllMaterialSelected,
@@ -1086,6 +1092,7 @@ const handleRefreshTrackingWords = async (): Promise<void> => {
 
 const viralTabState = computed(() => ({
     runMode: detail.run_mode,
+    copywritingSource: viralCopywritingSource.value,
     activeViralPlatform: activeViralPlatform.value,
     expandedViralIds: expandedViralIds.value,
     filteredViralList: filteredViralList.value,
@@ -1167,6 +1174,8 @@ const materialsTabState = computed(() => ({
     batchDeleteMode: batchDeleteMode.value,
     formatMaterialTime,
     hasOverusedMaterial: hasOverusedMaterial.value,
+    materialCleanThreshold: materialCleanThreshold.value,
+    showCleanButton: showCleanButton.value,
     isAllMaterialSelected: isAllMaterialSelected.value,
     isCurrentPlaying,
     isCurrentMusicPlaying,
@@ -1222,6 +1231,7 @@ const materialsTabActions = {
     cancelBatchDelete: handleCancelBatchDelete,
     confirmBatchDelete: handleConfirmBatchDelete,
     deleteFailedSlices: handleDeleteFailedSlices,
+    cleanOverUsed: handleCleanOverUsedMaterial,
     directMaterialFilter: handleDirectMaterialFilter,
     directPublish: handleOpenDirectPublish,
     directPublishVisible: handleSetDirectPublishVisible,

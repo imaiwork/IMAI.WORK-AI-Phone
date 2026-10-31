@@ -1,0 +1,1 @@
+<scroll-view wx:if="{{a}}" scroll-x class="w-full data-v-356506b4" show-scrollbar="{{false}}"><view class="flex items-center gap-_12rpx_ pr-_8rpx_ data-v-356506b4"><view wx:for="{{b}}" wx:for-item="tab" wx:key="b" class="{{['mg-tab', 'data-v-356506b4', tab.c]}}" bindtap="{{tab.d}}"><text class="data-v-356506b4">{{tab.a}}</text></view></view></scroll-view>

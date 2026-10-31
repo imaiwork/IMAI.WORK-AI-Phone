@@ -18,6 +18,7 @@ use app\common\model\sv\SvRobotKeyword;
 use app\common\model\sv\SvWechatStrategy;
 use app\common\model\wechat\AiWechatLog;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\sv\ServiceContactFilter;
 use app\common\service\sv\GroupTriggerKeywordMatcher;
 use app\common\service\sv\SvSphClueDedupService;
 use app\common\service\sv\XhsPrivateMessageAiChatService;
@@ -1036,6 +1037,11 @@ class MessageHandler extends BaseMessageHandler
 
                             if ($userWechatNo === '' || in_array(strtolower($userWechatNo), $blacklist)) {
                                 $this->setLog('忽略字符串', 'msg');
+                                continue;
+                            }
+
+                            if (ServiceContactFilter::isServiceContact($userWechatNo)) {
+                                $this->setLog($userWechatNo . ' 属官方服务号已忽略', 'msg');
                                 continue;
                             }
 

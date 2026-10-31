@@ -30,31 +30,24 @@ class VideoService
     public const SETTING_NAME_MAX = 50;
     public const TASK_NAME_MAX = 200;
     public const DISPATCH_LOCK_TTL = 480;
-    public const AI_MATERIAL_KEYWORD_BUDGET_SEC = 25;
-    public const AI_MATERIAL_FETCH_BUDGET_MIN = 60;
-    public const AI_MATERIAL_FETCH_BUDGET_MAX = 90;
-    public const AI_MATERIAL_TRANSCODE_SEC = 15;
+    /**
+     * 抓取预算常量统一由 CopywritingImitationLogic 维护（热点、设备/微信、爆炸视频三条链路共用一份口径），
+     * 这里只做别名，禁止在热点侧另写数值。
+     */
     public const AI_MATERIAL_BUDGET = [
-        'max_elapsed_sec' => 60,
-        'max_candidates_per_keyword' => 2,
-        'max_transcode_fail' => 3,
-        'max_transcode_sec' => 15,
+        'max_elapsed_sec' => CopywritingImitationLogic::AI_MATERIAL_FETCH_BUDGET_MIN,
+        'max_candidates_per_keyword' => CopywritingImitationLogic::AI_MATERIAL_MAX_CANDIDATES_PER_KEYWORD,
+        'max_transcode_fail' => CopywritingImitationLogic::AI_MATERIAL_MAX_TRANSCODE_FAIL,
+        'max_transcode_sec' => CopywritingImitationLogic::TRANSCODE_VIDEO_SEC,
     ];
+    public const AI_MATERIAL_KEYWORD_BUDGET_SEC = CopywritingImitationLogic::AI_MATERIAL_KEYWORD_BUDGET_SEC;
 
     /**
      * 抓取阶段墙钟（不含抽词）。clips 大缺口 90s，digital/小缺口 60s。
      */
     public static function aiMaterialFetchBudgetSec(int $needV, int $needI): int
     {
-        $needV = max(0, $needV);
-        $needI = max(0, $needI);
-        $budget = $needV >= 6
-            ? self::AI_MATERIAL_FETCH_BUDGET_MAX
-            : self::AI_MATERIAL_FETCH_BUDGET_MIN;
-        if ($needV + $needI <= 0) {
-            return self::AI_MATERIAL_FETCH_BUDGET_MIN;
-        }
-        return max(self::AI_MATERIAL_FETCH_BUDGET_MIN, min(self::AI_MATERIAL_FETCH_BUDGET_MAX, $budget));
+        return CopywritingImitationLogic::aiMaterialFetchBudgetSec($needV, $needI);
     }
 
     /**
@@ -579,7 +572,13 @@ class VideoService
         $modelVersion = self::resolveVoiceModelVersion($voiceId, $userId);
 
         $opt['platform'] = (string)($task['platform'] ?? '');
-        $materials = self::resolveMaterials($userId, $personaId, $opt, $script);
+        $synthesisConfig = self::resolveSynthesisConfig($userId, $personaId);
+        $generationType = self::generationTypeByVideoType($opt['video_type']);
+        // 语速先于素材评估算好：speed_ratio<1 会拉长实际口播时长，素材充足性必须按折算后的时长判
+        $speedRatio = $manualMode
+            ? AiPersonaSynthesisConfig::normalizeSpeechRate($opt['speech_rate'] ?? null)
+            : self::resolveSpeechRate($synthesisConfig, $generationType);
+        $materials = self::resolveMaterials($userId, $personaId, $opt, $script, $speedRatio, $taskNo);
         if ($opt['video_type'] === 'clips' && $materials === []) {
             throw new HotspotUpstreamException('素材混剪必须选择素材');
         }
@@ -587,7 +586,6 @@ class VideoService
         $svMaterialIds = self::collectMaterialIds($materials, 'sv_media');
         $payloadMaterials = self::stripMaterialIds($materials);
 
-        $synthesisConfig = self::resolveSynthesisConfig($userId, $personaId);
         // 不选人设没有人设合成配置可依：背景音乐用高级设置里自传的曲子，没传就系统随机
         $musicUrl = $manualMode
             ? ManualAssetService::resolveMusicUrl(
@@ -601,10 +599,6 @@ class VideoService
         $volume = $manualMode
             ? AiPersonaSynthesisConfig::normalizeMusicVolume($opt['music_volume'] ?? null)
             : self::resolveVolume($synthesisConfig);
-        $speedRatio = $manualMode
-            ? AiPersonaSynthesisConfig::normalizeSpeechRate($opt['speech_rate'] ?? null)
-            : self::resolveSpeechRate($synthesisConfig);
-        $generationType = self::generationTypeByVideoType($opt['video_type']);
         $templateConfig = $synthesisConfig->isEmpty() ? [] : ($synthesisConfig->template_config ?? []);
         // 不选人设时用户可直接指定剪辑模板；没指定（或指定的已下架）仍按自动随机走
         $clipId = $manualMode
@@ -639,6 +633,10 @@ class VideoService
                 ? ShanjianVideoSettingLogic::MUSIC_SOURCE_CUSTOM
                 : ShanjianVideoSettingLogic::MUSIC_SOURCE_NONE,
         ];
+        // 素材时长缺口透出：后台可据此筛「画面循环压力大」的成片
+        if ((float)(self::$lastDurationGate['gap_sec'] ?? 0) > 0) {
+            $extra['material_gap_sec'] = (float)self::$lastDurationGate['gap_sec'];
+        }
         if (!$manualMode && $personaId > 0) {
             $extra['material_use_mode'] = ScriptService::resolveFrozenMaterialUseMode($opt, $personaId);
         }
@@ -711,6 +709,7 @@ class VideoService
             'template_mode' => SynthesisTemplateConfigService::templateMode($templateConfig, $generationType),
             'material_count' => count($materials),
             'materials' => self::summarizeMaterials($materials),
+            'duration_gate' => self::$lastDurationGate,
             'extra' => $extra,
             'setting_name' => $params['name'],
         ], 2500);
@@ -760,6 +759,10 @@ class VideoService
         $patch = array_merge($patch, $logPatch);
         if ($svMaterialIds !== []) {
             $patch['sv_material_ids'] = $svMaterialIds;
+        }
+        // 素材时长收口结果随绑定回写：缺口>0 才记，任务详情/后台列表据此透出「画面重复使用」风险
+        if ((float)(self::$lastDurationGate['gap_sec'] ?? 0) > 0) {
+            $patch['material_gate'] = self::$lastDurationGate;
         }
         $bound = TaskService::bindShanjian($taskNo, $patch);
         HotspotLog::write(sprintf(
@@ -1071,11 +1074,34 @@ class VideoService
         return $mode === 'ai' || $mode === 'ai_persona';
     }
 
-    public static function materialQuota(string $videoType): array
+    /**
+     * AI 找素材的最低条数兜底：视频 2 条，图片按目标秒数 × 15% / 每张 2 秒折算（夹 2~8 张）。
+     * 实际视频条数由素材秒数锚点驱动（见 aiRound1VideoTarget），不再按固定配额找。
+     *
+     * @param float $targetSec 本轮素材目标秒数（数字人 floor / 素材混剪 ceil）
+     */
+    public static function materialQuota(string $videoType, float $targetSec = 0.0): array
     {
-        return $videoType === 'clips'
-            ? ['v_min' => 8, 'v_max' => 8, 'i_min' => 2, 'i_max' => 3]
-            : ['v_min' => 2, 'v_max' => 3, 'i_min' => 2, 'i_max' => 3];
+        $imageTarget = ScriptService::imageTargetCount($targetSec);
+        return [
+            'v_min' => ScriptService::MATERIAL_ANCHOR_MIN_VIDEO,
+            'v_max' => ScriptService::MATERIAL_ANCHOR_MIN_VIDEO,
+            'i_min' => $imageTarget,
+            'i_max' => $imageTarget,
+        ];
+    }
+
+    /**
+     * 本轮素材目标秒数：数字人口播画面是穿插，按口播的一半（floor）即可；
+     * 素材混剪画面要铺满全片，按口播全量（ceil）。
+     *
+     * @param array{est_sec:float,floor_sec:float,ceil_sec:float} $anchor
+     */
+    public static function materialTargetSec(string $videoType, array $anchor): float
+    {
+        return $videoType === 'digital'
+            ? (float)($anchor['floor_sec'] ?? 0.0)
+            : (float)($anchor['ceil_sec'] ?? 0.0);
     }
 
     public static function pickMaterialTargets(array $quota): array
@@ -1110,26 +1136,180 @@ class VideoService
         ];
     }
 
-    public static function trimMaterialsToTargets(array $selected, int $targetV, int $targetI): array
+    /**
+     * 首轮 AI 找素材的视频条数：素材秒数锚点下限扣掉已选素材可承载秒数与图片占位后，
+     * 按均条长换算成总条数，不低于最低兜底 2 条、不超费用熔断 30 条。纯计算，不打库。
+     *
+     * @param array{video_sec:float,image_sec:float,video_count:int,image_count:int,unknown_dur_count:int} $summary
+     *        已选素材时长盘点（ScriptService::sumMaterialSeconds 口径：图片每条 IMAGE_DISPLAY_SEC 秒）
+     */
+    public static function aiRound1VideoTarget(
+        float $neededSec,
+        array $summary,
+        int $selectedVideoCount,
+        float $avgVideoSec,
+        int $minVideoCount,
+        int $targetI
+    ): int {
+        // 图片占位只算「AI 还会补的图片」：已选图片的秒数已被 image_sec 覆盖，
+        // 再按目标条数全量占位会重复扣减、让视频少补
+        $aiImageWillAdd = max(0, $targetI - (int)($summary['image_count'] ?? 0));
+        $videoGapSec = max(
+            0.0,
+            $neededSec - (float)($summary['video_sec'] ?? 0) - (float)($summary['image_sec'] ?? 0)
+                - $aiImageWillAdd * ScriptService::IMAGE_DISPLAY_SEC
+        );
+        // 均条长异常（<=0）按保守兜底 5 秒换算，与 config('hotspot.avg_video_sec_fallback') 默认一致；
+        // 不直接调 config()，保持本函数纯计算（调用方已传 averageVideoSeconds 的结果，正常恒 >=1）
+        $avg = max(1.0, $avgVideoSec > 0 ? $avgVideoSec : 5.0);
+        $targetByDuration = (int)ceil($videoGapSec / max(1.0, $avg)) + $selectedVideoCount;
+        return max($minVideoCount, min($targetByDuration, ScriptService::MATERIAL_ANCHOR_VIDEO_CAP));
+    }
+
+    /**
+     * 按「秒数」而非「条数」收割 AI 素材：先取图片到目标张数（每张 2 秒），
+     * 再按视频时长累加到目标秒数停止；条数上限仍按目标条数封顶，保底 2 视频 + 2 图片。
+     * $targetSec <= 0 时退化为原来的按条数收割。
+     */
+    public static function trimMaterialsToTargets(array $selected, int $targetV, int $targetI, float $targetSec = 0.0): array
     {
         $videos = [];
         $images = [];
+        $imageSec = 0.0;
         foreach ($selected as $item) {
             if (!is_array($item)) {
                 continue;
             }
             if (($item['type'] ?? '') === 'video') {
-                if (count($videos) < $targetV) {
-                    $videos[] = $item;
-                }
-            } elseif (count($images) < $targetI) {
+                continue;
+            }
+            if (count($images) < $targetI) {
                 $images[] = $item;
+                $imageSec += ScriptService::IMAGE_DISPLAY_SEC;
+            }
+        }
+        $videoSec = 0.0;
+        foreach ($selected as $item) {
+            if (!is_array($item) || ($item['type'] ?? '') !== 'video') {
+                continue;
+            }
+            if (count($videos) >= $targetV) {
+                break;
+            }
+            $videos[] = $item;
+            $videoSec += (float)($item['duration'] ?? 0);
+            if ($targetSec > 0
+                && $videoSec + $imageSec >= $targetSec
+                && count($videos) >= ScriptService::MATERIAL_ANCHOR_MIN_VIDEO) {
+                break;
             }
         }
         return array_values(array_merge($videos, $images));
     }
 
-    private static function resolveMaterials(int $userId, int $personaId, array $opt, string $script): array
+    /**
+     * 按 fileUrl 去重：同一素材在多轮抓取里反复命中时只保留第一次出现的，
+     * 否则成片会出现同一段画面反复播（用户反馈的「素材大量重复」）。
+     * 传 $existing 时，与已选素材重复的候选也一并剔除。
+     */
+    public static function dedupeMaterialsByUrl(array $materials, array $existing = []): array
+    {
+        $seen = [];
+        foreach ($existing as $item) {
+            if (is_array($item)) {
+                $url = trim((string)($item['fileUrl'] ?? $item['file_url'] ?? ''));
+                if ($url !== '') {
+                    $seen[$url] = true;
+                }
+            }
+        }
+        $out = [];
+        foreach ($materials as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $url = trim((string)($item['fileUrl'] ?? $item['file_url'] ?? ''));
+            if ($url !== '') {
+                if (isset($seen[$url])) {
+                    continue;
+                }
+                $seen[$url] = true;
+            }
+            $out[] = $item;
+        }
+        return array_values($out);
+    }
+
+    /**
+     * 上限收口：AI 找来的素材让总量超过成片预估秒数时，从尾部裁掉多余的 AI 素材
+     * （视频优先裁，AI 部分至少保留 2 视频 + 2 图片）。用户已选素材一律不动。
+     *
+     * @param array $selected 用户已选素材
+     * @param array $ai AI 补来的素材
+     */
+    private static function trimAiMaterialsToCeil(array $selected, array $ai, float $ceilSec): array
+    {
+        if ($ceilSec <= 0 || $ai === []) {
+            return $ai;
+        }
+        // 用户已选素材自身已盖过上限时，AI 部分整体多余，全部裁掉（保底条数只兜「不够」不兜「超量」）
+        $selectedOnly = ScriptService::sumMaterialSeconds($selected);
+        if ($selectedOnly['video_sec'] + $selectedOnly['image_sec'] >= $ceilSec) {
+            HotspotLog::write(sprintf(
+                'AI找素材超上限裁剪：用户已选素材=%.1f秒已盖过成片预估=%.1f秒，裁掉全部AI素材=%d条',
+                $selectedOnly['video_sec'] + $selectedOnly['image_sec'],
+                $ceilSec,
+                count($ai)
+            ));
+            return [];
+        }
+        $sum = ScriptService::sumMaterialSeconds(array_merge($selected, $ai));
+        if ($sum['video_sec'] + $sum['image_sec'] <= $ceilSec) {
+            return $ai;
+        }
+        $counts = self::countTypes($ai);
+        $videoCount = (int)($counts['video'] ?? 0);
+        $imageCount = (int)($counts['image'] ?? 0);
+        $dropped = 0;
+        for ($i = count($ai) - 1; $i >= 0; $i--) {
+            $current = ScriptService::sumMaterialSeconds(array_merge($selected, $ai));
+            if ($current['video_sec'] + $current['image_sec'] <= $ceilSec) {
+                break;
+            }
+            if (($ai[$i]['type'] ?? '') === 'video') {
+                if ($videoCount <= ScriptService::MATERIAL_ANCHOR_MIN_VIDEO) {
+                    continue;
+                }
+                $videoCount--;
+            } else {
+                if ($imageCount <= ScriptService::MATERIAL_ANCHOR_MIN_IMAGE) {
+                    continue;
+                }
+                $imageCount--;
+            }
+            unset($ai[$i]);
+            $dropped++;
+        }
+        if ($dropped > 0) {
+            HotspotLog::write(sprintf(
+                'AI找素材超上限裁剪：成片预估=%.1f秒 裁掉AI素材=%d条 保留视频=%d 图片=%d',
+                $ceilSec,
+                $dropped,
+                $videoCount,
+                $imageCount
+            ));
+        }
+        return array_values($ai);
+    }
+
+    /**
+     * 装载用户已选素材与模式上下文：resolveMaterials（下发收口）与 precheckMaterials（创建预检）共用，
+     * 保证两处对「谁将被 AI 补齐、谁靠纯人设素材」的判断同口径。
+     *
+     * @param array $opt normalizeOptions 后的设置
+     * @return array{selected:list,mode:string,manualMode:bool,frozenUseMode:?int,isOriginalMode:bool}
+     */
+    private static function loadSelectedMaterials(int $userId, int $personaId, array $opt): array
     {
         $mode = (string)($opt['material_mode'] ?? 'ai_persona');
         $manualMode = (int)($opt['persona_mode'] ?? ScriptService::PERSONA_MODE_PERSONA)
@@ -1139,10 +1319,6 @@ class VideoService
             : ShanjianVideoSettingLogic::MATERIAL_USE_MODE_SLICE;
         $isOriginalMode = !$manualMode && $personaId > 0
             && $frozenUseMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL;
-        // clips=素材混剪(3)，digital=数字人口播(1)；原图缺视频只拦混剪
-        $requiresOriginalVideo = ShanjianVideoSettingLogic::originalModeRequiresVideo(
-            ($opt['video_type'] ?? '') === 'clips' ? 3 : 1
-        );
         $selectedIds = $mode === 'ai' ? [] : ($opt['materials'] ?? []);
         $selected = $mode === 'ai' ? [] : self::loadPersonaMaterials(
             $userId,
@@ -1165,6 +1341,211 @@ class VideoService
                 ));
             }
         }
+        return [
+            'selected' => $selected,
+            'mode' => $mode,
+            'manualMode' => $manualMode,
+            'frozenUseMode' => $frozenUseMode,
+            'isOriginalMode' => $isOriginalMode,
+        ];
+    }
+
+    /**
+     * 创建时素材预检（锚点前置）：按素材秒数锚点盘点用户已选素材与同人设池可补时长，
+     * 给前端返回「成片预估/下限/上限秒数 + AI 将补齐 N 条 / 纯人设素材预计仍缺多少秒」。
+     * 只读：不写库、不调 AI、不产生费用。任何异常都吞掉返回 []，预检只是建议，绝不阻塞任务创建。
+     *
+     * @param array $task TaskService::create 返回的任务数组（含 script/options/persona）
+     * @return array{
+     *     est_duration_sec:int,est_sec:float,floor_sec:float,ceil_sec:float,
+     *     needed_sec:float,available_sec:float,gap_sec:float,
+     *     ai_fill_video:int,ai_fill_image:int,pool_fill_sec:float,warning:string
+     * }|array{}
+     */
+    public static function precheckMaterials(array $task, int $userId): array
+    {
+        try {
+            $title = trim((string)($task['title'] ?? ''));
+            if ($title === '') {
+                $title = (string)($task['topic'] ?? '');
+            }
+            // 与下发链路同口径：先去文案开头标题，再估时长
+            $script = ScriptService::stripLeadingTitle(trim((string)($task['script'] ?? '')), $title);
+            if ($script === '') {
+                return [];
+            }
+            $opt = ScriptService::normalizeOptions(is_array($task['options'] ?? null) ? $task['options'] : []);
+            $manualMode = (int)($opt['persona_mode'] ?? ScriptService::PERSONA_MODE_PERSONA)
+                === ScriptService::PERSONA_MODE_MANUAL;
+            $videoType = (string)($opt['video_type'] ?? '');
+            if ($videoType === '') {
+                $videoType = 'clips';
+            }
+            $personaId = 0;
+            if ($manualMode) {
+                // 不选人设：语速按高级设置折算，素材固定 AI 找，没有人设池可查
+                $speedRatio = AiPersonaSynthesisConfig::normalizeSpeechRate($opt['speech_rate'] ?? null);
+            } else {
+                $persona = is_array($task['persona'] ?? null) ? $task['persona'] : [];
+                $personaId = (int)($persona['id'] ?? 0);
+                if ($personaId <= 0) {
+                    return [];
+                }
+                // 素材充足性要按该生成类型的语速折算时长，不然三类语速不同时估得不准
+                $speedRatio = self::resolveSpeechRate(
+                    self::resolveSynthesisConfig($userId, $personaId),
+                    self::generationTypeByVideoType($videoType)
+                );
+            }
+            $anchor = ScriptService::materialAnchorSeconds($script, $speedRatio);
+            if ($anchor['est_sec'] <= 0) {
+                return [];
+            }
+            $estSec = ScriptService::estimateSpokenDurationSec($script, $speedRatio);
+            // 数字人按口播一半（floor）、素材混剪按口播全量（ceil）驱动首轮目标
+            $neededSec = self::materialTargetSec($videoType, $anchor);
+            $ctx = self::loadSelectedMaterials($userId, $personaId, $opt);
+            $selected = $ctx['selected'];
+            $mode = $ctx['manualMode'] ? 'ai' : $ctx['mode'];
+            $summary = ScriptService::sumMaterialSeconds($selected);
+            $availableSec = $summary['video_sec'] + $summary['image_sec'];
+            $counts = self::countTypes($selected);
+            $quota = self::materialQuota($videoType, $neededSec);
+            $targets = self::pickMaterialTargets($quota);
+            $targetI = (int)$targets['image'];
+            $precheck = [
+                'est_duration_sec' => $estSec,
+                'est_sec' => $anchor['est_sec'],
+                'floor_sec' => $anchor['floor_sec'],
+                'ceil_sec' => $anchor['ceil_sec'],
+                'needed_sec' => round($neededSec, 2),
+                'available_sec' => round($availableSec, 2),
+                'gap_sec' => round(max(0.0, $neededSec - $availableSec), 2),
+                'ai_fill_video' => 0,
+                'ai_fill_image' => 0,
+                'pool_fill_sec' => 0.0,
+                'warning' => '',
+            ];
+            if (self::shouldFillAiMaterials($mode)) {
+                // AI 模式：缺口由首轮 AI 补（最低 2 视频 + 2 图片兜底，秒数锚点同 resolveMaterials），预检只给数量建议
+                $targetV = self::aiRound1VideoTarget(
+                    $neededSec,
+                    $summary,
+                    $counts['video'],
+                    self::averageVideoSeconds($selected),
+                    (int)$targets['video'],
+                    $targetI
+                );
+                $gap = self::materialGap($counts, $targetV, $targetI);
+                $precheck['ai_fill_video'] = (int)$gap['video'];
+                $precheck['ai_fill_image'] = (int)$gap['image'];
+                return $precheck;
+            }
+            // 纯人设：缺口靠同人设池自动补入，预检先只读盘点池子能补多少，仍缺就出提示
+            $gapSec = max(0.0, $neededSec - $availableSec);
+            if ($gapSec > 0 && $personaId > 0) {
+                $pool = self::poolFillableSeconds(
+                    $userId,
+                    $personaId,
+                    $ctx['frozenUseMode'],
+                    $selected,
+                    $gapSec,
+                    $ctx['isOriginalMode']
+                );
+                $precheck['pool_fill_sec'] = $pool['added_sec'];
+                $remaining = round(max(0.0, $gapSec - $pool['added_sec']), 2);
+                $precheck['gap_sec'] = $remaining;
+                if ($remaining > 0) {
+                    $precheck['warning'] = sprintf(
+                        '素材预计可承载约%.1f秒（含同人设池可补%.1f秒），成片约%.1f秒、素材需覆盖约%.1f秒，仍缺%.1f秒；建议先在素材库补充素材，或缩短文案后再生成',
+                        $availableSec,
+                        $pool['added_sec'],
+                        $anchor['est_sec'],
+                        $neededSec,
+                        $remaining
+                    );
+                }
+            }
+            return $precheck;
+        } catch (\Throwable $e) {
+            HotspotLog::write('创建素材预检失败（不阻塞创建）：' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * 纯人设预检用：只读统计同人设可选视频池还能补进的秒数，不改动素材、不落库。
+     * 与下发链路 fillFromPersonaPool 同口径：可选池排除已选、按最长优先、累计到缺口即止；
+     * 原图模式候选先按时长裁剪再统计（与补入动作一致）。
+     *
+     * @return array{count:int,added_sec:float}
+     */
+    private static function poolFillableSeconds(
+        int $userId,
+        int $personaId,
+        ?int $frozenUseMode,
+        array $selected,
+        float $gapSec,
+        bool $isOriginalMode
+    ): array {
+        $haveIds = [];
+        foreach ($selected as $item) {
+            $id = (int)($item['material_id'] ?? 0);
+            if ($id > 0) {
+                $haveIds[] = $id;
+            }
+        }
+        try {
+            $query = PersonaService::clipMaterialQuery($userId, $personaId, $frozenUseMode, $frozenUseMode !== null)
+                ->where('duration', '>', 0)
+                ->field(['id', 'file_url', 'material_type', 'duration'])
+                ->order('duration', 'desc')
+                ->limit(self::PERSONA_POOL_FILL_LIMIT);
+            if ($haveIds !== []) {
+                $query->whereNotIn('id', $haveIds);
+            }
+            $rows = $query->select()->toArray();
+        } catch (\Throwable $e) {
+            HotspotLog::write('创建预检同人设池统计失败：' . $e->getMessage());
+            return ['count' => 0, 'added_sec' => 0.0];
+        }
+        $candidates = self::formatRawMaterials($rows);
+        if ($isOriginalMode) {
+            $candidates = ShanjianVideoSettingLogic::trimMaterialsByDuration($candidates);
+        }
+        $count = 0;
+        $addedSec = 0.0;
+        foreach ($candidates as $candidate) {
+            if ($addedSec >= $gapSec) {
+                break;
+            }
+            if (($candidate['type'] ?? '') !== 'video') {
+                continue;
+            }
+            $duration = (float)($candidate['duration'] ?? 0);
+            if ($duration <= 0) {
+                continue;
+            }
+            $count++;
+            $addedSec += $duration;
+        }
+        return ['count' => $count, 'added_sec' => round($addedSec, 2)];
+    }
+
+    private static function resolveMaterials(int $userId, int $personaId, array $opt, string $script, float $speedRatio = 1.0, string $taskNo = ''): array
+    {
+        $ctx = self::loadSelectedMaterials($userId, $personaId, $opt);
+        $selected = $ctx['selected'];
+        // 上一轮（或前几次重试）被全候选拒绝的词，本轮不再回到 available
+        $blockedKeywords = CopywritingImitationLogic::normalizeBlockedKeywords($opt['ai_blocked_keywords'] ?? []);
+        $mode = $ctx['mode'];
+        $manualMode = $ctx['manualMode'];
+        $frozenUseMode = $ctx['frozenUseMode'];
+        $isOriginalMode = $ctx['isOriginalMode'];
+        // clips=素材混剪(3)，digital=数字人口播(1)；原图缺视频只拦混剪
+        $requiresOriginalVideo = ShanjianVideoSettingLogic::originalModeRequiresVideo(
+            ($opt['video_type'] ?? '') === 'clips' ? 3 : 1
+        );
         // 原图模式判空：纯人设素材没有后手，这里就得报错；
         // ai/ai_persona 的缺口留给下面 AI 补齐，补完再判一次，否则会在 AI 出手前先被判死
         if ($isOriginalMode && !self::shouldFillAiMaterials($mode)) {
@@ -1187,15 +1568,56 @@ class VideoService
                 ));
             }
         }
-        $quota = self::materialQuota((string)($opt['video_type'] ?? ''));
+        $anchor = ScriptService::materialAnchorSeconds($script, $speedRatio);
+        $videoType = (string)($opt['video_type'] ?? '');
+        $targetSec = self::materialTargetSec($videoType, $anchor);
+        $quota = self::materialQuota($videoType, $targetSec);
         $targets = self::pickMaterialTargets($quota);
         $targetV = (int)$targets['video'];
         $targetI = (int)$targets['image'];
 
         if (self::shouldFillAiMaterials($mode)) {
-            // 用户已选的人设素材全量保留，配额只用于计算 AI 需要补齐的缺口；
+            // 用户已选的人设素材全量保留，最低兜底条数只用于计算 AI 需要补齐的缺口；
             // 此前先按配额裁剪用户选择，会把多选的素材直接丢掉，后台/成片都看不到用户选的素材
             $counts = self::countTypes($selected);
+            // —— 首轮目标按素材秒数锚点换算（「创建时锚点」落地点）——
+            // 数字人口播按口播的一半（floor）、素材混剪按口播全量（ceil），
+            // 扣掉已选素材可承载秒数与图片目标占位后，按已选素材均条长换算成视频条数，
+            // 不低于 2 条兜底、不超 50 条费用熔断。
+            // 短素材多时首轮就能补足时长，不必落二轮再抓一遍（省一次 AI 按次抓取费用）。
+            if ((bool)config('hotspot.ai_round1_duration_enabled', true) && $targetSec > 0) {
+                $estSec = ScriptService::estimateSpokenDurationSec($script, $speedRatio);
+                $neededSec = $targetSec;
+                $summary = ScriptService::sumMaterialSeconds($selected);
+                $avgSec = self::averageVideoSeconds($selected);
+                $quotaTargetV = $targetV;
+                $targetV = self::aiRound1VideoTarget(
+                    $neededSec,
+                    $summary,
+                    $counts['video'],
+                    $avgSec,
+                    $targetV,
+                    $targetI
+                );
+                if ($targetV !== $quotaTargetV) {
+                    HotspotLog::write(sprintf(
+                        '首轮AI找素材按秒数锚点：任务号=%s 类型=%s 口播预估=%d秒 素材预估=%.1f秒 下限=%.1f秒 上限=%.1f秒 已选视频=%d条%.1f秒（未知时长%d条） 均条长=%.1f秒 兜底=%d条 取=%d条 熔断=%d条',
+                        $taskNo !== '' ? $taskNo : '-',
+                        (string)$opt['video_type'],
+                        $estSec,
+                        $anchor['est_sec'],
+                        $anchor['floor_sec'],
+                        $anchor['ceil_sec'],
+                        $counts['video'],
+                        $summary['video_sec'],
+                        $summary['unknown_dur_count'],
+                        $avgSec,
+                        $quotaTargetV,
+                        $targetV,
+                        ScriptService::MATERIAL_ANCHOR_VIDEO_CAP
+                    ));
+                }
+            }
             $gap = self::materialGap($counts, $targetV, $targetI);
             $needV = $gap['video'];
             $needI = $gap['image'];
@@ -1217,19 +1639,30 @@ class VideoService
                         $needI,
                         $userId,
                         $personaId,
-                        (string)($opt['platform'] ?? '')
+                        (string)($opt['platform'] ?? ''),
+                        $blockedKeywords,
+                        $taskNo
+                    );
+                    $blockedKeywords = self::mergeBlockedKeywords(
+                        $blockedKeywords,
+                        CopywritingImitationLogic::lastGrabFailedKeywords()
                     );
                     $ai = self::formatRawMaterials(is_array($aiV) ? $aiV : []);
                     $ai = array_merge($ai, self::formatRawMaterials(is_array($aiI) ? $aiI : []));
+                    // 同一 URL 反复命中或多轮重复，都会让成片画面重复，先按 URL 去重（含与已选素材重复的）
+                    $ai = self::dedupeMaterialsByUrl($ai, $selected);
                     if ($isOriginalMode) {
                         $ai = self::filterMaterialsByOriginalSpec($ai);
                     }
-                    // 只裁剪 AI 补来的部分，不动用户已选素材
+                    // 只裁剪 AI 补来的部分，不动用户已选素材；按目标秒数累加收割
                     $ai = self::trimMaterialsToTargets(
                         ShanjianVideoSettingLogic::trimMaterialsByDuration($ai),
                         $needV,
-                        $needI
+                        $needI,
+                        $targetSec
                     );
+                    // 总量超过成片预估秒数时从尾部裁掉多余 AI 素材（用户已选素材不动）
+                    $ai = self::trimAiMaterialsToCeil($selected, $ai, $anchor['ceil_sec']);
                     $selected = array_merge($selected, $ai);
                     $stats = CopywritingImitationLogic::lastGrabStats();
                     HotspotLog::write(sprintf(
@@ -1282,7 +1715,347 @@ class VideoService
             }
         }
 
+        // —— 素材可承载时长收口：保证送上游的素材总时长 ≥ 口播实际预估时长 × 裕量 ——
+        // 切片模式此前没有任何时长闸门（trimMaterialsByDuration 只跑原图模式），
+        // 素材可承载时长短于口播时上游只能循环素材补齐，成片观感就是同一段画面反复出现。
+        self::$lastDurationGate = self::ensureMaterialDurationCoverage($userId, $personaId, $opt, $script, $speedRatio, $selected, [
+            'frozenUseMode' => $frozenUseMode,
+            'isOriginalMode' => $isOriginalMode,
+            'blockedKeywords' => $blockedKeywords,
+            'taskNo' => $taskNo,
+        ]);
+        // 本轮失败词并入热点任务选项，重试下发时通过 ai_blocked_keywords 阻断（最小落库方案）
+        $blockedKeywords = self::mergeBlockedKeywords(
+            $blockedKeywords,
+            CopywritingImitationLogic::lastGrabFailedKeywords()
+        );
+        if ($taskNo !== '' && ($blockedKeywords['video'] !== [] || $blockedKeywords['image'] !== [])) {
+            TaskService::patchOptions($taskNo, ['ai_blocked_keywords' => $blockedKeywords]);
+        }
+
         return array_values($selected);
+    }
+
+    /** 最近一次素材时长收口结果，供下发日志与 extra 透出 */
+    private static array $lastDurationGate = [
+        'est_duration_sec' => 0,
+        'needed_sec' => 0.0,
+        'available_sec' => 0.0,
+        'gap_sec' => 0.0,
+        'ai_round2' => 0,
+        'pool_filled' => 0,
+    ];
+
+    /** AI 补齐每轮最多追加的视频条数（兜抓取费用） */
+    public const AI_ROUND2_VIDEO_CAP = 20;
+
+    /** AI 补齐最多轮次：整单视频总数另有 50 条熔断兜底 */
+    public const AI_ROUND2_MAX_ROUNDS = 3;
+
+    /** 同人设池自动补入最多取的候选行数 */
+    public const PERSONA_POOL_FILL_LIMIT = 20;
+
+    /**
+     * 素材可承载时长收口：不足素材下限秒数时二轮补齐，补齐后仍不足按配置警告或拦截。
+     * 直接改写 $selected（引用传入），返回收口明细供日志与 extra 透出。
+     *
+     * @param array{frozenUseMode:?int,isOriginalMode:bool} $ctx resolveMaterials 已算好的模式上下文
+     * @return array{est_duration_sec:int,est_sec:float,floor_sec:float,ceil_sec:float,needed_sec:float,available_sec:float,gap_sec:float,ai_round2:int,pool_filled:int}
+     */
+    private static function ensureMaterialDurationCoverage(
+        int $userId,
+        int $personaId,
+        array $opt,
+        string $script,
+        float $speedRatio,
+        array &$selected,
+        array $ctx
+    ): array {
+        $videoType = (string)($opt['video_type'] ?? 'clips');
+        $mode = (string)($opt['material_mode'] ?? 'ai_persona');
+        $anchor = ScriptService::materialAnchorSeconds($script, $speedRatio);
+        $estSec = ScriptService::estimateSpokenDurationSec($script, $speedRatio);
+        $gate = [
+            'est_duration_sec' => 0,
+            'est_sec' => 0.0,
+            'floor_sec' => 0.0,
+            'ceil_sec' => 0.0,
+            'needed_sec' => 0.0,
+            'available_sec' => 0.0,
+            'gap_sec' => 0.0,
+            'ai_round2' => 0,
+            'pool_filled' => 0,
+        ];
+        // 空文案不评：原素材为空下发时另有兜底，这里不重复拦
+        if ($estSec <= 0 || $anchor['floor_sec'] <= 0) {
+            return $gate;
+        }
+        // 收口阈值 = 本轮素材目标秒数（数字人 floor / 素材混剪 ceil）
+        $neededSec = self::materialTargetSec($videoType, $anchor);
+        if ($neededSec <= 0) {
+            return $gate;
+        }
+
+        $summary = ScriptService::sumMaterialSeconds($selected);
+        $availableSec = $summary['video_sec'] + $summary['image_sec'];
+        $gapSec = $neededSec - $availableSec;
+        $gate['est_duration_sec'] = $estSec;
+        $gate['est_sec'] = $anchor['est_sec'];
+        $gate['floor_sec'] = $anchor['floor_sec'];
+        $gate['ceil_sec'] = $anchor['ceil_sec'];
+        $gate['needed_sec'] = round($neededSec, 2);
+        $gate['available_sec'] = round($availableSec, 2);
+        $gate['gap_sec'] = round(max(0.0, $gapSec), 2);
+
+        HotspotLog::write(sprintf(
+            '热点素材时长收口：类型=%s 模式=%s 口播预估=%d秒 素材预估=%.1f秒 下限=%.1f秒 上限=%.1f秒 素材=%.1f秒（视频%d条共%.1f秒，未知时长%d条；图片%d条共%.1f秒） 缺口=%.1f秒',
+            $videoType,
+            $mode,
+            $estSec,
+            $anchor['est_sec'],
+            $anchor['floor_sec'],
+            $anchor['ceil_sec'],
+            $availableSec,
+            $summary['video_count'],
+            $summary['video_sec'],
+            $summary['unknown_dur_count'],
+            $summary['image_count'],
+            $summary['image_sec'],
+            $gapSec
+        ));
+        if ($gapSec <= 0) {
+            return $gate;
+        }
+
+        $frozenUseMode = is_int($ctx['frozenUseMode'] ?? null) ? $ctx['frozenUseMode'] : null;
+        $isOriginalMode = (bool)($ctx['isOriginalMode'] ?? false);
+        $blockedKeywords = CopywritingImitationLogic::normalizeBlockedKeywords($ctx['blockedKeywords'] ?? []);
+        $taskNo = (string)($ctx['taskNo'] ?? '');
+
+        // —— 多轮补齐 AI：首轮按目标秒数补但仍可能因素材偏短没补够 ——
+        // 每轮按缺口折算条数（单轮 ≤20 条、视频总数 ≤50），候选与已有素材全重复或抓空即停，
+        // 避免同一批素材被反复抓、费用白花且画面重复。
+        if (self::shouldFillAiMaterials($mode) && (bool)config('hotspot.ai_second_round_enabled', true)) {
+            for ($round = 1; $round <= self::AI_ROUND2_MAX_ROUNDS; $round++) {
+                $summaryNow = ScriptService::sumMaterialSeconds($selected);
+                $gapNow = $neededSec - ($summaryNow['video_sec'] + $summaryNow['image_sec']);
+                // 单条素材本身有 1 秒级时长误差，差不足 1 秒视为已覆盖，避免再花一次抓取费用
+                if ($gapNow < 1.0) {
+                    break;
+                }
+                $budget = ScriptService::MATERIAL_ANCHOR_VIDEO_CAP - (int)$summaryNow['video_count'];
+                if ($budget <= 0) {
+                    HotspotLog::write(sprintf(
+                        '热点素材AI补齐停止：视频条数已达熔断上限 %d 条',
+                        ScriptService::MATERIAL_ANCHOR_VIDEO_CAP
+                    ));
+                    break;
+                }
+                $avgSec = self::averageVideoSeconds($selected);
+                $needV = (int)ceil($gapNow / $avgSec);
+                $needV = max(1, min($needV, self::AI_ROUND2_VIDEO_CAP, $budget));
+                HotspotLog::write(sprintf(
+                    '热点素材第%d轮AI补齐开始：缺口=%.1f秒 平均条长=%.1f秒 追加视频=%d条',
+                    $round,
+                    $gapNow,
+                    $avgSec,
+                    $needV
+                ));
+                try {
+                    [$aiV, $aiI] = self::fetchAiMaterials(
+                        $script,
+                        $needV,
+                        0,
+                        $userId,
+                        $personaId,
+                        (string)($opt['platform'] ?? ''),
+                        $blockedKeywords,
+                        $taskNo
+                    );
+                    $blockedKeywords = self::mergeBlockedKeywords(
+                        $blockedKeywords,
+                        CopywritingImitationLogic::lastGrabFailedKeywords()
+                    );
+                    $ai = self::formatRawMaterials(is_array($aiV) ? $aiV : []);
+                    if ($isOriginalMode) {
+                        $ai = self::filterMaterialsByOriginalSpec($ai);
+                    }
+                    $ai = ShanjianVideoSettingLogic::trimMaterialsByDuration($ai);
+                    $ai = self::dedupeMaterialsByUrl($ai, $selected);
+                    if ($ai === []) {
+                        HotspotLog::write(sprintf(
+                            '热点素材第%d轮AI补齐停止：候选与已有素材全部重复或抓空（拉取=%d条）',
+                            $round,
+                            count(is_array($aiV) ? $aiV : [])
+                        ));
+                        break;
+                    }
+                    // 本轮只补当前缺口，够填即停，避免一条长素材把后续轮次额度吃满
+                    $ai = self::trimMaterialsToTargets($ai, $needV, 0, $gapNow);
+                    if ($ai === []) {
+                        break;
+                    }
+                    $selected = array_merge($selected, $ai);
+                    $gate['ai_round2'] += count($ai);
+                    HotspotLog::write(sprintf(
+                        '热点素材第%d轮AI补齐完成：追加=%d条 拉取量（付费视频=%d 图片=%d）',
+                        $round,
+                        count($ai),
+                        count(is_array($aiV) ? $aiV : []),
+                        count(is_array($aiI) ? $aiI : [])
+                    ));
+                } catch (\Throwable $e) {
+                    HotspotLog::write('热点素材AI补齐失败：' . $e->getMessage());
+                    break;
+                }
+            }
+        } elseif ($mode === 'persona' && $personaId > 0
+            && (bool)config('hotspot.persona_pool_autofill_enabled', true)) {
+            $filled = self::fillFromPersonaPool($userId, $personaId, $frozenUseMode, $selected, $gapSec, $isOriginalMode);
+            $gate['pool_filled'] = (int)$filled['count'];
+        }
+
+        // 原图模式补进新素材后整单重裁：前置用户素材在前、后补素材在后，裁掉只会裁到后补的
+        if ($isOriginalMode) {
+            $selected = ShanjianVideoSettingLogic::trimMaterialsByDuration($selected);
+        }
+
+        $summary2 = ScriptService::sumMaterialSeconds($selected);
+        $available2 = $summary2['video_sec'] + $summary2['image_sec'];
+        $gap2 = round(max(0.0, $neededSec - $available2), 2);
+        $gate['available_sec'] = round($available2, 2);
+        $gate['gap_sec'] = $gap2;
+
+        if ($gap2 <= 0) {
+            HotspotLog::write(sprintf(
+                '热点素材时长收口完成：补齐后素材=%.1f秒 已覆盖需=%.1f秒（AI追加=%d条 池补入=%d条）',
+                $available2,
+                $neededSec,
+                $gate['ai_round2'],
+                $gate['pool_filled']
+            ));
+            return $gate;
+        }
+
+        $msg = sprintf(
+            '素材总时长约%.1f秒，成片约%.1f秒（素材需覆盖约%.1f秒），仍缺%.1f秒；请在素材库补充素材，或把口播时长改短后重试',
+            $available2,
+            $anchor['est_sec'],
+            $neededSec,
+            $gap2
+        );
+        $fail = $videoType === 'clips'
+            ? (bool)config('hotspot.material_gap_fail_clips', false)
+            : (bool)config('hotspot.material_gap_fail_digital', false);
+        if ($fail) {
+            HotspotLog::write('热点素材时长不足整单拦截：类型=' . $videoType . ' ' . $msg);
+            throw new HotspotUpstreamException($msg);
+        }
+        HotspotLog::write(sprintf(
+            '热点素材时长不足（警告照常出片）：类型=%s %s',
+            $videoType,
+            $msg
+        ));
+        return $gate;
+    }
+
+    /**
+     * persona（纯人设勾选）模式自动补入：从同人设可选素材池挑时长最长的视频补进本次任务。
+     * 与混剪素材列表同口径（clipMaterialQuery 按快照/人设模式滤），不产生 AI 找素材费用。
+     *
+     * @return array{count:int,added_sec:float,ids:list<int>}
+     */
+    private static function fillFromPersonaPool(
+        int $userId,
+        int $personaId,
+        ?int $frozenUseMode,
+        array &$selected,
+        float $gapSec,
+        bool $isOriginalMode
+    ): array {
+        $haveIds = [];
+        foreach ($selected as $item) {
+            $id = (int)($item['material_id'] ?? 0);
+            if ($id > 0) {
+                $haveIds[] = $id;
+            }
+        }
+        try {
+            $query = PersonaService::clipMaterialQuery($userId, $personaId, $frozenUseMode, $frozenUseMode !== null)
+                ->where('duration', '>', 0)
+                ->field(['id', 'file_url', 'thumbnail_url', 'material_type', 'duration'])
+                ->order('duration', 'desc')
+                ->limit(self::PERSONA_POOL_FILL_LIMIT);
+            if ($haveIds !== []) {
+                $query->whereNotIn('id', $haveIds);
+            }
+            $rows = $query->select()->toArray();
+        } catch (\Throwable $e) {
+            HotspotLog::write('热点素材同人设池补入查询失败：' . $e->getMessage());
+            return ['count' => 0, 'added_sec' => 0.0, 'ids' => []];
+        }
+        $candidates = self::formatRawMaterials($rows);
+        if ($isOriginalMode) {
+            $candidates = ShanjianVideoSettingLogic::trimMaterialsByDuration($candidates);
+        }
+        $added = 0;
+        $addedSec = 0.0;
+        $addedIds = [];
+        foreach ($candidates as $candidate) {
+            if ($addedSec >= $gapSec) {
+                break;
+            }
+            if (($candidate['type'] ?? '') !== 'video') {
+                continue;
+            }
+            $duration = (float)($candidate['duration'] ?? 0);
+            if ($duration <= 0) {
+                continue;
+            }
+            $selected[] = $candidate;
+            $added++;
+            $addedSec += $duration;
+            if (!empty($candidate['material_id'])) {
+                $addedIds[] = (int)$candidate['material_id'];
+            }
+        }
+        if ($added > 0) {
+            HotspotLog::write(sprintf(
+                '热点素材同人设池自动补入：候选=%d 补入=%d条 追加时长=%.1f秒 素材id=%s',
+                count($candidates),
+                $added,
+                $addedSec,
+                implode(',', $addedIds)
+            ));
+        } else {
+            HotspotLog::write(sprintf(
+                '热点素材同人设池无可补素材：候选=%d 缺口=%.1f秒',
+                count($candidates),
+                $gapSec
+            ));
+        }
+        return ['count' => $added, 'added_sec' => round($addedSec, 2), 'ids' => $addedIds];
+    }
+
+    /** 已选素材视频均条长：无可用时长时退保守值（可配），换算 AI 追加条数用 */
+    private static function averageVideoSeconds(array $materials): float
+    {
+        $total = 0.0;
+        $count = 0;
+        foreach ($materials as $item) {
+            if (is_array($item) && ($item['type'] ?? '') === 'video') {
+                $duration = (float)($item['duration'] ?? 0);
+                if ($duration > 0) {
+                    $total += $duration;
+                    $count++;
+                }
+            }
+        }
+        if ($count > 0) {
+            return max(1.0, $total / $count);
+        }
+        $fallback = (float)config('hotspot.avg_video_sec_fallback', 5.0);
+        return $fallback > 0 ? max(1.0, $fallback) : 5.0;
     }
 
     public static function resolveMaterialsForTest(int $userId, int $personaId, array $opt, string $script): array
@@ -1296,7 +2069,9 @@ class VideoService
         int $needI,
         int $userId,
         int $personaId,
-        string $platform = ''
+        string $platform = '',
+        array $blockedKeywords = [],
+        string $taskNo = ''
     ): array {
         self::recordHook('getAiMaterialsCalls', [
             'script' => $script,
@@ -1306,6 +2081,7 @@ class VideoService
             'persona_id' => $personaId,
             'material_store' => 'sv_media',
             'platform' => $platform,
+            'blocked_keywords' => $blockedKeywords,
         ]);
         if (array_key_exists('getAiMaterials', self::$testHooks)) {
             $hook = self::$testHooks['getAiMaterials'];
@@ -1323,14 +2099,28 @@ class VideoService
             $needI,
             $userId,
             $personaId,
-            array_merge(self::AI_MATERIAL_BUDGET, [
-                'max_elapsed_sec' => self::aiMaterialFetchBudgetSec($needV, $needI),
-                'max_keyword_elapsed_sec' => self::AI_MATERIAL_KEYWORD_BUDGET_SEC,
-                'max_transcode_sec' => self::AI_MATERIAL_TRANSCODE_SEC,
+            CopywritingImitationLogic::aiMaterialBudgetOpts($needV, $needI, [
                 'material_store' => 'sv_media',
                 'platform' => $platform,
+                'blocked_keywords' => $blockedKeywords,
+                // 日志贯通：热点任务号即 task_id，trace_id 固定，便于按任务回放多轮抓取
+                'task_id' => $taskNo,
+                'trace_id' => $taskNo !== '' ? 'hotspot_' . $taskNo : '',
             ])
         );
+    }
+
+    /**
+     * 合并本轮新失败词到历史阻断词（按类型去重），供重试链路落库。
+     */
+    public static function mergeBlockedKeywords(array $blocked, array $failed): array
+    {
+        $merged = CopywritingImitationLogic::normalizeBlockedKeywords($blocked);
+        $failed = CopywritingImitationLogic::normalizeBlockedKeywords($failed);
+        foreach (['video', 'image'] as $type) {
+            $merged[$type] = array_values(array_unique(array_merge($merged[$type], $failed[$type])));
+        }
+        return $merged;
     }
 
     /**
@@ -1639,10 +2429,15 @@ class VideoService
         );
     }
 
-    private static function resolveSpeechRate(mixed $config): float
+    private static function resolveSpeechRate(mixed $config, int $generationType = 0): float
     {
-        return AiPersonaSynthesisConfig::normalizeSpeechRate(
-            $config->isEmpty() ? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT : ($config->speech_rate ?? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT)
+        if ($config->isEmpty()) {
+            return AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT;
+        }
+        // 按生成类型取语速，缺项回落顶层（老数据三类继承顶层）
+        return AiPersonaSynthesisConfig::resolveTypeSpeechRate(
+            $config,
+            $generationType > 0 ? $generationType : AiPersonaSynthesisConfig::GENERATION_TYPE_DIGITAL_HUMAN
         );
     }
 

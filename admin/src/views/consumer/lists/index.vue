@@ -37,11 +37,13 @@
                 <el-form-item>
                     <el-button type="primary" @click="resetPage">查询</el-button>
                     <el-button @click="resetParams">重置</el-button>
-                    <!-- <export-data
+                    <!-- 用 v-if 而非 v-perms：export-data 挂载即请求 export=1 统计，无权限时请求已发出会被提示权限不足 -->
+                    <export-data
+                        v-if="hasAuth(['user.user/export'])"
                         class="ml-2.5"
-                        :fetch-fun="getUserList"
+                        :fetch-fun="exportUser"
                         :params="queryParams"
-                        :page-size="pager.size" /> -->
+                        :page-size="pager.size" />
                 </el-form-item>
             </el-form>
         </el-card>
@@ -114,8 +116,9 @@
 </template>
 <script lang="ts" setup name="consumerLists">
 import { usePaging } from "@/hooks/usePaging";
+import { useAuth } from "@/hooks/useAuth";
 import { getRoutePath } from "@/router";
-import { getUserList, getUserLevelList } from "@/api/consumer";
+import { getUserList, getUserLevelList, exportUser } from "@/api/consumer";
 import { ClientMap } from "@/enums/appEnums";
 import AddUserPop from "../components/add-user-pop.vue";
 import ImportUserPop from "./import.vue";
@@ -136,6 +139,8 @@ const { pager, getLists, resetPage, resetParams } = usePaging({
     fetchFun: getUserList,
     params: queryParams,
 });
+
+const { hasAuth } = useAuth();
 
 const getUserLevels = async () => {
     const { lists } = await getUserLevelList({ page: 1, size: 1000 });

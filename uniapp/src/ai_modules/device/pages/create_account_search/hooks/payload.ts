@@ -5,7 +5,10 @@ import type { AccountSearchFormData } from './types'
  * 表单 → device.dySearchTask/add 的请求体。
  * 纯函数，不碰 Vue，方便单独跑一遍比对接口文档。
  */
-export function buildDySearchPayload(formData: AccountSearchFormData) {
+export function buildDySearchPayload(
+    formData: AccountSearchFormData,
+    removedKeywords: string[] = []
+) {
     const isKeywordMode = formData.search_mode === SearchModeEnum.KEYWORD
     const scanCover = formData.scan_positions.includes(ScanPositionEnum.COVER)
     const contactPhone = formData.contact_types.includes(ContactTypeEnum.PHONE)
@@ -17,7 +20,14 @@ export function buildDySearchPayload(formData: AccountSearchFormData) {
         name: formData.name,
         device_codes: formData.device_codes,
         search_mode: formData.search_mode,
-        keywords: isKeywordMode ? formData.keywords : formData.target_accounts,
+        // 过滤空行，避免把空字符串当线索词写进任务和历史
+        keywords: (isKeywordMode ? formData.keywords : formData.target_accounts)
+            .map((item) => item.trim())
+            .filter((item) => item),
+        // 本次会话在表单里删掉的关键词，后端从历史同步移除；指定账号模式不产生关键词历史
+        removed_keywords: isKeywordMode
+            ? removedKeywords.map((item) => item.trim()).filter((item) => item)
+            : [],
         per_kw: isKeywordMode ? formData.per_kw : 0,
         scan_config: {
             // pre_filter 关掉时这 4 项必须清零，否则后端仍会按上次填的值过滤
@@ -38,7 +48,8 @@ export function buildDySearchPayload(formData: AccountSearchFormData) {
             // 没认手机号就谈不上「拿手机号当微信加」
             phone_as_wechat: contactPhone && !!formData.phone_as_wechat,
             miss_action: formData.miss_action,
-            miss_scripts: isMissDm ? formData.miss_scripts : [],
+            // 过滤空白话术，避免空字符串写进任务和历史
+            miss_scripts: isMissDm ? formData.miss_scripts.filter((item) => item.trim()) : [],
             miss_once: isMissDm && !!formData.miss_once,
             // 去重与已看过跳过：页面无开关，后端锁死，这里照传
             dedupe: true,

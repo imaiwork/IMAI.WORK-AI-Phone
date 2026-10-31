@@ -266,6 +266,9 @@ class AccountLogEnum
     const TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P = 10112;
     const TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P = 10113;
 
+    /** 公共文案AI仿写（按中台返回的实际 token 折算，不设一口价） */
+    const TOKENS_DEC_PUBLIC_COPYWRITING_REWRITE = 10114;
+
 
 
     // 分销代理
@@ -508,6 +511,7 @@ class AccountLogEnum
         self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_480P,
         self::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P,
         self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P,
+        self::TOKENS_DEC_PUBLIC_COPYWRITING_REWRITE,
 
         self::TOKENS_DEC_STORYBOARD_VIDEO,
         self::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
@@ -787,7 +791,7 @@ class AccountLogEnum
             self::TOKENS_DEC_SPH_ADD_WECHAT => '视频号获客减少算力',
             self::TOKENS_DEC_SPH_ADD_FRIENDS => '视频号获客加好友话术自动去重减少算力',
             self::TOKENS_DEC_SPH_PRIVATE_CHAT => '视频号获客主动私聊话术去重减少算力',
-            self::TOKENS_DEC_SPH_SEARCH_TERMS => '视频号获客检索关键词减少算力',
+            self::TOKENS_DEC_SPH_SEARCH_TERMS => '获客检索关键词减少算力',
 
             self::TOKENS_DEC_AI_REPLY_LIKE => 'AI朋友圈评论点赞减少算力',
             self::TOKENS_DEC_VIDEO_CLIP => '视频剪辑减少算力',
@@ -822,6 +826,7 @@ class AccountLogEnum
             self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_480P => 'Seedance 2.5模型480p参考视频生成视频减少算力',
             self::TOKENS_DEC_SEEDANCE_IMAGE2VIDEO_720P => 'Seedance 2.5模型720p参考图文生成视频减少算力',
             self::TOKENS_DEC_SEEDANCE_VIDEO2VIDEO_720P => 'Seedance 2.5模型720p参考视频生成视频减少算力',
+            self::TOKENS_DEC_PUBLIC_COPYWRITING_REWRITE => '公共文案AI仿写减少算力',
 
                 // 自动化功能描述
             self::TOKENS_DEC_AUTOMATION_SOCIAL_MEDIA_RELEASED => '自动化社媒平台发布减少算力',

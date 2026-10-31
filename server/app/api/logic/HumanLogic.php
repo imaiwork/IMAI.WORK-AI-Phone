@@ -20,6 +20,7 @@ use app\common\model\ModelConfig;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\service\ConfigService;
+use app\common\service\digitalHuman\ChanjingAnchorVideoValidator;
 use app\common\service\digitalHuman\PublicAnchorBindService;
 use app\common\service\FileService;
 use app\common\service\UserDisplaySanitizer;
@@ -59,6 +60,17 @@ class HumanLogic extends ApiLogic
     const VOICE_TRAINING_CHANJING = 'voiceTrainingChanjing'; //音色训练
     const AUDIO_TRAINING_CHANJING = 'audioTrainingChanjing'; //文字转音频
     const VIDEO_TRAINING_CHANJING = 'videoTrainingChanjing'; //视频训练
+
+    private static function chanjingErrorMessage(array $data, string $fallback): string
+    {
+        foreach (['err_msg', 'err_reason', 'msg', 'message'] as $key) {
+            $message = $data[$key] ?? '';
+            if (is_string($message) && trim($message) !== '') {
+                return trim($message);
+            }
+        }
+        return $fallback;
+    }
 
     /**
      * 回调落库的终态 CAS：只在该行仍是 status=0（生成中）时写入
@@ -272,6 +284,8 @@ class HumanLogic extends ApiLogic
                 }
                 if ($item->model_version === 7) {
 
+                    $errorMessage = self::chanjingErrorMessage($data, 'ai生成授权视频音色克隆失败');
+
                     if (in_array($data['status'], [2, 3, 4])) {
                         $item->status = ($data['status'] == 2) ? 1 : 2;
                         // TODO 失败退费
@@ -280,7 +294,7 @@ class HumanLogic extends ApiLogic
                            if (!empty($dh_id) && PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$item->user_id)){
                                $squpdate= [
                                    'status' => 3,
-                                   'remark'=> 'ai生成授权视频音色克隆失败'
+                                   'remark'=> $errorMessage
                                ];
                                DigitalHumanAnchor::where('id', $dh_id)->update($squpdate);
                            } else if (!empty($dh_id)) {
@@ -294,7 +308,7 @@ class HumanLogic extends ApiLogic
                     } else {
                         $item->status = 0;
                     }
-                    $item->remark       = $data['err_msg'] ?? '';
+                    $item->remark       = $item->status == 2 ? $errorMessage : ($data['err_msg'] ?? '');
                 }
                 self::saveIfPending($item);
             });
@@ -440,6 +454,7 @@ class HumanLogic extends ApiLogic
                 }
                 if ((int)$item->model_version === 7) { //蝉镜
                     $status = (int)$data['status'];
+                    $errorMessage = self::chanjingErrorMessage($data, 'ai生成授权视频视频合成失败');
                     if ($status != 10) {
                         $item->status = ($data['status'] == 30) ? 1 : 2;
                         $notice = true;
@@ -448,7 +463,7 @@ class HumanLogic extends ApiLogic
                             if (!empty($dh_id) && PublicAnchorBindService::ownedPublic((int)$dh_id, (int)$item->user_id)){
                                 $squpdate= [
                                     'status' => 3,
-                                    'remark'=> 'ai生成授权视频视频合成失败'
+                                    'remark'=> $errorMessage
                                 ];
                                 DigitalHumanAnchor::where('id', $dh_id)->update($squpdate);
                             } else if (!empty($dh_id)) {
@@ -564,7 +579,7 @@ class HumanLogic extends ApiLogic
                             PublicAnchorBindService::logSkipUnowned((int)$dh_id, (int)$item->user_id, 'HumanLogic::updateVideo.success');
                         }
                     }
-                    $item->remark = $data['msg'] ?? '';
+                    $item->remark = $item->status == 2 ? $errorMessage : ($data['msg'] ?? '');
                 }
 
                 // type5 蝉镜桥接：成功/失败回写闪剪 type5，成功且开智剪则派生闪剪包装
@@ -1367,20 +1382,22 @@ class HumanLogic extends ApiLogic
                 HumanAnchor::create($addData);
             }
         } else {
+            $error = (int)$model_version === 7 && is_string($result['message'] ?? null)
+                ? $result['message'] : '';
             if (!empty($digitalHuman)) {
                 $digitalHuman->task_ids = json_encode($task_ids);
                 $digitalHuman->status = 3;
                 $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion((int)$model_version) ?: '数字人';
-                $digitalHuman->remark =  $modelName . '形象合成失败';
+                $digitalHuman->remark = $error ?: $modelName . '形象合成失败';
                 $digitalHuman->save();
             }
             if (!empty($placeholder)) {
                 $placeholder->save([
                     'status' => 2,
-                    'remark' => !empty($digitalHuman) ? (string)$digitalHuman->remark : '形象合成失败',
+                    'remark' => !empty($digitalHuman) ? (string)$digitalHuman->remark : ($error ?: '形象合成失败'),
                 ]);
             }
-            self::setError('合成失败');
+            self::setError($error ?: '合成失败');
             return false;
         }
         return true;
@@ -1459,7 +1476,9 @@ class HumanLogic extends ApiLogic
             self::$returnData = $anchor->toArray();
         } else {
 
-            self::setError('重试失败');
+            $error = (int)$anchor->model_version === 7 && is_string($result['message'] ?? null)
+                ? $result['message'] : '';
+            self::setError($error ?: '重试失败');
             return false;
         }
         return true;
@@ -2431,7 +2450,7 @@ class HumanLogic extends ApiLogic
                             );
                             $item->remark = $response['message'] ?? '形象创建失败';
                             $item->save();
-                            message('形象创建失败');
+                            message($item->remark);
                         }
 
                         if($item->model_version == 1 && $response['status'] == 'completed'){
@@ -3161,6 +3180,12 @@ class HumanLogic extends ApiLogic
      */
     private static function requestUrl(array $request, string $scene, int $userId, string $taskId): array
     {
+        if ($scene === self::AVATAR_TRAINING_CHANJING) {
+            $durationError = ChanjingAnchorVideoValidator::validate((string)($request['video_url'] ?? ''));
+            if ($durationError !== null) {
+                return ['message' => $durationError];
+            }
+        }
 
         $requestService = \app\common\service\ToolsService::Human();
 
@@ -3486,6 +3511,12 @@ class HumanLogic extends ApiLogic
 
         $result = self::requestUrl($request, $scene, self::$uid, $taskId);
         if (!empty($result) && isset($result['content'])) {
+            // ─── 文案质量校验：英文缺空格 / 外文乱码 ───
+            $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
+            $result['content'] = $sanitized['content'];
+            if (!empty($sanitized['warnings'])) {
+                $result['warnings'] = $sanitized['warnings'];
+            }
             self::$returnData = $result;
         } else {
             self::setError('生成失败');

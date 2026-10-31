@@ -1,6 +1,11 @@
 import { deleteShanjianTaskRecord, downloadShanjianVideoTask } from "@/api/digital_human";
 import { deleteImageRecord, getGenerateRecordList, getImageRecordList, retryGenerateRecord } from "@/api/person";
-import { VideoDownloadStatusEnum, isCloudRunMode } from "@/ai_modules/person/enums";
+import {
+    COPYWRITING_SOURCE_LABEL,
+    CopywritingSourceEnum,
+    VideoDownloadStatusEnum,
+    isCloudRunMode,
+} from "@/ai_modules/person/enums";
 import { AppTypeEnum } from "@/enums/appEnums";
 import { useCopy } from "@/hooks/useCopy";
 import { saveVideoToPhotosAlbum } from "@/utils/file";
@@ -44,11 +49,31 @@ const MATERIAL_SOURCE_MAP: Record<number, TagConfig> = {
 };
 
 const COPYWRITING_SOURCE_MAP: Record<number, TagConfig> = {
-    1: { label: "爆款仿写", bg: "#FFEAEC", color: "#F56C6C" },
-    2: { label: "AI生成", bg: "#EEF2FF", color: "#4F46E5" },
-    3: { label: "无文案", bg: "#F2F3F5", color: "#999999" },
-    4: { label: "文案库", bg: "#F0FBE8", color: "#389E0D" },
-    5: { label: "热点生成", bg: "#FFF7E8", color: "#D46B08" },
+    [CopywritingSourceEnum.IMITATE]: {
+        label: COPYWRITING_SOURCE_LABEL[CopywritingSourceEnum.IMITATE],
+        bg: "#FFEAEC",
+        color: "#F56C6C",
+    },
+    [CopywritingSourceEnum.AI]: {
+        label: COPYWRITING_SOURCE_LABEL[CopywritingSourceEnum.AI],
+        bg: "#EEF2FF",
+        color: "#4F46E5",
+    },
+    [CopywritingSourceEnum.NONE]: {
+        label: COPYWRITING_SOURCE_LABEL[CopywritingSourceEnum.NONE],
+        bg: "#F2F3F5",
+        color: "#999999",
+    },
+    [CopywritingSourceEnum.LIBRARY]: {
+        label: COPYWRITING_SOURCE_LABEL[CopywritingSourceEnum.LIBRARY],
+        bg: "#F0FBE8",
+        color: "#389E0D",
+    },
+    [CopywritingSourceEnum.HOTSPOT]: {
+        label: COPYWRITING_SOURCE_LABEL[CopywritingSourceEnum.HOTSPOT],
+        bg: "#FFF7E8",
+        color: "#D46B08",
+    },
 };
 
 const SHANJIAN_TYPE_MAP: Record<number, TagConfig> = {

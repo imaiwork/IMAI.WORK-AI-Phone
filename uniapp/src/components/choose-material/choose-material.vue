@@ -22,11 +22,7 @@
                             <text class="text-xs">
                                 已选：<text
                                     class="font-semibold"
-                                    :class="
-                                        props.limit && totalChooseCount >= props.limit
-                                            ? 'text-[#EF4444]'
-                                            : 'text-primary'
-                                    "
+                                    :class="limitReached ? 'text-[#EF4444]' : 'text-primary'"
                                     >{{ totalChooseCount }}</text
                                 >
                             </text>
@@ -37,21 +33,29 @@
                                 color="#6B7280" />
                         </view>
                         <view
-                            v-if="props.multiple && props.limit && props.limit > 1"
+                            v-if="showLimitBadge"
                             class="flex items-center gap-[4rpx] px-[12rpx] h-[36rpx] rounded-full"
-                            :class="props.limit && totalChooseCount >= props.limit ? 'bg-[#FEF2F2]' : 'bg-[#F0F2F5]'">
+                            :class="groupAllImport ? 'bg-[#ECFDF5]' : limitReached ? 'bg-[#FEF2F2]' : 'bg-[#F0F2F5]'">
                             <u-icon
                                 :name="
-                                    props.limit && totalChooseCount >= props.limit ? 'info-circle-fill' : 'info-circle'
+                                    groupAllImport
+                                        ? 'folder'
+                                        : limitReached
+                                        ? 'info-circle-fill'
+                                        : 'info-circle'
                                 "
-                                :color="props.limit && totalChooseCount >= props.limit ? '#EF4444' : '#9CA3AF'"
+                                :color="groupAllImport ? '#0F9F6E' : limitReached ? '#EF4444' : '#9CA3AF'"
                                 size="18" />
                             <text
                                 class="text-[20rpx] font-medium"
                                 :class="
-                                    props.limit && totalChooseCount >= props.limit ? 'text-[#EF4444]' : 'text-[#9CA3AF]'
+                                    groupAllImport
+                                        ? 'text-[#0F9F6E]'
+                                        : limitReached
+                                        ? 'text-[#EF4444]'
+                                        : 'text-[#9CA3AF]'
                                 ">
-                                最多 {{ props.limit }} 个
+                                {{ groupAllImport ? "分组整组导入" : `最多 ${props.limit} 个` }}
                             </text>
                         </view>
                     </view>
@@ -167,6 +171,14 @@
                         @query="queryList">
                         <view v-if="isGroupListMode" class="px-4 flex flex-col gap-y-3">
                             <view
+                                v-if="props.unlimitedByGroup && !props.disableGroupSelect"
+                                class="flex items-start gap-[10rpx] px-[20rpx] py-[16rpx] rounded-[16rpx] bg-[#ECFDF5]">
+                                <u-icon name="folder" color="#0F9F6E" size="24"></u-icon>
+                                <text class="flex-1 text-[22rpx] leading-[1.6] text-[#0F9F6E]">
+                                    点「整组导入」可一次导入该组全部素材，不受数量限制；已导入过的素材会自动跳过
+                                </text>
+                            </view>
+                            <view
                                 v-for="(item, index) in dataLists"
                                 :key="index"
                                 class="bg-white rounded-[16rpx] p-3 flex items-center shadow-sm border transition-all"
@@ -226,7 +238,13 @@
                                                 : 'bg-white border-[#E5E7EB] text-[#6B7280]'
                                         "
                                         @click.stop="item.material_count > 0 && toggleChooseGroup(item)">
-                                        {{ isChooseGroup(item) ? "已选分组" : "选分组" }}
+                                        {{
+                                            isChooseGroup(item)
+                                                ? "已选分组"
+                                                : props.unlimitedByGroup
+                                                ? "整组导入"
+                                                : "选分组"
+                                        }}
                                     </view>
 
                                     <u-icon
@@ -513,6 +531,8 @@ const props = withDefaults(
         durationLimit?: number;
         imageDuration?: number;
         disableGroupSelect?: boolean;
+        /** 选中分组时按整组全部导入，不受 limit 条数限制（人设素材库导入用） */
+        unlimitedByGroup?: boolean;
     }>(),
     {
         multiple: true,
@@ -521,6 +541,7 @@ const props = withDefaults(
         imageDuration: 2,
         durationLimit: 0,
         disableGroupSelect: false,
+        unlimitedByGroup: false,
     },
 );
 
@@ -573,6 +594,23 @@ const isConfirming = ref(false);
 const currentGroupItem = reactive<any>({ id: "", name: "" });
 
 const totalChooseCount = computed(() => chooseGroups.value.length + chooseLists.value.length);
+/** 选了分组且允许整组导入时，数量不再受 limit 限制：limit 只约束单个素材的勾选 */
+const groupAllImport = computed(() => !!props.unlimitedByGroup && chooseGroups.value.length > 0);
+const limitReached = computed(
+    () => !!props.limit && !groupAllImport.value && totalChooseCount.value >= props.limit,
+);
+/**
+ * 右上角「最多 N 个」提示：分组列表上的「整组导入」一次性导入该组全部素材、不受 limit 限制
+ * （列表顶部已有说明），此处再提示数量上限会与整组导入矛盾，整组导入场景直接隐藏。
+ * 进入分组内部按条勾选时 limit 仍然生效，提示照旧展示。
+ */
+const showLimitBadge = computed(
+    () =>
+        !!props.multiple &&
+        !!props.limit &&
+        props.limit > 1 &&
+        !(props.unlimitedByGroup && isGroupListMode.value),
+);
 const isImage = (item: any) => item.m_type === MaterialLibTypeEnum.IMAGE;
 const isAudio = (item: any) => item.m_type === MaterialLibTypeEnum.AUDIO;
 const isAudioOnly = computed(() => props.type === "audio");
@@ -922,6 +960,27 @@ const applyDurationLimit = (
 };
 
 // ── 确认提交 ─────────────────────────────────────────────────
+/**
+ * 整组导入要拿全组素材：按页拉取直到最后一页，避免单页上限（999）把大分组截断。
+ * 20 页 × 500 = 10000 条为安全上限，正常分组远达不到。
+ */
+const fetchGroupMaterials = async (groupId: string | number): Promise<any[]> => {
+    const pageSize = 500;
+    const maxPages = 20;
+    const result: any[] = [];
+    for (let pageNo = 1; pageNo <= maxPages; pageNo++) {
+        const { lists = [] } = await getMaterialLibraryList({
+            page_no: pageNo,
+            page_size: pageSize,
+            group_id: groupId,
+            m_type: queryMType.value,
+        });
+        result.push(...lists);
+        if (lists.length < pageSize) break;
+    }
+    return result;
+};
+
 const confirm = async () => {
     if (totalChooseCount.value === 0) {
         uni.$u.toast(`至少选择一个${emptySelectTip.value}`);
@@ -945,12 +1004,7 @@ const confirm = async () => {
                 Math.round(5 + (gi / chooseGroups.value.length) * 30),
             );
             try {
-                const { lists } = await getMaterialLibraryList({
-                    page_no: 1,
-                    page_size: 999,
-                    group_id: group.id,
-                    m_type: queryMType.value,
-                });
+                const lists = await fetchGroupMaterials(group.id);
                 groupItems.push(
                     ...lists.map((item: any) => ({
                         ...item,
@@ -958,6 +1012,9 @@ const confirm = async () => {
                         type: resolveContentType(item),
                         pic: isImage(item) ? item.pic || item.content : item.pic,
                         _fromGroup: group.id,
+                        // 整组导入来源：落到人设素材库后用于打标签 + 重复导入判重
+                        _sourceGroupId: group.id,
+                        _sourceGroupName: group.name,
                     })),
                 );
             } catch (e) {
@@ -967,11 +1024,23 @@ const confirm = async () => {
 
         setProgress("正在合并素材...", "步骤 2/3：合并去重", 40);
 
+        // 同一素材既被单个勾选又在所选分组里时，按分组导入归属，否则重导该组会重复入库
+        const groupProvenance = new Map<any, { id: any; name: string }>();
+        for (const item of groupItems) {
+            groupProvenance.set(item.id, { id: item._sourceGroupId, name: item._sourceGroupName });
+        }
+
         const singleItems = chooseLists.value.map((item: any) => ({
             ...item,
             url: item.content,
             type: resolveContentType(item),
             pic: isImage(item) ? item.pic || item.content : item.pic,
+            ...(groupProvenance.has(item.id)
+                ? {
+                      _sourceGroupId: groupProvenance.get(item.id)!.id,
+                      _sourceGroupName: groupProvenance.get(item.id)!.name,
+                  }
+                : {}),
         }));
 
         const idSet = new Set(singleItems.map((i: any) => i.id));
@@ -984,7 +1053,8 @@ const confirm = async () => {
         }
         let allItems = [...singleItems, ...mergedGroupItems];
 
-        if (props.limit && allItems.length > props.limit) {
+        // 整组导入不按 limit 截断：limit 只限制单个素材的勾选数量，分组要按组全部导入
+        if (props.limit && !groupAllImport.value && allItems.length > props.limit) {
             setProgress("素材数量超出限制，等待确认...", "步骤 3/3：数量校验", 45);
             closeProgressPop();
 
@@ -1057,6 +1127,10 @@ const emitResult = (result: any[]) => {
             size: item.size,
             duration: item.duration,
             type: resolveContentType(item),
+            // 整组导入的来源，消费方（人设素材库）用它打标签并按组判重
+            source_group_id: Number(item._sourceGroupId) || 0,
+            source_material_id: Number(item._sourceGroupId) ? Number(item.id) || 0 : 0,
+            source_group_name: item._sourceGroupName || "",
         })),
     );
     chooseLists.value = [];

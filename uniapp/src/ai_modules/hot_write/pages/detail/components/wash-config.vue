@@ -279,6 +279,20 @@
                 </text>
             </view>
 
+            <!-- AI 找素材秒数锚点：成片预估 = 字数 × 0.2，素材需覆盖 [预估×0.5, 预估] -->
+            <view
+                v-if="materialAnchorHint"
+                class="w-full mt-[20rpx] flex items-start gap-[8rpx] bg-[#FFF7ED] rounded-[12rpx] px-[16rpx] py-[12rpx]">
+                <u-icon
+                    name="photo"
+                    color="#F59E0B"
+                    :size="24"
+                    class="flex-shrink-0 mt-[2rpx]"></u-icon>
+                <text class="flex-1 text-[22rpx] text-[#B45309] leading-relaxed">
+                    {{ materialAnchorHint }}
+                </text>
+            </view>
+
             <!-- 确认 -->
             <view
                 class="w-full mt-[28rpx] py-[22rpx] rounded-full flex items-center justify-center gap-[12rpx]"
@@ -310,7 +324,13 @@
 <script setup lang="ts">
 import { getGenerationOptions } from "@/api/hot_write";
 import SystemMusicSheet from "@/components/system-music-sheet/system-music-sheet.vue";
-import { WashGenerationType, WashMusicSource, WASH_ORIGIN_VOICE_ID } from "@/ai_modules/hot_write/enums";
+import {
+    WashGenerationType,
+    WashMusicSource,
+    WASH_MATERIAL_ANCHOR,
+    WASH_ORIGIN_VOICE_ID,
+    washImageTargetCount
+} from "@/ai_modules/hot_write/enums";
 import useUpload from "@/hooks/useUpload";
 import IconVtypeDigital from "@/ai_modules/hot_write/static/icons/vtype_digital.svg";
 import IconVtypeClips from "@/ai_modules/hot_write/static/icons/vtype_clips.svg";
@@ -319,6 +339,8 @@ import IconVtypeNews from "@/ai_modules/hot_write/static/icons/vtype_news.svg";
 const props = defineProps<{
     taskId: string | number;
     submitting?: boolean;
+    /** 洗稿文案：用于展示 AI 找素材的秒数锚点，与后端 materialAnchorSeconds 同口径 */
+    scriptText?: string;
 }>();
 
 const emit = defineEmits<{
@@ -330,6 +352,7 @@ const emit = defineEmits<{
         speech_rate?: number;
         clip_template_id: string;
         music_url: string;
+        system_music_id: string;
     }): void;
 }>();
 
@@ -531,6 +554,45 @@ const typeOptions = computed(() =>
 const currentType = computed(() => TYPE_CARDS.find((o) => o.val === generationType.value));
 const needAvatar = computed(() => !!currentType.value?.needAvatar);
 const needVoice = computed(() => !!currentType.value?.needVoice);
+
+/** 素材秒数锚点提示：成片预估取「真实口播秒数（字数/4.2，夹 15~180）」与「下发时长（字数/3）」的较大值，
+ *  素材需覆盖 [预估×0.5, 预估]，数字人口播按 floor、素材混剪按 ceil 作为本轮目标，
+ *  与后端 ScriptService::materialAnchorSeconds / TaskLogic::resolveAnchorMaterialTargets 同口径；
+ *  新闻体没有口播，后端不按锚点算故不展示。
+ *  洗稿素材来源固定纯 AI（无本地素材），图片目标 = 目标秒数×15%/2 秒（夹 2~8 张），
+ *  视频条数按 5 秒均条长兜底折算、仅为抓取上限：后端按素材真实时长累加到目标秒数即收口，
+ *  实际入库条数通常少于上限，故按「上限」措辞展示，避免与「预估 12 个视频」式固定条数核对 */
+const materialAnchorHint = computed(() => {
+    if (generationType.value === WashGenerationType.NEWS) return "";
+    const wordCount = (props.scriptText || "").replace(/\s/g, "").length;
+    if (!wordCount) return "";
+    const speedRatio = Math.max(0.1, speechRateStep.value / 10)
+    const spokenSec = Math.min(
+        180,
+        Math.max(15, Math.ceil(wordCount / WASH_MATERIAL_ANCHOR.CHARS_PER_SEC / speedRatio)),
+    );
+    const durationSec = Math.max(
+        1,
+        Math.floor(wordCount / WASH_MATERIAL_ANCHOR.DURATION_CHARS_PER_SEC),
+    );
+    const estSec = Math.max(spokenSec, durationSec);
+    const floorSec = Math.max(1, Math.round(estSec * WASH_MATERIAL_ANCHOR.FLOOR_RATIO));
+    const targetSec =
+        generationType.value === WashGenerationType.DIGITAL_HUMAN ? floorSec : estSec;
+    const imageTarget = washImageTargetCount(targetSec);
+    const videoGapSec = Math.max(
+        0,
+        targetSec - imageTarget * WASH_MATERIAL_ANCHOR.IMAGE_DISPLAY_SEC
+    );
+    const videoTarget = Math.max(
+        WASH_MATERIAL_ANCHOR.MIN_VIDEO,
+        Math.min(
+            Math.ceil(videoGapSec / WASH_MATERIAL_ANCHOR.AVG_VIDEO_SEC_FALLBACK),
+            WASH_MATERIAL_ANCHOR.VIDEO_CAP
+        )
+    );
+    return `洗稿文案约${wordCount}字，成片预估约${estSec}秒，素材需覆盖${floorSec}~${estSec}秒（本轮目标约${targetSec}秒）；AI 预估找视频上限约${videoTarget}个 + 图片约${imageTarget}张，按素材实际时长自动收口，超出${estSec}秒的素材会被裁掉`;
+});
 
 const pickType = (val: number) => {
     if (generationType.value === val) return;

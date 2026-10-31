@@ -561,14 +561,7 @@ class PublishLogic extends BasePersonaLogic
 
     private static function getPlatformPublishMaterialType(AiPersona $persona, int $platform): int
     {
-        $config = AiPersona::getPlatformContentPublishConfig($persona['content_publish_config'], $platform);
-        if ($platform === AiPersona::PUBLISH_PLATFORM_XHS
-            && (int)$config['publish_media_type'] === AiPersona::PUBLISH_MEDIA_TYPE_IMAGE_TEXT
-        ) {
-            return 2;
-        }
-
-        return 1;
+        return AiPersona::platformPublishMaterialType($persona, $platform);
     }
 
     private static function getProductLibraryConfig(int $personaId): array
@@ -1028,7 +1021,9 @@ class PublishLogic extends BasePersonaLogic
                                 'publish_id' => $setting->id,
                                 'publish_account_id' => $paccount->id,
                                 'task_type' => 99,
-                                'video_task_id' => $mediaType === 2 ? 0 : $mediaId,
+                                // 成品库直发不关联闪剪视频任务：素材 id 已写入 material_id，
+                                // 若再写入 video_task_id 会与闪剪视频任务 id 撞号，导致视频合成成功后的回填逻辑误改本明细
+                                'video_task_id' => 0,
                                 'video_setting_id' => $mediaVideoSettingId,
                                 'user_id' => $device->user_id,
                                 'account' => $account['account'],
@@ -3127,29 +3122,7 @@ class PublishLogic extends BasePersonaLogic
 
     private static function normalizeShanjianPublishPlatforms(mixed $platforms): array
     {
-        if (is_string($platforms)) {
-            $platforms = json_decode($platforms, true) ?: [];
-        }
-        if (!is_array($platforms)) {
-            return [];
-        }
-
-        $normalized = [];
-        foreach ($platforms as $index => $platform) {
-            if (is_object($platform)) {
-                $platform = (array)$platform;
-            }
-            if (!is_array($platform) || empty($platform['account_type'])) {
-                continue;
-            }
-            $platform['order'] = (int)($platform['order'] ?? ($index + 1));
-            $normalized[] = $platform;
-        }
-
-        usort($normalized, static function ($a, $b) {
-            return $a['order'] <=> $b['order'];
-        });
-        return $normalized;
+        return AiPersona::normalizeContentPublishPlatforms($platforms);
     }
 
     private static function getAvailableShanjianPublishAccounts(SvDevice $device, array $platforms, int $st, int $et): array

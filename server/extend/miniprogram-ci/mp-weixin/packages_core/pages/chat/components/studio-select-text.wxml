@@ -1,0 +1,1 @@
+<text class="{{['studio-select-text', 'data-v-5fd95b9f', b]}}" selectable user-select catchlongpress="{{c}}"><block wx:if="{{$slots.d}}"><slot></slot></block><block wx:else>{{a}}</block></text>

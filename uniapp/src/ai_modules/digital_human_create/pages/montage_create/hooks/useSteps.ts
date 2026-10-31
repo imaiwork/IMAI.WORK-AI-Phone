@@ -1,4 +1,5 @@
 import { montageConfig } from "@/enums/montageEnums";
+import { getCopyLangFailReason } from "@/utils/textValidator";
 
 const enum CopywriterTab {
     TEXT = 0,
@@ -43,7 +44,9 @@ export function useSteps({
         3: () =>
             copywriterTypeIndex.value === CopywriterTab.TEXT
                 ? formData.copywriterList.length > 0 &&
-                  formData.copywriterList.every((item: any) => isSingleCopywriterValid(item.content))
+                  formData.copywriterList.every((item: any) => isSingleCopywriterValid(item.content)) &&
+                  // 语言检测：存在乱码/外文缺空格的文案时不允许进入下一步
+                  formData.copywriterList.every((item: any) => !getCopyLangFailReason(item.content))
                 : formData.audio.length > 0,
         4: () => getMaterialTotalDuration() <= montageConfig.materialTotalDuration * 60,
         5: () => true,
@@ -61,6 +64,12 @@ export function useSteps({
             2: () => "请填写完整的人设名称和介绍",
             3: () => {
                 if (copywriterTypeIndex.value === CopywriterTab.TEXT) {
+                    const langFailIndex = formData.copywriterList.findIndex((item: any) =>
+                        getCopyLangFailReason(item.content),
+                    );
+                    if (langFailIndex !== -1) {
+                        return `第${langFailIndex + 1}条文案语言检测不通过，请点击文案修改`;
+                    }
                     const hasInvalid = formData.copywriterList.some(
                         (item: any) => !isSingleCopywriterValid(item.content),
                     );

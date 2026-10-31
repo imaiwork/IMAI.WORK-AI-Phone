@@ -429,6 +429,7 @@
         <upload-rule-pop
             v-if="showAnchorUploadTip"
             v-model="showAnchorUploadTip"
+            mode="anchor"
             @handle-upload="uploadAndProcessFilesForAnchor('video')" />
 
         <upload-rule-pop

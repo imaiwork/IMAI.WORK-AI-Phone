@@ -103,7 +103,33 @@ class FfmpegFileLogic extends ApiLogic
      */
     public static function taskCron()
     {
+        $lock = null;
         try {
+            // Redis 调度锁过期时，仍存活的转码进程必须继续独占队列。
+            $lock = fopen(root_path() . 'runtime/ffmpeg_file_cron.lock', 'c');
+            if ($lock === false) {
+                throw new \RuntimeException('无法打开转码进程锁');
+            }
+            if (!flock($lock, LOCK_EX | LOCK_NB)) {
+                return true;
+            }
+
+            // 转码上限为 600 秒，另留下载和上传余量；进程中断后回收遗留状态。
+            $cutoff = time() - 1200;
+            $interrupted = FfmpegFile::where('status', 1)
+                ->where('update_time', '<=', $cutoff)
+                ->limit(5)->select()->toArray();
+            foreach ($interrupted as $task) {
+                $tries = (int)$task['tries'] + 1;
+                FfmpegFile::where('id', $task['id'])->where('status', 1)
+                    ->where('update_time', '<=', $cutoff)->update([
+                        'status' => $tries >= 5 ? 3 : 0,
+                        'tries' => $tries,
+                        'update_time' => time(),
+                        'remark' => $tries >= 5 ? '转码执行中断，已达重试上限' : '转码执行中断，已重新排队',
+                    ]);
+            }
+
             // 查询待处理的任务
             $tasks = FfmpegFile::where('status', 0)
                 ->where('tries', '<', 5)
@@ -128,14 +154,17 @@ class FfmpegFileLogic extends ApiLogic
                 ];
 
                 $tempFilePath = null;
-                $processedFilePath = null;
 
                 try {
                     // 更新状态为处理中
-                    FfmpegFile::where('id', $task['id'])->update([
+                    $claimed = FfmpegFile::where('id', $task['id'])->where('status', 0)->update([
                         'status' => 1,
-                        'remark' => '开始处理...'
+                        'remark' => '开始处理...',
+                        'update_time' => time(),
                     ]);
+                    if (!$claimed) {
+                        continue;
+                    }
 
                     // 验证输入参数
                     if (empty($task['uri'])) {
@@ -167,35 +196,22 @@ class FfmpegFileLogic extends ApiLogic
                         if (isset($processedFile['url'])) {
                             $finalUrl = FileService::getFileUrl($processedFile['url']);
                         }
+                        if ($finalUrl === '') {
+                            throw new \RuntimeException('转码未返回上传地址');
+                        }
                         Log::channel('ffmpeg')->write("[定时任务转码] 获取结果{$finalUrl}");
                         $updateData = [
                             'status' => 2, // 成功
                             'width' => $processedFile['width'] ?? 0, // 成功
                             'height' => $processedFile['height'] ?? 0, // 成功
                             'tries' => $task['tries'] + 1,
+                            'update_time' => time(),
                             'remark' => '处理成功 - ' . json_encode([
                                 'processed_at' => date('Y-m-d H:i:s')
                             ]),
                         ];
                     } else {
-                        $newTries = $task['tries'] + 1;
-                        if ($task['tries'] >= 5) {
-                            $updateData = [
-                                'status' => 3, // 失败
-                                'tries' => $newTries,
-                                'remark' => '失败 - ' . json_encode([
-                                    'processed_at' => date('Y-m-d H:i:s')
-                                ]),
-                            ];
-                        } else {
-                            $updateData = [
-                                'status' => 0,
-                                'tries' => $newTries,
-                                'remark' => '失败 - ' . json_encode([
-                                    'processed_at' => date('Y-m-d H:i:s')
-                                ]),
-                            ];
-                        }
+                        throw new \RuntimeException('ffmpeg6 不可用');
                     }
 
 
@@ -207,14 +223,15 @@ class FfmpegFileLogic extends ApiLogic
                     $result['output_url'] = $finalUrl;
                     $result['media_info'] = $mediaInfo;
                     $processedCount++;
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                     // 更新失败次数和状态
                     $newTries = $task['tries'] + 1;
-                    $status = $newTries >= 5 ? 3 : 0; // 达到3次后标记为失败
+                    $status = $newTries >= 5 ? 3 : 0;
 
                     FfmpegFile::where('id', $task['id'])->update([
                         'tries' => $newTries,
                         'status' => $status,
+                        'update_time' => time(),
                         'remark' => '处理失败: ' . $e->getMessage()
                     ]);
 
@@ -223,13 +240,10 @@ class FfmpegFileLogic extends ApiLogic
                     $result['error_code'] = $e->getCode();
                 } finally {
                     $default = ConfigService::get('storage', 'default', 'local');
-                    if ($default != 'local') {
-                        // 清理临时文件
+                    if ($default != 'local' && $result['success']) {
+                        // 失败时保留输入文件，供中断恢复或下次重试。
                         if ($tempFilePath && file_exists($tempFilePath)) {
                             unlink($tempFilePath);
-                        }
-                        if ($processedFilePath && file_exists($processedFilePath)) {
-                            unlink($processedFilePath);
                         }
                     }
                 }
@@ -247,9 +261,14 @@ class FfmpegFileLogic extends ApiLogic
             ];
 
             return true;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             self::setError($e->getMessage());
             return false;
+        } finally {
+            if (is_resource($lock)) {
+                flock($lock, LOCK_UN);
+                fclose($lock);
+            }
         }
     }
 }

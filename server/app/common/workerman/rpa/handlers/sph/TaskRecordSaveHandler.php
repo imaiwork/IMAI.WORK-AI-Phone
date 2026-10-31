@@ -20,6 +20,7 @@ use app\common\model\sv\SvCrawlingRecord;
 use app\common\model\sv\SvCrawlingTask;
 use app\common\model\sv\SvCrawlingTaskDeviceBind;
 use app\common\model\ChatPrompt;
+use app\common\service\sv\ServiceContactFilter;
 use app\common\service\sv\SvSphClueDedupService;
 
 
@@ -101,18 +102,6 @@ class TaskRecordSaveHandler extends BaseMessageHandler
 
     protected $wxPhonePattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
     protected $qqPhonePattern = '/\b(?!1[3-9]\d{9}\b)[1-9]\d{4,10}\b/'; //排除手机号
-
-    protected $blacklist = [
-        'wechat'
-    ];
-
-    protected array $serviceNumberBlacklist = [
-        '10000', // 电信
-        '10086', // 移动
-        '10010', // 联通
-        '10011', // 联通/电信
-        '10001', // 电信
-    ];
 
     public function handle(TcpConnection $connection, string $uid, array $payload): void
     {
@@ -328,8 +317,8 @@ class TaskRecordSaveHandler extends BaseMessageHandler
                 foreach ($contacts as $userWechatNo) {
                     $this->setLog($userWechatNo, 'task_record');
 
-                    if (in_array(strtolower($userWechatNo), $this->blacklist)) {
-                        $this->setLog('忽略字符串', 'task_record');
+                    if (ServiceContactFilter::isServiceContact($userWechatNo)) {
+                        $this->setLog($userWechatNo . ' 属官方服务号已忽略', 'task_record');
                         continue;
                     }
 
@@ -493,7 +482,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
 
         $wechatNos = [];
         foreach ($matches[0] as $match) {
-            if ($this->isBlacklistedContact($match) || $this->containsPhoneNumber($match)) {
+            if ($this->containsPhoneNumber($match)) {
                 continue;
             }
             $wechatNos[] = $match;
@@ -566,16 +555,6 @@ class TaskRecordSaveHandler extends BaseMessageHandler
         return false;
     }
 
-    private function isBlacklistedContact(string $content): bool
-    {
-        return in_array(strtolower($content), $this->blacklist);
-    }
-
-    private function isServiceNumber(string $contact): bool
-    {
-        return in_array($contact, $this->serviceNumberBlacklist, true);
-    }
-
     private function isLikelyStatisticNumber(string $text, int $offset, int $length): bool
     {
         $before = mb_substr(substr($text, 0, $offset), -8);
@@ -593,7 +572,7 @@ class TaskRecordSaveHandler extends BaseMessageHandler
         $result = [];
         foreach ($contacts as $contact) {
             $contact = trim((string)$contact);
-            if ($contact === '' || isset($result[$contact]) || $this->isServiceNumber($contact)) {
+            if ($contact === '' || isset($result[$contact]) || ServiceContactFilter::isServiceContact($contact)) {
                 continue;
             }
             $result[$contact] = $contact;

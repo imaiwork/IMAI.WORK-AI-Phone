@@ -26,11 +26,12 @@ class ShanjianClipTemplateSyncService
         'sort',
     ];
 
-    public static function syncFromPlatform(): array
+    public static function syncFromPlatform(bool $useCache = true): array
     {
         // 2026-09-02 起数据源为模板中心（imai-temp.imai.work）直连；
         // 字段与旧契约同构，后续清洗管道不变。缓存/超时/降级见 TemplateCenterClient。
-        $templates = TemplateCenterClient::shanjianClipTemplates();
+        // 定时任务传 false：每轮都要拿到远端最新内容，不能被 Redis 缓存吃掉一个周期。
+        $templates = TemplateCenterClient::shanjianClipTemplates($useCache);
 
         return self::syncFromPayload($templates);
     }
@@ -52,6 +53,27 @@ class ShanjianClipTemplateSyncService
             'total' => 0,
         ];
 
+        // 先取本地已有行：一方面用于判断内容指纹是否变化（未变化直接跳过素材下载/探活），
+        // 另一方面给后续事务里的字段比对复用，省一次全表查询。
+        $remoteIds = [];
+        foreach ($templates as $item) {
+            $id = is_array($item) ? trim((string)($item['id'] ?? '')) : '';
+            if ($id !== '') {
+                $remoteIds[$id] = true;
+            }
+        }
+        $existingMap = [];
+        foreach (array_chunk(array_keys($remoteIds), 500) as $ids) {
+            $existingRows = Db::name('shanjian_clip_template')
+                ->whereIn('id', $ids)
+                ->field('id,' . implode(',', self::CONTENT_FIELDS) . ',source_hash,create_time,update_time')
+                ->select()
+                ->toArray();
+            foreach ($existingRows as $existingRow) {
+                $existingMap[(string)$existingRow['id']] = $existingRow;
+            }
+        }
+
         // 单条资源下载失败只跳过这一条，不能让整批回滚（2026-09-24：俏皮字幕演示视频约 28MB，站上下载 22s，超过 20s 超时，virtualman 被一起挡住）
         $failedIds = [];
         foreach ($templates as $item) {
@@ -60,10 +82,18 @@ class ShanjianClipTemplateSyncService
                 continue;
             }
 
+            $id = trim((string)($item['id'] ?? ''));
+            $existing = $id !== '' ? ($existingMap[$id] ?? null) : null;
+            // 内容指纹一致且本地素材路径齐备时跳过下载：模板中心每 5 分钟同步一次，
+            // 稳态下不该反复拉取/HEAD 同一批封面与演示视频。
+            $skipAssets = $existing !== null
+                && (string)($existing['source_hash'] ?? '') === self::contentHash($item)
+                && self::localAssetsReady($item, $existing);
+
             try {
-                $row = self::normalizeTemplate($item, $stats);
+                $row = self::normalizeTemplate($item, $stats, $skipAssets ? $existing : null);
             } catch (\Throwable $e) {
-                $failedId = trim((string)($item['id'] ?? ''));
+                $failedId = $id;
                 if ($failedId !== '') {
                     $failedIds[] = $failedId;
                 }
@@ -92,18 +122,7 @@ class ShanjianClipTemplateSyncService
 
         Db::startTrans();
         try {
-            $remoteIds = array_keys($rows);
-            $keepIds = array_values(array_unique(array_merge($remoteIds, $failedIds)));
-            // 走 Db 门面取原始值：模型的 create_time/update_time 读取器会把时间戳格式化成字符串，不能用于比对
-            $existingRows = Db::name('shanjian_clip_template')
-                ->whereIn('id', $remoteIds)
-                ->field('id,' . implode(',', self::CONTENT_FIELDS) . ',create_time,update_time')
-                ->select()
-                ->toArray();
-            $existingMap = [];
-            foreach ($existingRows as $existingRow) {
-                $existingMap[(string)$existingRow['id']] = $existingRow;
-            }
+            $keepIds = array_values(array_unique(array_merge(array_keys($rows), $failedIds)));
 
             $now = time();
             foreach ($rows as $id => $row) {
@@ -112,6 +131,7 @@ class ShanjianClipTemplateSyncService
                 if ($existing === null) {
                     $row['create_time'] = $row['create_time'] ?: $now;
                     $row['update_time'] = $now;
+                    // status 走列默认值 1；sort_override 保持 NULL（跟随模板中心）
                     ShanjianClipTemplate::create($row);
                     $stats['created']++;
                     continue;
@@ -122,21 +142,29 @@ class ShanjianClipTemplateSyncService
                 $changed = self::hasContentChanged($existing, $row);
                 // 历史数据时间戳为 0（中台就返回 '0'）时补一次当前时间，否则将永远停留在 0
                 $needsTimeBackfill = $existingCreateTime <= 0 || $existingUpdateTime <= 0;
+                // 升级后首次同步需要把指纹落库，否则下一轮仍会走素材探活
+                $needsHashBackfill = (string)($existing['source_hash'] ?? '') !== (string)($row['source_hash'] ?? '');
 
-                if (!$changed && !$needsTimeBackfill) {
+                if (!$changed && !$needsTimeBackfill && !$needsHashBackfill) {
                     $stats['unchanged']++;
                     continue;
                 }
 
                 // create_time 只认第一次：中台有值优先，其次沿用本地已有值，最后才补当前时间
                 $row['create_time'] = $row['create_time'] ?: ($existingCreateTime ?: $now);
-                // 内容有变化才刷新 update_time；仅补历史空值时沿用已有值
+                // 内容有变化才刷新 update_time；仅补空值/指纹时沿用已有值
                 $row['update_time'] = $changed ? $now : ($existingUpdateTime ?: $now);
 
+                // 只写内容字段与指纹，绝不带 status / sort_override——这两个是本站覆盖位
                 ShanjianClipTemplate::where('id', $id)->update($row);
-                $stats['updated']++;
+                if ($changed) {
+                    $stats['updated']++;
+                } else {
+                    $stats['unchanged']++;
+                }
             }
 
+            // 模板中心只下发在架行，远端缺失即视为彻底下架，连本站覆盖位一起清掉
             $stats['deleted'] = ShanjianClipTemplate::whereNotIn('id', $keepIds)->delete();
             $stats['total'] = count($rows);
 
@@ -147,6 +175,50 @@ class ShanjianClipTemplateSyncService
         }
 
         return $stats;
+    }
+
+    /** 远端内容指纹：只算模板中心下发的字段，不含本地转存后的素材路径 */
+    private static function contentHash(array $item): string
+    {
+        $payload = [];
+        foreach (['name', 'cover_url', 'scene', 'demo_url', 'auto_type', 'sort'] as $field) {
+            $payload[$field] = (string)($item[$field] ?? '');
+        }
+
+        return md5(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    /**
+     * 本地已转过存的行，素材路径必须齐备，否则远端有地址时仍需重新下载。
+     * 本地存储再确认一次文件真实存在（is_file 不产生网络开销）——素材文件被清理掉时
+     * 指纹虽然没变，也必须重下一份，不能让模板一直指向空路径。
+     */
+    private static function localAssetsReady(array $item, array $existing): bool
+    {
+        $localStorage = self::getStorageDefault() === 'local';
+
+        foreach (['cover_url', 'demo_url'] as $field) {
+            $remote = trim((string)($item[$field] ?? ''));
+            if ($remote === '') {
+                continue;
+            }
+
+            $localPath = trim((string)($existing[$field] ?? ''));
+            if ($localPath === '') {
+                return false;
+            }
+
+            // 远端存储只信任库里已转存的路径，探活（HEAD）留给指纹变化时做，别每轮白跑
+            if ($localStorage) {
+                // public_path($path) 会带结尾分隔符，is_file 必须用无尾分隔符的路径
+                $absolutePath = rtrim(public_path(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . ltrim($localPath, '/\\');
+                if (!is_file($absolutePath) || filesize($absolutePath) <= 0) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     /** 只比对业务内容字段，时间戳不参与，避免中台返回 '0' 导致每轮都判定为「有变化」 */
@@ -161,7 +233,10 @@ class ShanjianClipTemplateSyncService
         return false;
     }
 
-    private static function normalizeTemplate(array $item, array &$stats): ?array
+    /**
+     * @param array|null $reuseRow 内容指纹未变时的本地行，直接沿用其已转存的素材路径
+     */
+    private static function normalizeTemplate(array $item, array &$stats, ?array $reuseRow = null): ?array
     {
         $id = trim((string)($item['id'] ?? ''));
         $name = trim((string)($item['name'] ?? ''));
@@ -171,15 +246,23 @@ class ShanjianClipTemplateSyncService
             return null;
         }
 
+        $coverUrl = trim((string)($item['cover_url'] ?? ''));
+        $demoUrl = trim((string)($item['demo_url'] ?? ''));
+
         return [
             'id' => $id,
             'name' => $name,
-            'cover_url' => self::downloadTemplateAsset(trim((string)($item['cover_url'] ?? '')), 'image', $stats),
+            'cover_url' => $reuseRow !== null
+                ? (string)($reuseRow['cover_url'] ?? '')
+                : self::downloadTemplateAsset($coverUrl, 'image', $stats),
             'scene' => $scene,
-            'demo_url' => self::downloadTemplateAsset(trim((string)($item['demo_url'] ?? '')), 'video', $stats),
+            'demo_url' => $reuseRow !== null
+                ? (string)($reuseRow['demo_url'] ?? '')
+                : self::downloadTemplateAsset($demoUrl, 'video', $stats),
             'auto_type' => (int)($item['auto_type'] ?? 0),
             // 中台对部分模板不下发 sort（键直接缺失），归 0 排在最后
             'sort' => max(0, (int)($item['sort'] ?? 0)),
+            'source_hash' => self::contentHash($item),
             // 原样带出中台值(缺失/为 '0' 都归零)，由 syncFromPayload 统一决定最终写入的时间戳
             'create_time' => max(0, (int)($item['create_time'] ?? 0)),
             'update_time' => max(0, (int)($item['update_time'] ?? 0)),

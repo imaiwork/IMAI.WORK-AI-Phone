@@ -5,7 +5,7 @@
                 class="flex items-center justify-center gap-[10rpx] px-[40rpx] h-[96rpx] border-[0] border-b border-solid border-[#F0F2F5]"
                 style="background: linear-gradient(135deg, #ebf2ff 0%, #f0f9ff 100%)">
                 <u-icon name="info-circle-fill" color="#0065fb" size="28" />
-                <text class="text-[30rpx] font-extrabold text-[#0D1117]">图片/视频上传须知</text>
+                <text class="text-[30rpx] font-extrabold text-[#0D1117]">{{ isAnchor ? "视频" : "图片/视频" }}上传须知</text>
             </view>
 
             <view class="px-[40rpx] py-[32rpx] flex flex-col gap-[20rpx]">
@@ -15,13 +15,15 @@
                         <text class="text-white text-[18rpx] font-extrabold">1</text>
                     </view>
                     <text class="text-xs text-[#374151] leading-relaxed flex-1">
-                        视频素材时长范围：<text class="text-primary font-semibold"
-                            >{{ videoDuration[0] }}s - {{ videoDuration[1] }}s</text
-                        >；大小 <text class="text-primary font-semibold">{{ videoSize }}MB</text> 以内
+                        {{ isAnchor ? "口播视频" : "视频素材" }}时长范围：<text class="text-primary font-semibold"
+                            >{{ videoLimit.duration[0] }}s - {{ videoLimit.duration[1] }}s</text
+                        >；大小 <text class="text-primary font-semibold">{{ videoLimit.size }}MB</text> 以内
                     </text>
                 </view>
 
-                <view class="bg-[#F0F6FF] rounded-[20rpx] px-[24rpx] py-[20rpx] flex items-start gap-[14rpx]">
+                <view
+                    v-if="!isAnchor"
+                    class="bg-[#F0F6FF] rounded-[20rpx] px-[24rpx] py-[20rpx] flex items-start gap-[14rpx]">
                     <view
                         class="w-[32rpx] h-[32rpx] rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-[2rpx]">
                         <text class="text-white text-[18rpx] font-extrabold">2</text>
@@ -42,7 +44,7 @@
                 <view class="bg-[#F0F6FF] rounded-[20rpx] px-[24rpx] py-[20rpx] flex items-start gap-[14rpx]">
                     <view
                         class="w-[32rpx] h-[32rpx] rounded-full bg-primary flex items-center justify-center flex-shrink-0 mt-[2rpx]">
-                        <text class="text-white text-[18rpx] font-extrabold">3</text>
+                        <text class="text-white text-[18rpx] font-extrabold">{{ isAnchor ? 2 : 3 }}</text>
                     </view>
                     <text class="text-xs text-[#374151] leading-relaxed flex-1">
                         所有素材只支持
@@ -87,8 +89,9 @@
 <script setup lang="ts">
 import { montageConfig } from "@/enums/montageEnums";
 
-const props = withDefaults(defineProps<{ modelValue: boolean }>(), {
+const props = withDefaults(defineProps<{ modelValue: boolean; mode?: "anchor" | "material" }>(), {
     modelValue: false,
+    mode: "material",
 });
 
 const emit = defineEmits<{
@@ -97,7 +100,14 @@ const emit = defineEmits<{
     (e: "close"): void;
 }>();
 
-const { imageAccept, imageSize, imageResolution, videoSize, videoDuration } = montageConfig;
+const { imageAccept, imageSize, imageResolution } = montageConfig;
+
+const isAnchor = computed(() => props.mode === "anchor");
+const videoLimit = computed(() =>
+    isAnchor.value
+        ? { size: montageConfig.anchorVideoSize, duration: montageConfig.anchorVideoDuration }
+        : { size: montageConfig.videoSize, duration: montageConfig.videoDuration },
+);
 
 const show = computed({
     get: () => props.modelValue,

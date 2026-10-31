@@ -1012,11 +1012,30 @@ class DySearchIngestService
         if ($contact === '') {
             return null;
         }
+        $originalMessage = trim($originalMessage);
+        if ($originalMessage === '') {
+            self::logEvent('上报内容为空，跳过加微写入', [
+                'task_id' => (int)$task->id,
+                'device' => $deviceCode,
+                'contact' => $contact,
+            ]);
+            return null;
+        }
         $existing = SvAddWechatRecord::where('user_id', $userId)
             ->where('reg_wechat', $contact)
             ->findOrEmpty();
         if (!$existing->isEmpty() && in_array((int)$existing->status, [1, 2, 4, 5, 6, SvAddWechatRecord::STATUS_RESULT_UNKNOWN], true)) {
             self::logEvent('加微号已存在，跳过该号仍保留客资', [
+                'task_id' => (int)$task->id,
+                'device' => $deviceCode,
+                'contact' => $contact,
+            ]);
+            return null;
+        }
+
+        // 官方服务号只拦新入队：存量行（含校验中）走上方既有分支或下方更新分支正常闭环，不在此拦截
+        if (ServiceContactFilter::isServiceContact($contact)) {
+            self::logEvent('官方服务号已过滤，跳过加微', [
                 'task_id' => (int)$task->id,
                 'device' => $deviceCode,
                 'contact' => $contact,

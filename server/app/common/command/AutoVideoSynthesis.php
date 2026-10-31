@@ -15,6 +15,7 @@ use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\sv\CloudSvDevice;
 use app\common\model\sv\SvDevice;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\aiPersona\PersonaTypePlanService;
 use think\console\Command;
 use think\console\Input;
 use think\console\Output;
@@ -57,6 +58,12 @@ class AutoVideoSynthesis extends Command
      */
     const DEVICE_BATCH_LIMIT      = 12;
     const COPYWRITING_BATCH_LIMIT = 6;
+
+    /**
+     * 仿写文案最多回退取几天前的积压。爆款有时效性，按 id 从旧到新取的话，
+     * 积压一旦形成就永远追不上：当天抓的稿排在几个月前的后面，成片和爆款库对不上。
+     */
+    const IMITATION_COPYWRITING_LOOKBACK_DAYS = 7;
 
     protected function configure()
     {
@@ -371,8 +378,7 @@ class AutoVideoSynthesis extends Command
         int $tasksBefore,
         int $attempt
     ): void {
-        $configured = AiPersonaSynthesisConfig::normalizeDailyVideoCount($config->daily_video_count);
-        $expect = $configured > 0 ? $configured : AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+        $expect = PersonaTypePlanService::resolveCloudTargetCount($config);
         $generated = $this->countCloudTasksToday($personaId, $deviceCode);
         if ($generated >= $expect) {
             return;
@@ -401,11 +407,10 @@ class AutoVideoSynthesis extends Command
         ));
     }
 
-    /** 无手机模式的每日出片条数：0=未配置兜底 1 条，与 CopywritingAiGenerationLogic 同口径 */
+    /** 无手机模式的每日出片条数：分类型条数之和，未配置回落 daily_video_count 再兜底 1 条 */
     private static function resolveCloudDailyCount(AiPersonaSynthesisConfig $config): int
     {
-        $count = AiPersonaSynthesisConfig::normalizeDailyVideoCount($config->daily_video_count);
-        return $count > 0 ? $count : AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+        return PersonaTypePlanService::resolveCloudTargetCount($config);
     }
 
     /** 今天挂在这个云端设备号下的自动社媒任务数（含失败，与配额口径一致） */
@@ -462,14 +467,30 @@ class AutoVideoSynthesis extends Command
         // 与 AI 生成那条链路（resolveCloudDailyVideoCount）同一口径，0=未配置兜底 1 条
         $publishCount = $device instanceof CloudSvDevice
             ? self::resolveCloudDailyCount($config)
-            : MarketingTemplateSchedule::getTodayPublishTaskCount($personaId);
+            : MarketingTemplateSchedule::getTodayVideoPublishTaskCount($personaId);
         if ($publishCount <= 0) {
+            // 手机模式下若已配置内容发布时段，说明这些时段全都对不上视频素材（如小红书图文平台），
+            // 视频合成无待办，直接标记完成，避免设备每轮被挑中却不出片。
+            $configuredPublishSlots = $device instanceof CloudSvDevice
+                ? 0
+                : MarketingTemplateSchedule::getTodayPublishTaskCount($personaId);
+            if ($configuredPublishSlots > 0) {
+                $this->markDeviceSynthesisDone($userId, $personaId, $deviceCode);
+                Log::channel('explosionVideoSynthesis')->write('爆款仿写发布时段无视频素材（均为图文），标记设备视频合成完成：' . json_encode([
+                    'user_id' => $userId,
+                    'persona_id' => $personaId,
+                    'device_code' => $deviceCode,
+                    'publish_slots' => $configuredPublishSlots,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                return;
+            }
+
             Log::channel('explosionVideoSynthesis')->write('爆款仿写发布时段为空，跳过设备视频合成：' . json_encode([
                 'user_id' => $userId,
                 'persona_id' => $personaId,
                 'device_code' => $deviceCode,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-            // 不标 synthesis_m，等配置好发布时段后下轮再试
+            // 完全未配置发布时段：不标 synthesis_m，等配置好发布时段后下轮再试
             return;
         }
 
@@ -710,12 +731,14 @@ class AutoVideoSynthesis extends Command
             ->where('a.use_state', AiPersonaSynthesisCopywriting::USE_STATE_UNUSED)
             ->where('vr.is_interested', 1)
             ->where('vr.use_time', 0)
-            ->where('a.day', '<=', $day);
+            ->where('a.day', '<=', $day)
+            ->where('a.day', '>=', date('Y-m-d', strtotime($day . ' -' . self::IMITATION_COPYWRITING_LOOKBACK_DAYS . ' days')));
         if ($deviceCode !== '') {
             $query->where('a.device_code', $deviceCode);
         }
 
-        return $query->order(['a.status' => 'desc', 'a.id' => 'asc'])
+        // 当天排期的稿优先，不够再往前补；同一天里仿写成功的排在降级稿前面
+        return $query->order(['a.day' => 'desc', 'a.status' => 'desc', 'a.id' => 'asc'])
             ->limit($limit)
             ->select();
     }
@@ -775,7 +798,7 @@ class AutoVideoSynthesis extends Command
         ?int $generatedCount = null
     ): void {
         if ($publishCount <= 0) {
-            $publishCount = MarketingTemplateSchedule::getTodayPublishTaskCount($personaId);
+            $publishCount = MarketingTemplateSchedule::getTodayVideoPublishTaskCount($personaId);
         }
         if ($publishCount <= 0) {
             return;
@@ -788,16 +811,7 @@ class AutoVideoSynthesis extends Command
             return;
         }
 
-        if (CloudSvDevice::isCloudCode($deviceCode)) {
-            // 云端设备号在 sv_device 里没有行，标记要落人设表，否则这个人设整晚被反复挑中
-            CloudSvDevice::markPersonaDone($personaId);
-        } else {
-            SvDevice::markSynthesisDoneWhere([
-                'user_id' => $userId,
-                'persona_id' => $personaId,
-                'device_code' => $deviceCode,
-            ], SvDevice::SYNTHESIS_SCENE_SOCIAL);
-        }
+        $this->markDeviceSynthesisDone($userId, $personaId, $deviceCode);
 
         Log::channel('explosionVideoSynthesis')->write('爆款仿写合成数量已达发布数量，设备标记已合成：' . json_encode([
             'user_id' => $userId,
@@ -807,6 +821,24 @@ class AutoVideoSynthesis extends Command
             'publish_count' => $publishCount,
             'generated_count' => $generatedCount,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    /**
+     * 标记设备当天社媒视频合成完成：手机模式落设备行，无手机模式落人设表。
+     */
+    private function markDeviceSynthesisDone(int $userId, int $personaId, string $deviceCode): void
+    {
+        if (CloudSvDevice::isCloudCode($deviceCode)) {
+            // 云端设备号在 sv_device 里没有行，标记要落人设表，否则这个人设整晚被反复挑中
+            CloudSvDevice::markPersonaDone($personaId);
+            return;
+        }
+
+        SvDevice::markSynthesisDoneWhere([
+            'user_id' => $userId,
+            'persona_id' => $personaId,
+            'device_code' => $deviceCode,
+        ], SvDevice::SYNTHESIS_SCENE_SOCIAL);
     }
 
     /**

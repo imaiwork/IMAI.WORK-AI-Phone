@@ -7,6 +7,7 @@ use app\common\model\aiPersona\SynthesisConfig;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\sv\CloudSvDevice;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\aiPersona\PersonaTypePlanService;
 use think\console\Command;
 use think\console\Input;
 use think\console\input\Option;
@@ -46,6 +47,8 @@ class RunModeRun extends Command
     private array $offsets = [];
     /** --force 临时抬高的每日条数，跑完必须还原，否则会永久改掉用户配置 */
     private ?int $restoreDailyCount = null;
+    /** --force 临时抬高的分类型条数（显式 type_config 存在时用它顶替 daily_video_count） */
+    private ?array $restoreTypeConfig = null;
     private int $personaId = 0;
     /** 出片子进程句柄，父进程被打断时要一并终止，别把活儿丢在后台继续跑 */
     private $childProcess = null;
@@ -250,8 +253,33 @@ class RunModeRun extends Command
             return false;
         }
         $count = SynthesisConfig::normalizeDailyVideoCount($config->daily_video_count);
-        $effective = $count > 0 ? $count : SynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
-        $this->kv('每日出片条数', $count > 0 ? (string)$count : "未配置，按默认 {$effective} 条");
+        $effective = PersonaTypePlanService::resolveCloudTargetCount($config);
+        $this->kv('每日出片条数', $count > 0 ? (string)$count : '未配置，按默认 ' . $effective . ' 条');
+        $typeCounts = SynthesisConfig::resolveCloudTypeCounts($config);
+        $typeLabels = [1 => '数字人口播', 3 => '纯素材混剪', 4 => '新闻体混剪'];
+        $typeParts = [];
+        foreach ($typeCounts as $type => $typeCount) {
+            $typeParts[] = ($typeLabels[$type] ?? ('类型' . $type)) . ' ' . $typeCount . ' 条';
+        }
+        $this->kv('分类型条数', implode(' · ', $typeParts) . '（合计 ' . array_sum($typeCounts) . ' 条，实际出片按 ' . $effective . ' 条）');
+        foreach ($typeCounts as $type => $typeCount) {
+            $music = SynthesisConfig::resolveTypeMusic($config, (int)$type);
+            $sourceText = [
+                SynthesisConfig::MUSIC_SOURCE_SYSTEM => '系统音乐库',
+                SynthesisConfig::MUSIC_SOURCE_PERSONA => '人设音乐库',
+                SynthesisConfig::MUSIC_SOURCE_NONE => '不使用',
+            ][(int)$music['source']] ?? '未知';
+            $this->kv(
+                '  ' . ($typeLabels[$type] ?? ('类型' . $type)) . ' 音乐',
+                sprintf(
+                    '%s ／ 分组 %s ／ 指定曲目 %s ／ 音量 %d%%',
+                    $sourceText,
+                    (int)$music['group_id'] > 0 ? ('#' . $music['group_id']) : '全部',
+                    $music['pinned_id'] !== '' ? $music['pinned_id'] : '随机',
+                    (int)round($music['volume'] * 100)
+                )
+            );
+        }
         $this->kv('文案来源', $this->copySourceText((int)$config->copywriting_source));
         $this->kv('生成类型', json_encode($config->generation_types, JSON_UNESCAPED_UNICODE));
 
@@ -286,9 +314,28 @@ class RunModeRun extends Command
             // 这里临时把配额抬到"已生成 + 1"，跑完在 finally 里还原成用户配的值
             if ($generated >= $effective) {
                 $this->restoreDailyCount = (int)$config->daily_video_count;
+                if (SynthesisConfig::hasExplicitTypeConfig($config)) {
+                    // 分类型条数是云端出片的实际配额来源，直接改 daily_video_count 不会生效
+                    $this->restoreTypeConfig = (array)($config->type_config ?? []);
+                }
                 $this->guardRestore();
-                SynthesisConfig::where('persona_id', $personaId)->update(['daily_video_count' => $generated + 1]);
-                $this->out->writeln('  已临时把每日条数抬到 ' . ($generated + 1) . ' 条以便多出一条，跑完自动还原');
+                if ($this->restoreTypeConfig !== null) {
+                    $counts = SynthesisConfig::resolveCloudTypeCounts($config);
+                    $bumpType = SynthesisConfig::resolveGenerationOrder($config)[0] ?? SynthesisConfig::GENERATION_TYPE_DIGITAL_HUMAN;
+                    $delta = ($generated + 1) - array_sum($counts);
+                    $counts[$bumpType] = max(1, (int)($counts[$bumpType] ?? 0) + $delta);
+                    $typeConfig = SynthesisConfig::normalizeTypeConfig($config->type_config ?? []);
+                    foreach ($counts as $type => $typeCount) {
+                        $typeConfig[$type]['video_count'] = $typeCount;
+                    }
+                    SynthesisConfig::where('persona_id', $personaId)->update([
+                        'type_config' => json_encode($typeConfig, JSON_UNESCAPED_UNICODE),
+                    ]);
+                    $this->out->writeln('  已临时把分类型条数抬到合计 ' . ($generated + 1) . ' 条以便多出一条，跑完自动还原');
+                } else {
+                    SynthesisConfig::where('persona_id', $personaId)->update(['daily_video_count' => $generated + 1]);
+                    $this->out->writeln('  已临时把每日条数抬到 ' . ($generated + 1) . ' 条以便多出一条，跑完自动还原');
+                }
             }
             return true;
         }
@@ -414,6 +461,19 @@ class RunModeRun extends Command
     /** 还原 --force 临时抬高的配额；可重复调用 */
     private function restoreDailyCount(): void
     {
+        if ($this->restoreTypeConfig !== null && $this->personaId > 0) {
+            $typeConfig = $this->restoreTypeConfig;
+            $this->restoreTypeConfig = null;
+            try {
+                SynthesisConfig::where('persona_id', $this->personaId)->update([
+                    'type_config' => json_encode($typeConfig, JSON_UNESCAPED_UNICODE),
+                ]);
+                $this->out->writeln('');
+                $this->out->writeln('  已把分类型条数还原为原先配置');
+            } catch (\Throwable $e) {
+                // 进程正在退出时输出流可能已关闭，还原本身成功即可
+            }
+        }
         if ($this->restoreDailyCount === null || $this->personaId <= 0) {
             return;
         }

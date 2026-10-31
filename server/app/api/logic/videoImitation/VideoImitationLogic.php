@@ -1720,12 +1720,17 @@ class VideoImitationLogic extends BaseLogic
 
         Log::channel('shanjian')->write("VideoImitationParseTask 请求参数: " . json_encode($titlecoze, JSON_UNESCAPED_UNICODE));
         $imitationResult = AutoDeviceSettingLogic::copywriting($titlecoze, $userId, 7);
-        Log::channel('shanjian')->write("VideoImitationParseTask 文案仿写: " . json_encode($imitationResult, JSON_UNESCAPED_UNICODE));
         $contentData = $imitationResult['content'] ?? [];
         if (is_string($contentData)) {
             // 如果是字符串，手动解析为数组
             $contentData = json_decode($contentData, true) ?: [];
         }
+        if (is_array($contentData)) {
+            // 上游偶发夹带空元素，先过滤再提取正文，避免空占位被当成有效字段
+            $contentData = self::stripEmptyContentElements($contentData);
+            $imitationResult['content'] = $contentData;
+        }
+        Log::channel('shanjian')->write("VideoImitationParseTask 文案仿写: " . json_encode($imitationResult, JSON_UNESCAPED_UNICODE));
 
         // Coze 偶发只回标签不回正文（analysis_tags 有值，rewritten_text/title/compliance 全是空串）。
         // 老逻辑照单全收：任务照常进「待确认」，详情页仿写框空白、用户什么也做不了，
@@ -1758,6 +1763,26 @@ class VideoImitationLogic extends BaseLogic
         }
 
         return $task;
+    }
+
+    /**
+     * 剔除文案返回 content 中的空元素（空串 / 纯空白 / 空数组 / null）。
+     *
+     * 上游偶发在具名 content 里夹带空值字段（如 rewrite 失败时 analysis_tags 为空、
+     * 标题或合规字段为空串），提取正文前统一过滤，避免空占位被当成有效数据。
+     * 保留原键名；列表型 content 只删值不重排，避免打乱批量标题与视频的下标对应关系。
+     */
+    public static function stripEmptyContentElements(array $content): array
+    {
+        return array_filter($content, static function ($value) {
+            if (is_string($value)) {
+                return trim($value) !== '';
+            }
+            if (is_array($value)) {
+                return $value !== [];
+            }
+            return $value !== null;
+        });
     }
 
     /**

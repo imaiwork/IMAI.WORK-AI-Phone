@@ -72,7 +72,12 @@ class SynthesisConfig extends BaseModel
     const COPYWRITING_GENERATION_TYPE_CUSTOM = 7;
     const COPYWRITING_GENERATION_CUSTOM_MAX = 500;
 
-    protected $json = ['generation_types', 'template_config', 'square_group_ids'];
+    /** 一镜到底：仅新闻体混剪支持，开启后该类型每条只用 1 条视频素材 */
+    const SINGLE_SHOT_OFF = 0;
+    const SINGLE_SHOT_ON = 1;
+
+
+    protected $json = ['generation_types', 'template_config', 'square_group_ids', 'type_config'];
     protected $jsonAssoc = true;
 
     /** 每日出片条数：0=未配置。仅无手机模式消费，手机模式仍按发布时段数出片 */
@@ -80,6 +85,17 @@ class SynthesisConfig extends BaseModel
     /** 无手机模式未配置条数时的兜底，取 1 而不是 0，避免云端人设一条都不出 */
     const DAILY_VIDEO_COUNT_CLOUD_DEFAULT = 1;
     const DAILY_VIDEO_COUNT_MAX = 20;
+
+    // 生成类型：1-数字人口播 3-纯素材混剪 4-新闻体混剪（与闪剪 shanjian_type 同值）
+    const GENERATION_TYPE_DIGITAL_HUMAN = 1;
+    const GENERATION_TYPE_MATERIAL = 3;
+    const GENERATION_TYPE_NEWS = 4;
+    const TYPE_CONFIG_KEYS = [
+        self::GENERATION_TYPE_DIGITAL_HUMAN,
+        self::GENERATION_TYPE_MATERIAL,
+        self::GENERATION_TYPE_NEWS,
+    ];
+    const TYPE_VIDEO_COUNT_MAX = 20;
 
     /** 归一每日出片条数：非法或越界回落到未配置(0)，由调用方决定兜底 */
     public static function normalizeDailyVideoCount($value): int
@@ -174,5 +190,69 @@ class SynthesisConfig extends BaseModel
     public static function requireValidHotspotPickMode($value): int
     {
         return AiPersonaSynthesisConfig::requireValidHotspotPickMode($value);
+    }
+
+    // ------------------------------------------------------------------
+    // 分类型配置（type_config）：统一委托给 AiPersonaSynthesisConfig，避免两份口径
+    // ------------------------------------------------------------------
+
+    public static function normalizeTypeVideoCount($value): int
+    {
+        return AiPersonaSynthesisConfig::normalizeTypeVideoCount($value);
+    }
+
+    public static function normalizeSingleShot($value): int
+    {
+        return AiPersonaSynthesisConfig::normalizeSingleShot($value);
+    }
+
+    public static function resolveTypeSingleShot($config, int $type): bool
+    {
+        return AiPersonaSynthesisConfig::resolveTypeSingleShot($config, $type);
+    }
+
+    public static function normalizeTypeConfig($raw): array
+    {
+        return AiPersonaSynthesisConfig::normalizeTypeConfig($raw);
+    }
+
+    public static function resolveGenerationOrder($config): array
+    {
+        return AiPersonaSynthesisConfig::resolveGenerationOrder($config);
+    }
+
+    public static function hasExplicitTypeConfig($config): bool
+    {
+        return AiPersonaSynthesisConfig::hasExplicitTypeConfig($config);
+    }
+
+    public static function splitLegacyVideoCount(int $total, array $order): array
+    {
+        return AiPersonaSynthesisConfig::splitLegacyVideoCount($total, $order);
+    }
+
+    public static function resolveCloudTypeCounts($config): array
+    {
+        return AiPersonaSynthesisConfig::resolveCloudTypeCounts($config);
+    }
+
+    public static function resolveCloudTypeCount($config, int $type): int
+    {
+        return AiPersonaSynthesisConfig::resolveCloudTypeCount($config, $type);
+    }
+
+    public static function buildCloudTypePlan(array $counts, array $order): array
+    {
+        return AiPersonaSynthesisConfig::buildCloudTypePlan($counts, $order);
+    }
+
+    public static function resolveTypeMusic($config, int $type): array
+    {
+        return AiPersonaSynthesisConfig::resolveTypeMusic($config, $type);
+    }
+
+    public static function resolveTypeSpeechRate($config, int $type): float
+    {
+        return AiPersonaSynthesisConfig::resolveTypeSpeechRate($config, $type);
     }
 }

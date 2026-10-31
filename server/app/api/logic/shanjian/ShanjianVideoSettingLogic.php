@@ -1597,11 +1597,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
         // 解析JSON数据
         $anchorData = $decodedData['anchor'] ?? [];
         $voiceData = $decodedData['voice'] ?? [];
-        $copywritingData = $decodedData['copywriting'] ?? [];
+        $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
         $audioData = $decodedData['audio'] ?? [];
         $characterDesignData = $decodedData['character_design'] ?? [];
         $materialData = $decodedData['material'] ?? [];
-        $clipData = $decodedData['clip'] ?? [];
+        // 后台隐藏/已下架的模板一律丢弃；全被过滤时下面会回落到可见模板池随机
+        $clipData = ShanjianClipTemplate::filterVisibleClipData($decodedData['clip'] ?? [], 'virtualman');
         $musicData = $decodedData['music'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
         $defaultPic = (string)($params['pic'] ?? '');
@@ -1698,7 +1699,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
                 // 剪辑模板选择：1=顺序，0=随机
                 if (count($clipData) == 0) {
-                    $clip_template_id = ShanjianClipTemplate::where('scene', 'virtualman')->column('id');
+                    $clip_template_id = ShanjianClipTemplate::visibleIdsByScene('virtualman');
                     $clip_template_total = count($clip_template_id) - 1;
                     if (count($clip_template_id) == 0) {
                         throw new \Exception("缺少剪辑模版");
@@ -2068,6 +2069,82 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
         $modelName = UserDisplaySanitizer::digitalHumanModelNameByVersion(8) ?: '数字人';
         return '音色不可用，请选择已生成的' . $modelName . '音色、视频原音或MiniMax音色';
+    }
+
+    /**
+     * 文案标题/正文兼容字符串与数组：新闻体（type=4）前端把标题按行传成 string[]，
+     * 直接做字符串运算会触发 Array to string conversion，这里统一压平成按行拼接的文本。
+     */
+    private static function stringifyCopywritingText($value): string
+    {
+        if (is_array($value)) {
+            $lines = [];
+            array_walk_recursive($value, static function ($line) use (&$lines) {
+                if (is_scalar($line) && trim((string)$line) !== '') {
+                    $lines[] = (string)$line;
+                }
+            });
+            return implode("\n", $lines);
+        }
+        return is_scalar($value) ? (string)$value : '';
+    }
+
+    /**
+     * 文案正文首行与标题重复时去掉该段，避免标题、关键词和口播重复。
+     */
+    public static function stripDuplicateTitle($title, $content): string
+    {
+        $content = trim(self::stringifyCopywritingText($content));
+        $title = trim(self::stringifyCopywritingText($title));
+        if ($content === '' || $title === '') {
+            return $content;
+        }
+
+        $titleLines = preg_split('/\R/u', $title) ?: [];
+        $contentLines = preg_split('/\R/u', $content) ?: [];
+        $compact = static function (string $value): string {
+            return preg_replace('/[#＃\s]+/u', '', trim($value)) ?? '';
+        };
+
+        $removeCount = 0;
+        foreach ($titleLines as $index => $titleLine) {
+            $titleCompact = $compact($titleLine);
+            if ($titleCompact === '' || !isset($contentLines[$index])) {
+                break;
+            }
+            $contentCompact = $compact($contentLines[$index]);
+            if ($contentCompact === '' || mb_strpos($contentCompact, $titleCompact) !== 0) {
+                break;
+            }
+            $removeCount++;
+        }
+
+        if ($removeCount === 0) {
+            return $content;
+        }
+        $remaining = trim(implode("\n", array_slice($contentLines, $removeCount)));
+        return $remaining !== '' ? $remaining : $content;
+    }
+
+    /**
+     * 统一清理文案数据，任务创建和时长计算都使用去重后的正文。
+     */
+    public static function normalizeCopywritingData($copywriting): array
+    {
+        if (!is_array($copywriting)) {
+            return [];
+        }
+        foreach ($copywriting as &$item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $item['content'] = self::stripDuplicateTitle(
+                $item['title'] ?? '',
+                $item['content'] ?? ''
+            );
+        }
+        unset($item);
+        return $copywriting;
     }
 
     /**
@@ -2538,7 +2615,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
     ): void {
         $anchorData = $decodedData['anchor'] ?? [];
         $voiceData = $decodedData['voice'] ?? [];
-        $copywritingData = $decodedData['copywriting'] ?? [];
+        $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
         $audioData = $decodedData['audio'] ?? [];
         $characterDesignData = $decodedData['character_design'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
@@ -2718,7 +2795,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
         $anchorData = $decodedData['anchor'] ?? [];
         $voiceData = $decodedData['voice'] ?? [];
-        $copywritingData = $decodedData['copywriting'] ?? [];
+        $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
         $audioData = $decodedData['audio'] ?? [];
         $characterDesignData = $decodedData['character_design'] ?? [];
         $materialData = $decodedData['material'] ?? [];
@@ -3327,7 +3404,8 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $voiceData = $decodedData['voice'] ?? [];
         $characterDesignData = $decodedData['character_design'] ?? [];
         $materialData = $decodedData['material'] ?? [];
-        $clipData = $decodedData['clip'] ?? [];
+        // 后台隐藏/已下架的模板一律丢弃；全被过滤时下面会回落到可见模板池随机
+        $clipData = ShanjianClipTemplate::filterVisibleClipData($decodedData['clip'] ?? [], 'realMan');
         $musicData = $decodedData['music'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
         $defaultPic = (string)($params['pic'] ?? '');
@@ -3382,7 +3460,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                 } else {
                     // 没有clip数据时，从数据库获取模板
-                    $clip_template_id = ShanjianClipTemplate::where('scene', 'realMan')->column('id');
+                    $clip_template_id = ShanjianClipTemplate::visibleIdsByScene('realMan');
                     $clip_template_total = count($clip_template_id) - 1;
                     if (count($clip_template_id) == 0) {
                         throw new \Exception("缺少剪辑模版");
@@ -3658,8 +3736,9 @@ class ShanjianVideoSettingLogic extends ApiLogic
         array $minimaxTaskIds
     ): void {
         $materialData = $decodedData['material'] ?? [];
-        $copywritingData = $decodedData['copywriting'] ?? [];
-        $clipData = $decodedData['clip'] ?? [];
+        $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
+        // 后台隐藏/已下架的模板一律丢弃；全被过滤时下面会回落到可见模板池随机
+        $clipData = ShanjianClipTemplate::filterVisibleClipData($decodedData['clip'] ?? [], 'oralMixCutting');
         $musicData = $decodedData['music'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
         $videoCount = max(1, (int)($extraData['video_count'] ?? 1));
@@ -3754,10 +3833,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
         $taskData = [];
         // 解析JSON数据
-        $copywritingData = $decodedData['copywriting'] ?? [];
+        $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
         $audioData = $decodedData['audio'] ?? [];
         $materialData = $decodedData['material'] ?? [];
-        $clipData = $decodedData['clip'] ?? [];
+        // 后台隐藏/已下架的模板一律丢弃；全被过滤时下面会回落到可见模板池随机
+        $clipData = ShanjianClipTemplate::filterVisibleClipData($decodedData['clip'] ?? [], 'oralMixCutting');
         $musicData = $decodedData['music'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
         $aimusicMode = $extraData['ai_music'] ?? false; // 控制是否使用默认音乐
@@ -3843,7 +3923,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                 } else {
                     // 获取剪辑模板
-                    $clip_template_id = ShanjianClipTemplate::where('scene', 'oralMixCutting')->column('id');
+                    $clip_template_id = ShanjianClipTemplate::visibleIdsByScene('oralMixCutting');
                     $clip_template_total = count($clip_template_id) - 1;
                     // 数据验证
                     if (count($clip_template_id) == 0) {
@@ -4015,7 +4095,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 : $clipIds[array_rand($clipIds)];
         }
 
-        $defaultClipIds = ShanjianClipTemplate::where('scene', 'oralMixCutting')->column('id');
+        $defaultClipIds = ShanjianClipTemplate::visibleIdsByScene('oralMixCutting');
         if (empty($defaultClipIds)) {
             throw new \Exception('缺少剪辑模版');
         }
@@ -4324,7 +4404,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 }
             }
 
-            $copywritingData = $decodedData['copywriting'] ?? [];
+            $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
             $audioData = $decodedData['audio'] ?? [];
 
             // 文案和音频不能同时为空
@@ -4406,7 +4486,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
     private static function createVideoTasksType4(int $settingId, array $params, $decodedData): void
     {
         // 获取剪辑模板
-        $clip_template_id = ShanjianClipTemplate::where('scene', 'newsMixCutting')->column('id');
+        $clip_template_id = ShanjianClipTemplate::visibleIdsByScene('newsMixCutting');
         $clip_template_total = count($clip_template_id) - 1;
 
         // 设置视频数量上下限：1-50
@@ -4420,11 +4500,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
 
         $taskData = [];
         // 解析JSON数据
-        $copywritingData = $decodedData['copywriting'] ?? [];
+        $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
         $audioData = $decodedData['audio'] ?? [];
         $characterDesignData = $decodedData['character_design'] ?? [];
         $materialData = $decodedData['material'] ?? [];
-        $clipData = $decodedData['clip'] ?? [];
+        // 后台隐藏/已下架的模板一律丢弃；全被过滤时下面会回落到可见模板池随机
+        $clipData = ShanjianClipTemplate::filterVisibleClipData($decodedData['clip'] ?? [], 'newsMixCutting');
         $musicData = $decodedData['music'] ?? [];
         // 数据验证
         if (count($clip_template_id) == 0) {
@@ -4719,10 +4800,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
     {
         $taskData = [];
         // 解析JSON数据
-        $copywritingData = $decodedData['copywriting'] ?? [];
+        $copywritingData = self::normalizeCopywritingData($decodedData['copywriting'] ?? []);
         $characterDesignData = $decodedData['character_design'] ?? [];
         $materialData = $decodedData['material'] ?? [];
-        $clipData = $decodedData['clip'] ?? [];
+        // 后台隐藏/已下架的模板一律丢弃；全被过滤时下面会回落到可见模板池随机
+        $clipData = ShanjianClipTemplate::filterVisibleClipData($decodedData['clip'] ?? [], 'newsMixCutting');
         $musicData = $decodedData['music'] ?? [];
         $extraData = $decodedData['extra'] ?? [];
         // 用户显式传入的封面；各任务按当前素材组独立取封面
@@ -4802,7 +4884,7 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                 } else {
                     // 获取剪辑模板
-                    $clip_template_id = ShanjianClipTemplate::where('scene', 'newsMixCutting')->column('id');
+                    $clip_template_id = ShanjianClipTemplate::visibleIdsByScene('newsMixCutting');
                     $clip_template_total = count($clip_template_id) - 1;
 
                     if (count($clip_template_id) == 0) {

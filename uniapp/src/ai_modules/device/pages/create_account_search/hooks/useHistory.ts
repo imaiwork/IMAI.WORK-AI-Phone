@@ -7,6 +7,8 @@ import type { AccountSearchFormData } from './types'
  * 指定账号模式的名单后端不记历史，所以只回填 keywords，不碰 target_accounts。
  */
 export function useHistory(formData: AccountSearchFormData) {
+    // 本次会话回填过的历史关键词快照，提交时对比表单算出「被删掉的词」随单上报
+    const historyKeywordsSnapshot = ref<string[]>([])
     // 历史为空时保留内置默认话术，否则新用户进来会是空列表
     const applyHistory = (list: unknown, target: string[]) => {
         if (!Array.isArray(list) || !list.length) return
@@ -20,6 +22,9 @@ export function useHistory(formData: AccountSearchFormData) {
             applyHistory(res.keywords, formData.keywords)
             applyHistory(res.remarks, formData.remarks)
             applyHistory(res.miss_scripts, formData.miss_scripts)
+            if (Array.isArray(res.keywords) && res.keywords.length) {
+                historyKeywordsSnapshot.value = res.keywords.map((item: any) => String(item))
+            }
         } catch (error) {
             // 历史拉不到不该挡住建任务，静默降级到默认话术
             console.error('[dySearchTask] 历史记录获取失败', error)
@@ -28,5 +33,5 @@ export function useHistory(formData: AccountSearchFormData) {
 
     onMounted(queryHistory)
 
-    return { queryHistory }
+    return { queryHistory, historyKeywordsSnapshot }
 }

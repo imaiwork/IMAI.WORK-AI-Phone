@@ -170,3 +170,13 @@ export function updateInteractionConfig(data: any) {
 export function getInteractionConfig(params: any) {
     return request.get({ url: "/aiPersona.interactive/detail", params });
 }
+
+// 获取人设设置（素材一键清理：开关 + 次数阈值）
+export function getPersonaMaterialConfig() {
+    return request.get({ url: "/aiPersona.personaMaterialSetting/getConfig" });
+}
+
+// 保存人设设置
+export function setPersonaMaterialConfig(data: any) {
+    return request.post({ url: "/aiPersona.personaMaterialSetting/setConfig", data });
+}

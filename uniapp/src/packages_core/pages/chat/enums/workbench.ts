@@ -19,7 +19,7 @@ export const WORKBENCH_PLACEHOLDER: Record<WorkbenchMode, string> = {
     [WorkbenchMode.Chat]: "发送消息、输入@选择智能体",
     [WorkbenchMode.Image]: "输入图片生成的提示词，例如：浩瀚的银河中一艘宇宙飞船驶过",
     [WorkbenchMode.Ppt]: "输入演讲主题，例如：2026年Q1业务总结",
-    [WorkbenchMode.Map]: "告诉我你想找什么商家，例如：帮我找北京东城区的咖啡店",
+    [WorkbenchMode.Map]: "告诉我你想找什么商家，例如：深圳市宝安区的咖啡店",
     [WorkbenchMode.Video]: "输入视频脚本或画面描述",
 };
 

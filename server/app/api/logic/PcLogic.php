@@ -124,6 +124,7 @@ class PcLogic extends BaseLogic
      */
     public static function getConfigData()
     {
+        $siteTeamId = \app\api\logic\TeamLogic::currentRequestSiteTeamId();
         // 登录配置
         $loginConfig = [
             // 登录方式
@@ -160,12 +161,12 @@ class PcLogic extends BaseLogic
 
             'shop_title' => ConfigService::get('website', 'shop_title', 'AI时代，企业化AI工具的新星'),
             'client_download'                 => [
-                'windows' =>  ConfigService::get('client_download', 'windows', ''),
-                'mac_intel' =>  ConfigService::get('client_download', 'mac_intel', ''),
-                'mac_apple' =>  ConfigService::get('client_download', 'mac_apple', ''),
-                'android' =>  ConfigService::get('client_download', 'android', ''),
-                'mini_programs' =>  ConfigService::get('client_download', 'mini_programs', ''),
-                'h5' =>  ConfigService::get('client_download', 'h5', ''),
+                'windows' =>  ConfigService::get('client_download', 'windows', '', $siteTeamId),
+                'mac_intel' =>  ConfigService::get('client_download', 'mac_intel', '', $siteTeamId),
+                'mac_apple' =>  ConfigService::get('client_download', 'mac_apple', '', $siteTeamId),
+                'android' =>  ConfigService::get('client_download', 'android', '', $siteTeamId),
+                'mini_programs' =>  ConfigService::get('client_download', 'mini_programs', '', $siteTeamId),
+                'h5' =>  ConfigService::get('client_download', 'h5', '', $siteTeamId),
             ],
         ];
 
@@ -184,10 +185,10 @@ class PcLogic extends BaseLogic
         }
 
         // 公众号二维码
-        $oaQrCode = ConfigService::get('oa_setting', 'qr_code', '');
+        $oaQrCode = ConfigService::get('oa_setting', 'qr_code', '', $siteTeamId);
         $oaQrCode = empty($oaQrCode) ? $oaQrCode : FileService::getFileUrl($oaQrCode);
         // 小程序二维码
-        $mnpQrCode = ConfigService::get('mnp_setting', 'qr_code', '');
+        $mnpQrCode = ConfigService::get('mnp_setting', 'qr_code', '', $siteTeamId);
         $mnpQrCode = empty($mnpQrCode) ? $mnpQrCode : FileService::getFileUrl($mnpQrCode);
 
         //版本信息

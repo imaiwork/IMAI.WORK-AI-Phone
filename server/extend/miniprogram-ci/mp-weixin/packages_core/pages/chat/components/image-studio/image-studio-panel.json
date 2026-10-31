@@ -3,6 +3,7 @@
   "usingComponents": {
     "u-icon": "../../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "image-optimize-card": "../image-optimize-card",
-    "image-result-card": "./image-result-card"
+    "image-result-card": "./image-result-card",
+    "studio-select-text": "../studio-select-text"
   }
 }

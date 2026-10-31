@@ -11,7 +11,7 @@
                     <view v-if="!contentList.length" class="studio-empty">
                         <text class="studio-empty__title">地图获客</text>
                         <text class="studio-empty__desc">
-                            告诉我你想找什么商家，例如：帮我找北京东城区的咖啡店
+                            告诉我你想找什么商家，例如：深圳市宝安区的咖啡店
                         </text>
                     </view>
 
@@ -173,7 +173,7 @@ const props = withDefaults(
     {
         contentList: () => [],
         sendDisabled: false,
-        placeholder: "告诉我你想找什么商家，例如：帮我找北京东城区的咖啡店",
+        placeholder: "告诉我你想找什么商家，例如：深圳市宝安区的咖啡店",
         canLoadMore: false,
         canExport: false,
         tabbarVisible: false,

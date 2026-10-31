@@ -121,7 +121,7 @@ class HotspotValidate extends BaseValidate
     {
         // persona 的必填与模式相关（不选人设时可空），跨字段判断放 HotspotLogic::add，
         // 这里只保证 persona 传了就必须是对象（基础 array 规则）
-        return $this->only(['topic', 'platform', 'title', 'script', 'hashtags', 'shots', 'persona', 'core_points', 'citations', 'analysis', 'options'])
+        return $this->only(['topic', 'platform', 'title', 'script', 'hashtags', 'shots', 'persona', 'core_points', 'summary', 'citations', 'analysis', 'options'])
             ->append('script', 'require')
             ->append('options', 'require|checkCreateOptions');
     }

@@ -154,7 +154,7 @@ const handleExample = async () => {
 };
 
 const handleExport = () => {
-    mindMapExportAsPNG(mindMapContainer.value);
+    mindMapExportAsPNG(formData.reply);
 };
 
 const { lockFn: lockHandleGenerate, isLock } = useLockFn(async () => {

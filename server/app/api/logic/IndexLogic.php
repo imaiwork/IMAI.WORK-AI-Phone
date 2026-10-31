@@ -110,6 +110,7 @@ class IndexLogic extends BaseLogic
      */
     public static function getConfigData()
     {
+        $siteTeamId = \app\api\logic\TeamLogic::currentRequestSiteTeamId();
         // 底部导航
         $tabbar = DecorateTabbar::getTabbarLists();
         // 导航颜色
@@ -149,12 +150,12 @@ class IndexLogic extends BaseLogic
 
             'customer_service' => self::getCustomerService(),
             'client_download'                 => [
-                'windows' =>  ConfigService::get('client_download', 'windows', ''),
-                'mac_intel' =>  ConfigService::get('client_download', 'mac_intel', ''),
-                'mac_apple' =>  ConfigService::get('client_download', 'mac_apple', ''),
-                'android' =>  ConfigService::get('client_download', 'android', ''),
-                'mini_programs' =>  ConfigService::get('client_download', 'mini_programs', ''),
-                'h5' =>  ConfigService::get('client_download', 'h5', ''),
+                'windows' =>  ConfigService::get('client_download', 'windows', '', $siteTeamId),
+                'mac_intel' =>  ConfigService::get('client_download', 'mac_intel', '', $siteTeamId),
+                'mac_apple' =>  ConfigService::get('client_download', 'mac_apple', '', $siteTeamId),
+                'android' =>  ConfigService::get('client_download', 'android', '', $siteTeamId),
+                'mini_programs' =>  ConfigService::get('client_download', 'mini_programs', '', $siteTeamId),
+                'h5' =>  ConfigService::get('client_download', 'h5', '', $siteTeamId),
             ],
         ];
 
@@ -253,6 +254,11 @@ class IndexLogic extends BaseLogic
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
             'comment_screening' => ConfigService::get('touch_clue', 'comment_screening', []),
             'touch_speech' => ConfigService::get('touch_clue',  'touch_speech',  []),
+            // IP人设设置：人设素材库一键清理按钮显隐 + 清理次数阈值
+            'persona_material' => [
+                'clean_switch' => (int)ConfigService::get('aiPersona', 'material_clean_switch', 0),
+                'clean_threshold' => (int)ConfigService::get('aiPersona', 'material_clean_threshold', 3),
+            ],
         ];
     }
 

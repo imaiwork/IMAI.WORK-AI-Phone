@@ -76,4 +76,14 @@ class VoiceController extends BaseApiController
             return $this->data(VoiceLogic::getReturnData());
         }
     }
+
+    /** 选曲页分组 tab：全部 + 各分组（默认只含有可用曲目的分组，all=1 返回全部分组） */
+    public function musicGroups()
+    {
+        $includeEmpty = (int)$this->request->get('all', 0) === 1;
+        $result = VoiceLogic::musicGroups($includeEmpty);
+        if ($result) {
+            return $this->data(VoiceLogic::getReturnData());
+        }
+    }
 }

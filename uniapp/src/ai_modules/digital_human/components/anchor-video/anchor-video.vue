@@ -29,6 +29,16 @@
                             </text>
                         </template>
 
+                        <template v-else-if="getStatus(item) == 4">
+                            <view class="bg-[#6B7280] px-[16rpx] py-[6rpx] rounded-full mb-[10rpx]">
+                                <text class="text-[22rpx] text-white font-medium">已冻结</text>
+                            </view>
+                            <text
+                                class="text-[20rpx] text-[#ffffff]/70 text-center leading-relaxed line-clamp-2 whitespace-pre-line">
+                                会员到期已冻结，续费后自动恢复
+                            </text>
+                        </template>
+
                         <template v-else>
                             <text class="rotation mb-[8rpx]"></text>
                             <text class="text-[24rpx] text-white font-medium mb-[6rpx]">正在生成中</text>
@@ -79,6 +89,7 @@ const getStatus = (data: Record<string, any>): number => {
         human_anchor: {
             1: 1,
             2: 2,
+            9: 4, // 会员到期冻结
             default: 0,
         },
         shanjian_anchor: {
@@ -86,6 +97,8 @@ const getStatus = (data: Record<string, any>): number => {
             2: 2,
             5: 2,
             3: 3,
+            6: 1, // 旧数据：闪剪成功
+            9: 4, // 会员到期冻结
             default: 0,
         },
         public_anchor: {

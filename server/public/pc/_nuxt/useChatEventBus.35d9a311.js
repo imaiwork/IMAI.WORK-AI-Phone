@@ -1,1 +1,0 @@
-import{ab as s,r as o}from"./entry.93f3db6b.js";const t=o(null),n=o(0);function u(){return{triggerHistoryRefresh:e=>{t.value=e},onHistoryRefresh:e=>{s(t,r=>{r&&(e(r),t.value=null)})},triggerEnterChatSession:()=>{n.value+=1},onEnterChatSession:e=>{s(n,()=>{e()})}}}export{u as useChatEventBus};

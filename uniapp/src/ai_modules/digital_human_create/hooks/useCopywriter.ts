@@ -42,6 +42,8 @@ export function useCopywriter({ formData, recorderRef }: UseAudioOptions) {
                     content: data?.content,
                     title: data?.title,
                     limit: COPYWRITER_LIMIT,
+                    // 语言检测硬拦截：文案不通过时不允许确认回填
+                    strictCheck: true,
                 });
             },
         });
@@ -59,7 +61,8 @@ export function useCopywriter({ formData, recorderRef }: UseAudioOptions) {
     const handleSelectAgent = (res: any): void => {
         uni.$u.route({
             url: "/ai_modules/digital_human_create/pages/ai_copywriter/ai_copywriter",
-            params: { agentData: JSON.stringify(res.data) },
+            // strict=1：开启语言检测硬拦截，文案不通过不允许使用
+            params: { agentData: JSON.stringify(res.data), strict: 1 },
         });
     };
 

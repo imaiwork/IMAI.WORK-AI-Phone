@@ -380,7 +380,11 @@ class AutoDeviceWechatCircleConfigLogic extends ApiLogic
                         continue; // 跳过没有视频的任务
                     }
 
-                    $clip_template_id = ShanjianClipTemplate::where('scene', $scene)->where('auto_type', $auto_type)->column('id');
+                    $clip_template_id = ShanjianClipTemplate::visibleIdsByScene((string)$scene, (int)$auto_type);
+                    if (empty($clip_template_id)) {
+                        \think\facade\Log::channel('wechatCircle')->info('朋友圈自动创作 场景' . $scene . ' 无可用剪辑模板(全部被后台隐藏)，跳过本条');
+                        continue;
+                    }
                     $clip_template_total = count($clip_template_id) - 1;
                     $clip = random_int(0, $clip_template_total);
                     $clip_id =  $clip_template_id[$clip];

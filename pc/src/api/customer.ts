@@ -77,3 +77,33 @@ export const getManualAddWechatRecord = (params: any) => {
 export const deleteManualAddWechatRecord = (params: any) => {
     return $request.post({ url: "/sv.crawlingManual/recordDelete", params });
 };
+
+// 抖音获客任务列表
+export const getDouyinTaskList = (params: any) => {
+    return $request.get({ url: "/device.dySearchTask/lists", params });
+};
+
+// 删除抖音获客任务
+export const deleteDouyinTask = (params: any) => {
+    return $request.post({ url: "/device.dySearchTask/delete", params });
+};
+
+// 创建抖音获客任务
+export const createDouyinTask = (params: any) => {
+    return $request.post({ url: "/device.dySearchTask/add", params });
+};
+
+// 抖音获客任务详情
+export const getDouyinTaskDetail = (params: any) => {
+    return $request.get({ url: "/device.dySearchTask/detail", params });
+};
+
+// 获取抖音获客任务线索（走访记录）
+export const getDouyinTaskClue = (params: any) => {
+    return $request.get({ url: "/device.dySearchTask/records", params });
+};
+
+// 获取抖音获客任务填写历史（线索词/私信话术/加微备注）
+export const getDouyinTaskHistory = () => {
+    return $request.get({ url: "/device.dySearchTask/history" });
+};

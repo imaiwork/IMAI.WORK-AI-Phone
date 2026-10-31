@@ -24,7 +24,9 @@
                                         mode="aspectFill"
                                         @click.stop="previewRefImages(item.refImages, refIndex)" />
                                 </view>
-                                <text class="user-bubble__text">{{ item.message }}</text>
+                                <studio-select-text
+                                    custom-class="user-bubble__text"
+                                    :text="item.message || ''" />
                             </view>
                         </view>
 
@@ -217,6 +219,7 @@ import { useStudioSendGuard } from "@/hooks/useStudioGuards";
 import { useStableTextareaAutoHeight } from "@/hooks/useStableTextareaAutoHeight";
 import ImageOptimizeCard from "../image-optimize-card.vue";
 import ImageResultCard from "./image-result-card.vue";
+import StudioSelectText from "../studio-select-text.vue";
 
 const props = withDefaults(
     defineProps<{

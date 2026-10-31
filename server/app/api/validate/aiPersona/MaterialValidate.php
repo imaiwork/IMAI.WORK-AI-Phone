@@ -99,4 +99,9 @@ class MaterialValidate extends BaseValidate
     {
         return $this->only(['persona_id']);
     }
+
+    public function sceneCleanOverUsed()
+    {
+        return $this->only(['persona_id']);
+    }
 }

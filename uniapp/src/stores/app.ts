@@ -84,6 +84,8 @@ export const useAppStore = defineStore({
         getByName: (state) => state.config.by_name || "",
         getAiModelConfig: (state) => state.aiModels || {},
         getIsShowRobot: (state) => state.config.is_robot_show,
+        /** 人设素材库一键清理：clean_switch(1显示/0隐藏) clean_threshold(次数阈值) */
+        getPersonaMaterialConfig: (state) => state.config.persona_material || {},
         getCommentFilterConfig: (state) => state.config.comment_screening || [],
         getCommentContentConfig: (state) => state.config.touch_speech || [],
         getChatModel: (state) => state.config.ai_model?.channel || [],

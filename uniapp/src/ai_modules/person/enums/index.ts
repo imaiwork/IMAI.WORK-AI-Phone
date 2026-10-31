@@ -124,6 +124,12 @@ export const MATERIAL_KIND_TO_USE_MODE: Record<MaterialKindEnum, MaterialUseMode
     [MaterialKindEnum.ORIGINAL]: MaterialUseModeApiEnum.ORIGINAL,
 };
 
+/**
+ * 相册上传到 IP 人设素材库的请求标记：服务端把文件同时写一份到外部素材库（平台素材库），
+ * 其他人设可复用，避免素材只在当前人设下可见；人设素材本身仍按原链路入库。
+ */
+export const PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY = { sync_media_library: 1 } as const;
+
 /** 接口值回显成素材模式：只有 2 算原图，其余（空 / 脏值）一律自动适配 */
 export const normalizeMaterialUseMode = (value: unknown): MaterialKindEnum =>
     Number(value) === MaterialUseModeApiEnum.ORIGINAL ? MaterialKindEnum.ORIGINAL : MaterialKindEnum.AUTO;
@@ -230,3 +236,11 @@ export enum CopywritingSourceEnum {
     LIBRARY = 4,
     HOTSPOT = 5,
 }
+
+export const COPYWRITING_SOURCE_LABEL: Record<CopywritingSourceEnum, string> = {
+    [CopywritingSourceEnum.IMITATE]: "爆款仿写",
+    [CopywritingSourceEnum.AI]: "AI生成",
+    [CopywritingSourceEnum.NONE]: "无文案",
+    [CopywritingSourceEnum.LIBRARY]: "文案库",
+    [CopywritingSourceEnum.HOTSPOT]: "热点生成",
+};

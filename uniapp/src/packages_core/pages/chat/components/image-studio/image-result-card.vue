@@ -4,7 +4,10 @@
         <template v-if="status === 'generating'">
             <view class="img-card__status img-card__status--muted">
                 <view class="img-spin"></view>
-                <text>正在生成 {{ count }} 张图片 · {{ modelName }} · {{ ratio }}</text>
+                <studio-select-text
+                    custom-class="img-card__status-text"
+                    :text="`正在生成 ${count} 张图片 · ${modelName} · ${ratio}`"
+                    :long-press-copy="false" />
             </view>
             <view class="img-grid" :class="count > 1 ? 'img-grid--2' : 'img-grid--1'">
                 <view
@@ -19,7 +22,9 @@
         <template v-else-if="status === 'error'">
             <view class="img-card__status img-card__status--error">
                 <u-icon name="close-circle" :size="28" color="#DC2626"></u-icon>
-                <text>{{ error || "生成失败，请重试" }}</text>
+                <studio-select-text
+                    custom-class="img-card__status-text"
+                    :text="error || '生成失败，请重试'" />
             </view>
             <view
                 class="img-card__regen"
@@ -35,7 +40,9 @@
         <template v-else>
             <view class="img-card__status img-card__status--ok">
                 <u-icon name="checkmark-circle" :size="28" color="#16A34A"></u-icon>
-                <text>{{ title || `已生成 ${urls.length || count} 张 · ${sizeLabel}` }}</text>
+                <studio-select-text
+                    custom-class="img-card__status-text"
+                    :text="title || `已生成 ${urls.length || count} 张 · ${sizeLabel}`" />
             </view>
             <view class="img-grid" :class="(urls.length || count) > 1 ? 'img-grid--2' : 'img-grid--1'">
                 <view
@@ -71,6 +78,8 @@
 </template>
 
 <script setup lang="ts">
+import StudioSelectText from "../studio-select-text.vue";
+
 const props = withDefaults(
     defineProps<{
         status?: "generating" | "done" | "error";

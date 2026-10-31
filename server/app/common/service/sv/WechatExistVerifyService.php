@@ -87,6 +87,31 @@ class WechatExistVerifyService
     }
 
     /**
+     * 校验结果说明落库长度上限
+     * la_sv_crawling_manual_task_record.result 为 varchar(500)，中台 error 为外部输入，超长截断避免整单 update 报错
+     */
+    public const INVALID_ERROR_MAX = 500;
+
+    /**
+     * 提取中台 query_result 返回的 error 说明
+     * valid=false 且 error 有值时可作为校验结果说明，返回空串时由调用方回退默认文案
+     * 超过 INVALID_ERROR_MAX 时截断
+     * @param array<string, mixed> $response
+     */
+    public static function invalidErrorText(array $response): string
+    {
+        $data = is_array($response['data'] ?? null) ? $response['data'] : [];
+        if (!isset($data['error']) || !is_scalar($data['error'])) {
+            return '';
+        }
+        $error = trim((string)$data['error']);
+        if ($error === '') {
+            return '';
+        }
+        return mb_substr($error, 0, self::INVALID_ERROR_MAX, 'UTF-8');
+    }
+
+    /**
      * @param array<string, mixed> $response
      */
     public static function interpret(array $response): string
@@ -149,9 +174,10 @@ class WechatExistVerifyService
      */
     private static function outcomeLog(string $wechat, string $outcome, array $response): string
     {
+        $invalidError = self::invalidErrorText($response);
         return match ($outcome) {
             self::OUTCOME_VALID => $wechat . '有效',
-            self::OUTCOME_INVALID => $wechat . '无效',
+            self::OUTCOME_INVALID => $wechat . '无效' . ($invalidError !== '' ? '，校验结果说明：' . $invalidError : ''),
             self::OUTCOME_PENDING => $wechat . (array_key_exists('data', $response) && $response['data'] === null
                 ? '该账号还未开始验证'
                 : '该账号还未完成验证,稍后再试'),

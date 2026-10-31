@@ -547,12 +547,17 @@ trait DeviceAutoTaskTrait
                 'content_location' => '',
             ];
 
-            $location = (int)($locationConfig['is_content_location'] ?? 0) === 1
+            $contentLocation = (int)($locationConfig['is_content_location'] ?? 0) === 1
                 ? (string)($locationConfig['content_location'] ?? '')
                 : '';
-            $isLocation = $location !== '' ? 1 : 0;
             $storePosition = $canUseLocation ? (string)($persona->store_position ?? '') : '';
             $isStorePosition = $canUseLocation ? (int)($persona->is_store_position ?? 0) : 0;
+            // 商家定位开启时优先把精确地址放入旧字段 location，
+            // 兼容仍只读取 isLocation/location 的 RPA 客户端。
+            $location = $isStorePosition === 1 && $storePosition !== ''
+                ? $storePosition
+                : $contentLocation;
+            $isLocation = $location !== '' ? 1 : 0;
             $payload = array(
                 'appType' => $task->account_type,
                 'messageId' => 0,
@@ -576,8 +581,8 @@ trait DeviceAutoTaskTrait
                     'pic' => \app\common\service\FileService::getFileUrl($publish->pic ?? ''),
                     'is_shopping_cart' => in_array($task->account_type, [4]) ? ($persona->is_shopping_cart ?? 0) : 0,
                     'goods_name' => in_array($task->account_type, [4]) ? ($persona->goods_name ?? '') : '',
-                    'is_content_location' => $isLocation,
-                    'content_location' => $location,
+                    'is_content_location' => $contentLocation !== '' ? 1 : 0,
+                    'content_location' => $contentLocation,
                     'is_store_position' => $isStorePosition,
                     'store_position' => $storePosition,
 
@@ -885,11 +890,13 @@ trait DeviceAutoTaskTrait
                         }
 
                         if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
-                            self::setLog($record['reg_wechat'] . '该账号不是有效的微信号,忽略', 'add_wechat');
+                            // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
+                            $invalidResult = \app\common\service\sv\WechatExistVerifyService::invalidErrorText($response) ?: '该线索经过校验为无效线索';
+                            self::setLog($record['reg_wechat'] . '该账号不是有效的微信号,忽略,校验结果说明:' . $invalidResult, 'add_wechat');
                             self::setLog($response, 'add_wechat');
                             SvAddWechatRecord::where('id', $record['id'])->update([
                                 'status' => 0,
-                                'result' => '该线索经过校验为无效线索',
+                                'result' => $invalidResult,
                                 'update_time' => time(),
                             ]);
                             continue;

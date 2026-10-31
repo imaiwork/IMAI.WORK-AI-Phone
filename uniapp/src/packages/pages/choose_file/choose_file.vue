@@ -48,6 +48,7 @@ import {
     getFilesByExtname,
     normalizeFileData,
 } from "@/components/file-upload/choose-file";
+import { isPrivacyError } from "@/utils/privacy";
 import {
     CHAT_UPLOAD_EXTS,
     CHAT_IMAGE_MAX_SIZE,
@@ -106,6 +107,8 @@ const openFile = async (type: string) => {
         // 用户取消选择时静默返回
         const errMsg = e?.errMsg || "";
         if (errMsg.includes("cancel")) return;
+        // 隐私协议未同意/后台未声明：choose-file 已给过中文引导，这里不再弹"去设置开权限"（会误导）
+        if (isPrivacyError(e)) return;
         // 相机/相册权限被拒：引导去小程序设置里开启，而不是抛英文 errMsg
         if (errMsg.includes("auth") || errMsg.includes("deny") || errMsg.includes("privacy")) {
             uni.showModal({

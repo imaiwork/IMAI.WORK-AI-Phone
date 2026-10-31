@@ -38,4 +38,9 @@ class PublicCopyValidate extends BaseValidate
     {
         return $this->only(['id', 'force']);
     }
+
+    public function sceneRewrite()
+    {
+        return $this->only(['persona_id', 'ids']);
+    }
 }

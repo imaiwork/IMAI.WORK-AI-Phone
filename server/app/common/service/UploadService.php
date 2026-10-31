@@ -124,6 +124,7 @@ class UploadService
         string $sliceModule = '',
         string $scene = 'persona',
         int $groupId = 0,
+        ?array $customSpecs = null,
     ): array {
         return self::executeUpload([
             'cid' => $cid,
@@ -142,6 +143,7 @@ class UploadService
             'sliceModule' => $sliceModule,
             'scene' => $scene,
             'group_id' => $groupId,
+            'custom_specs' => $customSpecs,
         ]);
     }
 
@@ -153,6 +155,7 @@ class UploadService
      * @param int $source 来源类型
      * @param string $saveDir 保存目录
      * @param bool $isDate 是否使用日期目录
+     * @param array $allowedExts 允许的扩展名；传空用全局配置（公共音乐库会传更窄的白名单）
      * @return array
      * @throws Exception
      */
@@ -161,7 +164,8 @@ class UploadService
         int $sourceId = 0,
         int $source = FileEnum::SOURCE_ADMIN,
         string $saveDir = 'uploads/audio',
-        bool $isDate = true
+        bool $isDate = true,
+        array $allowedExts = []
     ): array {
         $result = self::executeUpload([
             'cid' => $cid,
@@ -169,7 +173,7 @@ class UploadService
             'source' => $source,
             'saveDir' => $saveDir,
             'fileType' => FileEnum::AUDIO_TYPE,
-            'allowedExts' => config('project.file_audio'),
+            'allowedExts' => $allowedExts ?: config('project.file_audio'),
             'ffmpeg' => 0,
             'isDate' => $isDate,
             'generateThumbnail' => false,
@@ -509,6 +513,10 @@ class UploadService
             // 4. 验证文件类型
             if ($params['allowedExts']) {
                 self::validateFileExtension($fileInfo['ext'], $params['allowedExts']);
+            }
+            if ((int)$params['fileType'] === FileEnum::IMAGE_TYPE
+                || in_array(strtolower($fileInfo['ext']), (array)config('project.file_image'), true)) {
+                self::validateImageContent($fileInfo['realPath'], (array)config('project.file_image'));
             }
 
             // 5. 计算保存目录和路径
@@ -940,7 +948,9 @@ class UploadService
         $localDir  = public_path() . $saveDir . '/';
         $localPath = $localDir . $fileName;
 
-        if (!is_dir($localDir) && !mkdir($localDir, 0755, true)) {
+        // 并发上传同一目录时，别的请求可能刚好建好目录，mkdir 会报 "File exists"；
+        // 这里压掉告警并二次确认目录，避免把并发竞争当成建目录失败。
+        if (!is_dir($localDir) && !@mkdir($localDir, 0755, true) && !is_dir($localDir)) {
             throw new Exception("无法创建本地临时目录: {$localDir}");
         }
 
@@ -1002,7 +1012,7 @@ class UploadService
             $info = self::getMediaInfo($filePath);
             if (empty($info['streams'])) {
                 return [
-                    'need_transcode' => false,
+                    'need_transcode' => true,
                     'media_type' => 'unknown',
                     'reason' => '无法获取媒体流信息'
                 ];
@@ -1019,7 +1029,7 @@ class UploadService
 
             if (!$videoStream) {
                 return [
-                    'need_transcode' => false,
+                    'need_transcode' => true,
                     'media_type' => 'unknown',
                     'reason' => '未找到视频流'
                 ];
@@ -1027,13 +1037,11 @@ class UploadService
 
             // 3. 判断媒体类型
             $mediaType = $videoStream['codec_type'] ?? 'unknown';
-            $frameRate = $videoStream['r_frame_rate'] ?? 'unknown';
             $codecName = $videoStream['codec_name']  ?? ''; // ✅ 新增
 
-            // 4. 根据类型检查是否符合规范
-            // ✅ 修改判断条件：codec 是图片类型 或 帧率是 25/1
+            // 帧率不能用于区分图片和视频，正常 H.264 视频也可能是 25 fps。
             $imageCodecs = ['png', 'apng', 'mjpeg', 'jpeg', 'jpg', 'gif', 'webp', 'bmp', 'tiff'];
-            $isImage = in_array(strtolower($codecName), $imageCodecs) || $frameRate == '25/1';
+            $isImage = in_array(strtolower($codecName), $imageCodecs);
 
             if ($mediaType === 'video' && $isImage) {
                 // 图片处理
@@ -1061,7 +1069,7 @@ class UploadService
                 ];
             } else {
                 return [
-                    'need_transcode' => false,
+                    'need_transcode' => true,
                     'media_type' => 'unknown',
                     'reason' => "不支持的媒体类型: {$mediaType}"
                 ];
@@ -1267,6 +1275,21 @@ class UploadService
     {
         if (!in_array(strtolower($ext), $allowedExts)) {
             throw new Exception("不允许上传{$ext}格式的文件");
+        }
+    }
+
+    /**
+     * 按文件内容校验图片格式，防止 HEIC 等文件仅改后缀后进入素材库。
+     */
+    private static function validateImageContent(string $filePath, array $allowedExts): void
+    {
+        $info = @getimagesize($filePath);
+        $ext = $info === false ? '' : image_type_to_extension((int)$info[2], false);
+        if ($ext === 'jpeg' && in_array('jpg', $allowedExts, true)) {
+            $ext = 'jpg';
+        }
+        if (!$ext || !in_array($ext, $allowedExts, true)) {
+            throw new Exception('不支持或无法识别图片真实格式，请转换为 JPG、PNG 或 WebP 后重新上传');
         }
     }
 
@@ -1610,6 +1633,10 @@ class UploadService
             if ($isImage) {
                 Log::channel('ffmpeg')->write("[转码] 识别为图片类型 codec={$codecName}");
                 self::transcodeImage($inputPath, $tempOutputPath, $specs, $info);
+            } elseif (self::isVideoCompliant($info, $specs)) {
+                if (!copy($inputPath, $tempOutputPath)) {
+                    throw new Exception("合规视频复制失败: {$inputPath}");
+                }
             } else {
                 self::transcodeVideo($inputPath, $tempOutputPath, $specs, $info);
             }
@@ -1779,7 +1806,13 @@ class UploadService
             }
 
             $tempOutputPath = $outputDir . '/tmp_' . uniqid() . '_' . basename($outputPath);
-            self::transcodeVideo($inputPath, $tempOutputPath, $specs, $info);
+            if (self::isVideoCompliant($info, $specs)) {
+                if (!copy($inputPath, $tempOutputPath)) {
+                    throw new Exception("合规视频复制失败: {$inputPath}");
+                }
+            } else {
+                self::transcodeVideo($inputPath, $tempOutputPath, $specs, $info);
+            }
 
             if (!file_exists($tempOutputPath)) {
                 throw new Exception("标准化失败：临时输出文件未生成: {$tempOutputPath}");
@@ -2000,9 +2033,11 @@ class UploadService
         $targetResolution = self::calculateTargetResolution($info, $specs);
         $targetDims       = explode('x', $targetResolution);
 
+        // 目标分辨率被 toEvenDimension 向下取过偶数，奇数边素材最多会比目标大 1px。
+        // 不放这 1px 容差，250x179 这类原图会被判"不合规"→ 白转码，还会撞上小画布 boxblur 必败。
         return (
-            isset($stream['width'])  && $stream['width']  <= intval($targetDims[0]) &&
-            isset($stream['height']) && $stream['height'] <= intval($targetDims[1]) &&
+            isset($stream['width'])  && $stream['width']  <= intval($targetDims[0]) + 1 &&
+            isset($stream['height']) && $stream['height'] <= intval($targetDims[1]) + 1 &&
             in_array(strtolower($format), ['jpg', 'jpeg', 'png', 'mjpeg'])
         );
     }
@@ -2146,31 +2181,27 @@ class UploadService
             return false;
         }
 
-        $targetResolution = self::calculateTargetResolution($info, $specs, $rotation);
-        $targetDims       = explode('x', $targetResolution);
-
         // ✅ 修复：安全解析帧率，避免除零或格式异常
         $frameRateParts = explode('/', $stream['r_frame_rate'] ?? '0/1');
         $frameRate      = (isset($frameRateParts[1]) && intval($frameRateParts[1]) > 0)
             ? intval($frameRateParts[0]) / intval($frameRateParts[1])
             : intval($frameRateParts[0]);
 
-        if ($specs['duration'] < 1) {
-            return (
-                isset($stream['codec_name']) && $stream['codec_name'] === $specs['video_codec'] &&
-                isset($stream['width'])      && $stream['width']  <= intval($targetDims[0]) &&
-                isset($stream['height'])     && $stream['height'] <= intval($targetDims[1]) &&
-                round($frameRate) == $specs['frame_rate']
-            );
-        } else {
-            return (
-                isset($stream['codec_name']) && $stream['codec_name'] === $specs['video_codec'] &&
-                isset($stream['width'])      && $stream['width']  <= intval($targetDims[0]) &&
-                isset($stream['height'])     && $stream['height'] <= intval($targetDims[1]) &&
-                round($frameRate) == $specs['frame_rate'] &&
-                isset($stream['duration'])   && floatval($stream['duration']) < $specs['duration']
-            );
-        }
+        // 与素材准入的 25~30 fps、长边上限保持一致，不为凑到 30 fps/1920 再编码。
+        $frameRateOk = (float)$specs['frame_rate'] === (float)self::DEFAULT_VIDEO_SPECS['frame_rate']
+            ? OriginalMaterialSpec::isFpsOk($frameRate)
+            : abs($frameRate - (float)$specs['frame_rate']) < 0.01;
+        $formats = explode(',', strtolower((string)($info['format']['format_name'] ?? '')));
+        $duration = (float)($stream['duration'] ?? $info['format']['duration'] ?? 0);
+        $width = (int)($stream['width'] ?? 0);
+        $height = (int)($stream['height'] ?? 0);
+
+        return !empty(array_intersect($formats, OriginalMaterialSpec::VIDEO_FORMAT_TOKENS))
+            && ($stream['codec_name'] ?? '') === $specs['video_codec']
+            && $width > 0 && $height > 0
+            && max($width, $height) <= (int)$specs['max_dimension']
+            && $frameRateOk
+            && ($specs['duration'] < 1 || ($duration > 0 && $duration < $specs['duration']));
     }
 
 
@@ -2266,13 +2297,19 @@ class UploadService
             Log::channel('ffmpeg')->write("[转码] 识别为动图，仅提取首帧。codec={$codecName}");
         }
 
+        // boxblur 半径上限 = 色度平面短边 / 2；4:2:0 下等于画布短边 / 4。
+        // 9:16 画布会把小图压成 140x250 这类尺寸，写死 40 直接超出 35 的上限，
+        // ffmpeg 报 "Invalid chroma_param radius value 40" 且不产出文件，转码必败。
+        $blurRadius = (int)max(1, min(40, intdiv((int)min((int)$tW, (int)$tH), 8)));
+
         $filter = sprintf(
             "split[bg_raw][fg_raw];" .
-                "[bg_raw]scale=%d:%d,boxblur=40:10[bg];" .
+                "[bg_raw]scale=%d:%d,boxblur=%d:10[bg];" .
                 "[fg_raw]scale=%d:%d:force_original_aspect_ratio=decrease[fg];" .
                 "[bg][fg]overlay=(W-w)/2:(H-h)/2",
             $tW,
             $tH,
+            $blurRadius,
             $tW,
             $tH
         );
@@ -2390,7 +2427,7 @@ class UploadService
         $ffmpegParts = array_merge($ffmpegParts, [
             "-i " . escapeshellarg($inputPath),
             "-c:v libx264",
-            "-crf 28",
+            "-crf 20",
             "-preset veryfast",
             "-c:a aac",
             "-b:a 128k",
@@ -2895,7 +2932,8 @@ class UploadService
         int $sourceId = 0,
         int $source = FileEnum::SOURCE_ADMIN,
         int $timeout = 0,
-        bool $skipTranscode = false
+        bool $skipTranscode = false,
+        ?array $customSpecs = null
     ): array {
         if (empty($url)) {
             throw new Exception("URL不能为空");
@@ -3024,7 +3062,7 @@ class UploadService
                 'oss_uri'      => $fileUri,   // 云端/相对路径
                 'save_dir'     => $saveDir,
                 'clip'         => [],
-                'custom_specs' => null,
+                'custom_specs' => $customSpecs,
             ]);
 
             Log::channel('ffmpeg')->write("[Source转码投递] 类型:{$type} | URL:{$url} | FileID:{$file['id']}");
@@ -3193,22 +3231,29 @@ class UploadService
                 $saveDir = 'uploads/file/' . date('Ymd');
             }
 
-            // 图片转码走本机 ffmpeg，读的是 local_path。OSS 存储下上传完本地就没有副本了，
-            // 投出去必然 10 次 fopen 失败并把这个文件永久标成 transcode_status=4，
-            // 之后每一轮预检都判"转码失败且分辨率仍超标"→不可恢复。与其留一个坏状态，
-            // 不如这里就判定不可自动恢复，让调用方（封面丢弃 / 素材报错）自己决定怎么处理。
+            // 本机转码读 local_path。非本地存储上传完本地没有副本，但 MediaTranscodeJob
+            // 支持按 oss_uri 重新下载，所以这里不再直接判死；只有本地存储且文件确实丢了
+            // 才不可恢复（本地存储没有别的副本可取）。
             $localPath = public_path() . ltrim($fileUri, '/');
-            if (!is_file($localPath)) {
-                $result['skipped'][] = ['uri' => $fileUri, 'reason' => '本地无文件，无法自动转码（对象存储）'];
+            $localFileMissing = !is_file($localPath);
+            if ($localFileMissing
+                && ConfigService::get('storage', 'default', 'local') === 'local'
+            ) {
+                $result['skipped'][] = ['uri' => $fileUri, 'reason' => '本地无文件，无法自动转码'];
                 $result['unrecoverable'][] = [
                     'file_id' => $fileId,
                     'uri' => $fileUri,
-                    'reason' => '本地无文件，无法自动转码（对象存储）',
+                    'reason' => '本地无文件，无法自动转码',
                 ];
                 Log::channel('ffmpeg')->write(
-                    '[分辨率超标自动转码] 跳过投递:本地无文件 file_id=' . $fileId . ' uri=' . $fileUri
+                    '[分辨率超标自动转码] 跳过投递:本地存储无文件 file_id=' . $fileId . ' uri=' . $fileUri
                 );
                 continue;
+            }
+            if ($localFileMissing) {
+                Log::channel('ffmpeg')->write(
+                    '[分辨率超标自动转码] 本地无副本,交由转码队列从 OSS 下载 file_id=' . $fileId . ' uri=' . $fileUri
+                );
             }
 
             try {

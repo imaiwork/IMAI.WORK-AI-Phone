@@ -512,3 +512,13 @@ export function deleteWeChatFriendSopPush(params: any) {
 export function getSopPushLog(params: any) {
     return $request.get({ url: "/wechat.sop.index/getPushLogList", params });
 }
+
+// AI销售加微记录列表
+export function getAddRecordLists(params: any) {
+    return $request.get({ url: "/wechat.addRecord/lists", params });
+}
+
+// 删除AI销售加微记录
+export function deleteAddRecord(params: any) {
+    return $request.post({ url: "/wechat.addRecord/delete", params });
+}

@@ -13,6 +13,7 @@ use app\common\model\sora\SoraVideoSetting;
 use app\common\model\sora\SoraVideoTask;
 use app\common\model\user\User;
 use app\common\model\user\UserAuth;
+use app\common\service\copywriting\VideoPromptService;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -42,9 +43,12 @@ class SoraVideoSettingLogic extends ApiLogic
         $gender       = $params['gender'] ?? '无';
         $image_urls   = $params['image_urls'] ?? [];
         $video_urls   = $params['video_urls'] ?? [];
-        if (!empty($content)){
-            $title = mb_substr($content, 0, 10);
-        }
+
+        // 记录标题：优先用用户填的 / 前端从 AI 提示词里带过来的名字，
+        // 只有拿到前端那个「时间戳 + 一句话生成视频」默认名时才自己从提示词里提炼。
+        // 旧逻辑是 mb_substr($content, 0, 10)，而 content 是 AI 提示词，
+        // 头十个字符正好是「7秒竖屏9:16，写」这类参数前缀，主题全丢。
+        $title = self::resolveTitle((string)($params['name'] ?? ''), (string)$content);
 
         if (!empty($video_urls)){
             $inDuration = 0;
@@ -65,25 +69,24 @@ class SoraVideoSettingLogic extends ApiLogic
         $ai_type      = $params['ai_type'] ?? 0;
         if ($params['model'] == 'sora-2'){
             $model = 1;
-            $name  = $params['name'] ?? '一句话视频-(sora2)'.date('Y-m-d H:i:s', time()).round(1000,9999);
         } else if ($params['model'] == 'sora2-pro'){
             $model = 2;
-            $name  = $params['name'] ?? '一句话视频-(sora2-pro)'.date('Y-m-d H:i:s', time()).round(1000,9999);
         } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 0 && $params['resolution'] == '480p'){
             $model = empty($video_urls)? 3 : 4;
             $scene = $model == 3 ? self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_480P_VIDEO2VIDEO_CREATE;
-            $name  = $title ?? '一句话视频-SD2.5(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
         } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 0 && $params['resolution'] == '720p'){
             $model = empty($video_urls)? 5 : 6;
             $scene = $model == 5 ? self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_720P_VIDEO2VIDEO_CREATE;
-            $name  = $title ?? '一句话视频-SD2.5(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999);
         } else if ($params['model'] == 'seedance2.0' && $params['first_last_frame'] == 1){
             $model = $params['resolution'] == '480p' ? 3 : 5;
             $scene = $model == 3 ? self::SEEDANCE2_480P_IMAGE2VIDEO_CREATE : self::SEEDANCE2_720P_IMAGE2VIDEO_CREATE;
-            $name  = $model == 3 ? ($title??'一句话视频-SD2.5(480p)'.date('Y-m-d H:i:s', time()).round(1000,9999)) : ($title ??'一句话视频-SD2.5(720p)'.date('Y-m-d H:i:s', time()).round(1000,9999));
         }else{
             message('模型参数错误');
         }
+
+        // 所有模型走同一个标题口径。旧代码 sora-2 用前端传的默认名、seedance 用 content 前 10 字，
+        // 同一句需求在两个模型下标题风格完全不同。
+        $name = $title;
 
         $anchor_ids   = $params['anchor_ids'] ?? [];
 
@@ -250,7 +253,8 @@ class SoraVideoSettingLogic extends ApiLogic
                         'model'          => 'doubao-seedance-2-5-260628',
                         'content'        => $contents,
                         'generate_audio' => True,
-                        'ratio'          => $aspect_ratio,
+                        // 首尾帧模式必须传 adaptive：画面比例由首帧决定，显式比例会被中台判为生成失败
+                        'ratio'          => $params['first_last_frame'] == 1 ? 'adaptive' : $aspect_ratio,
                         'duration'       => (int)$duration,
                         'resolution'     => $params['resolution'] == '720p' ? '720p' : '480p',
                         'model_version'  => $model,
@@ -325,6 +329,44 @@ class SoraVideoSettingLogic extends ApiLogic
             self::setError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 创作记录标题。
+     *
+     * 用户填了名字（含前端从 AI 提示词里带过来的标题）就用用户的；只有拿到前端那个
+     * 「时间戳 + 一句话生成视频」默认名时，才从提示词里提炼。
+     * 提炼不出来（空提示词 / 整段都是参数）时给一个带时间的兜底名，至少能在列表里区分。
+     */
+    private static function resolveTitle(string $name, string $content): string
+    {
+        $name = trim($name);
+        if ($name !== '' && !self::isAutoName($name)) {
+            // 用户自己填的名字原样保留，只按字段长度收口，不做标点/字数规整
+            return mb_substr($name, 0, 50);
+        }
+
+        $derived = VideoPromptService::fallbackTitle($content);
+        if ($derived !== '') {
+            return $derived;
+        }
+
+        return '一句话视频 ' . date('m-d H:i');
+    }
+
+    /** 前端「视频名称」输入框的默认值，不当作真实标题 */
+    private static function isAutoName(string $name): bool
+    {
+        // 202610291545一句话生成视频 / 202610291545一句话视频
+        if (preg_match('/^\d{10,14}\s*一句话(生成)?视频$/u', $name)) {
+            return true;
+        }
+        // 后端历史默认名：一句话视频-SD2.5(480p)2026-10-29 15:45:01 / 一句话视频-(sora2)...
+        if (preg_match('/^一句话(生成)?视频\s*[-－—]?\s*[（(]?\s*(sora2(-pro)?|sora-2|SD2(\.\d+)?(\((480|720)p\))?)\s*[）)]?[\s\d\-:：]*$/iu', $name)) {
+            return true;
+        }
+        // 兜底名：一句话视频 10-29 15:45
+        return (bool)preg_match('/^一句话(生成)?视频\s+\d{1,2}-\d{1,2}\s+\d{1,2}:\d{2}$/u', $name);
     }
 
     /**

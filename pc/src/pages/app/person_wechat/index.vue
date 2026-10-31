@@ -21,6 +21,7 @@ import CirclePraiseSetting from "./circle/_pages/setting/index.vue";
 import TagAuto from "./tag/_pages/auto/index.vue";
 import TagManualAuto from "./tag/_pages/manual/index.vue";
 import FriendStrategy from "./setting/_pages/friend/index.vue";
+import AddRecord from "./setting/_pages/record/index.vue";
 import MaterialLibrary from "./marketing/_pages/material/index.vue";
 import DeviceList from "./setting/_pages/device/index.vue";
 import WechatList from "./setting/_pages/wechat/index.vue";
@@ -45,6 +46,7 @@ sidebar.value = [
     { name: "素材库", components: markRaw(MaterialLibrary), type: SidebarTypeEnum.MATERIAL_LIBRARY },
     { name: "好友策略", components: markRaw(FriendStrategy), type: SidebarTypeEnum.FRIEND_STRATEGY },
     { name: "打招呼策略", components: markRaw(Greeting), type: SidebarTypeEnum.GREETING },
+    { name: "加微记录", components: markRaw(AddRecord), type: SidebarTypeEnum.ADD_WECHAT_RECORD },
 ];
 
 enum SidebarGroupEnum {
@@ -75,6 +77,7 @@ const getSidebar = computed(() => {
         [SidebarTypeEnum.WECHAT_MANAGEMENT]: SidebarGroupEnum.DEVICE,
         [SidebarTypeEnum.FRIEND_STRATEGY]: SidebarGroupEnum.SETTING,
         [SidebarTypeEnum.GREETING]: SidebarGroupEnum.SETTING,
+        [SidebarTypeEnum.ADD_WECHAT_RECORD]: SidebarGroupEnum.SETTING,
     };
 
     const result = [];

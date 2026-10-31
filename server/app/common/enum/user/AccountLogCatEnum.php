@@ -120,6 +120,7 @@ class AccountLogCatEnum
             AccountLogEnum::TOKENS_DEC_COZE_HOT_WORDS,
             AccountLogEnum::TOKENS_DEC_EXTRACT_KEYWORDS,
             AccountLogEnum::TOKENS_DEC_IMAGES_EXPLOSION_REWRITE,
+            AccountLogEnum::TOKENS_DEC_PUBLIC_COPYWRITING_REWRITE,
         ]) + self::assign(self::HUMAN, [
             AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR,
             AccountLogEnum::TOKENS_DEC_HUMAN_VOICE,

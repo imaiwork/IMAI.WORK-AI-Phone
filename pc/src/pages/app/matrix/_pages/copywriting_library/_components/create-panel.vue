@@ -51,7 +51,7 @@
                     </button>
                 </div>
                 <div class="grow min-h-0 flex justify-center gap-x-[18px]">
-                    <template v-if="formData.copywriting_type === 1">
+                    <template v-if="formData.copywriting_type === CopywritingTypeEnum.CONTENT">
                         <div class="content-item">
                             <copywriting-card v-model:model-value="formData.title" :type="1" />
                         </div>
@@ -59,7 +59,7 @@
                             <copywriting-card v-model:model-value="formData.described" :type="2" />
                         </div>
                     </template>
-                    <template v-if="formData.copywriting_type === 2">
+                    <template v-if="formData.copywriting_type === CopywritingTypeEnum.ORAL">
                         <div class="content-item !w-[500px] !mx-auto !grow-0 !flex-none">
                             <copywriting-card v-model:model-value="formData.oral_copy" :type="3" :show-topic="false" />
                         </div>
@@ -187,6 +187,7 @@ import {
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import CopywritingCard from "../../../_components/copywriting-card.vue";
+import { CopywritingTypeEnum } from "@/pages/app/matrix/_enums";
 
 const props = defineProps<{
     type: number;
@@ -221,10 +222,10 @@ const aiFormData = reactive({
 const isSaveDisabled = computed(() => {
     const hasContent = (arr: any[]) => arr.some((item) => item.content?.trim());
 
-    if (formData.copywriting_type === 1) {
+    if (formData.copywriting_type === CopywritingTypeEnum.CONTENT) {
         return !hasContent(formData.title) || !hasContent(formData.described);
     }
-    if (formData.copywriting_type === 2) {
+    if (formData.copywriting_type === CopywritingTypeEnum.ORAL) {
         return !hasContent(formData.oral_copy);
     }
     return true;
@@ -306,7 +307,7 @@ const handleAiGen = async () => {
         }
 
         const { described, oral_copy, title } = data;
-        if (formData.copywriting_type === 1) {
+        if (formData.copywriting_type === CopywritingTypeEnum.CONTENT) {
             const newTitle = title.map((item: any) => {
                 item.content = item.content.slice(0, 20);
                 return item;
@@ -315,7 +316,7 @@ const handleAiGen = async () => {
             formData.described.push(
                 ...described.map((item: any) => ({ content: item.content, topic: item?.topic || [] }))
             );
-        } else if (formData.copywriting_type === 2) {
+        } else if (formData.copywriting_type === CopywritingTypeEnum.ORAL) {
             formData.oral_copy.push(...oral_copy);
         }
         userStore.getUser();

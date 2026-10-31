@@ -23,6 +23,7 @@
                     <view
                         v-if="isVisible(UploadCategoryEnum.Album)"
                         class="flex flex-col items-center flex-1 px-[8rpx] relative"
+                        :class="albumLast ? 'order-4' : ''"
                         hover-class="opacity-70"
                         @click="handleCategory(UploadCategoryEnum.Album)">
                         <view
@@ -36,6 +37,7 @@
                     <view
                         v-if="isVisible(UploadCategoryEnum.Library)"
                         class="flex flex-col items-center flex-1 px-[8rpx] relative"
+                        :class="albumLast ? 'order-1' : ''"
                         hover-class="opacity-70"
                         @click="handleCategory(UploadCategoryEnum.Library)">
                         <view
@@ -49,6 +51,7 @@
                     <view
                         v-if="isVisible(UploadCategoryEnum.Group)"
                         class="flex flex-col items-center flex-1 px-[8rpx] relative"
+                        :class="albumLast ? 'order-2' : ''"
                         hover-class="opacity-70"
                         @click="handleCategory(UploadCategoryEnum.Group)">
                         <!-- 高效角标 -->
@@ -69,6 +72,7 @@
                     <view
                         v-if="isVisible(UploadCategoryEnum.Creation)"
                         class="flex flex-col items-center flex-1 px-[8rpx] relative"
+                        :class="albumLast ? 'order-3' : ''"
                         hover-class="opacity-70"
                         @click="handleCategory(UploadCategoryEnum.Creation)">
                         <view
@@ -207,6 +211,8 @@ const props = withDefaults(
         maskCloseAble?: boolean;
         /** 页面可选择统一的轻量视觉，其他入口保持原样。 */
         plain?: boolean;
+        /** IP 人设素材库：相册上传排到「素材库 / 素材组 / 创作库」之后，弱化直传人设库。 */
+        albumLast?: boolean;
         title?: string;
     }>(),
     {
@@ -216,6 +222,7 @@ const props = withDefaults(
         forceAlbumTypePicker: false,
         maskCloseAble: false,
         plain: false,
+        albumLast: false,
         title: "添加素材",
     },
 );

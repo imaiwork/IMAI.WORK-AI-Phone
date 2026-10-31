@@ -15,6 +15,7 @@ use app\common\model\human\HumanAnchor;
 use app\common\model\material\FfmpegFile;
 use app\common\model\shanjian\ShanjianAnchor;
 use app\common\model\user\User;
+use app\common\service\digitalHuman\ChanjingAnchorVideoValidator;
 use app\common\service\digitalHuman\PendingAnchorTaskService;
 use app\common\service\digitalHuman\PublicAnchorBindService;
 use app\common\service\FileService;
@@ -284,6 +285,10 @@ class DigitalHumanLogic extends ApiLogic
             if ($ai_type == 0 && (empty($params['authorized_url']) || empty($params['authorized_pic']))) {
                 throw new \Exception('缺少授权形象视频或者授权图片');
             }
+            $durationError = ChanjingAnchorVideoValidator::validate((string)$params['anchor_url']);
+            if ($durationError !== null) {
+                throw new \Exception($durationError);
+            }
             Log::channel('digital')->write('公共形象创建参数'.json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $unit = 0;
             if ($ai_type == 1){
@@ -499,9 +504,56 @@ class DigitalHumanLogic extends ApiLogic
         return min($w, $h) >= 2160 ? 2160 : 1080;
     }
 
+    /**
+     * 汇总公共形象的子克隆任务状态。
+     * 蝉镜、闪剪极速以及一克三的专业闪剪全部成功后才算完成；
+     * 任一子任务仍在生成时保持生成中，任一子任务失败才转失败。
+     */
+    public static function aggregatePublicAnchorStatus(
+        int $currentStatus,
+        int $cloneMode,
+        int $fastStatus,
+        int $proStatus,
+        int $chanjingStatus
+    ): int {
+        $failed = in_array($fastStatus, [2, 5], true)
+            || $chanjingStatus === 2
+            || ($cloneMode === 3 && $proStatus === 2);
+        if ($failed) {
+            return 3;
+        }
+
+        // status=9 为会员到期冻结标记，语义等同于"曾成功"，收口时一并视为完成条件
+        $allReady = in_array($fastStatus, [6, 9], true)
+            && in_array($chanjingStatus, [1, 9], true)
+            && ($cloneMode !== 3 || in_array($proStatus, [3, 9], true));
+        if ($allReady) {
+            return 2;
+        }
+
+        // 历史父状态可能已被提前写成完成；子任务未齐时不能继续展示完成。
+        return $currentStatus === 2 ? 1 : $currentStatus;
+    }
+
     public static function getDigitalHumanAnchorStatusCron()
     {
-        $lists = DigitalHumanAnchor::where('status', 'in', [1, 4])->select();
+        // 1/4 本身就需要持续收敛；2 只复查 task_ids 尚未齐的异常旧数据，避免每分钟扫描全部已完成形象
+        $lists = DigitalHumanAnchor::where(function ($query) {
+            $query->whereIn('status', [1, 4])
+                ->whereOr(function ($query2) {
+                    $query2->where('status', 2)
+                        ->where(function ($query3) {
+                            // 已冻结(9)同样视为子任务已成功，避免修好收口后被每分钟重复扫出来重写
+                            $query3
+                                ->whereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(task_ids, '$.shanjian.status')), '') NOT IN ('6', '9')")
+                                ->whereOrRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(task_ids, '$.chanjing.status')), '') NOT IN ('1', '9')")
+                                ->whereOr(function ($query4) {
+                                    $query4->where('clone_mode', 3)
+                                        ->whereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(task_ids, '$.shanjian_pro.status')), '') NOT IN ('3', '9')");
+                                });
+                        });
+                });
+        })->select();
         if ($lists->isEmpty()) {
             return true;
         }
@@ -536,17 +588,13 @@ class DigitalHumanLogic extends ApiLogic
             $update['task_ids'] = json_encode($task_ids);
             //隐藏微聚
 //            if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
-            $fastOk = ($task_ids['shanjian']['status'] == 6);
-            $chanjingOk = ($task_ids['chanjing']['status'] == 1);
-            $proOk = $cloneMode !== 3 || (($task_ids['shanjian_pro']['status'] ?? 0) == 3);
-            if ($fastOk && $chanjingOk && $proOk) {
-                $update['status']   = 2;
-                $update['task_ids'] = json_encode($task_ids);
-            }
-            if ($task_ids['shanjian']['status'] == 5 || ($cloneMode === 3 && ($task_ids['shanjian_pro']['status'] ?? 0) == 2)) {
-                $update['status']   = 3;
-                $update['task_ids'] = json_encode($task_ids);
-            }
+            $update['status'] = self::aggregatePublicAnchorStatus(
+                (int)$item['status'],
+                $cloneMode,
+                (int)($task_ids['shanjian']['status'] ?? 0),
+                (int)($task_ids['shanjian_pro']['status'] ?? 0),
+                (int)($task_ids['chanjing']['status'] ?? 0)
+            );
             DigitalHumanAnchor::where('id', $item['id'])->update($update);
         }
         return true;
@@ -678,7 +726,9 @@ class DigitalHumanLogic extends ApiLogic
 //            $weiju    = HumanAnchor::where('model_version', 1)->where('dh_id', $item['id'])->findOrEmpty();
             $chanjing = PublicAnchorBindService::ownChanjing((int)$item['id'], $ownerId);
 //            if ($shanjian->isEmpty() || $weiju->isEmpty() || $chanjing->isEmpty()) {
-            if (empty($shanjian) || empty($chanjing)) {
+            $aiType = (int)($item['ai_type'] ?? 0);
+            // ai_type=1 只走蝉镜，没有闪剪子任务，不能因此被永久跳过退费
+            if (empty($chanjing) || ($aiType !== 1 && empty($shanjian))) {
                 continue;
             }
             if ($cloneMode === 3 && empty($shanjianPro)) {
@@ -699,12 +749,29 @@ class DigitalHumanLogic extends ApiLogic
             }
             $update['task_ids']              = json_encode($task_ids);
 
-            DigitalHumanAnchor::where('id', $item['id'])->update($update);
             $publicAnchor = DigitalHumanAnchor::where('id', $item['id'])->find();
-            $task_ids = json_decode($publicAnchor['task_ids'], true);
+            // task_ids 未变化时不再重复写库，避免无法退费的失败单每轮空转写放大
+            if ($publicAnchor['task_ids'] !== $update['task_ids']) {
+                DigitalHumanAnchor::where('id', $item['id'])->update($update);
+            }
+            $task_ids = json_decode($update['task_ids'], true);
+
+            // ai_type=1 失败单：仅按蝉镜失败退费（幂等，重复执行不会多退）
+            if ($aiType === 1) {
+                if ((int)$chanjing->status === 2) {
+                    self::refundTokens($chanjing->user_id, (string)$chanjing->task_id, AccountLogEnum::TOKENS_DEC_HUMAN_AVATAR_CHANJING);
+                    $chanjing->remark = '公共数字人合成失败';
+                    $chanjing->save();
+                    $task_ids['chanjing']['task_id'] = $chanjing->task_id ?? '';
+                    $task_ids['chanjing']['status']  = (int)$chanjing->status;
+                    DigitalHumanAnchor::where('id', $item['id'])->update(['task_ids' => json_encode($task_ids)]);
+                }
+                Log::channel('digital')->write('退费处理结束：' . $item['id']);
+                continue;
+            }
 
 //            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['weiju']['status'] == 1 && $task_ids['chanjing']['status'] == 1) {
-            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && $task_ids['chanjing']['status'] == 1) {
+            if (($task_ids['shanjian']['status'] == 2 || $task_ids['shanjian']['status'] == 5) && in_array($task_ids['chanjing']['status'], [1, 9], true)) {
                 if ($cloneMode === 3 && !empty($shanjianPro)
                     && !self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
                     Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
@@ -738,7 +805,7 @@ class DigitalHumanLogic extends ApiLogic
                 $order = true;
             } else
 //                if ($task_ids['shanjian']['status'] == 6 && $task_ids['weiju']['status'] == 2 && $task_ids['chanjing']['status'] == 1) {
-                if ($task_ids['shanjian']['status'] == 6 && $task_ids['chanjing']['status'] == 1) {
+                if (in_array($task_ids['shanjian']['status'], [6, 9], true) && in_array($task_ids['chanjing']['status'], [1, 9], true)) {
                     if ($cloneMode === 3 && !empty($shanjianPro)
                         && !self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
                         Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
@@ -766,7 +833,7 @@ class DigitalHumanLogic extends ApiLogic
                         $shanjianPro->save();
                     }
                     $order = true;
-                } else if ($cloneMode === 3 && (($task_ids['shanjian_pro']['status'] ?? 0) == 2) && $task_ids['chanjing']['status'] == 1) {
+                } else if ($cloneMode === 3 && (($task_ids['shanjian_pro']['status'] ?? 0) == 2) && in_array($task_ids['chanjing']['status'], [1, 9], true)) {
                     if (!self::refundMiddleCloneModeThree((int)$item['id'], $shanjian, $shanjianPro, $chanjing)) {
                         Log::channel('digital')->write('中台一克三整单退款失败，等待重试：' . $item['id']);
                         continue;
@@ -995,6 +1062,13 @@ class DigitalHumanLogic extends ApiLogic
                         $item['status'] = 1;
                     }
                 }
+                $item['status'] = self::aggregatePublicAnchorStatus(
+                    (int)$item['status'],
+                    $cloneMode,
+                    (int)($shanjianFast->status ?? 0),
+                    (int)($shanjianPro->status ?? 0),
+                    (int)($chanjing->status ?? 0)
+                );
                 $item['status_text'] = PublicAnchorBindService::publicStatusText((int)$item['status']);
             } else {
                 $item['anchor_ids'] = [];

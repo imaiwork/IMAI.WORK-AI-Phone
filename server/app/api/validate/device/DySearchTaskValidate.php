@@ -23,6 +23,7 @@ class DySearchTaskValidate extends BaseValidate
         'day_cap'      => 'checkDayCap',
         'minutes'      => 'checkMinutes',
         'time_config'  => 'checkTimeConfig',
+        'removed_keywords' => 'array',
     ];
 
     protected $message = [
@@ -35,6 +36,7 @@ class DySearchTaskValidate extends BaseValidate
         'keywords.require'      => '请输入线索词或账号名单',
         'keywords.array'        => '线索词或账号名单必须是数组',
         'add_type.in'           => '自动加好友类型不正确',
+        'removed_keywords.array' => '删除线索词参数必须是数组',
     ];
 
     public function sceneAdd()
@@ -51,6 +53,7 @@ class DySearchTaskValidate extends BaseValidate
             'day_cap',
             'minutes',
             'time_config',
+            'removed_keywords',
         ]);
     }
 

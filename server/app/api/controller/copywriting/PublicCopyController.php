@@ -39,4 +39,17 @@ class PublicCopyController extends BaseApiController
         }
         return $this->success('已更新', PublicCopyLogic::getReturnData());
     }
+
+    /**
+     * 公共文案 AI 仿写：按当前人设重写后写入人设文案库，按实际 token 折算算力。
+     */
+    public function rewrite()
+    {
+        $params = (new PublicCopyValidate())->post()->goCheck('rewrite');
+        if (!PublicCopyLogic::rewrite($params)) {
+            return $this->fail(PublicCopyLogic::getError());
+        }
+        $data = PublicCopyLogic::getReturnData();
+        return $this->success($data['message'] ?? '已仿写', $data);
+    }
 }

@@ -37,6 +37,10 @@ class DySearchTaskLists extends BaseApiDataLists implements ListsSearchInterface
             $item['clue_total'] = 0;
             $item['added_count'] = 0;
             $item['remain_count'] = 0;
+            // 执行进度：已走访过的线索词数 / 任务线索词总数，口径对齐视频号采集任务
+            $keywords = is_array($item['keywords'] ?? null) ? $item['keywords'] : [];
+            $item['implementation_keywords_number'] = count($keywords);
+            $item['number_of_implemented_keywords'] = 0;
         }
         unset($item);
 
@@ -55,6 +59,21 @@ class DySearchTaskLists extends BaseApiDataLists implements ListsSearchInterface
             $item['remain_count'] = max(0, $item['clue_total'] - $item['added_count']);
         }
         unset($item);
+
+        try {
+            $visited = self::loadVisitedKeywords(array_column($list, 'id'));
+            foreach ($list as &$item) {
+                $id = (int)($item['id'] ?? 0);
+                if (!isset($visited[$id])) {
+                    continue;
+                }
+                $keywords = is_array($item['keywords'] ?? null) ? $item['keywords'] : [];
+                $item['number_of_implemented_keywords'] = count(array_intersect($keywords, $visited[$id]));
+            }
+            unset($item);
+        } catch (\Throwable $e) {
+            Log::channel('device')->write('抖音获客执行进度统计失败：' . $e->getMessage());
+        }
 
         return $list;
     }
@@ -171,5 +190,44 @@ class DySearchTaskLists extends BaseApiDataLists implements ListsSearchInterface
         }
 
         return $stats;
+    }
+
+    /**
+     * 执行进度取数：任务下已产生走访记录的去重线索词。
+     * 与详情 keywordsCount 的走访口径一致，不看 result（未识别/跳过也算走访过该词）。
+     *
+     * @param list<int|string> $taskIds
+     * @return array<int, list<string>> task_id => 线索词列表
+     */
+    private static function loadVisitedKeywords(array $taskIds): array
+    {
+        $ids = [];
+        foreach ($taskIds as $taskId) {
+            $taskId = (int)$taskId;
+            if ($taskId > 0) {
+                $ids[$taskId] = $taskId;
+            }
+        }
+        $ids = array_values($ids);
+        if ($ids === []) {
+            return [];
+        }
+
+        $rows = SvDySearchRecord::whereIn('task_id', $ids)
+            ->where('exec_keyword', '<>', '')
+            ->fieldRaw('task_id, exec_keyword')
+            ->group('task_id, exec_keyword')
+            ->select()
+            ->toArray();
+        $visited = [];
+        foreach ($rows as $row) {
+            $taskId = (int)($row['task_id'] ?? 0);
+            $keyword = trim((string)($row['exec_keyword'] ?? ''));
+            if ($taskId < 1 || $keyword === '') {
+                continue;
+            }
+            $visited[$taskId][] = $keyword;
+        }
+        return $visited;
     }
 }

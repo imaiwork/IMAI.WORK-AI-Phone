@@ -1,5 +1,15 @@
 <template>
     <view>
+        <view v-if="unusedCopySourceLabel" class="viral-cloud-tip">
+            <u-icon name="info-circle" color="#536A87" size="34" class="shrink-0 mt-[4rpx]"></u-icon>
+            <view class="flex-1 min-w-0 flex flex-col">
+                <text class="text-xs font-bold">当前视频文案来源：{{ unusedCopySourceLabel }}</text>
+                <text class="text-xs leading-[1.65]">
+                    这里的仿写文案不会用于生成视频。需要用爆款仿写出片，请在「AI合成规则配置」把文案来源改为爆款仿写。
+                </text>
+            </view>
+        </view>
+
         <view v-if="isCloudMode" class="viral-cloud-tip">
             <u-icon name="info-circle" color="#536A87" size="34" class="shrink-0 mt-[4rpx]"></u-icon>
             <view class="flex-1 min-w-0 flex flex-col">
@@ -289,7 +299,11 @@
 </template>
 
 <script setup lang="ts">
-import { isCloudRunMode } from "@/ai_modules/person/enums";
+import {
+    COPYWRITING_SOURCE_LABEL,
+    CopywritingSourceEnum,
+    isCloudRunMode
+} from "@/ai_modules/person/enums";
 type ViralPlatformKey = "all" | "douyin" | "xiaohongshu" | "kuaishou" | "shipinhao";
 type ViralRealPlatformKey = Exclude<ViralPlatformKey, "all">;
 
@@ -322,6 +336,8 @@ interface ViralItem {
 const props = defineProps<{
     state: {
         runMode: number;
+        /** 人设当前视频文案来源，0 表示未知 */
+        copywritingSource: number;
         viralKeywords: string[];
         viralPlatformTabs: ViralPlatformTab[];
         viralPlatformCounts: Record<ViralPlatformKey, number>;
@@ -371,6 +387,13 @@ const handleCopywritingInput = (item: ViralItem, event: any) => {
 
 // 追踪词折叠展示：默认只显示前 3 个，超出折叠成 "+M" 入口，展开后可收起，
 const isCloudMode = computed(() => isCloudRunMode(props.state.runMode));
+
+// 文案来源不是爆款仿写时，爆款库只是参考，成片不取这里的稿，提前说清楚免得拿来对成片
+const unusedCopySourceLabel = computed(() => {
+    const source = props.state.copywritingSource as CopywritingSourceEnum;
+    if (!source || source === CopywritingSourceEnum.IMITATE) return "";
+    return COPYWRITING_SOURCE_LABEL[source] || "";
+});
 
 const KEYWORD_VISIBLE_LIMIT = 3;
 const keywordsExpanded = ref(false);

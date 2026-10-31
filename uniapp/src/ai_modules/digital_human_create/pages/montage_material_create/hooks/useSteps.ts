@@ -1,5 +1,6 @@
 import { montageConfig, calcMaterialDurationBudget } from "@/enums/montageEnums";
 import { isShanjianVoiceModelVersion } from "@/enums/appEnums";
+import { getCopyLangFailReason } from "@/utils/textValidator";
 
 const COPYWRITER_LIMIT = 600;
 
@@ -60,7 +61,9 @@ export function useSteps({
         2: () =>
             copywriterTypeIndex.value === CopywriterTab.TEXT
                 ? formData.copywriterList.length > 0 &&
-                  formData.copywriterList.every((item: any) => isSingleCopywriterValid(item.content))
+                  formData.copywriterList.every((item: any) => isSingleCopywriterValid(item.content)) &&
+                  // 语言检测：存在乱码/外文缺空格的文案时不允许进入下一步
+                  formData.copywriterList.every((item: any) => !getCopyLangFailReason(item.content))
                 : formData.audio.length > 0,
         3: () => true,
     };
@@ -76,6 +79,12 @@ export function useSteps({
         },
         2: () => {
             if (copywriterTypeIndex.value === CopywriterTab.TEXT) {
+                const langFailIndex = formData.copywriterList.findIndex((item: any) =>
+                    getCopyLangFailReason(item.content),
+                );
+                if (langFailIndex !== -1) {
+                    return `第${langFailIndex + 1}条文案语言检测不通过，请点击文案修改`;
+                }
                 const hasInvalid = formData.copywriterList.some((item: any) => !isSingleCopywriterValid(item.content));
                 return hasInvalid ? `口播文案内容不能少于3个字，不能超过${COPYWRITER_LIMIT}个字` : "请至少添加一条文案";
             }

@@ -15,7 +15,6 @@
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
     "video-preview": "../../../../components/video-preview/video-preview",
     "tokens-cost": "../../../../components/tokens-cost/tokens-cost",
-    "create-success-pop": "../../components/create-success-pop/create-success-pop",
-    "choose-agent": "../../components/choose-agent/choose-agent"
+    "create-success-pop": "../../components/create-success-pop/create-success-pop"
   }
 }

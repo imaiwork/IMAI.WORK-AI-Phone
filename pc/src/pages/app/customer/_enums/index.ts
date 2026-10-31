@@ -9,6 +9,8 @@ export enum SidebarTypeEnum {
     AUTO_ADD_WECHAT = 4,
     // 批量加微
     MANUAL_ADD_WECHAT = 5,
+    // 抖音获客
+    DOUYIN_GET_CUSTOMER = 6,
 }
 
 export enum CreateTypeEnum {

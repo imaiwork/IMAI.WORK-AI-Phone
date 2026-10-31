@@ -58,6 +58,11 @@
                                 </view>
                                 <view class="h-[2rpx] bg-[#F3F4F6]"></view>
                                 <view class="flex items-center justify-between py-[20rpx]">
+                                    <text class="text-xs text-[#9CA3AF]">执行版本</text>
+                                    <text class="text-sm text-[#374151] font-semibold">{{ execVersionText }}</text>
+                                </view>
+                                <view class="h-[2rpx] bg-[#F3F4F6]"></view>
+                                <view class="flex items-center justify-between py-[20rpx]">
                                     <text class="text-xs text-[#9CA3AF]">执行时间</text>
                                     <text class="text-sm text-[#374151] font-semibold">{{ fullTimeText }}</text>
                                 </view>
@@ -441,6 +446,11 @@ const taskTimeText = computed(() => {
     return start || end || "待定";
 });
 
+const execVersionText = computed(() => {
+    const data = detailData.value;
+    return data.exec_version ?? data.detail?.exec_version ?? "-";
+});
+
 const fullTimeText = computed(() => {
     const day = detailData.value.day || "";
     return `${day} ${taskTimeText.value}`.trim() || "-";
@@ -693,6 +703,7 @@ const getDetail = async (data: any) => {
     detailData.value = {
         ...baseData,
         ...res,
+        exec_version: res?.exec_version ?? baseData.exec_version,
         task_id: data.id,
         sub_task_id: data.sub_task_id,
         source: data.source ?? res?.source,

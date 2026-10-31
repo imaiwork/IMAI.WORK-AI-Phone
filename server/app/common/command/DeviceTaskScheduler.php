@@ -20,6 +20,7 @@ use app\common\service\sv\PublishTaskCloseService;
 use app\common\service\sv\PublishTaskReconcile;
 use app\common\traits\DeviceTaskTrait;
 use app\common\traits\TaskExceptionTrait;
+use app\common\workerman\rpa\Support\ConnectionRepository;
 use app\api\logic\ApiLogic;
 
 class DeviceTaskScheduler extends Command
@@ -324,6 +325,9 @@ class DeviceTaskScheduler extends Command
      */
     protected function executeDeviceTask(SvDeviceTask $task, Output $output)
     {
+        $task->exec_version = $this->resolveDeviceExecVersion($task);
+        $task->update_time = time();
+        $task->save();
         try {
             // 根据任务类型执行不同的业务逻辑
             switch ((int)$task->task_type) {
@@ -394,6 +398,29 @@ class DeviceTaskScheduler extends Command
         }
     }
 
+    /**
+     * 读取任务所属设备当前的 RPA 版本号。
+     * Redis 异常或键缺失时返回"未知",不阻断任务执行。
+     */
+    private function resolveDeviceExecVersion(SvDeviceTask $task): string
+    {
+        $deviceCode = $task->device_code;
+        if ($deviceCode === null || $deviceCode === '') {
+            return '未知';
+        }
+        try {
+            $version = Cache::store('redis')->handler()->get("xhs:device:{$deviceCode}:version");
+            if (!is_string($version) || $version === '') {
+                return '未知';
+            }
+            // 写入端经 think-cache 驱动 set() 会带 serialize 包装,统一剥掉后再落库
+            return ConnectionRepository::unwrapSerialized($version);
+        } catch (\Throwable $e) {
+            $this->setTaskLog("读取设备 RPA 版本失败 task_id={$task->id} device_code={$deviceCode}: " . $e->getMessage(), 'warning');
+            return '未知';
+        }
+    }
+    
     /**
      * 执行设备任务完成逻辑
      */

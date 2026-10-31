@@ -126,6 +126,11 @@ export function getSystemMusicList() {
     return $request.get({ url: "/shanjian.voice/musicLists" });
 };
 
+// 选曲分组 tab：只返回当前有可用曲目的分组（全部 tab 不在里面，由前端拼）
+export function getSystemMusicGroups() {
+    return $request.get({ url: "/shanjian.voice/musicGroups" });
+};
+
 // 批量克隆形象
 export const batchCloneAnchor = (params: Record<string, any>) => {
     return $request.post({ url: "/digitalHuman/createAnchor", params });
@@ -198,6 +203,11 @@ export const minimaxVoiceClone = (params: Record<string, any>) => {
 // sora视频创建
 export const createSoraVideo = (params: Record<string, any>) => {
     return $request.post({ url: "/sora.soraVideoSetting/add", params });
+};
+
+// sora 一句话生成 · AI 帮写提示词
+export const createSoraPrompt = (params: Record<string, any>) => {
+    return $request.post({ url: "/sora.soraVideoSetting/prompt", params });
 };
 
 // 分镜混剪创建

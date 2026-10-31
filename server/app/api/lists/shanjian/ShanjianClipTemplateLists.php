@@ -19,9 +19,11 @@ class ShanjianClipTemplateLists extends BaseApiDataLists implements ListsSearchI
 
     public function lists(): array
     {
+        // 后台隐藏（status=0）的模板不进前台列表：手动创作、24 小时创作与热点/爆款复刻都读这里
         $list = ShanjianClipTemplate::where($this->searchWhere)
-            // 按中台下发的 sort 倒序（越大越靠前）；sort 相同（含未下发的 0）再按 id 兜底，保证分页稳定不重不漏
-            ->order(['sort' => 'desc', 'id' => 'desc'])
+            ->where('status', 1)
+            // 后台设过本站排序优先，否则用模板中心的 sort 倒序（越大越靠前）；同序再按 id 兜底，保证分页稳定不重不漏
+            ->orderRaw(ShanjianClipTemplate::SORT_EXPRESSION . ' DESC, id DESC')
             ->limit($this->limitOffset, $this->limitLength)
             ->select()
             ->each(function ($item) {
@@ -34,6 +36,6 @@ class ShanjianClipTemplateLists extends BaseApiDataLists implements ListsSearchI
 
     public function count(): int
     {
-        return ShanjianClipTemplate::where($this->searchWhere)->count();
+        return ShanjianClipTemplate::where($this->searchWhere)->where('status', 1)->count();
     }
 }

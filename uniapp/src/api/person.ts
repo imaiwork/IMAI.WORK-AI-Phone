@@ -151,6 +151,11 @@ export const deleteFailedSlices = (data: { persona_id: number | string }) => {
     return request.post({ url: "/aiPersona.material/deleteFailedSlices", data });
 };
 
+// 一键清理使用次数达到阈值的素材
+export const cleanOverUsedMaterial = (data: { persona_id: number | string }) => {
+    return request.post({ url: "/aiPersona.material/cleanOverUsed", data });
+};
+
 // 素材库详情
 export const getMaterialDetail = (data: Record<string, any>) => {
     return request.get({ url: "/aiPersona.material/detail", data });

@@ -22,7 +22,11 @@
                         <template #reference>
                             <ElButton link type="primary" class="!font-medium !text-[13px]">+ 补充素材</ElButton>
                         </template>
-                        <material-menu-content type="video" @action="handleAnchorMaterialAction" />
+                        <material-menu-content
+                            type="video"
+                            :video-size="montageUploadConfig.anchorVideoSize"
+                            :video-max-duration="montageUploadConfig.anchorVideoDuration[1]"
+                            @action="handleAnchorMaterialAction" />
                     </ElPopover>
                 </header>
                 <div class="flex-1 min-h-0">
@@ -91,7 +95,11 @@
                                         class="absolute -inset-1 border-2 border-[#0065fb]/30 rounded-[24px] animate-ping opacity-20 group-hover:hidden"></div>
                                 </button>
                             </template>
-                            <material-menu-content type="video" @action="handleAnchorMaterialAction" />
+                            <material-menu-content
+                                type="video"
+                                :video-size="montageUploadConfig.anchorVideoSize"
+                                :video-max-duration="montageUploadConfig.anchorVideoDuration[1]"
+                                @action="handleAnchorMaterialAction" />
                         </ElPopover>
                     </div>
                 </div>
@@ -104,8 +112,7 @@
                         <h3 class="text-[16px] font-black text-slate-700 whitespace-nowrap">参考素材</h3>
                         <div
                             class="text-[11px] text-slate-400 font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                            总量限制：全部素材总时长不得超过{{ montageUploadConfig.materialTotalDuration }}分钟
-                            (图片按{{ montageUploadConfig.imageDuration }}秒/张，视频按实际时长/个)
+                            总量限制：单张图片计算为{{ montageUploadConfig.imageDuration }}秒，单个视频素材不能超过60秒，所有素材总时长不能超过{{ montageUploadConfig.materialTotalDuration }}分钟；
                         </div>
                     </div>
                     <div v-if="formData.materialList.length > 0" class="flex flex-col items-end gap-2">
@@ -571,7 +578,7 @@ const usageToggleRows = [
 // ─── 时长计算 ────────────────────────────────────────────────
 const calcTotalDuration = () => {
     const videoDur = formData.materialList.reduce(
-        (acc: number, item: any) => (item.type === "video" ? acc + (item.duration ?? 0) : acc),
+        (acc: number, item: any) => (item.type === "video" ? acc + (Number(item.duration) || 0) : acc),
         0,
     );
     const imageDur =
@@ -650,7 +657,7 @@ const handleAnchorMaterialAction = async (action: MaterialAction) => {
             url: data.uri,
             type: "video",
             pic: data.thumbnail_path,
-            duration: data.duration,
+            duration: Number(data.duration) || 0,
         });
         return;
     }
@@ -681,7 +688,7 @@ const handleMaterialAction = async (action: MaterialAction) => {
         const data = getValidUploadFileData(action.event);
         if (!data) return;
         const pic = mediaType === "image" ? data.uri : data.thumbnail_path;
-        const duration = mediaType === "image" ? montageUploadConfig.imageDuration : data.duration;
+        const duration = mediaType === "image" ? montageUploadConfig.imageDuration : Number(data.duration) || 0;
         handleMaterialData([{ url: data.uri, type: mediaType, pic, duration }], true);
         return;
     }
@@ -710,26 +717,35 @@ const handleSelectHistory = async (list: any[]) => {
         await processAndAppend({
             rawList: list,
             urlField: "url",
-            maxDuration: 59,
+            maxDuration: montageUploadConfig.anchorVideoDuration[1],
             onSuccess: (formatted) => {},
         });
     } else {
         handleMaterialData(
             list.map((item) => ({
                 url: item.url,
-                type: chooseMaterialType.value,
+                // 创作历史项自带真实 media_type（image/video），不能用 chooseMaterialType（"all"）覆盖
+                type: item.type === "video" ? "video" : "image",
                 pic: item.pic,
-                duration: item.duration,
+                duration: Number(item.duration) || 0,
             })),
         );
     }
 };
 // ─── 素材选择弹窗回调（根据 target 分流）────────────────────
 const handleSelectMaterial = (list: any[]) => {
+    // 素材库 duration 可能是字符串（如 "10.000000"），统一转成数字，避免累加成 NaN
     if (chooseMaterialTarget.value === "anchor") {
-        formData.anchorLists.push(...list);
+        formData.anchorLists.push(...list.map((item) => ({ ...item, duration: Number(item.duration) || 0 })));
     } else {
-        formData.materialList.push(...list);
+        handleMaterialData(
+            list.map((item) => ({
+                url: item.url,
+                type: item.type === "video" ? "video" : "image",
+                pic: item.pic,
+                duration: Number(item.duration) || 0,
+            })),
+        );
     }
 };
 
@@ -751,10 +767,17 @@ const handleMaterialData = async (
     skipProcess = false,
 ) => {
     const maxSeconds = montageUploadConfig.materialTotalDuration * 60;
+    const maxVideoSeconds = montageUploadConfig.videoDuration[1];
     let skippedCount = 0;
+    let tooLongCount = 0;
     let currentDuration = calcTotalDuration();
 
     const filteredList = list.filter((item) => {
+        // 单个视频素材不能超过 60s（创作历史里可能有几分钟的成片，需先按单条上限拦截）
+        if (item.type === "video" && item.duration > maxVideoSeconds) {
+            tooLongCount++;
+            return false;
+        }
         const itemDuration = calcMaterialDurationBudget(item.type === "image", item.duration);
         if (currentDuration + itemDuration > maxSeconds) {
             skippedCount++;
@@ -764,6 +787,9 @@ const handleMaterialData = async (
         return true;
     });
 
+    if (tooLongCount > 0) {
+        feedback.msgWarning(`${tooLongCount} 个视频素材超过 ${maxVideoSeconds} 秒已过滤`);
+    }
     if (skippedCount > 0) {
         feedback.msgWarning(`${skippedCount} 个素材超出总时长限制已过滤`);
     }
@@ -779,7 +805,7 @@ const handleMaterialData = async (
     await processAndAppend({
         rawList: filteredList,
         urlField: "url",
-        maxDuration: 59,
+        maxDuration: montageUploadConfig.videoDuration[1],
     });
 };
 

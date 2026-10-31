@@ -55,6 +55,8 @@ class UserLists extends BaseAdminDataLists implements ListsExcelInterface
 
         foreach ($lists as &$item) {
             $item['channel'] = UserTerminalEnum::getTermInalDesc($item['channel']);
+            // 与列表页展示一致：无会员等级时类型显示「默认」
+            $item['level_name'] = ($item['level_name'] ?? '') !== '' ? $item['level_name'] : '默认';
         }
         unset($item);
 
@@ -219,6 +221,8 @@ class UserLists extends BaseAdminDataLists implements ListsExcelInterface
             'nickname' => '用户昵称',
             'account' => '账号',
             'mobile' => '手机号码',
+            'level_name' => '类型',
+            'tokens' => '余额',
             'channel' => '注册来源',
             'invite_source' => '邀请来源',
             'create_time' => '注册时间',

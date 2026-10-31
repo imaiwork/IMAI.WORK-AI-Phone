@@ -72,8 +72,11 @@ export const montageUploadConfig = {
         [1, 99999],
         [1, 99999],
     ],
-    videoSize: 200,
+    videoSize: 500,
     videoDuration: [1, 59],
+    /** 真人口播混剪主视频（闪剪 videoUrl）：5 分钟内、500MB 以内 */
+    anchorVideoSize: 500,
+    anchorVideoDuration: [1, 300],
     videoResolution: [
         [1, 99999],
         [1, 99999],
@@ -92,4 +95,6 @@ export const montageUploadConfig = {
  * 按整秒累加会整体低估，闪剪按真实时长判超 5 分钟会把整单打回。
  */
 export const calcMaterialDurationBudget = (isImage: boolean, duration?: number): number =>
-    isImage ? montageUploadConfig.imageDuration : (duration ?? 0) + montageUploadConfig.videoDurationSafetyMargin;
+    isImage
+        ? montageUploadConfig.imageDuration
+        : (Number(duration) || 0) + montageUploadConfig.videoDurationSafetyMargin;

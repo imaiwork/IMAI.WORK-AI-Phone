@@ -417,7 +417,22 @@ class HotspotLogic extends BaseLogic
             $result['user_id'] = $userId;
             RecordService::attachTask($result);
             unset($result['user_id']);
+            // 创建时素材预检（锚点前置）：只读建议，失败不阻塞创建
+            $result['material_precheck'] = VideoService::precheckMaterials($result, $userId);
             VideoService::enqueue($result, $userId);
+            $precheck = $result['material_precheck'];
+            HotspotLog::write(sprintf(
+                '创建素材预检：任务号=%s 模式=%s 预估口播=%d秒 素材可承载=%.1f秒 缺口=%.1f秒 AI补视频=%d条 图片=%d条 池可补=%.1f秒 提示=%s',
+                $taskNo,
+                (string)($result['options']['material_mode'] ?? ''),
+                (int)($precheck['est_duration_sec'] ?? 0),
+                (float)($precheck['available_sec'] ?? 0),
+                (float)($precheck['gap_sec'] ?? 0),
+                (int)($precheck['ai_fill_video'] ?? 0),
+                (int)($precheck['ai_fill_image'] ?? 0),
+                (float)($precheck['pool_fill_sec'] ?? 0),
+                (string)($precheck['warning'] ?? '') !== '' ? '有' : '无'
+            ));
             HotspotLog::write('任务已入库待后台下发：任务号=' . $taskNo);
             return $result;
         } catch (HotspotUpstreamException $e) {

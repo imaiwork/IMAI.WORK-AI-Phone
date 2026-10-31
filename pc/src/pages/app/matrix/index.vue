@@ -13,7 +13,6 @@ import useSidebar from "../_hooks/useSidebar";
 import Home from "./_pages/home/index.vue";
 import Create from "./_pages/create/index.vue";
 import Publish from "./_pages/publish/index.vue";
-import ImageTask from "./_pages/image_task/index.vue";
 import DhCreation from "./_pages/dh_creation/index.vue";
 import MaterialLibrary from "./_pages/material_library/index.vue";
 import VideoWorks from "./_pages/video_works/index.vue";

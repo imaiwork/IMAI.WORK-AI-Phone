@@ -23,6 +23,8 @@ class AiPersonaCopywritingLibrary extends BaseModel
     const SOURCE_MANUAL = 1;
     const SOURCE_IMPORT = 2;
     const SOURCE_PUBLIC = 3;
+    /** 公共文案AI仿写：内容由模型按人设重写，与原模板无版本关系 */
+    const SOURCE_AI_REWRITE = 4;
 
     const STATUS_ENABLED = 1;
     const STATUS_DISABLED = 0;

@@ -124,38 +124,18 @@
                                     </view>
                                 </view>
 
-                                <!-- 每日出片条数：只在无手机模式下有意义，手机模式仍按发布时段数出片 -->
+                                <!-- 每日出片条数：无手机模式按「分类型配置」里的类型条数汇总，手机模式按发布时段数出片 -->
                                 <view v-if="isCloudRun" class="rule-sec">
                                     <view class="rule-sec-hd">
                                         <view class="rule-sec-title"><text>每日出片条数</text></view>
-                                        <text class="rule-sec-hint">不看发布时段，按条数出片</text>
-                                    </view>
-                                    <view class="rule-dur">
-                                        <view
-                                            class="rule-dur-btn"
-                                            :class="{ disabled: dailyCountMinusDisabled }"
-                                            @click="stepDailyCount(-1)">
-                                            <u-icon name="minus" color="#4B5563" size="26"></u-icon>
-                                        </view>
-                                        <view class="rule-dur-input-wrap">
-                                            <input
-                                                class="rule-dur-input"
-                                                type="number"
-                                                :value="String(innerState.dailyVideoCount)"
-                                                @input="handleDailyCountInput"
-                                                @blur="handleDailyCountBlur" />
-                                            <text class="rule-dur-unit">条</text>
-                                        </view>
-                                        <view
-                                            class="rule-dur-btn"
-                                            :class="{ disabled: dailyCountPlusDisabled }"
-                                            @click="stepDailyCount(1)">
-                                            <u-icon name="plus" color="#4B5563" size="26"></u-icon>
-                                        </view>
+                                        <text class="rule-sec-hint">按类型条数出片，不看发布时段</text>
                                     </view>
                                     <view class="rule-note">
                                         <text class="block rule-note-text">
-                                            每天云端自动生成这么多条，按下方生成类型顺序轮流出。
+                                            今日共 {{ cloudTotalCount }} 条 · {{ cloudCountSummary || "暂未设置" }}
+                                        </text>
+                                        <text class="block rule-note-extra">
+                                            条数在上方「生成类型」卡片里按类型分别设置，出片时按类型交错。
                                         </text>
                                     </view>
                                 </view>
@@ -163,7 +143,9 @@
                                 <view class="rule-sec">
                                     <view class="rule-sec-hd">
                                         <view class="rule-sec-title"><text>生成类型</text></view>
-                                        <text class="rule-sec-hint"> 可多选，将根据每日任务数按顺序轮流生成 </text>
+                                        <text class="rule-sec-hint">
+                                            {{ isCloudRun ? "可多选，每个类型按自己设置的条数出片" : "可多选，按发布时段数轮流生成" }}
+                                        </text>
                                     </view>
                                     <view class="rule-type-grid">
                                         <view
@@ -183,10 +165,223 @@
                                                 size="42"
                                                 class="mb-[14rpx]"></u-icon>
                                             <text class="rule-type-name">{{ item.label }}</text>
+                                            <!-- 条数 stepper 只在无手机模式渲染；手机模式由发布时段决定条数 -->
+                                            <view
+                                                v-if="isCloudRun && innerState.synthTypes.includes(item.id)"
+                                                class="rule-type-stepper mt-[10rpx]"
+                                                @click.stop>
+                                                <view
+                                                    class="rule-dur-btn"
+                                                    :class="{ disabled: innerState.typeConfig[typeKeyOfSynth(item.id)].videoCount <= 0 }"
+                                                    @click.stop="stepTypeVideoCount(typeKeyOfSynth(item.id), -1)">
+                                                    <u-icon name="minus" color="#4B5563" size="22"></u-icon>
+                                                </view>
+                                                <text class="rule-type-stepper-val">
+                                                    {{ innerState.typeConfig[typeKeyOfSynth(item.id)].videoCount }}
+                                                </text>
+                                                <view
+                                                    class="rule-dur-btn"
+                                                    :class="{ disabled: typeCountRemain(typeKeyOfSynth(item.id)) <= 0 }"
+                                                    @click.stop="stepTypeVideoCount(typeKeyOfSynth(item.id), 1)">
+                                                    <u-icon name="plus" color="#4B5563" size="22"></u-icon>
+                                                </view>
+                                            </view>
                                         </view>
                                     </view>
                                 </view>
 
+                                <!-- 类型配置：BGM/音量按生成类型独立设置，口播语速全局；默认收起，展开才可配置 -->
+                                <view class="rule-sec">
+                                    <view class="rule-collapse">
+                                        <view
+                                            class="rule-collapse-hd"
+                                            @click="typeConfigExpanded = !typeConfigExpanded">
+                                            <view class="rule-collapse-info">
+                                                <view class="rule-sec-title"><text>类型配置</text></view>
+                                                <text class="rule-collapse-sub">{{ typeConfigSummary }}</text>
+                                            </view>
+                                            <u-icon
+                                                :name="typeConfigExpanded ? 'arrow-up' : 'arrow-down'"
+                                                color="#9CA3AF"
+                                                size="22"></u-icon>
+                                        </view>
+                                        <view v-if="typeConfigExpanded" class="rule-collapse-body">
+                                            <view class="rule-seg">
+                                                <view
+                                                    v-for="key in visibleTypeKeys"
+                                                    :key="`type-tab-${key}`"
+                                                    class="rule-seg-btn"
+                                                    :class="{ sel: activeTypeTab === key }"
+                                                    @click="activeTypeTab = key">
+                                                    <text>{{ TYPE_CONFIG_LABELS[key] }}</text>
+                                                </view>
+                                            </view>
+                                            <!-- 新闻体时长：跟着「新闻体混剪」这个 tab 走，不再单独占一格 -->
+                                            <view v-if="hasNews && activeTypeTab === '4'" class="mt-[16rpx]">
+                                                <view class="rule-sec-hd rule-slider-hd">
+                                                    <view class="rule-sec-title"><text>新闻体时长</text></view>
+                                                    <text class="rule-slider-val">{{ innerState.newsDuration }} 秒</text>
+                                                </view>
+                                                <view class="rule-dur">
+                                                    <view
+                                                        class="rule-dur-btn"
+                                                        :class="{ disabled: newsDurationMinusDisabled }"
+                                                        @click="stepNewsDuration(-1)">
+                                                        <u-icon name="minus" color="#4B5563" size="26"></u-icon>
+                                                    </view>
+                                                    <view class="rule-dur-input-wrap">
+                                                        <input
+                                                            class="rule-dur-input"
+                                                            type="number"
+                                                            :value="String(innerState.newsDuration)"
+                                                            @input="handleNewsDurationInput"
+                                                            @blur="handleNewsDurationBlur" />
+                                                        <text class="rule-dur-unit">秒</text>
+                                                    </view>
+                                                    <view
+                                                        class="rule-dur-btn"
+                                                        :class="{ disabled: newsDurationPlusDisabled }"
+                                                        @click="stepNewsDuration(1)">
+                                                        <u-icon name="plus" color="#4B5563" size="26"></u-icon>
+                                                    </view>
+                                                </view>
+                                                <text class="block rule-note-extra mt-[10rpx]">
+                                                    范围 {{ NEWS_DURATION.min }}–{{ NEWS_DURATION.max }} 秒
+                                                </text>
+                                                <!-- 一镜到底：开启后每条新闻体只用 1 条视频素材 -->
+                                                <view class="rule-sec-hd rule-slider-hd mt-[10rpx]" style="align-items: center">
+                                                    <view class="rule-sec-title"><text>一镜到底</text></view>
+                                                    <u-switch
+                                                        v-model="innerState.typeConfig['4'].singleShot"
+                                                        size="36"
+                                                        active-color="#2F73F6"
+                                                        inactive-color="#E5E7EB"></u-switch>
+                                                </view>
+                                                <text class="block rule-note-extra mt-[10rpx]">
+                                                    开启后每条新闻体视频只用 1 条视频素材，画面不再切换；素材不足设定时长时按素材实际时长出片
+                                                </text>
+                                            </view>
+                                            <view class="mt-[16rpx]">
+                                                <view class="rule-sec-hd rule-slider-hd">
+                                                    <view class="rule-sec-title"><text>背景音乐</text></view>
+                                                </view>
+                                                <view class="rule-seg">
+                                                    <view
+                                                        v-for="opt in MUSIC_SOURCE_OPTIONS"
+                                                        :key="`type-music-${activeTypeTab}-${opt.val}`"
+                                                        class="rule-seg-btn"
+                                                        :class="{ sel: currentTypeConfig.musicSource === opt.val }"
+                                                        @click="pickTypeMusicSource(activeTypeTab, opt.val)">
+                                                        <text>{{ opt.label }}</text>
+                                                    </view>
+                                                </view>
+                                                <view class="rule-note">
+                                                    <text class="block rule-note-text">{{ currentTypeMusicHint }}</text>
+                                                </view>
+                                                <view
+                                                    v-if="currentTypeConfig.musicSource === MusicSourceEnum.System"
+                                                    class="mt-[16rpx]">
+                                                    <!-- 分组用选择器：分组多了 chip 会撑爆面板 -->
+                                                    <view class="rule-picker" @click="showGroupPicker = true">
+                                                        <text class="rule-picker-label">音乐分组</text>
+                                                        <view class="rule-picker-value">
+                                                            <text class="rule-picker-text">{{ currentTypeGroupLabel }}</text>
+                                                            <u-icon name="arrow-down" color="#C9CDD4" size="20"></u-icon>
+                                                        </view>
+                                                    </view>
+                                                    <view class="rule-seg mt-[16rpx]">
+                                                        <view
+                                                            class="rule-seg-btn"
+                                                            :class="{ sel: !currentTypeConfig.systemMusicId }"
+                                                            @click="clearTypeSystemMusic(activeTypeTab)">
+                                                            <text>{{ currentTypeConfig.musicGroupId > 0 ? "组内随机" : "每次随机" }}</text>
+                                                        </view>
+                                                        <view
+                                                            class="rule-seg-btn"
+                                                            :class="{ sel: !!currentTypeConfig.systemMusicId }"
+                                                            @click="openTypeSystemMusic(activeTypeTab)">
+                                                            <text>指定一首</text>
+                                                        </view>
+                                                    </view>
+                                                    <view
+                                                        v-if="currentTypeConfig.systemMusicId"
+                                                        class="mt-[12rpx] flex items-center gap-[12rpx]">
+                                                        <text class="flex-1 min-w-0 text-[24rpx] text-[#374151] line-clamp-1">
+                                                            {{ currentTypeConfig.systemMusicName || "已指定" }}
+                                                        </text>
+                                                        <text
+                                                            class="flex-shrink-0 text-[24rpx] text-primary font-bold"
+                                                            @click="openTypeSystemMusic(activeTypeTab)">
+                                                            重选
+                                                        </text>
+                                                    </view>
+                                                    <text
+                                                        v-if="currentTypeConfig.systemMusicId && !currentTypeConfig.systemMusicEnabled"
+                                                        class="block text-[22rpx] text-[#F59E0B] mt-[8rpx]">
+                                                        这首已下架，下次将随机
+                                                    </text>
+                                                </view>
+
+                                                <view
+                                                    v-if="currentTypeConfig.musicSource !== MusicSourceEnum.None"
+                                                    class="mt-[16rpx]">
+                                                    <view class="rule-sec-hd rule-slider-hd">
+                                                        <view class="rule-sec-title"><text>音乐音量</text></view>
+                                                        <text class="rule-slider-val">{{ currentTypeVolumePercent }}%</text>
+                                                    </view>
+                                                    <!-- key：切换类型/来源时重新挂载，避免沿用上一块的轨道宽度 -->
+                                                    <view
+                                                        v-if="visible"
+                                                        :key="`type-vol-${activeTypeTab}-${currentTypeConfig.musicSource}`"
+                                                        class="rule-slider-body">
+                                                        <u-slider
+                                                            v-model="typeVolumeSlider"
+                                                            :min="0"
+                                                            :max="10"
+                                                            :step="1"
+                                                            active-color="#2F73F6"
+                                                            inactive-color="#E5E9F0"
+                                                            block-width="36"></u-slider>
+                                                        <view class="rule-slider-labels">
+                                                            <text
+                                                                v-for="label in MUSIC_VOLUME_LABELS"
+                                                                :key="label"
+                                                                class="rule-slider-label">
+                                                                {{ label }}
+                                                            </text>
+                                                        </view>
+                                                    </view>
+                                                </view>
+
+                                                <!-- 口播语速：按类型各存一份，三类文案节奏不同，不能互相带着改 -->
+                                                <view class="mt-[16rpx]">
+                                                    <view class="rule-sec-hd rule-slider-hd">
+                                                        <view class="rule-sec-title"><text>口播语速</text></view>
+                                                        <text class="rule-slider-val">{{ currentTypeSpeechRateLabel }}</text>
+                                                    </view>
+                                                    <view v-if="visible" class="rule-slider-body">
+                                                        <u-slider
+                                                            v-model="typeSpeechRateSlider"
+                                                            :min="5"
+                                                            :max="20"
+                                                            :step="1"
+                                                            active-color="#2F73F6"
+                                                            inactive-color="#E5E9F0"
+                                                            block-width="36"></u-slider>
+                                                        <view class="rule-slider-labels">
+                                                            <text
+                                                                v-for="label in SPEECH_RATE_LABELS"
+                                                                :key="label"
+                                                                class="rule-slider-label">
+                                                                {{ label }}
+                                                            </text>
+                                                        </view>
+                                                    </view>
+                                                </view>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </view>
                                 <view class="rule-sec">
                                     <view class="rule-sec-hd">
                                         <view class="rule-sec-title"><text>视频模板</text></view>
@@ -201,36 +396,6 @@
                                             <text class="block rule-tpl-summary">{{ templateSummary }}</text>
                                         </view>
                                         <u-icon name="arrow-right" color="#C9CDD4" size="22"></u-icon>
-                                    </view>
-                                </view>
-
-                                <view v-if="hasNews" class="rule-sec">
-                                    <view class="rule-sec-hd">
-                                        <view class="rule-sec-title"><text>新闻体时长</text></view>
-                                        <text class="rule-sec-hint">范围 5–300 秒</text>
-                                    </view>
-                                    <view class="rule-dur">
-                                        <view
-                                            class="rule-dur-btn"
-                                            :class="{ disabled: newsDurationMinusDisabled }"
-                                            @click="stepNewsDuration(-1)">
-                                            <u-icon name="minus" color="#4B5563" size="26"></u-icon>
-                                        </view>
-                                        <view class="rule-dur-input-wrap">
-                                            <input
-                                                class="rule-dur-input"
-                                                type="number"
-                                                :value="String(innerState.newsDuration)"
-                                                @input="handleNewsDurationInput"
-                                                @blur="handleNewsDurationBlur" />
-                                            <text class="rule-dur-unit">秒</text>
-                                        </view>
-                                        <view
-                                            class="rule-dur-btn"
-                                            :class="{ disabled: newsDurationPlusDisabled }"
-                                            @click="stepNewsDuration(1)">
-                                            <u-icon name="plus" color="#4B5563" size="26"></u-icon>
-                                        </view>
                                     </view>
                                 </view>
 
@@ -438,110 +603,6 @@
                                         </view>
                                     </view>
                                 </view>
-
-                                <view class="rule-sec">
-                                    <view class="rule-sec-hd">
-                                        <view class="rule-sec-title"><text>剪辑视频音乐来源</text></view>
-                                    </view>
-                                    <view class="rule-seg">
-                                        <view
-                                            v-for="opt in MUSIC_SOURCE_OPTIONS"
-                                            :key="opt.val"
-                                            class="rule-seg-btn"
-                                            :class="{ sel: innerState.musicSource === opt.val }"
-                                            @click="pickMusicSource(opt.val)">
-                                            <text>{{ opt.label }}</text>
-                                        </view>
-                                    </view>
-                                    <view class="rule-note">
-                                        <text class="block rule-note-text">{{ currentMusicSourceHint }}</text>
-                                    </view>
-                                    <view v-if="innerState.musicSource === MusicSourceEnum.System" class="mt-[16rpx]">
-                                        <view class="rule-seg">
-                                            <view
-                                                class="rule-seg-btn"
-                                                :class="{ sel: !innerState.systemMusicId }"
-                                                @click="clearSystemMusic">
-                                                <text>每次随机</text>
-                                            </view>
-                                            <view
-                                                class="rule-seg-btn"
-                                                :class="{ sel: !!innerState.systemMusicId }"
-                                                @click="showSystemMusic = true">
-                                                <text>指定一首</text>
-                                            </view>
-                                        </view>
-                                        <view
-                                            v-if="innerState.systemMusicId"
-                                            class="mt-[12rpx] flex items-center gap-[12rpx]">
-                                            <text class="flex-1 min-w-0 text-[24rpx] text-[#374151] line-clamp-1">
-                                                {{ innerState.systemMusicName || "已指定" }}
-                                            </text>
-                                            <text class="flex-shrink-0 text-[24rpx] text-primary font-bold" @click="showSystemMusic = true">
-                                                重选
-                                            </text>
-                                        </view>
-                                        <text
-                                            v-if="innerState.systemMusicId && !innerState.systemMusicEnabled"
-                                            class="block text-[22rpx] text-[#F59E0B] mt-[8rpx]">
-                                            这首已下架，下次将随机
-                                        </text>
-                                    </view>
-                                </view>
-
-                                <view v-if="innerState.musicSource !== MusicSourceEnum.None" class="rule-sec">
-                                    <view class="rule-sec-hd rule-slider-hd">
-                                        <view class="rule-sec-title"><text>音乐音量</text></view>
-                                        <text class="rule-slider-val">{{ musicVolumePercent }}%</text>
-                                    </view>
-                                    <!-- key：切换音乐来源重新显示时强制重挂载，避免沿用错误轨道宽度 -->
-                                    <view
-                                        v-if="visible"
-                                        :key="`vol-${innerState.musicSource}`"
-                                        class="rule-slider-body">
-                                        <u-slider
-                                            v-model="musicVolumeSlider"
-                                            :min="0"
-                                            :max="10"
-                                            :step="1"
-                                            active-color="#2F73F6"
-                                            inactive-color="#E5E9F0"
-                                            block-width="36"></u-slider>
-                                        <view class="rule-slider-labels">
-                                            <text
-                                                v-for="label in MUSIC_VOLUME_LABELS"
-                                                :key="label"
-                                                class="rule-slider-label">
-                                                {{ label }}
-                                            </text>
-                                        </view>
-                                    </view>
-                                </view>
-
-                                <view class="rule-sec">
-                                    <view class="rule-sec-hd rule-slider-hd">
-                                        <view class="rule-sec-title"><text>口播语速</text></view>
-                                        <text class="rule-slider-val">{{ speechRateLabel }}</text>
-                                    </view>
-                                    <view v-if="visible" class="rule-slider-body">
-                                        <u-slider
-                                            v-model="speechRateSlider"
-                                            :min="5"
-                                            :max="20"
-                                            :step="1"
-                                            active-color="#2F73F6"
-                                            inactive-color="#E5E9F0"
-                                            block-width="36"></u-slider>
-                                        <view class="rule-slider-labels">
-                                            <text
-                                                v-for="label in SPEECH_RATE_LABELS"
-                                                :key="label"
-                                                class="rule-slider-label">
-                                                {{ label }}
-                                            </text>
-                                        </view>
-                                    </view>
-                                </view>
                             </template>
                         </view>
                     </scroll-view>
@@ -561,15 +622,56 @@
         center
         @confirm="handleConfirmDeleteHotspot" />
 
+    <!-- 音乐分组选择：分组多时用选择器，避免 chip 撑爆面板 -->
+    <!-- z-index 必须高于视频剪辑面板自身的 5002，否则弹窗会被渲染在面板下面、看起来像点了没反应 -->
+    <popup-bottom v-model="showGroupPicker" title="选择音乐分组" height="55%" :z-index="5003">
+        <template #content>
+            <scroll-view scroll-y class="h-full">
+                <view class="px-[32rpx] pb-[40rpx] flex flex-col gap-[12rpx]">
+                    <view
+                        class="rule-picker-option"
+                        :class="{ sel: currentTypeConfig.musicGroupId === 0 }"
+                        @click="pickTypeMusicGroup(0)">
+                        <text class="rule-picker-option-text">全部分组（每次随机）</text>
+                        <u-icon
+                            v-if="currentTypeConfig.musicGroupId === 0"
+                            name="checkmark"
+                            color="#2F73F6"
+                            size="26"></u-icon>
+                    </view>
+                    <view
+                        v-for="group in musicGroups"
+                        :key="`picker-group-${group.id}`"
+                        class="rule-picker-option"
+                        :class="{ sel: currentTypeConfig.musicGroupId === group.id }"
+                        @click="pickTypeMusicGroup(group.id)">
+                        <text class="rule-picker-option-text">{{ groupOptionLabel(group) }}</text>
+                        <u-icon
+                            v-if="currentTypeConfig.musicGroupId === group.id"
+                            name="checkmark"
+                            color="#2F73F6"
+                            size="26"></u-icon>
+                    </view>
+                    <text v-if="!musicGroups.length" class="text-center text-[24rpx] text-[#9CA3AF] py-[40rpx]">
+                        暂无音乐分组，可在后台「公共音乐库 › 分组」创建
+                    </text>
+                </view>
+            </scroll-view>
+        </template>
+    </popup-bottom>
+
     <system-music-sheet
         v-model="showSystemMusic"
-        :selected-id="innerState.systemMusicId"
+        :selected-id="innerState.typeConfig[editingTypeKey].systemMusicId"
+        :group-id="innerState.typeConfig[editingTypeKey].musicGroupId"
+        allow-group-random
         @confirm="onSystemMusic" />
 </template>
 
 <script setup lang="ts">
 import { addAiSynthesisRule, updateAiSynthesisRule, getAiSynthesisRuleDetail, getAvatarList } from "@/api/person";
 import SystemMusicSheet from "@/components/system-music-sheet/system-music-sheet.vue";
+import { getSystemMusicGroups } from "@/api/digital_human";
 import { getSquareBrowse } from "@/api/square";
 import useUpload from "@/hooks/useUpload";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
@@ -656,6 +758,68 @@ const normalizeMusicSource = (value: unknown): MusicSourceEnum => {
     return MusicSourceEnum.System;
 };
 
+// ─── 分类型配置（条数仅无手机模式生效；背景音乐与音量两种模式都按类型生效）──
+/** key 与闪剪 shanjian_type 同值 */
+type TypeConfigKey = "1" | "3" | "4";
+const TYPE_CONFIG_KEYS: TypeConfigKey[] = ["1", "3", "4"];
+const TYPE_CONFIG_LABELS: Record<TypeConfigKey, string> = {
+    "1": "数字人口播",
+    "3": "纯素材混剪",
+    "4": "新闻体混剪",
+};
+interface TypeMusicState {
+    /** 每日视频数量：仅无手机模式消费，手机模式原样保留但不生效 */
+    videoCount: number;
+    musicSource: MusicSourceEnum;
+    /** 系统音乐分组，0 = 全部分组 */
+    musicGroupId: number;
+    systemMusicId: string;
+    systemMusicName: string;
+    systemMusicEnabled: boolean;
+    musicVolume: number;
+    /** 口播语速：按类型各存一份，缺省继承顶层 speech_rate（老数据三类相同） */
+    speechRate: number;
+    /** 一镜到底：仅新闻体混剪可开，开启后每条只用 1 条视频素材 */
+    singleShot: boolean;
+}
+const createDefaultTypeMusic = (): TypeMusicState => ({
+    videoCount: 0,
+    musicSource: MusicSourceEnum.System,
+    musicGroupId: 0,
+    systemMusicId: "",
+    systemMusicName: "",
+    systemMusicEnabled: true,
+    musicVolume: MUSIC_VOLUME_DEFAULT,
+    speechRate: SPEECH_RATE_DEFAULT,
+    singleShot: false,
+});
+const createDefaultTypeConfig = (): Record<TypeConfigKey, TypeMusicState> => ({
+    "1": createDefaultTypeMusic(),
+    "3": createDefaultTypeMusic(),
+    "4": createDefaultTypeMusic(),
+});
+const clampTypeVideoCount = (value: unknown): number => {
+    const num = Math.round(Number(value));
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.min(DAILY_VIDEO_COUNT.max, num));
+};
+
+/** 老数据条数分配：先均分，余数从第一个已勾选类型起各补 1（与后端同口径） */
+const splitLegacyVideoCount = (total: number, types: number[]): Record<number, number> => {
+    const result: Record<number, number> = {};
+    TYPE_CONFIG_KEYS.forEach((key) => (result[Number(key)] = 0));
+    const list = types.filter((t) => result[t] !== undefined);
+    const n = list.length;
+    if (n <= 0 || total <= 0) return result;
+    const base = Math.floor(total / n);
+    let rest = total % n;
+    list.forEach((t) => {
+        result[t] = base + (rest > 0 ? 1 : 0);
+        if (rest > 0) rest -= 1;
+    });
+    return result;
+};
+
 // ─── 类型 ─────────────────────────────────────────────────────────
 interface InnerState {
     id: string;
@@ -673,8 +837,6 @@ interface InnerState {
     workMode: string;
     /** 运行模式：人设接口 run_mode（1 手机 / 2 无手机），随规则一起提交 */
     runMode: RunModeEnum;
-    /** 每日出片条数：仅无手机模式提交与生效 */
-    dailyVideoCount: number;
     libUseMode: string;
     libRandomRule: string;
     newsDuration: number;
@@ -684,13 +846,8 @@ interface InnerState {
     hotspotTakeMode: HotspotTakeModeEnum;
     /** 视频模板：key 为 generation_types 数字（1/3/4） */
     templateConfig: TemplateConfigMap;
-    /** 背景音乐来源：1 系统 / 2 人设 / 3 无 */
-    musicSource: MusicSourceEnum;
-    systemMusicId: string;
-    systemMusicName: string;
-    systemMusicEnabled: boolean;
-    /** 音乐音量 0~1，一位小数 */
-    musicVolume: number;
+    /** 分类型配置：1/3/4 三类恒存在（顶层 music_* 由数字人口播的值回写，兼容旧链路） */
+    typeConfig: Record<TypeConfigKey, TypeMusicState>;
     /** 口播语速 0.5~2，一位小数 */
     speechRate: number;
     squareGroupIds: number[];
@@ -958,7 +1115,6 @@ const innerState = reactive<InnerState>({
     coverImage: "",
     workMode: WorkModeEnum.Ai,
     runMode: RunModeEnum.Phone,
-    dailyVideoCount: DAILY_VIDEO_COUNT.default,
     libUseMode: LibUseModeEnum.Random,
     libRandomRule: LibRuleEnum.Once,
     newsDuration: NEWS_DURATION.default,
@@ -966,11 +1122,7 @@ const innerState = reactive<InnerState>({
     copyLibRandomRule: LibRuleEnum.Once,
     hotspotTakeMode: HotspotTakeModeEnum.Latest,
     templateConfig: {},
-    musicSource: MusicSourceEnum.System,
-    systemMusicId: "",
-    systemMusicName: "",
-    systemMusicEnabled: true,
-    musicVolume: MUSIC_VOLUME_DEFAULT,
+    typeConfig: createDefaultTypeConfig(),
     speechRate: SPEECH_RATE_DEFAULT,
     squareGroupIds: [],
 });
@@ -987,6 +1139,20 @@ const loadSquareGroups = async () => {
         squareGroups.value = res?.groups || [];
     } catch {
         squareGroups.value = [];
+    }
+};
+/** 曲库分组兜底：详情没带 system_music_groups 时单独拉一次（all=1 带上暂无曲目的空分组） */
+const loadMusicGroups = async () => {
+    try {
+        const res: any = await getSystemMusicGroups({ all: 1 });
+        const list = Array.isArray(res) ? res : res?.list || [];
+        musicGroups.value = list.map((g: any) => ({
+            id: Number(g.id),
+            name: String(g.name || ""),
+            music_count: Number(g.music_count || 0),
+        }));
+    } catch {
+        musicGroups.value = [];
     }
 };
 
@@ -1020,8 +1186,6 @@ const currentMaterialKindNote = computed(() => MATERIAL_KIND_NOTES[materialKind.
 const currentEditorLibRuleNote = computed(() => EDITOR_LIB_RULE_NOTES[innerState.libRandomRule]);
 const currentCopyLibRuleNote = computed(() => COPY_LIB_RULE_NOTES[innerState.copyLibRandomRule]);
 
-const dailyCountMinusDisabled = computed(() => innerState.dailyVideoCount <= DAILY_VIDEO_COUNT.min);
-const dailyCountPlusDisabled = computed(() => innerState.dailyVideoCount >= DAILY_VIDEO_COUNT.max);
 const newsDurationMinusDisabled = computed(() => innerState.newsDuration <= NEWS_DURATION.min);
 const newsDurationPlusDisabled = computed(() => innerState.newsDuration >= NEWS_DURATION.max);
 
@@ -1053,41 +1217,163 @@ const currentCopyHint = computed(() => {
     return hint;
 });
 const currentCoverHint = computed(() => COVER_HINTS[innerState.coverSource]);
-const currentMusicSourceHint = computed(
-    () => MUSIC_SOURCE_HINTS[innerState.musicSource] || MUSIC_SOURCE_HINTS[MusicSourceEnum.System],
-);
 const showSystemMusic = ref(false);
-const pickMusicSource = (val: MusicSourceEnum) => {
-    innerState.musicSource = val;
-    if (val !== MusicSourceEnum.System) clearSystemMusic();
-};
-const clearSystemMusic = () => {
-    innerState.systemMusicId = "";
-    innerState.systemMusicName = "";
-    innerState.systemMusicEnabled = true;
-};
-const onSystemMusic = (value: { id: string; name: string }) => {
-    innerState.systemMusicId = value.id;
-    innerState.systemMusicName = value.name;
-    innerState.systemMusicEnabled = value.id !== "";
+/** 当前正在给哪个生成类型选曲 */
+const editingTypeKey = ref<TypeConfigKey>("1");
+const musicGroups = ref<{ id: number; name: string; music_count?: number }[]>([]);
+/** 分组选项文案：带可用曲目数，空分组提示会不会生效 */
+const groupOptionLabel = (group: { name: string; music_count?: number }): string =>
+    `${group.name}${Number(group.music_count || 0) > 0 ? ` · ${group.music_count} 首` : " · 暂无曲目"}`;
+/** 音乐分组选择弹窗（分组多时 chip 会撑爆面板，改成选择器） */
+const showGroupPicker = ref(false);
+/** 类型配置卡片默认收起，避免设置项臃肿；收起时各项按已保存的值生效 */
+const typeConfigExpanded = ref(false);
+
+/**
+ * 类型配置 tab 顺序：与上方「生成类型」卡片的前后顺序一致（数字人口播 → 新闻体混剪 → 纯素材混剪）。
+ * 不能按 TYPE_CONFIG_KEYS（1/3/4）排，那样新闻体（4）会被挤到纯素材混剪（3）后面，
+ * 站长先选新闻体时会觉得 tab 跑到最后去了。
+ */
+const SYNTH_CARD_TYPE_KEYS: TypeConfigKey[] = SYNTH_TYPES.map(
+    (item) => String(SYNTH_TYPE_TO_API[item.id]) as TypeConfigKey
+);
+/** 只有勾选的生成类型才有类型配置面板 */
+const visibleTypeKeys = computed<TypeConfigKey[]>(() => {
+    const keys = SYNTH_CARD_TYPE_KEYS.filter(
+        (key) => !!key && innerState.synthTypes.includes(API_TO_SYNTH_TYPE[Number(key)])
+    );
+    return keys.length ? keys : [TYPE_CONFIG_KEYS[0]];
+});
+const activeTypeTab = ref<TypeConfigKey>("1");
+watch(visibleTypeKeys, (keys) => {
+    if (!keys.includes(activeTypeTab.value)) activeTypeTab.value = keys[0];
+});
+
+const currentTypeConfig = computed<TypeMusicState>(() => innerState.typeConfig[activeTypeTab.value]);
+const currentTypeMusicHint = computed(
+    () => MUSIC_SOURCE_HINTS[currentTypeConfig.value.musicSource] || MUSIC_SOURCE_HINTS[MusicSourceEnum.System]
+);
+const currentTypeVolumePercent = computed(() => Math.round(currentTypeConfig.value.musicVolume * 100));
+/** 当前类型选中的分组名（0 = 全部） */
+const currentTypeGroupLabel = computed(() => {
+    const id = currentTypeConfig.value.musicGroupId;
+    if (!id) return "全部分组";
+    return musicGroups.value.find((g) => g.id === id)?.name || "全部分组";
+});
+/** 收起状态下的摘要：每类型的 BGM 来源/音量/语速 + 新闻体时长（仅新闻体） */
+const typeConfigSummary = computed(() => {
+    const parts = visibleTypeKeys.value.map((key) => {
+        const cfg = innerState.typeConfig[key];
+        const rate = `${cfg.speechRate.toFixed(1)}x`;
+        if (cfg.musicSource === MusicSourceEnum.None) return `${TYPE_CONFIG_LABELS[key]} 无音乐 · ${rate}`;
+        const sourceLabel = MUSIC_SOURCE_OPTIONS.find((o) => o.val === cfg.musicSource)?.label ?? "系统音乐库";
+        return `${TYPE_CONFIG_LABELS[key]} ${sourceLabel} ${Math.round(cfg.musicVolume * 100)}% · ${rate}`;
+    });
+    // 新闻体时长现在也收在卡片里，摘要里带一句，免得收起后找不到入口
+    if (hasNews.value) parts.push(`新闻体 ${innerState.newsDuration} 秒`);
+    return parts.join(" · ");
+});
+/** 无手机模式的条数汇总（类型条数之和即当天出片总量） */
+const cloudTotalCount = computed(() =>
+    visibleTypeKeys.value.reduce((sum, key) => sum + Number(innerState.typeConfig[key].videoCount || 0), 0)
+);
+const cloudCountSummary = computed(() =>
+    visibleTypeKeys.value
+        .map((key) => `${TYPE_CONFIG_LABELS[key]} ${innerState.typeConfig[key].videoCount}`)
+        .join(" / ")
+);
+/** 数字人口播的类型配置，用来回写顶层音乐字段（兼容旧链路） */
+const voiceTypeConfig = computed(() => innerState.typeConfig["1"]);
+/** 提交用的分类型配置：手机模式条数原样回传（后端不生效），音乐/语速两种模式都按类型生效 */
+const buildTypeConfigPayload = (): Record<string, Record<string, unknown>> => {
+    const payload: Record<string, Record<string, unknown>> = {};
+    TYPE_CONFIG_KEYS.forEach((key) => {
+        const cfg = innerState.typeConfig[key];
+        const isSystem = normalizeMusicSource(cfg.musicSource) === MusicSourceEnum.System;
+        payload[key] = {
+            video_count: clampTypeVideoCount(cfg.videoCount),
+            music_source: normalizeMusicSource(cfg.musicSource),
+            music_group_id: isSystem ? Number(cfg.musicGroupId) || 0 : 0,
+            system_music_id: isSystem ? String(cfg.systemMusicId || "") : "",
+            music_volume: normalizeMusicVolume(cfg.musicVolume),
+            speech_rate: normalizeSpeechRate(cfg.speechRate),
+            // 一镜到底只有新闻体混剪生效，其余类型恒 0
+            single_shot: key === "4" && cfg.singleShot ? 1 : 0,
+        };
+    });
+    return payload;
 };
 
-const musicVolumePercent = computed(() => Math.round(innerState.musicVolume * 100));
-const speechRateLabel = computed(() => `${innerState.speechRate.toFixed(1)}x`);
-
-/** u-slider 用整数刻度：音量 0~10 → 0.0~1.0 */
-const musicVolumeSlider = computed({
-    get: () => Math.round(innerState.musicVolume * 10),
+/** 类型配置里的音量滑块：只渲染当前 tab，直接绑到当前类型 */
+const typeVolumeSlider = computed({
+    get: () => Math.round(innerState.typeConfig[activeTypeTab.value].musicVolume * 10),
     set: (val: number) => {
-        innerState.musicVolume = normalizeMusicVolume(Number(val) / 10);
+        innerState.typeConfig[activeTypeTab.value].musicVolume = normalizeMusicVolume(Number(val) / 10);
     },
 });
 
-/** u-slider 用整数刻度：语速 5~20 → 0.5~2.0 */
-const speechRateSlider = computed({
-    get: () => Math.round(innerState.speechRate * 10),
+/** 生成类型卡片上的条数 stepper */
+const typeKeyOfSynth = (id: string): TypeConfigKey => String(SYNTH_TYPE_TO_API[id] ?? 1) as TypeConfigKey;
+/** 该类型还能再加几条：三类合计不得超过每日上限 */
+const typeCountRemain = (key: TypeConfigKey): number =>
+    DAILY_VIDEO_COUNT.max - (cloudTotalCount.value - (Number(innerState.typeConfig[key].videoCount) || 0));
+const stepTypeVideoCount = (key: TypeConfigKey, dir: 1 | -1): void => {
+    const cfg = innerState.typeConfig[key];
+    const next = (Number(cfg.videoCount) || 0) + dir;
+    cfg.videoCount = clampTypeVideoCount(Math.min(next, typeCountRemain(key)));
+};
+
+const pickTypeMusicSource = (key: TypeConfigKey, val: MusicSourceEnum): void => {
+    const cfg = innerState.typeConfig[key];
+    cfg.musicSource = val;
+    if (val !== MusicSourceEnum.System) {
+        cfg.musicGroupId = 0;
+        cfg.systemMusicId = "";
+        cfg.systemMusicName = "";
+        cfg.systemMusicEnabled = true;
+    }
+};
+const setTypeMusicGroup = (key: TypeConfigKey, groupId: number): void => {
+    const cfg = innerState.typeConfig[key];
+    cfg.musicGroupId = Number(groupId) || 0;
+    // 换分组后原指定曲目可能不属于该组，直接改为组内随机
+    cfg.systemMusicId = "";
+    cfg.systemMusicName = "";
+    cfg.systemMusicEnabled = true;
+};
+const clearTypeSystemMusic = (key: TypeConfigKey): void => {
+    const cfg = innerState.typeConfig[key];
+    cfg.systemMusicId = "";
+    cfg.systemMusicName = "";
+    cfg.systemMusicEnabled = true;
+};
+/** 分组选择弹窗选中某项 */
+const pickTypeMusicGroup = (groupId: number): void => {
+    setTypeMusicGroup(activeTypeTab.value, groupId);
+    showGroupPicker.value = false;
+};
+const openTypeSystemMusic = (key: TypeConfigKey): void => {
+    editingTypeKey.value = key;
+    showSystemMusic.value = true;
+};
+
+const onSystemMusic = (value: { id: string; name: string; group_id?: number }) => {
+    const cfg = innerState.typeConfig[editingTypeKey.value];
+    cfg.systemMusicId = value.id;
+    cfg.systemMusicName = value.name;
+    cfg.systemMusicEnabled = value.id !== "";
+    // 指定单曲时把该曲所属分组一并记下；「系统随机」group_id=0 表示全部分组
+    cfg.musicGroupId = Number(value.group_id || 0);
+};
+
+/** 当前类型 tab 的口播语速（各类型独立） */
+const currentTypeSpeechRateLabel = computed(() => `${currentTypeConfig.value.speechRate.toFixed(1)}x`);
+
+/** u-slider 用整数刻度：语速 5~20 → 0.5~2.0，只作用于当前 tab 的类型 */
+const typeSpeechRateSlider = computed({
+    get: () => Math.round(currentTypeConfig.value.speechRate * 10),
     set: (val: number) => {
-        innerState.speechRate = normalizeSpeechRate(Number(val) / 10);
+        innerState.typeConfig[activeTypeTab.value].speechRate = normalizeSpeechRate(Number(val) / 10);
     },
 });
 
@@ -1128,7 +1414,11 @@ onEventBus(VIDEO_TEMPLATE_CONFIRM_EVENT, (payload: TemplateConfigMap) => {
 const toggleSynthType = (id: string): void => {
     const idx = innerState.synthTypes.indexOf(id as SynthTypeEnum);
     if (idx > -1) {
-        if (innerState.synthTypes.length > 1) innerState.synthTypes.splice(idx, 1);
+        if (innerState.synthTypes.length > 1) {
+            innerState.synthTypes.splice(idx, 1);
+            // 取消勾选即该类型不出片，条数同步归零，避免后端把「有条数没勾选」的类型补回列表
+            innerState.typeConfig[typeKeyOfSynth(id as SynthTypeEnum)].videoCount = 0;
+        }
     } else {
         innerState.synthTypes.push(id as SynthTypeEnum);
     }
@@ -1139,25 +1429,6 @@ const clampNewsDuration = (value: unknown): number => {
     const num = Math.round(Number(value));
     if (!Number.isFinite(num)) return NEWS_DURATION.default;
     return Math.max(NEWS_DURATION.min, Math.min(NEWS_DURATION.max, num));
-};
-
-const clampDailyCount = (value: unknown): number => {
-    const num = Math.round(Number(value));
-    if (!Number.isFinite(num)) return DAILY_VIDEO_COUNT.default;
-    return Math.max(DAILY_VIDEO_COUNT.min, Math.min(DAILY_VIDEO_COUNT.max, num));
-};
-
-const stepDailyCount = (dir: 1 | -1): void => {
-    innerState.dailyVideoCount = clampDailyCount(innerState.dailyVideoCount + dir);
-};
-
-const handleDailyCountInput = (e: any): void => {
-    const raw = Number(e?.detail?.value);
-    innerState.dailyVideoCount = Number.isFinite(raw) ? raw : innerState.dailyVideoCount;
-};
-
-const handleDailyCountBlur = (): void => {
-    innerState.dailyVideoCount = clampDailyCount(innerState.dailyVideoCount);
 };
 
 const stepNewsDuration = (dir: 1 | -1): void => {
@@ -1248,6 +1519,14 @@ const buildSummary = (): string => {
         return `成品库直发 · ${useLabel}`;
     }
 
+    // 无手机模式按类型条数出片，摘要直接给每类型条数，员工卡按「 · 」拆分展示
+    if (isCloudRun.value) {
+        const parts = visibleTypeKeys.value.map(
+            (key) => `${TYPE_CONFIG_LABELS[key]} ${innerState.typeConfig[key].videoCount} 条`
+        );
+        return parts.length ? parts.join(" · ") : "无手机模式 · 暂未设置条数";
+    }
+
     const typeLabels = innerState.synthTypes.map((id) => SYNTH_TYPES.find((t) => t.id === id)!.label);
     const typeStr = typeLabels.length > 1 ? `${typeLabels[0]}等` : typeLabels[0];
 
@@ -1271,6 +1550,11 @@ const validateParams = (): boolean => {
     }
 
     if (innerState.workMode === WorkModeEnum.Ai) {
+        // 无手机模式没有发布时段兜底，条数全 0 就一条都不出，保存前先拦住
+        if (isCloudRun.value && cloudTotalCount.value <= 0) {
+            uni.showToast({ title: "请至少给一个生成类型设置视频数量", icon: "none" });
+            return false;
+        }
         const emptyType = findEmptyCustomType(activeSynthApiTypes.value, innerState.templateConfig);
         if (emptyType != null) {
             uni.showToast({
@@ -1308,14 +1592,20 @@ const buildApiParams = () => ({
         ? RUN_MODE_TO_API[RunModeEnum.Phone]
         : RUN_MODE_TO_API[innerState.runMode],
     // 手机模式不提交条数，避免把无手机模式的配置带进按发布时段出片的链路
-    daily_video_count: isCloudRun.value ? innerState.dailyVideoCount : 0,
+    daily_video_count: isCloudRun.value ? cloudTotalCount.value : 0,
     product_use_mode: LIB_USE_MODE_TO_API[innerState.libUseMode],
     product_reuse_mode: LIB_RULE_TO_API[innerState.libRandomRule],
-    music_source: normalizeMusicSource(innerState.musicSource),
+    // 顶层音乐取数字人口播的配置，兼容未分类型的旧链路（爆款复刻等）
+    music_source: normalizeMusicSource(voiceTypeConfig.value.musicSource),
     system_music_id:
-        normalizeMusicSource(innerState.musicSource) === MusicSourceEnum.System ? innerState.systemMusicId : "",
-    music_volume: normalizeMusicVolume(innerState.musicVolume),
-    speech_rate: normalizeSpeechRate(innerState.speechRate),
+        normalizeMusicSource(voiceTypeConfig.value.musicSource) === MusicSourceEnum.System
+            ? voiceTypeConfig.value.systemMusicId
+            : "",
+    music_volume: normalizeMusicVolume(voiceTypeConfig.value.musicVolume),
+    // 分类型配置：条数、来源、分组、指定曲目、音量、口播语速（语速按类型各存一份）
+    type_config: buildTypeConfigPayload(),
+    // 顶层语速同样取数字人口播，兼容未分类型的旧链路
+    speech_rate: normalizeSpeechRate(voiceTypeConfig.value.speechRate),
     // 提交全部类型配置，避免未勾选类型在后端被重置为自动随机
     template_config: buildTemplateConfigForTypes(ALL_SYNTH_API_TYPES, innerState.templateConfig),
 });
@@ -1420,15 +1710,53 @@ const getDetail = async (): Promise<void> => {
         ? clampNewsDuration(res.news_mixcut_duration)
         : NEWS_DURATION.default;
     innerState.coverImage = res.pic ?? "";
-    innerState.musicSource = normalizeMusicSource(res.music_source);
-    innerState.systemMusicId = String(res.system_music_id || "");
-    innerState.systemMusicName = String(res.system_music_name || "");
-    innerState.systemMusicEnabled = res.system_music_enabled !== false;
-    innerState.musicVolume = normalizeMusicVolume(res.music_volume ?? MUSIC_VOLUME_DEFAULT);
     innerState.speechRate = normalizeSpeechRate(res.speech_rate ?? SPEECH_RATE_DEFAULT);
     materialKind.value = normalizeMaterialUseMode(res.material_use_mode);
     innerState.runMode = (API_TO_RUN_MODE[String(res.run_mode)] as RunModeEnum) ?? RunModeEnum.Phone;
-    innerState.dailyVideoCount = clampDailyCount(res.daily_video_count || DAILY_VIDEO_COUNT.default);
+
+    // 分类型配置回显：后端已把老数据补齐（音乐继承顶层 + 条数均分），这里只兜底老接口
+    const detailTypeConfig = (res.type_config || {}) as Record<string, any>;
+    const legacyCounts = splitLegacyVideoCount(
+        Number(res.daily_video_count) || 0,
+        ((res.generation_types as number[]) || []).map((n) => Number(n)),
+    );
+    const nextTypeConfig = createDefaultTypeConfig();
+    TYPE_CONFIG_KEYS.forEach((key) => {
+        const target = nextTypeConfig[key];
+        const cfg = detailTypeConfig[key];
+        if (cfg && typeof cfg === "object") {
+            target.videoCount = clampTypeVideoCount(cfg.video_count ?? 0);
+            target.musicSource = normalizeMusicSource(cfg.music_source ?? res.music_source);
+            target.musicGroupId = Number(cfg.music_group_id ?? 0) || 0;
+            target.systemMusicId = String(cfg.system_music_id || "");
+            target.systemMusicName = String(cfg.system_music_name || "");
+            target.systemMusicEnabled = cfg.system_music_enabled !== false;
+            target.musicVolume = normalizeMusicVolume(cfg.music_volume ?? res.music_volume ?? MUSIC_VOLUME_DEFAULT);
+            target.speechRate = normalizeSpeechRate(cfg.speech_rate ?? res.speech_rate ?? SPEECH_RATE_DEFAULT);
+            target.singleShot = Number(cfg.single_shot ?? 0) === 1;
+            return;
+        }
+        // 老数据 / 老接口：三类音乐与语速都继承顶层配置，条数按「先均分余数补前」分配
+        target.videoCount = legacyCounts[Number(key)] ?? 0;
+        target.musicSource = normalizeMusicSource(res.music_source);
+        target.musicGroupId = 0;
+        target.systemMusicId = String(res.system_music_id || "");
+        target.systemMusicName = String(res.system_music_name || "");
+        target.systemMusicEnabled = res.system_music_enabled !== false;
+        target.musicVolume = normalizeMusicVolume(res.music_volume ?? MUSIC_VOLUME_DEFAULT);
+        target.speechRate = normalizeSpeechRate(res.speech_rate ?? SPEECH_RATE_DEFAULT);
+    });
+    innerState.typeConfig = nextTypeConfig;
+    // 分组由详情一并返回；老版本接口没有该字段时单独拉一次，否则选择器只剩「全部分组」
+    if (Array.isArray(res.system_music_groups) && res.system_music_groups.length) {
+        musicGroups.value = res.system_music_groups.map((g: any) => ({
+            id: Number(g.id),
+            name: String(g.name || ""),
+            music_count: Number(g.music_count || 0),
+        }));
+    } else {
+        void loadMusicGroups();
+    }
 
     // 回显全部类型模板（含当前未启用），以便重新勾选生成类型时恢复
     innerState.templateConfig = buildTemplateConfigForTypes(
@@ -1446,6 +1774,10 @@ watch(visible, (newVal) => {
     innerState.runMode = RunModeEnum.Phone;
     innerState.hotspotTakeMode = HotspotTakeModeEnum.Latest;
     materialKind.value = MaterialKindEnum.AUTO;
+    innerState.typeConfig = createDefaultTypeConfig();
+    // 每次打开都从收起态开始，避免上次展开的设置项撑着面板
+    typeConfigExpanded.value = false;
+    showGroupPicker.value = false;
     getDetail();
     loadSquareGroups();
 });
@@ -1639,6 +1971,21 @@ defineExpose({
     color: #2f73f6;
 }
 
+/* 类型卡片内的条数 stepper：只在无手机模式渲染，点按不触发勾选 */
+.rule-type-stepper {
+    display: flex;
+    align-items: center;
+    gap: 8rpx;
+}
+
+.rule-type-stepper-val {
+    min-width: 44rpx;
+    font-size: 26rpx;
+    font-weight: 800;
+    color: #2f73f6;
+    text-align: center;
+}
+
 /* 分段控件：与 CS 的 cs-seg / cs-seg-btn 对齐
    轨道 #f3f4f6 / r-20rpx / p-6rpx；激活态白底 + primary 蓝字 */
 .rule-seg {
@@ -1677,6 +2024,101 @@ defineExpose({
 
 .rule-seg-copy .rule-seg-btn {
     @apply text-[22rpx] whitespace-nowrap;
+}
+
+/* 可折叠设置卡：收起只留一行摘要，展开才渲染具体设置项 */
+.rule-collapse {
+    border-radius: 28rpx;
+    background: #f7f9fc;
+    border: 2rpx solid #eaeef5;
+    padding: 24rpx 28rpx;
+}
+
+.rule-collapse-hd {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+}
+
+.rule-collapse-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.rule-collapse-sub {
+    display: block;
+    margin-top: 8rpx;
+    font-size: 22rpx;
+    line-height: 1.45;
+    color: #9ca3af;
+}
+
+.rule-collapse-body {
+    margin-top: 24rpx;
+    padding-top: 24rpx;
+    border-top: 2rpx dashed #e2e8f2;
+}
+
+/* 分组选择器：点开底部弹窗选，分组多了也不会撑爆面板 */
+.rule-picker {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    padding: 22rpx 26rpx;
+    border-radius: 20rpx;
+    background: #ffffff;
+    border: 2rpx solid #e9edf4;
+}
+
+.rule-picker-label {
+    flex-shrink: 0;
+    font-size: 24rpx;
+    color: #6b7280;
+}
+
+.rule-picker-value {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8rpx;
+}
+
+.rule-picker-text {
+    font-size: 26rpx;
+    font-weight: 700;
+    color: #1d2129;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.rule-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 20rpx;
+    padding: 0 24rpx;
+    height: 100rpx;
+    border-radius: 20rpx;
+    background: #f7f9fc;
+    border: 2rpx solid transparent;
+}
+
+.rule-picker-option.sel {
+    background: #eff5ff;
+    border-color: #2f73f6;
+}
+
+.rule-picker-option-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 28rpx;
+    font-weight: 700;
+    color: #1d2129;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 .rule-note {

@@ -12,6 +12,23 @@ class ConnectionRepository
     {
     }
 
+    /**
+     * 本类写入的版本号等字符串键经由 think\cache\driver\Redis::set() 落库,
+     * 驱动会把非数值字符串用 PHP serialize 包裹(如 s:6:"2.9.87";),
+     * 而 handler() 裸读不会反序列化。所有读取端必须统一用本方法剥掉包装,
+     * 同时兼容裸值(新写入或驱动 get 读取方已反序列化过的值)直接返回。
+     */
+    public static function unwrapSerialized(string $value): string
+    {
+        if (preg_match('/^s:\d+:".*";$/s', $value) === 1) {
+            $unserialized = @unserialize($value, ['allowed_classes' => false]);
+            if (is_string($unserialized)) {
+                return $unserialized;
+            }
+        }
+        return $value;
+    }
+
     public function bindConnection(string $uid, int $workerId, string $clientType = '', string $content = ''): void
     {
         $this->redis->set("xhs:connection:{$uid}:worker", $workerId);

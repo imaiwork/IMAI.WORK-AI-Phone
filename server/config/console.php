@@ -73,6 +73,8 @@ return [
         'shanjian_asset_sync' => 'app\common\command\ShanjianAssetSyncCron',
         //手动加微信任务
         'crawling_manual_cron' => 'app\common\command\CrawlingManualCron',
+        //AI销售加微-线索加微信定时任务
+        'ai_sales_add_wechat_cron' => 'app\common\command\AiSalesAddWechatCron',
         //设备任务调度
         'task:scheduler' => 'app\common\command\DeviceTaskScheduler',
         //替换cron表达式
@@ -82,6 +84,8 @@ return [
         'hd_puzzle_cron' => 'app\common\command\HdPuzzleCron',
         //sora视频合成
         'sora_video_task' => 'app\common\command\SoraVideoTaskCron',
+        //回填一句话生成视频的历史记录标题（旧口径取了提示词前 10 字，手动执行，默认预览）
+        'sora:record-title-fix' => 'app\common\command\SoraRecordTitleFix',
         //设备运营/爆款任务生成（0:00-3:00，每分钟 15 台）
         'auto_device_create_cron' => 'app\common\command\AutoDeviceCreateCron',
         //设备素材发布/朋友圈建单（0:00-6:00，每分钟 2 台，与运营分锁）
@@ -150,10 +154,8 @@ return [
         'member_daily_grant' => 'app\common\command\MemberDailyGrantCron',
         //会员到期检查 + 软降级冻结
         'member_expire_check' => 'app\common\command\MemberExpireCheckCron',
-        // 同步中台闪剪剪辑模板
-        'sync_shanjian_clip_templates' => 'app\common\command\SyncShanjianClipTemplatesCron',
-        // 同步系统曲库
-        'sync_system_music' => 'app\common\command\SyncSystemMusicCron',
+        // 同步模板中心（每5分钟）：剪辑模板 + 公共音乐库每轮跑，玩法模板任务内按小时闸门控制
+        'sync_template_center' => 'app\common\command\SyncTemplateCenterCron',
         // 团队OEM 计费/退费自检(仅人工验证,不进 cron)
         'team:oem-selfcheck' => 'app\common\command\TeamOemSelfCheck',
         // 团队扣费主体诊断(个人 vs 企业钱包)
@@ -162,6 +164,8 @@ return [
         'team:seed-test' => 'app\common\command\TeamSeedTest',
         // 清理过期设备日志
         'device_log_clean' => 'app\common\command\SvDeviceLogCleanCron',
+        // 清理存量加微记录中的官方服务号联系方式(视频号/抖音,默认预览,--execute 执行)
+        'sv:service-contact-clean' => 'app\common\command\SvServiceContactClean',
     ],
 
     

@@ -462,6 +462,7 @@ import ChooseMusic from "@/pages/app/digital_human/_components/choose-music.vue"
 import ChooseTone from "@/pages/app/digital_human/_components/choose-tone.vue";
 import CostPop from "@/pages/app/digital_human/_components/cost-pop.vue";
 import MontageStoryboardTitle from "./_components/top-title-pop.vue";
+import { validateText } from "@/utils/textValidator";
 
 // ──────────────────────────────────────────────────────────────
 // 常量
@@ -788,6 +789,12 @@ const validateBeforeCreate = async (): Promise<boolean> => {
             feedback.msgWarning(result?.firstErrorMsg ?? "请完善口播文案");
             return false;
         }
+        // warning 级（空格拼接等）：提示并阻断提交
+        const warningList = Object.values(result?.warnings ?? {});
+        if (warningList.length > 0) {
+            feedback.msgWarning(`文案提示：${warningList[0]}`);
+            return false;
+        }
     }
 
     if (copywritingMode.value === CopywritingTypeEnum.CLIP) {
@@ -803,6 +810,18 @@ const validateBeforeCreate = async (): Promise<boolean> => {
             }
             if (item.text.length > CLIP_TEXT_MAX) {
                 const msg = `文案不能超过 ${CLIP_TEXT_MAX} 字符`;
+                setClipError(item.groupId, msg);
+                feedback.msgWarning(`「${item.label}」${msg}`);
+                await scrollToClipGroup(item.groupId);
+                return false;
+            }
+            // 语种检测：乱码 / 空格拼接 → 阻断提交
+            const langResult = validateText(item.text);
+            if (langResult.status !== "ok") {
+                const msg =
+                    langResult.type === "mojibake"
+                        ? "检测到外文乱码，请修改后再提交"
+                        : "疑似外文单词间缺少空格，请检查后再提交";
                 setClipError(item.groupId, msg);
                 feedback.msgWarning(`「${item.label}」${msg}`);
                 await scrollToClipGroup(item.groupId);

@@ -128,6 +128,9 @@ const COPY_AGENT_SYSTEM_IDS: Record<CopyDriverTypeEnum, number[]> = {
 
 export const isPublicCopy = (item: CopyItem): boolean => Number(item.from_public || item.source_id || 0) > 0;
 
+/** 公共文案 AI 仿写产物：来源标记 4，与公共模板无版本关系 */
+export const isAiRewriteCopy = (item: CopyItem): boolean => Number(item.source || 0) === 4;
+
 export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) => {
     const { copy } = useCopy();
     const copyTab = ref<CopyLibraryTypeEnum>(CopyLibraryTypeEnum.DRIVE);

@@ -11,41 +11,43 @@ use think\facade\Cache;
  * 模板中心客户端（2026-09-02）：直连 imai-temp.imai.work 公开分发接口。
  *
  * 缓存与韧性设计：
- *   - 结果进 Redis 缓存 10 分钟——同步 cron 每小时才跑一次，缓存主要防
- *     手动重复执行/多进程并发时打远端；
+ *   - 结果进 Redis 缓存 5 分钟——与定时同步节奏对齐，避免缓存吃掉一整个同步
+ *     周期；定时任务传 $useCache = false 直接打远端，手动重复执行仍走缓存；
  *   - 拉取失败直接抛异常，由调用方（同步任务）记录错误并跳过本轮——
  *     本地表数据保持原样继续服务，模板中心抖动不影响线上；
- *   - 空结果不进缓存，避免一次坏响应被缓 10 分钟。
+ *   - 空结果不进缓存，避免一次坏响应被缓存。
  */
 class TemplateCenterClient
 {
-    private const CACHE_TTL = 600;
+    private const CACHE_TTL = 300;
     private const CONNECT_TIMEOUT = 5;
     private const TIMEOUT = 10;
 
     /** 闪剪剪辑模板（字段与旧同步契约同构：id/name/cover_url/scene/demo_url/auto_type/sort） */
-    public static function shanjianClipTemplates(): array
+    public static function shanjianClipTemplates(bool $useCache = true): array
     {
-        return self::fetchTemplates('/api/shanjian-clip-templates', 'tpl_center:shanjian_clip');
+        return self::fetchTemplates('/api/shanjian-clip-templates', 'tpl_center:shanjian_clip', 'templates', $useCache);
     }
 
     /** 爆款玩法模板（ref_id/play/name/category/heat/duration_sec/video_url/cover_url/face_count/allow_bg_replace/script/sort） */
-    public static function playTemplates(): array
+    public static function playTemplates(bool $useCache = true): array
     {
-        return self::fetchTemplates('/api/play-templates', 'tpl_center:play');
+        return self::fetchTemplates('/api/play-templates', 'tpl_center:play', 'templates', $useCache);
     }
 
     /** 系统曲库（id/name/audio_url/duration_sec/sort，只含上架） */
-    public static function systemMusics(): array
+    public static function systemMusics(bool $useCache = true): array
     {
-        return self::fetchTemplates('/api/system-musics', 'tpl_center:system_music', 'musics');
+        return self::fetchTemplates('/api/system-musics', 'tpl_center:system_music', 'musics', $useCache);
     }
 
-    private static function fetchTemplates(string $path, string $cacheKey, string $dataKey = 'templates'): array
+    private static function fetchTemplates(string $path, string $cacheKey, string $dataKey = 'templates', bool $useCache = true): array
     {
-        $cached = Cache::get($cacheKey);
-        if (is_array($cached) && $cached !== []) {
-            return $cached;
+        if ($useCache) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached) && $cached !== []) {
+                return $cached;
+            }
         }
 
         $base = rtrim((string)(config('api_tools.template_center_url') ?: 'https://imai-temp.imai.work'), '/');

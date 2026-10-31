@@ -5,6 +5,11 @@ export function getUserList(params: any) {
     return request.get({ url: "/user.user/lists", params }, { ignoreCancelToken: true });
 }
 
+// 用户列表导出（导出弹窗统计 export=1 与生成 export=2 同 URL，需关闭自动取消）
+export function exportUser(params: any) {
+    return request.get({ url: "/user.user/export", params }, { ignoreCancelToken: true });
+}
+
 // 用户列表
 export function getUserGroupAll(params?: any) {
     return request.get({ url: "/user.userGroup/all", params });

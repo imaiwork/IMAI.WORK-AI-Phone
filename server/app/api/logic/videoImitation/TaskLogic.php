@@ -28,8 +28,11 @@ use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
 use app\common\model\videoImitation\VideoImitationTask;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
+use app\common\service\AiMaterialRelevanceService;
 use app\common\service\draw\MediaModelsService;
 use app\common\service\FileService;
+use app\common\service\hotspot\ScriptService;
+use app\common\service\MaterialKeywordPlanner;
 use app\common\service\MaterialReadinessService;
 use app\common\service\ShanjianQueueService;
 use app\common\service\square\SquareAssetService;
@@ -52,9 +55,9 @@ class TaskLogic extends BaseLogic
     /** 手动纯AI素材搜索与转码的同步处理限制 */
     private const WASH_STRICT_MATERIAL_TIMEOUT_SECONDS = 180;
     private const WASH_STRICT_MATERIAL_CLEANUP_RESERVE_SECONDS = 45;
-    private const WASH_STRICT_MATERIAL_MAX_ROUNDS = 5;
-    private const WASH_STRICT_VIDEO_GRAB_BATCH_SIZE = 1;
-    private const WASH_STRICT_IMAGE_GRAB_BATCH_SIZE = 1;
+    private const WASH_STRICT_MATERIAL_MAX_ROUNDS = 6;
+    private const WASH_STRICT_VIDEO_GRAB_BATCH_SIZE = 2;
+    private const WASH_STRICT_IMAGE_GRAB_BATCH_SIZE = 2;
     private const WASH_STRICT_ROUND_TRANSCODE_WAIT_SECONDS = 10;
     private const WASH_STRICT_VIDEO_DOWNLOAD_TIMEOUT_SECONDS = 30;
     private const WASH_STRICT_IMAGE_DOWNLOAD_TIMEOUT_SECONDS = 15;
@@ -1225,6 +1228,7 @@ class TaskLogic extends BaseLogic
             1 => ['v_min' => 8, 'v_max' => 8, 'i_min' => 2, 'i_max' => 3], // 素材混剪
             2 => ['v_min' => 5, 'v_max' => 5, 'i_min' => 2, 'i_max' => 3], // 新闻体
         ];
+        // 无文案锚点时的原条数目标：洗稿按稳定哈希、人设仿写按随机区间
         if ($isWashMode) {
             [$targetVideoCount, $targetImageCount] = self::resolveWashStrictMaterialTargets(
                 (int)$task->id,
@@ -1310,6 +1314,40 @@ class TaskLogic extends BaseLogic
                 self::setError('当前人设为原图模式，素材库中没有可用的原图视频素材，请先上传原图素材或将人设切回自动适配');
                 return false;
             }
+        }
+
+        // —— AI 找素材按素材秒数锚点：成片预估 = 真实口播秒数（字数/4.2），
+        // 与下发时长（字数/3）取较大值作上限；素材总量需覆盖 [上限 × 0.5, 上限]。
+        // 条数 = 已有人设素材 + 缺口折算，图片按目标秒数×15% 折算（2~8 张），视频最低 2 条、最高熔断 50 条；
+        // 视频条数仅作抓取上限，实际按本轮目标秒数累加到即收口，避免按均条长高估后大量素材被裁掉。
+        // 新闻体没有口播、纯人设/广场素材不找 AI，均沿用上面的原条数规则。
+        $materialCeilSec = 0.0;
+        $anchor = ScriptService::materialAnchorSeconds($rewrittenText, 1.0, (float)$duration);
+        if ($isMaterial != 2 && $anchor['floor_sec'] > 0 && in_array((int)$visualMaterialSource, [1, 2], true)) {
+            $anchorVideos = (int)$visualMaterialSource === 1 ? [] : $localVideos;
+            $anchorImages = (int)$visualMaterialSource === 1 ? [] : $localImages;
+            [$targetVideoCount, $targetImageCount] = self::resolveAnchorMaterialTargets(
+                $anchor,
+                $anchorVideos,
+                $anchorImages,
+                (int)$isMaterial
+            );
+            // 素材总量上限 = 成片预估秒数，超过就按秒数裁到区间内
+            $materialCeilSec = $anchor['ceil_sec'];
+            Log::channel('shanjian')->write(sprintf(
+                '[视频仿写素材锚点] task_id=%d text=%d字 成片预估=%.1f秒 下限=%.1f秒 上限=%.1f秒 '
+                . '来源=%d 人设视频=%d条 人设图片=%d张 目标视频=%d条 目标图片=%d张',
+                (int)$task->id,
+                ScriptService::wordCount($rewrittenText),
+                $anchor['est_sec'],
+                $anchor['floor_sec'],
+                $anchor['ceil_sec'],
+                (int)$visualMaterialSource,
+                count($anchorVideos),
+                count($anchorImages),
+                $targetVideoCount,
+                $targetImageCount
+            ));
         }
 
         $maxAiCost = 0;
@@ -1409,7 +1447,8 @@ class TaskLogic extends BaseLogic
                 (int)$task->platform_type,
                 $useManagedPureAiMaterial,
                 $useManagedPureAiMaterial,
-                false
+                false,
+                $materialCeilSec
             );
         } catch (\Exception $e) {
             $errorMsg = $e->getMessage();
@@ -1488,7 +1527,7 @@ class TaskLogic extends BaseLogic
                 if (!empty($voiceId)) {
                     $shanjianPayload['speakerId'] = $voiceId;
                     // 语速仅闪剪 TTS(speakerId) 路径可用；MiniMax 走 audioUrl，闪剪会忽略 speedRatio
-                    $speedRatio = self::resolveSpeechRate($task, $userId);
+                    $speedRatio = self::resolveSpeechRate($task, $userId, $isMaterial);
                     if ($speedRatio !== null) {
                         $shanjianPayload['speakerExtra'] = array_merge(
                             is_array($shanjianPayload['speakerExtra'] ?? null) ? $shanjianPayload['speakerExtra'] : [],
@@ -2193,6 +2232,56 @@ class TaskLogic extends BaseLogic
         return [$videoCount, $imageCount];
     }
 
+    /**
+     * 素材秒数锚点目标条数：素材总量需覆盖 [成片预估 × 0.5, 成片预估]。
+     * 本轮目标秒数：数字人（is_material=0）取 floor，素材混剪（is_material=1）取 ceil。
+     * 图片目标 = 目标秒数 × 15% / 每张 2 秒，夹 2~8 张；剩余时长缺口按人设视频均条长折算成视频条数，
+     * 最低 2 条兜底、最高 50 条熔断（仅防极端长文案抓取费用失控）。不落库、不调 AI。
+     *
+     * @param array{est_sec:float,floor_sec:float,ceil_sec:float} $anchor
+     * @return array{0:int,1:int} [视频数, 图片数]
+     */
+    private static function resolveAnchorMaterialTargets(
+        array $anchor,
+        array $localVideos,
+        array $localImages,
+        int $isMaterial = 1
+    ): array {
+        $targetSec = $isMaterial === 0
+            ? (float)($anchor['floor_sec'] ?? 0)
+            : (float)($anchor['ceil_sec'] ?? 0);
+        $videoSec = 0.0;
+        $durations = [];
+        foreach ($localVideos as $video) {
+            $duration = (float)($video['duration'] ?? 0);
+            if ($duration <= 0) {
+                continue;
+            }
+            $videoSec += $duration;
+            $durations[] = $duration;
+        }
+        $imageCount = count($localImages);
+        $imageSec = $imageCount * ScriptService::IMAGE_DISPLAY_SEC;
+        $imageTarget = max(ScriptService::imageTargetCount($targetSec), $imageCount);
+        // 图片占位只算「AI 还会补的图片」：已选图片的秒数已被 $imageSec 覆盖，
+        // 再按目标条数全量占位会重复扣减、让视频少补
+        $aiImageWillAdd = max(0, $imageTarget - $imageCount);
+        $videoGapSec = max(
+            0.0,
+            $targetSec - $videoSec - $imageSec
+                - $aiImageWillAdd * ScriptService::IMAGE_DISPLAY_SEC
+        );
+        $avgSec = $durations !== [] ? array_sum($durations) / count($durations) : 5.0;
+        $avgSec = max(1.0, $avgSec);
+        $videoTarget = count($localVideos) + (int)ceil($videoGapSec / $avgSec);
+        $videoTarget = max(
+            ScriptService::MATERIAL_ANCHOR_MIN_VIDEO,
+            min($videoTarget, ScriptService::MATERIAL_ANCHOR_VIDEO_CAP)
+        );
+
+        return [$videoTarget, $imageTarget];
+    }
+
     private static function stableWashMaterialCount(
         int $taskId,
         int $isMaterial,
@@ -2223,7 +2312,8 @@ class TaskLogic extends BaseLogic
         int $platformType = 0,
         bool $strictCount = false,
         bool $filterExistingLibrary = false,
-        bool $reuseExistingLibrary = false
+        bool $reuseExistingLibrary = false,
+        float $ceilSec = 0.0
     ): array
     {
         if ($strictCount) {
@@ -2241,7 +2331,8 @@ class TaskLogic extends BaseLogic
                 $taskId,
                 $platformType,
                 $filterExistingLibrary,
-                $reuseExistingLibrary
+                $reuseExistingLibrary,
+                $ceilSec
             );
         }
 
@@ -2305,10 +2396,10 @@ class TaskLogic extends BaseLogic
             }
         }
 
-        // Limit duration check (max 300s)
+        // Limit duration check (max 300s)；有素材秒数锚点时收口到成片预估秒数
         $result = [];
         $currentDuration = 0;
-        $maxDuration = 300;
+        $maxDuration = $ceilSec > 0 ? min(300.0, $ceilSec) : 300.0;
         
         $pickedVideoCount = 0;
         $pickedImageCount = 0;
@@ -2385,7 +2476,8 @@ class TaskLogic extends BaseLogic
         int $taskId,
         int $platformType,
         bool $filterExistingLibrary = false,
-        bool $reuseExistingLibrary = false
+        bool $reuseExistingLibrary = false,
+        float $ceilSec = 0.0
     ): array {
         $startedAt = microtime(true);
         $hardDeadline = $startedAt + self::WASH_STRICT_MATERIAL_TIMEOUT_SECONDS;
@@ -2398,7 +2490,7 @@ class TaskLogic extends BaseLogic
         $completed = false;
 
         try {
-            $keywords = self::extractWashStrictKeywords(
+            $plannedQueries = self::extractWashStrictKeywords(
                 $text,
                 $searchDeadline
             );
@@ -2428,20 +2520,31 @@ class TaskLogic extends BaseLogic
             }
             Log::channel('shanjian')->write('[手动纯AI找素材关键词] ' . json_encode([
                 'task_id' => $taskId,
-                'keyword_count' => count($keywords),
-                'keywords' => $keywords,
+                'keyword_count' => count($plannedQueries),
+                'planned_queries' => $plannedQueries,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
             $keywordCursor = ['video' => 0, 'image' => 1];
+            $targetSec = max(0.0, $ceilSec);
             $selection = self::selectWashStrictMaterials(
                 $candidates,
                 $targetVideoCount,
-                $targetImageCount
+                $targetImageCount,
+                $targetSec
             );
             $searchStoppedByDeadline = false;
 
             for ($round = 1; $round <= self::WASH_STRICT_MATERIAL_MAX_ROUNDS; $round++) {
                 if (microtime(true) >= $searchDeadline) {
                     $searchStoppedByDeadline = true;
+                    break;
+                }
+                // 素材秒数已覆盖本轮目标时不再发起新的付费抓取，避免超出目标后仍按条数空抓。
+                if (self::washStrictSelectionReachedTarget(
+                    $selection,
+                    $targetVideoCount,
+                    $targetImageCount,
+                    $targetSec
+                )) {
                     break;
                 }
                 // 待转码素材也占用目标名额，避免上一批尚未完成时重复发起大量付费抓取。
@@ -2457,6 +2560,14 @@ class TaskLogic extends BaseLogic
                     'video' => max(0, $targetVideoCount - $activeCounts['video']),
                     'image' => max(0, $targetImageCount - $activeCounts['image']),
                 ];
+                // 视频秒数已覆盖目标时只继续补齐图片，不再为凑条数重复抓视频。
+                if (
+                    $targetSec > 0
+                    && count($selection['videos']) >= min(2, $targetVideoCount)
+                    && $selection['total_duration'] >= $targetSec
+                ) {
+                    $gaps['video'] = 0;
+                }
                 if ($gaps['video'] <= 0 && $gaps['image'] <= 0) {
                     // 名额都在等待转码时继续轮询，但不再发起新的付费抓取。
                     $roundWaitDeadline = min(
@@ -2472,12 +2583,15 @@ class TaskLogic extends BaseLogic
                     $selection = self::selectWashStrictMaterials(
                         $candidates,
                         $targetVideoCount,
-                        $targetImageCount
+                        $targetImageCount,
+                        $targetSec
                     );
-                    if (
-                        count($selection['videos']) >= $targetVideoCount
-                        && count($selection['images']) >= $targetImageCount
-                    ) {
+                    if (self::washStrictSelectionReachedTarget(
+                        $selection,
+                        $targetVideoCount,
+                        $targetImageCount,
+                        $targetSec
+                    )) {
                         break;
                     }
                     continue;
@@ -2494,8 +2608,10 @@ class TaskLogic extends BaseLogic
                             $searchStoppedByDeadline = true;
                             break 2;
                         }
-                        $keyword = $keywords[$keywordCursor[$type] % count($keywords)];
+                        $plannedQuery = $plannedQueries[$keywordCursor[$type] % count($plannedQueries)];
                         $keywordCursor[$type]++;
+                        $keyword = (string)($plannedQuery['query'] ?? '');
+                        $keywordType = (string)($plannedQuery['type'] ?? '');
                         $grabTaskId = (string)generate_unique_task_id();
                         $grabCalls[$grabTaskId] = [
                             'type' => $type,
@@ -2526,7 +2642,9 @@ class TaskLogic extends BaseLogic
                                 $filterExistingLibrary,
                                 $reuseExistingLibrary,
                                 $searchDeadline,
-                                $taskId
+                                $taskId,
+                                $keyword,
+                                $keywordType
                             );
                             if ($candidate !== null) {
                                 $candidates[$type][] = $candidate;
@@ -2581,7 +2699,8 @@ class TaskLogic extends BaseLogic
                 $selection = self::selectWashStrictMaterials(
                     $candidates,
                     $targetVideoCount,
-                    $targetImageCount
+                    $targetImageCount,
+                    $targetSec
                 );
 
                 Log::channel('shanjian')->write('[手动纯AI找素材] ' . json_encode([
@@ -2594,6 +2713,14 @@ class TaskLogic extends BaseLogic
                     'total_duration' => $selection['total_duration'],
                     'deadline_reached' => $searchStoppedByDeadline ? 1 : 0,
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                if (self::washStrictSelectionReachedTarget(
+                    $selection,
+                    $targetVideoCount,
+                    $targetImageCount,
+                    $targetSec
+                )) {
+                    break;
+                }
                 if ($searchStoppedByDeadline) {
                     break;
                 }
@@ -2610,7 +2737,8 @@ class TaskLogic extends BaseLogic
             $selection = self::selectWashStrictMaterials(
                 $candidates,
                 $targetVideoCount,
-                $targetImageCount
+                $targetImageCount,
+                $targetSec
             );
             $finalPendingCount = 0;
             foreach (['video', 'image'] as $candidateType) {
@@ -2629,9 +2757,11 @@ class TaskLogic extends BaseLogic
                 'hard_deadline_reached' => microtime(true) >= $hardDeadline ? 1 : 0,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-            $selected = array_merge($selection['videos'], $selection['images']);
             // 复用现有时长门禁；目标数量仅为上限，不再要求视频、图片分别达标。
-            $selected = ShanjianVideoSettingLogic::trimMaterialsByDuration($selected, 300, 59);
+            // 有素材秒数锚点时上限收口到成片预估秒数，避免总时长超出区间
+            $strictMaxDuration = $ceilSec > 0 ? (int)min(300.0, $ceilSec) : 300;
+            $selected = array_merge($selection['videos'], $selection['images']);
+            $selected = ShanjianVideoSettingLogic::trimMaterialsByDuration($selected, $strictMaxDuration, 59);
             if ($selected === []) {
                 throw new \RuntimeException('未找到与文案关键词匹配的可用素材');
             }
@@ -2725,13 +2855,12 @@ class TaskLogic extends BaseLogic
     /**
      * 最多请求三轮关键词；只使用最终文案提取结果，不追加人设行业词或固定兜底词。
      *
-     * @return array<int, string>
+     * @return array<int, array{query: string, type: string}>
      */
     private static function extractWashStrictKeywords(
         string $text,
         float $deadline
-    ): array
-    {
+    ): array {
         $keywords = [];
         $attempts = 0;
         $lastError = '';
@@ -2780,11 +2909,25 @@ class TaskLogic extends BaseLogic
             throw new \RuntimeException($message);
         }
 
+        // 叙事短语直接投给素材库只能召回字面近邻，先改写成具体画面查询词，并带上关键词类型
+        $originKeywords = array_values($keywords);
+        $plan = MaterialKeywordPlanner::plan($originKeywords, $text, $deadline);
+        $planned = MaterialKeywordPlanner::plannedQueries($plan['items']);
+        if ($planned === []) {
+            $planned = [];
+            foreach ($originKeywords as $keyword) {
+                $planned[] = ['query' => $keyword, 'type' => MaterialKeywordPlanner::classify($keyword)];
+            }
+        }
+
         Log::channel('shanjian')->write('[手动纯AI关键词提取] ' . json_encode([
             'attempts' => $attempts,
-            'keyword_count' => count($keywords),
+            'keyword_count' => count($originKeywords),
+            'plan_source' => $plan['source'],
+            'origin_keywords' => $originKeywords,
+            'planned_queries' => $planned,
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        return array_values($keywords);
+        return $planned;
     }
 
     /**
@@ -2873,9 +3016,12 @@ class TaskLogic extends BaseLogic
         bool $filterExistingLibrary = false,
         bool $reuseExistingLibrary = false,
         float $deadline = 0,
-        int $taskId = 0
+        int $taskId = 0,
+        string $keyword = '',
+        string $keywordType = ''
     ): ?array {
-        foreach ($list as $item) {
+        // 同一批搜索结果里先按贴合度排序，避免「首条通过即用」捡到字面近邻
+        foreach (self::rankWashStrictCandidates($list, $type, $keyword) as $item) {
             if ($deadline > 0 && microtime(true) >= $deadline) {
                 break;
             }
@@ -2886,6 +3032,10 @@ class TaskLogic extends BaseLogic
             }
             $seenRemoteUrls[$remoteDedupKey] = true;
             if (!FileService::isAllowedGrabMaterialUrl($link, $type)) {
+                continue;
+            }
+            // 相关性闸门：标题与搜索词无文字交集（或品牌/人物等类型不达标）的候选直接丢弃，避免跨行业素材混入
+            if (!AiMaterialRelevanceService::passes($item, $keyword, 'shanjian', '手动纯AI找素材', $keywordType)) {
                 continue;
             }
             if (
@@ -2905,6 +3055,21 @@ class TaskLogic extends BaseLogic
             $duration = $type === 'video' ? (float)($item['duration'] ?? 0) : 2.0;
             if ($type === 'video' && ($duration <= 0 || $duration > 59)) {
                 continue;
+            }
+
+            // 视频画面闸门前置：用中台返回的封面判图，拒绝后直接换下一条候选，避免先转码才发现不符
+            if ($type === 'video') {
+                $coverUrl = trim((string)($item['image'] ?? ''));
+                if ($coverUrl !== '' && !AiMaterialRelevanceService::passesVisual($coverUrl, $keyword, 'shanjian', '手动纯AI找素材画面预检', $keywordType)) {
+                    Log::channel('shanjian')->write(sprintf(
+                        '[手动纯AI找素材] 画面预检拒绝 task_id=%d grab_task_id=%s keyword=%s remote=%s',
+                        $taskId,
+                        $grabTaskId,
+                        mb_substr($keyword, 0, 50, 'UTF-8'),
+                        mb_substr($link, 0, 180, 'UTF-8')
+                    ));
+                    continue;
+                }
             }
 
             $maxDownloadSeconds = $type === 'video'
@@ -2933,17 +3098,31 @@ class TaskLogic extends BaseLogic
                         $downloadResult = 'duplicate_content';
                         self::logSkippedExistingStrictMaterial($grabTaskId, $type, $link, 'content');
                     } else {
-                        $downloadResult = 'dispatched';
-                        $dispatchedCandidate = [
-                            'file_id' => $fileId,
-                            'remote_url' => $link,
-                            'fileUrl' => $fileUrl,
-                            'type' => $type,
-                            'duration' => $duration,
-                            'size' => self::resolveGrabbedMaterialSize($transRes),
-                            'grab_task_id' => $grabTaskId,
-                            'transcode_status' => 'pending',
-                        ];
+                        // 画面闸门：视频已在下载前用封面判过，这里只补图片（转存后才有可访问地址）
+                        $visualUrl = $type === 'video' ? '' : $fileUrl;
+                        if ($visualUrl !== '' && !AiMaterialRelevanceService::passesVisual($visualUrl, $keyword, 'shanjian', '手动纯AI找素材画面校验', $keywordType)) {
+                            $downloadResult = 'visual_rejected';
+                            Log::channel('shanjian')->write(sprintf(
+                                '[手动纯AI找素材] 画面闸门拒绝 task_id=%d grab_task_id=%s type=%s keyword=%s remote=%s',
+                                $taskId,
+                                $grabTaskId,
+                                $type,
+                                mb_substr($keyword, 0, 50, 'UTF-8'),
+                                mb_substr($link, 0, 180, 'UTF-8')
+                            ));
+                        } else {
+                            $downloadResult = 'dispatched';
+                            $dispatchedCandidate = [
+                                'file_id' => $fileId,
+                                'remote_url' => $link,
+                                'fileUrl' => $fileUrl,
+                                'type' => $type,
+                                'duration' => $duration,
+                                'size' => self::resolveGrabbedMaterialSize($transRes),
+                                'grab_task_id' => $grabTaskId,
+                                'transcode_status' => 'pending',
+                            ];
+                        }
                     }
                 }
             } catch (\Throwable $e) {
@@ -2980,6 +3159,37 @@ class TaskLogic extends BaseLogic
         }
 
         return null;
+    }
+
+    /**
+     * 按候选与关键词的贴合度排序（稳定排序，同分保持搜索结果原顺序）。
+     * 只负责排序，不做通过/拒绝判定，过滤条件仍由 dispatchWashStrictCandidate 统一处理。
+     *
+     * @param array<int, array<string, mixed>> $list
+     * @return array<int, array<string, mixed>>
+     */
+    public static function rankWashStrictCandidates(array $list, string $type, string $keyword): array
+    {
+        $ranked = [];
+        foreach (array_values($list) as $index => $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $ranked[] = [
+                'score' => AiMaterialRelevanceService::candidateScore($item, $keyword, $type),
+                'index' => $index,
+                'item' => $item,
+            ];
+        }
+        usort($ranked, static function (array $a, array $b): int {
+            if ($a['score'] === $b['score']) {
+                return $a['index'] <=> $b['index'];
+            }
+            return $b['score'] <=> $a['score'];
+        });
+        return array_map(static function (array $row): array {
+            return $row['item'];
+        }, $ranked);
     }
 
     /**
@@ -3199,7 +3409,9 @@ class TaskLogic extends BaseLogic
     }
 
     /**
-     * 按类型上限选择：图片固定2秒，视频优先较短素材，并为目标图片预留总时长。
+     * 按类型上限选择：图片固定2秒，视频优先较短素材。
+     * 有素材秒数锚点（$targetSec > 0）时按目标秒数收口，视频条数仅作上限；
+     * 无锚点时保持原有按条数选择逻辑。
      *
      * @param array{video:array<int,array<string,mixed>>,image:array<int,array<string,mixed>>} $candidates
      * @return array{videos:array<int,array<string,mixed>>,images:array<int,array<string,mixed>>,total_duration:float}
@@ -3207,7 +3419,8 @@ class TaskLogic extends BaseLogic
     private static function selectWashStrictMaterials(
         array $candidates,
         int $targetVideoCount,
-        int $targetImageCount
+        int $targetImageCount,
+        float $targetSec = 0.0
     ): array {
         $images = array_values(array_filter(
             $candidates['image'] ?? [],
@@ -3235,7 +3448,10 @@ class TaskLogic extends BaseLogic
 
         $selectedVideos = [];
         $videoDuration = 0.0;
-        $videoBudget = 300 - ($targetImageCount * 2);
+        // 无秒数锚点时保持原口径：先为图片预留总时长；有锚点时按目标秒数收口
+        $videoBudget = $targetSec > 0 ? 300.0 : 300 - ($targetImageCount * 2);
+        $imageDuration = count($images) * 2.0;
+        $minVideoCount = $targetSec > 0 ? min(2, $targetVideoCount) : $targetVideoCount;
         foreach ($videos as $video) {
             if (count($selectedVideos) >= $targetVideoCount) {
                 break;
@@ -3246,13 +3462,43 @@ class TaskLogic extends BaseLogic
             }
             $selectedVideos[] = $video;
             $videoDuration += $duration;
+            // 图片秒数先占位，视频累加到本轮目标秒数即收口；视频已按短到长排序，下一条只会更接近目标
+            if (
+                $targetSec > 0
+                && count($selectedVideos) >= $minVideoCount
+                && ($imageDuration + $videoDuration) >= $targetSec
+            ) {
+                break;
+            }
         }
 
         return [
             'videos' => $selectedVideos,
             'images' => $images,
-            'total_duration' => $videoDuration + (count($images) * 2),
+            'total_duration' => $videoDuration + $imageDuration,
         ];
+    }
+
+    /**
+     * 洗稿纯AI素材是否已达标：图片张数先达标，再判断素材秒数是否覆盖本轮目标；
+     * 无秒数锚点时退化为原有按条数判断。
+     *
+     * @param array{videos:array<int,array<string,mixed>>,images:array<int,array<string,mixed>>,total_duration:float} $selection
+     */
+    private static function washStrictSelectionReachedTarget(
+        array $selection,
+        int $targetVideoCount,
+        int $targetImageCount,
+        float $targetSec
+    ): bool {
+        if (count($selection['images']) < $targetImageCount) {
+            return false;
+        }
+        if ($targetSec > 0) {
+            return count($selection['videos']) >= min(2, $targetVideoCount)
+                && $selection['total_duration'] >= $targetSec;
+        }
+        return count($selection['videos']) >= $targetVideoCount;
     }
 
     /**
@@ -3520,6 +3766,10 @@ class TaskLogic extends BaseLogic
                         if ($link === '' || !FileService::isAllowedGrabMaterialUrl($link, 'video')) {
                             continue;
                         }
+                        // 相关性闸门：标题与搜索词无文字交集的候选直接丢弃，避免跨行业素材混入
+                        if (!AiMaterialRelevanceService::passes($item, $keyword, 'shanjian', '人设模式AI找视频素材')) {
+                            continue;
+                        }
                         $reused = self::buildReusedVideoImitationCandidate($userId, 'video', $link, $item, (string)$taskId);
                         if ($reused !== null) {
                             $videos[] = $reused;
@@ -3537,12 +3787,23 @@ class TaskLogic extends BaseLogic
                                 // 抓取结果无时长时跳过，避免默认5s低估触发闪剪5分钟限制
                                 continue;
                             }
+                            // 画面闸门：文本闸门对无标题候选一律放行，需视觉模型确认视频封面与关键词相符
+                            $thumbUrl = (string)($item['image'] ?? '');
+                            if ($thumbUrl !== '' && !AiMaterialRelevanceService::passesVisual($thumbUrl, $keyword, 'shanjian', '人设模式AI找视频素材画面校验')) {
+                                Log::channel('shanjian')->write(sprintf(
+                                    '[人设模式AI找视频素材] 画面闸门拒绝 task_id=%d keyword=%s remote=%s',
+                                    $taskId,
+                                    mb_substr($keyword, 0, 50, 'UTF-8'),
+                                    mb_substr($link, 0, 180, 'UTF-8')
+                                ));
+                                continue;
+                            }
                             $videos[] = [
                                 'fileUrl' => FileService::getFileUrl($url),
                                 'type' => 'video',
                                 'duration' => $duration,
                                 'size' => self::resolveGrabbedMaterialSize($transRes),
-                                'thumbnail_url' => self::resolveGrabbedVideoCover((string)($item['image'] ?? '')),
+                                'thumbnail_url' => self::resolveGrabbedVideoCover($thumbUrl),
                                 'remote_url' => $link,
                             ];
                             $readyVideosCount++;
@@ -3569,6 +3830,10 @@ class TaskLogic extends BaseLogic
                         if ($link === '' || !FileService::isAllowedGrabMaterialUrl($link, 'image')) {
                             continue;
                         }
+                        // 相关性闸门：标题与搜索词无文字交集的候选直接丢弃，避免跨行业素材混入
+                        if (!AiMaterialRelevanceService::passes($item, $keyword, 'shanjian', '人设模式AI找图片素材')) {
+                            continue;
+                        }
                         $reused = self::buildReusedVideoImitationCandidate($userId, 'image', $link, $item, (string)$taskId);
                         if ($reused !== null) {
                             $images[] = $reused;
@@ -3581,8 +3846,19 @@ class TaskLogic extends BaseLogic
                             if (empty($url)){
                                 continue;
                             }
+                            $fileUrl = FileService::getFileUrl($url);
+                            // 画面闸门：文本闸门对无标题候选一律放行，需视觉模型确认图片画面与关键词相符
+                            if (!AiMaterialRelevanceService::passesVisual($fileUrl, $keyword, 'shanjian', '人设模式AI找图片素材画面校验')) {
+                                Log::channel('shanjian')->write(sprintf(
+                                    '[人设模式AI找图片素材] 画面闸门拒绝 task_id=%d keyword=%s remote=%s',
+                                    $taskId,
+                                    mb_substr($keyword, 0, 50, 'UTF-8'),
+                                    mb_substr($link, 0, 180, 'UTF-8')
+                                ));
+                                continue;
+                            }
                             $images[] = [
-                                'fileUrl' => FileService::getFileUrl($url),
+                                'fileUrl' => $fileUrl,
                                 'type' => 'image',
                                 'duration' => 2,
                                 'size' => self::resolveGrabbedMaterialSize($transRes),
@@ -3790,7 +4066,9 @@ class TaskLogic extends BaseLogic
         array &$seenRemoteUrls,
         int $userId = 0,
         bool $filterExistingLibrary = false,
-        bool $reuseExistingLibrary = false
+        bool $reuseExistingLibrary = false,
+        string $keyword = '',
+        string $keywordType = ''
     ): ?array {
         return self::dispatchWashStrictCandidate(
             $list,
@@ -3799,7 +4077,11 @@ class TaskLogic extends BaseLogic
             $seenRemoteUrls,
             $userId,
             $filterExistingLibrary,
-            $reuseExistingLibrary
+            $reuseExistingLibrary,
+            0,
+            0,
+            $keyword,
+            $keywordType
         );
     }
 
@@ -3901,6 +4183,7 @@ class TaskLogic extends BaseLogic
         if ($washTemplateId !== '' && (int)$task->rewrite_mode === VideoImitationTask::REWRITE_MODE_WASH) {
             $ok = ShanjianClipTemplate::where('id', $washTemplateId)
                 ->where('scene', self::resolveStyleScene($isMaterial))
+                ->where('status', 1)
                 ->count() > 0;
             if ($ok) {
                 return $washTemplateId;
@@ -3941,6 +4224,8 @@ class TaskLogic extends BaseLogic
         // 洗稿可能抽到人设模式永远抽不到的非自动化模板。
         $clip = ShanjianClipTemplate::where('scene', self::resolveStyleScene($isMaterial))
             ->where('auto_type', 1)
+            // 后台隐藏的模板不参与随机，避免「用户看不到却总被抽中」
+            ->where('status', 1)
             ->orderRand()
             ->find();
 
@@ -4036,9 +4321,10 @@ class TaskLogic extends BaseLogic
     }
 
     /**
-     * 口播语速：人设模式跟随 speech_rate；洗稿/无配置/异常返回 null（不下发该字段，保持中台默认）
+     * 口播语速：人设模式按生成类型取 speech_rate（缺项回落顶层）；
+     * 洗稿/无配置/异常返回 null（不下发该字段，保持中台默认）
      */
-    private static function resolveSpeechRate(VideoImitationTask $task, int $userId): ?float
+    private static function resolveSpeechRate(VideoImitationTask $task, int $userId, int $isMaterial = 0): ?float
     {
         try {
             $config = self::findPersonaSynthesisConfig($task, $userId);
@@ -4051,8 +4337,10 @@ class TaskLogic extends BaseLogic
                     : AiPersonaSynthesisConfig::normalizeSpeechRate($washRate);
             }
 
-            return AiPersonaSynthesisConfig::normalizeSpeechRate(
-                $config->speech_rate ?? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT
+            // is_material(0 数字人 / 2 新闻体 / 其它 素材混剪) → 生成类型 1/4/3
+            return AiPersonaSynthesisConfig::resolveTypeSpeechRate(
+                $config,
+                self::resolveTemplateGenerationType($isMaterial)
             );
         } catch (\Throwable $e) {
             Log::channel('shanjian')->write(sprintf(

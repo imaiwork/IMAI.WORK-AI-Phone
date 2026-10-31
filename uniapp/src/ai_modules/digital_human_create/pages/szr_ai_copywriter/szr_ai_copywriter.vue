@@ -133,6 +133,7 @@ import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { getCopyWritingGenerate } from "@/api/agent";
 import { getRect } from "@/utils/util";
+import { getCopyLangFailReason } from "@/utils/textValidator";
 import useAgent from "@/ai_modules/digital_human_create/hooks/useAgent";
 
 // ─── 常量 ─────────────────────────────────────────────────────────
@@ -341,6 +342,17 @@ function useCopywriterGenerate(options: {
 
     // ── 使用文案：emit 回调并返回上一页 ──
     const confirmUseContent = (content: string) => {
+        // 语言检测硬拦截：检测不通过不允许使用
+        const failReason = getCopyLangFailReason(content);
+        if (failReason) {
+            uni.showModal({
+                title: "文案语言检测不通过",
+                content: `文案${failReason}，请重新生成或复制后手动修改`,
+                confirmText: "知道了",
+                showCancel: false,
+            });
+            return;
+        }
         emit("confirm", {
             type: ListenerTypeEnum.AI_COPYWRITER,
             data: content,

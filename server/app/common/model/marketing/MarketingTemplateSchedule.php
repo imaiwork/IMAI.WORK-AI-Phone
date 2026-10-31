@@ -61,4 +61,39 @@ class MarketingTemplateSchedule extends BaseModel
         return count($scheduleIds);
     }
 
+    /**
+     * 统计人设工作流中「需要视频素材」的发布时段数量（已剔除用户关闭的时段）。
+     * 与内容发布建单侧同口径：小红书配置图文的纯图文时段走图片池，不计入视频出片配额。
+     * @param int $personaId 人设ID
+     * @param int $scene 场景：5=社媒内容发布
+     */
+    public static function getTodayVideoPublishTaskCount(int $personaId, int $scene = 5): int
+    {
+        $persona = AiPersona::where('id', $personaId)->findOrEmpty();
+        if ($persona->isEmpty()) {
+            return 0;
+        }
+
+        $schedules = self::where('template_id', $persona->workflow_template_id)
+            ->where('scene', $scene)
+            ->where('id', 'not in', function ($query) use ($persona, $scene) {
+                $query->name('ai_persona_workflow_schedule_user')
+                    ->where('user_id', $persona->user_id)
+                    ->where('persona_id', $persona->id)
+                    ->where('template_id', $persona->workflow_template_id)
+                    ->where('status', 0)->field('schedule_id');
+            })
+            ->field('id,platform')
+            ->select();
+
+        $count = 0;
+        foreach ($schedules as $schedule) {
+            if (AiPersona::scheduleNeedsVideoPublish($persona, $schedule->platform)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
 }

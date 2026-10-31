@@ -1203,7 +1203,16 @@ class KbRobotLogic extends BaseLogic
                     AccountLogLogic::recordUserTokensLog(true, $params['user_id'], $tokenCode, $points, $task_id, $extra);
                 }
                 if (isset($res['data']) && count($res['data']) > 0) {
-                    self::$returnData = $res['data'];
+                    // ─── 文案质量校验：英文缺空格 / 外文乱码 ───
+                    $data = $res['data'];
+                    if (isset($data['content']) && is_array($data['content'])) {
+                        $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($data['content']);
+                        $data['content'] = $sanitized['content'];
+                        if (!empty($sanitized['warnings'])) {
+                            $data['warnings'] = $sanitized['warnings'];
+                        }
+                    }
+                    self::$returnData = $data;
                 } else {
                     self::setError('生成失败');
                     return false;

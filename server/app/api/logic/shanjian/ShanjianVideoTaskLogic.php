@@ -7,11 +7,14 @@ use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\device\TaskLogic;
 use app\api\logic\service\TokenLogService;
 use app\common\enum\DeviceEnum;
+use app\common\enum\FileEnum;
 use app\common\enum\user\AccountLogEnum;
 use app\common\exception\MaterialNotReadyException;
 use app\common\logic\AccountLogLogic;
 use app\common\model\aiPersona\AiPersona;
+use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
+use app\common\model\file\File;
 use app\common\model\ModelConfig;
 use app\common\model\shanjian\ShanjianClipTemplate;
 use app\common\model\shanjian\ShanjianVideoSetting;
@@ -27,9 +30,11 @@ use app\common\service\aiPersona\CloudPublishCopyService;
 use app\common\service\FileService;
 use app\common\service\hotspot\VideoService;
 use app\common\service\MaterialReadinessService;
+use app\common\service\ResolutionValidator;
 use app\common\service\ShanjianQueueService;
 use app\common\service\TeamBillingService;
 use app\common\service\TeamContextService;
+use app\common\service\UploadService;
 use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Log;
@@ -322,6 +327,11 @@ class ShanjianVideoTaskLogic extends ApiLogic
         }
     }
 
+    /**
+     * 闪剪报「风格不存在」时把本地模板置为隐藏（status=0），不再硬删。
+     * 硬删的下场是下一轮同步把模板中心仍在架的坏模板重新插回来，
+     * 24 小时自动创作又会反复抽中同一批坏模板；置隐藏则同步永不覆盖，站长想恢复再打开即可。
+     */
     private static function deleteClipTemplateIfExists(string $clipId, string $taskId = ''): void
     {
         $clipId = trim($clipId);
@@ -329,14 +339,21 @@ class ShanjianVideoTaskLogic extends ApiLogic
             return;
         }
 
-        $deleted = ShanjianClipTemplate::where('id', $clipId)->delete();
-        if ($deleted) {
-            $message = '视频风格不存在,已删除模版 clip_id=' . $clipId;
-            if ($taskId !== '') {
-                $message .= ' task_id=' . $taskId;
-            }
-            Log::channel('shanjianClipTemplate')->write($message);
+        $row = ShanjianClipTemplate::where('id', $clipId)->find();
+        if ($row === null) {
+            return;
         }
+
+        // 已经是隐藏状态就别每轮重复写库；不写 update_time（该列只表示模板中心的内容更新时间）
+        if ((int)$row['status'] !== 0) {
+            ShanjianClipTemplate::where('id', $clipId)->update(['status' => 0]);
+        }
+
+        $message = '视频风格不存在,已隐藏模版 clip_id=' . $clipId;
+        if ($taskId !== '') {
+            $message .= ' task_id=' . $taskId;
+        }
+        Log::channel('shanjianClipTemplate')->write($message);
     }
 
     /**
@@ -464,6 +481,21 @@ class ShanjianVideoTaskLogic extends ApiLogic
             if (!$allowAutoTask && (int)$task->auto_type !== 0) {
                 self::setError('自动任务不支持手动重试');
                 Db::rollback();
+                return false;
+            }
+
+            // 重试前完整性校验：缺 styleId/virtualmanId/speakerId/素材时重试必然再失败，
+            // 直接拦下让上层回退到「重新发起生成」（重新走素材前处理），避免白扣一次重试。
+            $integrityIssues = self::submitIntegrityIssues($task);
+            if ($integrityIssues !== []) {
+                Db::rollback();
+                self::setError('视频关键参数缺失（' . implode('、', $integrityIssues) . '），请重新发起生成');
+                Log::channel('shanjiannotice')->write('retry_integrity_check 视频重试完整性校验未通过' . json_encode([
+                    'id' => (int)$task->id,
+                    'task_id' => (string)$task->task_id,
+                    'shanjian_type' => (int)$task->shanjian_type,
+                    'issues' => $integrityIssues,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 return false;
             }
 
@@ -740,6 +772,108 @@ class ShanjianVideoTaskLogic extends ApiLogic
         return false;
     }
 
+    /**
+     * 提交前后完整性校验：缺关键参数时闪剪必然校验失败，重试等于白跑一次。
+     * 只校验确定必填的字段，类型 2/5 由各自链路（主视频转码/引擎桥接）单独把关。
+     *
+     * @return array<int, string> 缺失项（空数组=完整）
+     */
+    public static function submitIntegrityIssues(ShanjianVideoTask $task): array
+    {
+        $type = (int)$task->shanjian_type;
+        $issues = [];
+        if ($type === 1) {
+            if (trim((string)$task->clip_id) === '') {
+                $issues[] = 'styleId';
+            }
+            if (trim((string)$task->anchor_id) === '') {
+                $issues[] = 'virtualmanId';
+            }
+            if (trim((string)$task->audio_url) === '' && trim((string)$task->voice_id) === '') {
+                $issues[] = 'speakerId/audioUrl';
+            }
+        } elseif (in_array($type, [3, 4], true)) {
+            if (trim((string)$task->clip_id) === '') {
+                $issues[] = 'styleId';
+            }
+            $material = is_string($task->material)
+                ? (json_decode((string)$task->material, true) ?: [])
+                : (array)$task->material;
+            if (!self::hasValidMaterialFileUrl($material)) {
+                $issues[] = 'material';
+            }
+        }
+        return $issues;
+    }
+
+    /** 智剪包装的主视频不在 material 中，需单独转码并等待文件就绪。 */
+    private static function preflightMainVideo(ShanjianVideoTask $task): bool
+    {
+        if ((int)$task->shanjian_type !== 2 || trim((string)$task->anchor_id) === '') {
+            return true;
+        }
+
+        $videoUrl = FileService::getFileUrl(trim((string)$task->anchor_id));
+        $extra = self::normalizeJsonArrayField($task->extra);
+        $fileId = (int)($extra['main_video_transcode_file_id'] ?? 0);
+        $file = $fileId > 0
+            ? File::where('id', $fileId)->find()
+            : File::where('uri', 'in', [self::normalizeSubmitUri($videoUrl), $videoUrl])
+                ->order('id', 'desc')->find();
+        if ($fileId > 0 && !$file) {
+            self::setError('主视频转码文件记录不存在，请重新生成或更换视频');
+            return false;
+        }
+
+        if ($file) {
+            $check = MaterialReadinessService::checkFileUrlsForSubmit([(string)$file->uri]);
+            // 队列可能刚完成并改写 uri，按文件 ID 回读，不能继续提交旧地址。
+            $file = File::where('id', (int)$file->id)->find();
+            if (!$file || !empty($check['failed_uris']) || (int)$file->transcode_status === 4) {
+                self::setError('主视频转码失败或超时，请重新生成或更换视频');
+                return false;
+            }
+            if (!empty($check['pending_uris']) || in_array((int)$file->transcode_status, [1, 2], true)) {
+                if ($fileId !== (int)$file->id) {
+                    $extra['main_video_transcode_file_id'] = (int)$file->id;
+                    $task->extra = $extra;
+                    $task->save();
+                }
+                throw MaterialNotReadyException::fromCheck($check, '主视频 task_id=' . $task->task_id);
+            }
+            if ((int)$file->transcode_status === 3) {
+                $videoUrl = FileService::getFileUrl((string)$file->uri);
+            }
+        }
+
+        $violations = ResolutionValidator::findViolations([['url' => $videoUrl, 'type' => 'video']]);
+        if (empty($violations)) {
+            if ((string)$task->anchor_id !== $videoUrl) {
+                $task->anchor_id = $videoUrl;
+                $task->save();
+            }
+            return true;
+        }
+        if ($file && (int)$file->transcode_status === 3) {
+            self::setError('主视频转码后分辨率仍超过2000x2000，请重新生成或更换视频');
+            return false;
+        }
+
+        // 生成成片可能只经过 FileService 转存，没有 file 记录或本地副本。
+        // 复用远程素材入库转码入口，兼容 OSS，并保留文件 ID 追踪转码后的地址。
+        // 主视频最长 5 分钟，转码规范必须放宽到 300s，否则默认 60s 会把长口播视频截断
+        $result = UploadService::transcodeBySource(
+            $videoUrl, 'video', 0, (int)$task->user_id, FileEnum::SOURCE_USER, 120, false,
+            ['video' => ['duration' => 300]]
+        );
+        $extra['main_video_transcode_file_id'] = (int)$result['id'];
+        $task->extra = $extra;
+        $task->save();
+        Log::channel('shanjiannotice')->write('主视频已投递转码 task_id=' . $task->task_id
+            . ' file_id=' . $result['id']);
+        throw new MaterialNotReadyException('主视频分辨率超标，已投递转码，等待完成后提交');
+    }
+
     private static function failEmptyMaterialTask(ShanjianVideoTask $task): void
     {
         $task->status = 2;
@@ -978,8 +1112,12 @@ class ShanjianVideoTaskLogic extends ApiLogic
         } elseif (!empty($packaging['clip'][0]['clip_template_id'])) {
             $clipId = $packaging['clip'][0]['clip_template_id'];
         }
+        // 后台隐藏/已下架的模板不能再用，与「未选模板」同样回落随机
+        if ($clipId !== '' && ShanjianClipTemplate::where('id', $clipId)->where('status', 1)->count() === 0) {
+            $clipId = '';
+        }
         if ($clipId === '') {
-            $clipTemplates = \app\common\model\shanjian\ShanjianClipTemplate::where('scene', 'realMan')->column('id');
+            $clipTemplates = ShanjianClipTemplate::visibleIdsByScene('realMan');
             if (!empty($clipTemplates)) {
                 $clipId = (string)$clipTemplates[random_int(0, count($clipTemplates) - 1)];
             }
@@ -1251,15 +1389,39 @@ class ShanjianVideoTaskLogic extends ApiLogic
             }
             $taskIds = array_values(array_unique($taskIds));
 
+            // 排除成品库直发明细（task_type=99 且 scene=2）：其历史行的 video_task_id 写的是成品库素材 id，
+            // 与闪剪视频任务 id 撞号时会被本回填误改 material_url/status
             $details = SvPublishSettingDetail::where('video_task_id', 'in', $taskIds)
                 ->where('user_id', (int)$task->user_id)
                 ->where('account_type', 'in', [1, 3, 4, 5])
                 ->where('status', 'in', $reviveFailed ? [0, 2, 5] : [0])
+                ->whereRaw('NOT (task_type = 99 AND scene = 2)')
                 ->select();
+
+            // 人设级守卫：明细所属人设当前为成品库直发时，AI 成片与直发素材无关，直接跳过不回填
+            // （覆盖人设从「视频剪辑」切成「成品库直发」前已创建的 scene=1 明细）
+            $personaIds = [];
+            foreach ($details as $item) {
+                $pid = (int)$item->persona_id;
+                if ($pid > 0) {
+                    $personaIds[$pid] = true;
+                }
+            }
+            $directSendPersonaIds = [];
+            if ($personaIds !== []) {
+                $directSendPersonaIds = AiPersona::whereIn('id', array_keys($personaIds))
+                    ->where('publish_mode', Material::PUBLISH_MODE_DIRECT_SEND)
+                    ->column('id');
+            }
 
             $pendingCount = 0;
             $overdueCount = 0;
+            $skippedDirectSendCount = 0;
             foreach ($details as $detail) {
+                if (in_array((int)$detail->persona_id, $directSendPersonaIds, true)) {
+                    $skippedDirectSendCount++;
+                    continue;
+                }
                 // 已失败明细仅当此前没有成片(material_url 为空,即因视频未生成而失败)才允许复活;
                 // 设备端发布失败的明细已有成片与真实失败原因,不得重置
                 if ((int)$detail->status !== 0 && trim((string)$detail->getData('material_url')) !== '') {
@@ -1304,6 +1466,7 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 'video_result_url' => $videoUrl,
                 'pending_count' => $pendingCount,
                 'overdue_count' => $overdueCount,
+                'skipped_direct_send_count' => $skippedDirectSendCount,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         } catch (\Throwable $e) {
             Log::channel('shanjian')->error('闪剪视频同步待发布详情失败: ' . $e->getMessage());
@@ -1708,6 +1871,12 @@ class ShanjianVideoTaskLogic extends ApiLogic
 
         $result = self::requestUrl($request, $scene, self::$uid, $taskId);
         if (!empty($result) && isset($result['content'])) {
+            // ─── 文案质量校验：英文缺空格 / 外文乱码 ───
+            $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
+            $result['content'] = $sanitized['content'];
+            if (!empty($sanitized['warnings'])) {
+                $result['warnings'] = $sanitized['warnings'];
+            }
             self::$returnData = $result;
         } else {
             self::setError('生成失败');
@@ -2613,18 +2782,20 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     // `trim($submitPic) != '' && $task->thumb_status == 2` 才带封面,
                     // thumb_status 不是 2 的任务压根不带 pic,为一张用不上的缩略图把整条视频判失败不值当。
                     $preflightPic = (int)$task->thumb_status === 2 ? $submitPic : '';
-                    if ($preflightPic !== '') {
-                        // 封面按素材模式各自的口径判：能用就带上，压不下去(如转码失败)就丢封面继续合成。
-                        // 不能让一张缩略图把整条视频判失败——它会把这个人设每天每条都毁掉。
-                        $preflightPic = ShanjianVideoSettingLogic::resolveSubmitCover(
-                            $preflightPic,
-                            $useMode,
-                            $taskUserId,
-                            (string)$task->task_id
-                        );
-                        $submitPic = $preflightPic;
-                    }
                     try {
+                        if ($preflightPic !== '') {
+                            // 封面按素材模式各自的口径判：能用就带上，压不下去(如转码失败)就丢封面继续合成。
+                            // 不能让一张缩略图把整条视频判失败——它会把这个人设每天每条都毁掉。
+                            // 必须在 try 内：resolveSubmitCover 会抛 MaterialNotReadyException，
+                            // 放在 try 外会绕过下面那道"保持生成中"的 catch，改成 tries++ 把任务判死。
+                            $preflightPic = ShanjianVideoSettingLogic::resolveSubmitCover(
+                                $preflightPic,
+                                $useMode,
+                                $taskUserId,
+                                (string)$task->task_id
+                            );
+                            $submitPic = $preflightPic;
+                        }
                         $materialArr = is_string($task->material)
                             ? (json_decode($task->material, true) ?: [])
                             : (array)$task->material;
@@ -2632,7 +2803,9 @@ class ShanjianVideoTaskLogic extends ApiLogic
                             self::failEmptyMaterialTask($task);
                             continue;
                         }
-                        if (empty($materialArr)) {
+                        if (!self::preflightMainVideo($task)) {
+                            $preflightOk = false;
+                        } elseif (empty($materialArr)) {
                             // 部分视频任务没有素材;先保留封面等预检,通过后再跳过素材转码收敛/失败删除判断。
                             $preflightOk = ShanjianVideoSettingLogic::preflightMaterials(
                                 ['material' => []],
@@ -2747,6 +2920,20 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     ) {
                         continue;
                     }
+
+                    // 下发尝试日志：门禁全过后记录真正要提交的关键参数，便于失败单按 attempt 回放
+                    Log::channel('shanjiannotice')->write('submit_shanjian_attempt 闪剪下发尝试' . json_encode([
+                        'id' => (int)$task->id,
+                        'task_id' => (string)$task->task_id,
+                        'shanjian_type' => (int)$task->shanjian_type,
+                        'auto_type' => (int)$task->auto_type,
+                        'clip_id' => (string)$task->clip_id,
+                        'anchor_id' => (string)$task->anchor_id,
+                        'has_audio_url' => trim((string)$task->audio_url) !== '',
+                        'voice_id' => (string)$task->voice_id,
+                        'material_count' => count($submitMaterials),
+                        'integrity_issues' => self::submitIntegrityIssues($task),
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
                     $videoDuration = $extra['videoDuration'] ?? 0;
                     switch ($task->shanjian_type) {

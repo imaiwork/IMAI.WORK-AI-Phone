@@ -231,6 +231,9 @@ const { on } = useEventBusManager()
 const formData = reactive(createDefaultFormData())
 
 const { step: currentStep, canNext, currentClueList, handleStep, STEPS } = useStep(formData)
+// 进页面回填上次填过的线索词 / 私信话术 / 加好友备注
+const { historyKeywordsSnapshot } = useHistory(formData)
+
 const {
     currentFrequency,
     taskErrorMsg,
@@ -240,10 +243,7 @@ const {
     handleCreateTask,
     handleTaskMsgPopConfirm,
     handleCreateTaskSuccess
-} = useCreateTask(formData)
-
-// 进页面回填上次填过的线索词 / 私信话术 / 加好友备注
-useHistory(formData)
+} = useCreateTask(formData, historyKeywordsSnapshot)
 
 // 加微客服微信下拉：account 就是 wxid，多选数组由 config-step 转换为 wechat_id 字符串
 const { optionsData } = useDictOptions<{ wechatLists: any[] }>({

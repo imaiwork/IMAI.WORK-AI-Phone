@@ -329,4 +329,18 @@ class VoiceLogic extends ApiLogic
         self::$returnData = \app\common\service\SystemMusicService::publicList();
         return true;
     }
+
+    /**
+     * 选曲页的分组 tab（全部 + 各分组）。与 musicLists 分开下发，
+     * 是为了让老版本 App 拿到的 musicLists 仍是原来的数组结构。
+     *
+     * $includeEmpty：配置页选分组时传 true，连暂时没有可用曲目的分组一起返回。
+     * 选曲页不传，空分组在那边就是个点进去空白的死 tab。
+     */
+    public static function musicGroups(bool $includeEmpty = false){
+        self::$returnData = $includeEmpty
+            ? \app\common\service\SystemMusicService::allGroups()
+            : \app\common\service\SystemMusicService::publicGroups();
+        return true;
+    }
 }

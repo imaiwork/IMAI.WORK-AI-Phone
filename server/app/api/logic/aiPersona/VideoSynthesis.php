@@ -600,12 +600,14 @@ class VideoSynthesis extends BasePersonaLogic
                         unset($item['id']);
                         unset($item['thumbnail_url']);
                     }
-                    $extradata['volume'] = AiPersonaSynthesisConfig::normalizeMusicVolume(
-                        $synthesisConfig->isEmpty() ? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT : ($synthesisConfig->music_volume ?? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT)
-                    );
-                    $extradata['speed_ratio'] = AiPersonaSynthesisConfig::normalizeSpeechRate(
-                        $synthesisConfig->isEmpty() ? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT : ($synthesisConfig->speech_rate ?? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT)
-                    );
+                    // 背景音乐与音量按生成类型取（朋友圈链路也按类型生效）
+                    $momentMusic = $synthesisConfig->isEmpty()
+                        ? ['url' => CopywritingImitationLogic::resolveSystemMusicUrl(), 'volume' => AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT]
+                        : CopywritingImitationLogic::resolveMusicForTask($synthesisConfig, (int)$persona->id, (int)$shanjianType);
+                    $extradata['volume'] = AiPersonaSynthesisConfig::normalizeMusicVolume($momentMusic['volume']);
+                    $extradata['speed_ratio'] = $synthesisConfig->isEmpty()
+                        ? AiPersonaSynthesisConfig::SPEECH_RATE_DEFAULT
+                        : AiPersonaSynthesisConfig::resolveTypeSpeechRate($synthesisConfig, (int)$shanjianType);
                     $shanjianVideoSettingData['name'] = '朋友圈-' . mb_substr($taskTitle, 0, 6) . '-' . date('YmdHis') . '-' . $typeName;
                     if ($shanjianType == 4) {
                         $taskTitle = $copywritingResult4['0']['title'];
@@ -614,16 +616,14 @@ class VideoSynthesis extends BasePersonaLogic
                         $copywritingResult2['0']['title'] = $taskTitle;
                         $shanjianVideoSettingData['copywriting'] = json_encode($copywritingResult2, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     }
-                    $clip_template_id = ShanjianClipTemplate::where('scene', $scene)->where('auto_type', $auto_type)->column('id');
+                    $clip_template_id = ShanjianClipTemplate::visibleIdsByScene((string)$scene, (int)$auto_type);
                     if (empty($clip_template_id)) {
-                        throw new \Exception('未找到剪辑模板');
+                        throw new \Exception('未找到剪辑模板(已被后台隐藏)');
                     }
                     $clip_template_total = count($clip_template_id) - 1;
                     $clip = random_int(0, $clip_template_total);
                     $clip_id = $clip_template_id[$clip];
-                    $music_url = $synthesisConfig->isEmpty()
-                        ? CopywritingImitationLogic::resolveSystemMusicUrl()
-                        : CopywritingImitationLogic::resolveMusicUrlByConfig($synthesisConfig, (int)$persona->id);
+                    $music_url = $momentMusic['url'];
                     $shanjianVideoSettingData['material'] = json_encode($selectedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     $shanjianVideoSettingData['voice'] = $voice_id;
 

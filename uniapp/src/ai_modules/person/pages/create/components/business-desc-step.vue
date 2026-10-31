@@ -68,7 +68,7 @@
                     <view
                         class="rounded-[24rpx] bg-[#F3F7FC] px-[24rpx] py-[20rpx] border-[3rpx] border-solid border-[transparent]">
                         <textarea
-                            v-model="currentSubForm[field.modelKey]"
+                            v-model="form[field.modelKey]"
                             :maxlength="1000"
                             :placeholder="field.placeholder"
                             placeholder-style="color:#C2C9D1;font-size:26rpx;font-weight:400;line-height:1.65;"
@@ -77,7 +77,7 @@
                     </view>
                     <view class="flex justify-end mt-[8rpx]">
                         <text class="text-[20rpx] leading-[1.4] text-[#C0C8D8]">
-                            {{ (currentSubForm[field.modelKey] || "").length }} 字
+                            {{ (form[field.modelKey] || "").length }} 字
                         </text>
                     </view>
                 </view>
@@ -102,15 +102,13 @@ interface BizField {
     example: string[];
 }
 
-defineProps<{
-    isAddMode: boolean;
-    analysisTokenScore: number;
+const props = defineProps<{
     currentSubForm: Record<string, any>;
 }>();
 
-const emit = defineEmits<{
-    (event: "open-voice"): void;
-}>();
+// 与 basic-info-step 一致：父层传下来的就是这个 reactive 表单对象，
+// 子组件直接改字段（v-model 走 props 会触发 vue/no-mutating-props，别名是既有写法）
+const form = props.currentSubForm;
 
 const bizFields = computed<BizField[]>(() => [
     {

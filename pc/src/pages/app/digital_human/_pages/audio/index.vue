@@ -89,7 +89,6 @@
 
 <script setup lang="ts">
 import { getAudioList, deleteAudio } from "@/api/digital_human";
-import AudioControl from "@/pages/app/derivative_work/_components/control.vue";
 import { useAppStore } from "@/stores/app";
 import { DigitalHumanModelVersionEnum } from "../../_enums";
 const appStore = useAppStore();
@@ -106,9 +105,6 @@ const modelChannel = computed(() => {
     }
     return [];
 });
-
-const showAudio = ref<boolean>(false);
-const audioControlRef = shallowRef<InstanceType<typeof AudioControl>>();
 
 const queryParams = reactive({
     name: "",
@@ -128,11 +124,8 @@ const getModelType = (type: number) => {
 const currentAudio = ref<any>({});
 const currentRowIndex = ref<number>();
 const handlePlay = async (row: any, index: number) => {
-    showAudio.value = true;
     currentRowIndex.value = index;
     currentAudio.value = row;
-    await nextTick();
-    audioControlRef.value?.setAudio(currentAudio.value.url);
 };
 
 const handleDelete = async (id: number) => {

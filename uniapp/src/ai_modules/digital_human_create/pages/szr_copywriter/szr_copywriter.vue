@@ -54,6 +54,7 @@
 <script setup lang="ts">
 import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import { getCopyLangFailReason } from "@/utils/textValidator";
 
 const { emit } = useEventBusManager();
 
@@ -64,6 +65,8 @@ const formData = reactive({
 });
 
 const textLimit = ref(500);
+// 语言检测硬拦截模式：入口页带 strict=1 时，文案检测不通过不允许完成
+const strictCheck = ref(false);
 
 const back = () => {
     if (!formData.content) {
@@ -72,6 +75,18 @@ const back = () => {
             return;
         } else {
             uni.$u.toast("请输入文案");
+            return;
+        }
+    }
+    if (strictCheck.value) {
+        const failReason = getCopyLangFailReason(formData.content);
+        if (failReason) {
+            uni.showModal({
+                title: "文案语言检测不通过",
+                content: `文案${failReason}，请修改后再完成`,
+                confirmText: "去修改",
+                showCancel: false,
+            });
             return;
         }
     }
@@ -89,6 +104,9 @@ onLoad((options: any) => {
     if (options.content) {
         formData.content = options.content;
         isEdit.value = true;
+    }
+    if (options.strict == 1) {
+        strictCheck.value = true;
     }
 });
 </script>

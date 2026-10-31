@@ -16,7 +16,7 @@
                 <view class="flex-1 min-w-0 flex flex-col gap-[8rpx]">
                     <text class="text-[34rpx] font-semibold text-[#202937]">从公共热门文案添加</text>
                     <text class="text-[24rpx] leading-[36rpx] text-[#647184]">
-                        按当前人设改写后存进我的文案，不会自动推送
+                        「导入」把文案原样存进我的文案；「AI仿写」按当前人设重写后存入，按实际消耗算力扣费
                     </text>
                 </view>
                 <view class="pc-close" @click="emit('update:modelValue', false)">
@@ -60,7 +60,6 @@
                                     v-for="item in items"
                                     :key="item.id"
                                     class="pc-card"
-                                    :class="isLocked(item) ? 'opacity-50' : ''"
                                     @click="toggleSelect(item)">
                                     <view class="flex items-start gap-[16rpx]">
                                         <view class="flex-1 min-w-0">
@@ -80,10 +79,7 @@
                                                 {{ item.content || item.topic || typeLabel(item) }}
                                             </text>
                                         </view>
-                                        <view
-                                            v-if="!isLocked(item)"
-                                            class="pc-check"
-                                            :class="isSelected(item.id) ? 'pc-check--on' : ''">
+                                        <view class="pc-check" :class="isSelected(item.id) ? 'pc-check--on' : ''">
                                             <u-icon
                                                 v-if="isSelected(item.id)"
                                                 name="checkbox-mark"
@@ -103,8 +99,16 @@
                 </view>
                 <view class="pc-foot">
                     <text class="text-[24rpx] text-[#647184]">已选 {{ selectedIds.length }} 条</text>
-                    <view class="pc-add" :class="selectedIds.length ? '' : 'opacity-40'" @click="handleConfirm">
-                        <text>加入我的文案</text>
+                    <view class="flex items-center gap-[16rpx]">
+                        <view class="pc-add" :class="selectedIds.length ? '' : 'opacity-40'" @click="handleImport">
+                            <text>导入</text>
+                        </view>
+                        <view
+                            class="pc-ai"
+                            :class="selectedIds.length ? '' : 'opacity-40'"
+                            @click="handleRewrite">
+                            <text>AI仿写</text>
+                        </view>
                     </view>
                 </view>
             </view>
@@ -114,7 +118,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { addPublicCopies, getPublicCopyBrowse } from "@/api/publicCopy";
+import { addPublicCopies, getPublicCopyBrowse, rewritePublicCopies } from "@/api/publicCopy";
 
 const TYPE_FILTERS = [
     { key: "all", label: "全部", library_type: 0, driver_type: -1 },
@@ -154,6 +158,8 @@ const show = computed({
 });
 
 const PAGE_SIZE = 20;
+/** 与服务端 PublicCopywritingRewriteService::MAX_BATCH 对齐：一次串行仿写太多会撞请求超时 */
+const MAX_REWRITE = 5;
 
 const typeFilters = TYPE_FILTERS;
 const items = ref<any[]>([]);
@@ -174,14 +180,21 @@ const typeLabel = (item: any) => {
     return matched?.label || "公共文案";
 };
 
-const isLocked = (item: any) => Boolean(item.added) && !item.has_update;
+/** 已同步且平台没有新版本 —— 只影响「导入」，不影响勾选（勾选后仍可 AI 仿写） */
+const isSynced = (item: any) => Boolean(item.added) && !item.has_update;
+const isFrame = (item: any) => Number(item.ui_type) === 2;
 const isSelected = (id: number) => selectedIds.value.includes(id);
 
 const toggleSelect = (item: any) => {
-    if (isLocked(item)) return;
-    selectedIds.value = isSelected(item.id)
-        ? selectedIds.value.filter((id) => id !== item.id)
-        : selectedIds.value.concat(item.id);
+    if (isSelected(item.id)) {
+        selectedIds.value = selectedIds.value.filter((id) => id !== item.id);
+        return;
+    }
+    if (selectedIds.value.length >= MAX_REWRITE) {
+        uni.showToast({ title: `一次最多选 ${MAX_REWRITE} 条`, icon: "none" });
+        return;
+    }
+    selectedIds.value = selectedIds.value.concat(item.id);
 };
 
 const loadPage = async (reset: boolean) => {
@@ -226,25 +239,71 @@ const loadMore = () => {
 const handleSwitchType = (key: TypeFilterKey) => {
     if (activeKey.value === key) return;
     activeKey.value = key;
+    // 换分类后旧的选中项已经不在列表里，继续留着只会占「最多 5 条」的名额
+    selectedIds.value = [];
     loadPage(true);
 };
 
-const handleConfirm = async () => {
-    if (!selectedIds.value.length) return;
-    uni.showLoading({ title: "加入中...", mask: true });
+const handleImport = async () => {
+    const ids = selectedIds.value.filter((id) => {
+        const item = items.value.find((row) => row.id === id);
+        return item ? !isSynced(item) : false;
+    });
+    if (!ids.length) {
+        uni.showToast({ title: "选中的都已同步，无需重复导入", icon: "none" });
+        return;
+    }
+    uni.showLoading({ title: "导入中...", mask: true });
     try {
         const res: any = await addPublicCopies({
             persona_id: props.personaId,
-            ids: selectedIds.value,
+            ids,
         });
         uni.showToast({ title: res?.message || "已加入", icon: "none", duration: 2500 });
         emit("added");
         emit("update:modelValue", false);
     } catch (error: any) {
-        uni.showToast({ title: error || "加入失败", icon: "none", duration: 2500 });
+        uni.showToast({ title: error || "导入失败", icon: "none", duration: 2500 });
     } finally {
         uni.hideLoading();
     }
+};
+
+const handleRewrite = () => {
+    if (!selectedIds.value.length) return;
+    const picked = items.value.filter((item) => selectedIds.value.includes(item.id));
+    // 提示词框架是「给 AI 看的骨架」，本身没成品正文可仿写，先拦在本地避免白扣算力
+    if (picked.some((item) => isFrame(item))) {
+        uni.showToast({ title: "「提示词框架」类请用导入", icon: "none", duration: 2500 });
+        return;
+    }
+    if (picked.length > MAX_REWRITE) {
+        uni.showToast({ title: `一次最多仿写 ${MAX_REWRITE} 条`, icon: "none" });
+        return;
+    }
+
+    uni.showModal({
+        title: "AI仿写",
+        content: `按当前人设重写这 ${picked.length} 条文案并存入我的文案，按实际消耗算力扣费，是否继续？`,
+        confirmText: "开始仿写",
+        success: async (res) => {
+            if (!res.confirm) return;
+            uni.showLoading({ title: "AI 仿写中...", mask: true });
+            try {
+                const result: any = await rewritePublicCopies({
+                    persona_id: props.personaId,
+                    ids: picked.map((item) => item.id),
+                });
+                uni.showToast({ title: result?.message || "已仿写", icon: "none", duration: 2500 });
+                emit("added");
+                emit("update:modelValue", false);
+            } catch (error: any) {
+                uni.showToast({ title: error || "仿写失败", icon: "none", duration: 2500 });
+            } finally {
+                uni.hideLoading();
+            }
+        },
+    });
 };
 
 watch(
@@ -305,5 +364,12 @@ watch(
 }
 .pc-add {
     @apply min-h-[72rpx] px-[32rpx] rounded-full bg-primary text-white text-[26rpx] font-semibold flex items-center;
+}
+/* AI仿写：次级样式，和「导入」区分开，避免误点扣费 */
+.pc-ai {
+    @apply min-h-[72rpx] px-[28rpx] rounded-full text-[26rpx] font-semibold flex items-center;
+    color: #075ecf;
+    background: #e8f1ff;
+    border: 2rpx solid #b9d5fb;
 }
 </style>

@@ -200,6 +200,32 @@
                                         </view>
                                     </view>
 
+                                    <!-- 文案质量警告提示条 -->
+                                    <view
+                                        v-if="item.warning"
+                                        class="mb-[14rpx] rounded-[12rpx] px-[16rpx] py-[12rpx] flex items-center justify-between"
+                                        :style="item.warning.type === 'mojibake'
+                                            ? 'background:#FEF2F2;border:1px solid #FECACA'
+                                            : 'background:#FFFBEB;border:1px solid #FDE68A'"
+                                        @click.stop="showWarningDetail(index)">
+                                        <view class="flex items-center gap-[10rpx] flex-1 min-w-0">
+                                            <u-icon
+                                                :name="item.warning.type === 'mojibake' ? 'error-circle' : 'warning'"
+                                                :color="item.warning.type === 'mojibake' ? '#EF4444' : '#F59E0B'"
+                                                size="18" />
+                                            <view class="flex-1 min-w-0">
+                                                <text
+                                                    class="text-[22rpx] font-medium block truncate"
+                                                    :style="item.warning.type === 'mojibake' ? 'color:#EF4444' : 'color:#B45309'">
+                                                    {{ item.warning.type === 'mojibake' ? '外文乱码检测到' : '空格分词语种疑似单词间缺空格' }}
+                                                </text>
+                                                <text class="text-[20rpx] block truncate opacity-70">
+                                                    点击查看修复建议
+                                                </text>
+                                            </view>
+                                        </view>
+                                    </view>
+
                                     <template v-if="isNewsBodyMode">
                                         <view
                                             class="bg-[#F8FAFC] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#F0F2F5]">
@@ -336,6 +362,7 @@ import { TokensSceneEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum, MontageTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useAgent from "@/ai_modules/digital_human_create/hooks/useAgent";
+import { validateText, fixEnglishSpaces, stripGarbage } from "@/utils/textValidator";
 
 // ─── 常量 ─────────────────────────────────────────────────────────
 const CONTENT_MAX_LENGTH = 1000;
@@ -358,6 +385,8 @@ const agentData = ref({
 const montageType = ref<MontageTypeEnum>();
 /** 由人设管理等场景带人设进入时锁定，不允许在本页切换人设 */
 const personaLocked = ref(false);
+/** 语言检测硬拦截模式：入口页带 strict=1 时，文案检测不通过不允许确认使用 */
+const strictCheck = ref(false);
 
 /** 是否系统 Agent 模式 */
 const isSystemMode = computed(() => agentData.value.agentType === 1);
@@ -386,6 +415,8 @@ const {
     handleSubmit,
     handleDeleteItem,
     confirmUseContent,
+    applyWarningFix,
+    showWarningDetail,
 } = useCopywriterGenerate({
     agentData,
     isSystemMode,
@@ -394,6 +425,7 @@ const {
     currentPrompt,
     currentPromptNum,
     selectedPerson,
+    strictCheck,
 });
 
 // ─── 页面生命周期 ─────────────────────────────────────────────────
@@ -402,6 +434,9 @@ const { pollingEnd } = useAgent({ onfinish: () => {}, onerror: () => {} });
 onLoad((options: any) => {
     if (options?.montageType) {
         montageType.value = parseInt(options.montageType);
+    }
+    if (options?.strict == 1) {
+        strictCheck.value = true;
     }
     if (options?.agentData) {
         agentData.value = JSON.parse(options.agentData);
@@ -460,6 +495,7 @@ function useCopywriterGenerate(options: {
     currentPrompt: Ref<any>;
     currentPromptNum: Ref<number>;
     selectedPerson: Ref<any>;
+    strictCheck: Ref<boolean>;
 }) {
     const {
         agentData,
@@ -469,6 +505,7 @@ function useCopywriterGenerate(options: {
         currentPrompt,
         currentPromptNum,
         selectedPerson,
+        strictCheck,
     } = options;
 
     const userStore = useUserStore();
@@ -581,7 +618,7 @@ function useCopywriterGenerate(options: {
 
         // 新闻 / 分镜混剪模式：不请求标题，不额外扣算力
         if (isNewsBodyMode.value || isStoryboardMixMode.value) {
-            const { content } = await systemChat({
+            const res = await systemChat({
                 sn: agentData.value.agentId,
                 keywords: input,
                 number: currentPromptNum.value,
@@ -589,13 +626,15 @@ function useCopywriterGenerate(options: {
                 persona_id: selectedPerson.value?.id,
                 type: agentData.value.engine,
             });
-            if (content?.length > 0) {
-                resultList.value = content.map((item: any) => ({
+            if (res.content?.length > 0) {
+                resultList.value = res.content.map((item: any, index: number) => ({
                     title: item,
                     content: item,
                     status: "success",
+                    warning: res.warnings?.find((w: any) => w.index === index) ?? null,
                 }));
                 userStore.getUser();
+                showWarningsIfAny();
             } else {
                 uni.$u.toast("生成失败，请重试");
                 resetResult();
@@ -621,8 +660,10 @@ function useCopywriterGenerate(options: {
                 title: titleRes.content?.[index] ?? `标题 ${index + 1}`,
                 content: item,
                 status: "success",
+                warning: contentRes.warnings?.find((w: any) => w.index === index) ?? null,
             }));
             userStore.getUser();
+            showWarningsIfAny();
         } else {
             uni.$u.toast("生成失败，请重试");
             resetResult();
@@ -669,12 +710,120 @@ function useCopywriterGenerate(options: {
         }
     };
 
+    // ── 文案质量警告处理 ────────────────────────────────────
+
+    /** 检查 resultList 中是否存在 warning 并弹出提示 */
+    const showWarningsIfAny = () => {
+        const hasWarnings = resultList.value.some((item: any) => item.warning)
+        if (hasWarnings) {
+            uni.showToast({
+                title: "部分文案可能存在问题，点击查看修复建议",
+                icon: "none",
+                duration: 3500,
+            })
+        }
+    }
+
+    /** 对单条文案应用修复版本 */
+    const applyWarningFix = (index: number) => {
+        const item = resultList.value[index]
+        if (!item?.warning?.fixed) return
+        if (isNewsBodyMode.value || isStoryboardMixMode.value) {
+            item.title = item.warning.fixed
+            item.content = item.warning.fixed
+        } else {
+            item.content = item.warning.fixed
+        }
+        item.warning = null
+        uni.showToast({ title: "已应用修复", icon: "success" })
+    }
+
+    /** 查看 warning 详情：弹窗展示原文 vs 修复版 */
+    const showWarningDetail = (index: number) => {
+        const item = resultList.value[index]
+        const w = item?.warning
+        if (!w) return
+        const typeLabel = w.type === "mojibake" ? "外文乱码" : "疑似单词间缺空格"
+        uni.showModal({
+            title: `${typeLabel} · 建议修复`,
+            content: `原 文:\n${w.original}\n\n修复后:\n${w.fixed}`,
+            confirmText: "应用修复",
+            cancelText: "保留原文",
+            success: (res) => {
+                if (res.confirm) {
+                    applyWarningFix(index)
+                } else {
+                    // 用户选择保留原文，清除 warning 让文案可提交
+                    resultList.value[index].warning = null
+                }
+            },
+        })
+    }
+
+    /** 前端兜底校验：对 Agent 流式生成的文案做本地检测 */
+    const localValidateItem = (item: any) => {
+        if (!item) return
+        const text = item.content || item.title || ""
+        const res = validateText(text)
+        if (res.status !== "ok") {
+            item.warning = {
+                type: res.type,
+                original: text,
+                fixed: res.suggestedFix,
+            }
+        }
+    }
+
     // ── 确认使用文案 ──
     const confirmUseContent = () => {
         if (!isAllGenerated.value) {
             uni.$u.toast("文案生成中，请稍候...");
             return;
         }
+        // 前端兜底：对所有文案做一次本地校验（无条件重新校验，因为用户可能手动编辑过任何一条）
+        resultList.value.forEach((item: any) => {
+            // 先清除旧 warning，重新计算（用户可能手动修改了文案内容）
+            const oldWarning = item.warning
+            item.warning = null
+            localValidateItem(item)
+            // 如果用户编辑后问题消失了，localValidateItem 不会给 warning，保持 null 即可
+            // 如果用户编辑后问题更严重了，localValidateItem 会重新给出 warning
+            // 如果用户编辑后内容完全正常，warning 就是 null
+            // 如果 localValidateItem 没有检测到问题但旧 warning 存在（比如后端返回了但前端检测不到），保留旧 warning
+            if (!item.warning && oldWarning) {
+                item.warning = oldWarning // 兜底：保留后端返回的 warning
+            }
+        })
+        // 统计仍有 warning 的条目
+        const pendingWarnings = resultList.value.filter((item: any) => item.warning)
+        if (pendingWarnings.length > 0) {
+            // 严格模式：语言检测不通过不允许继续使用，必须修复
+            if (strictCheck.value) {
+                uni.showModal({
+                    title: `${pendingWarnings.length} 条文案语言检测不通过`,
+                    content: "请在列表中逐条查看并应用修复后再使用",
+                    confirmText: "返回查看",
+                    showCancel: false,
+                })
+                return
+            }
+            uni.showModal({
+                title: `${pendingWarnings.length} 条文案可能存在问题`,
+                content: "建议在列表中逐条查看并应用修复，或继续直接使用",
+                confirmText: "直接使用",
+                cancelText: "返回查看",
+                success: (res) => {
+                    if (res.confirm) {
+                        doConfirm()
+                    }
+                },
+            })
+            return
+        }
+        doConfirm()
+    }
+
+    const doConfirm = () => {
         emit("confirm", {
             type: ListenerTypeEnum.AI_COPYWRITER,
             data:
@@ -701,6 +850,7 @@ function useCopywriterGenerate(options: {
         handleSubmit,
         handleDeleteItem,
         confirmUseContent,
+        applyWarningFix,
     };
 }
 </script>

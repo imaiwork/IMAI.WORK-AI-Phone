@@ -1,8 +1,8 @@
 <?php
 return [
     // 系统版本号
-    'version'                  => 'v2.13.5',
-    'version_number'           => '21305',
+    'version'                  => 'v2.13.6',
+    'version_number'           => '21306',
     // 官网
     'website'               => [
         'name'        => env('project.web_name', ''), // 网站名称
@@ -48,6 +48,48 @@ return [
     'lists'                 => [
         'page_size_max' => 25000, //列表页查询数量限制（列表页每页数量、导出每页数量）
         'page_size'     => 25, //默认每页数量
+    ],
+
+    // AI 找素材候选相关性闸门（保守负向过滤：候选有标题类文本且与搜索词无任何文字交集时才拒绝）
+    'ai_material_relevance' => [
+        'enabled'         => true, //文本闸门总开关，false 时所有候选一律放行
+        'min_hits'        => 2,    //全局兜底：具体主体类（实体/菜品/场景/动作）未单独配置时的最低二元组命中数
+        'min_ratio'       => 0.4,  //全局兜底：具体主体类未单独配置时的最低命中比例，长关键词按比例提高门槛
+        'min_consecutive' => 0,    //最少连续命中二元组数，0=不启用；调高可减少零散字面交集误放行
+        'vision_enabled'  => true, //画面闸门总开关：转存成功后（视频在下载前用封面）用视觉模型判图
+        'vision_timeout'  => 8,    //单次判图请求超时（秒），超时/异常/无结果按放行处理并记日志
+        // 分类型文本闸门阈值：key 为关键词类型（entity 实体 / dish 菜品 / scene 场景 / action 动作 /
+        // person 人物 / brand 品牌 / mood 氛围 / abstract 抽象），未列出的类型按 entity 处理
+        'keyword_type_thresholds' => [
+            'entity'   => ['min_hits' => 2, 'min_ratio' => 0.4, 'text_enabled' => true],  //具体物件，必须有字面证据
+            'dish'     => ['min_hits' => 2, 'min_ratio' => 0.4, 'text_enabled' => true],  //菜品食品，同实体
+            'scene'    => ['min_hits' => 2, 'min_ratio' => 0.4, 'text_enabled' => true],  //场景场所，同实体
+            'action'   => ['min_hits' => 2, 'min_ratio' => 0.4, 'text_enabled' => true],  //动作过程，同实体
+            'person'   => ['min_hits' => 1, 'min_ratio' => 0.3, 'text_enabled' => true],  //人物人群，呈现方式多样，放宽
+            'brand'    => ['min_hits' => 1, 'min_ratio' => 1.0, 'text_enabled' => true],  //品牌：品牌名必须原文出现（实际走原文包含，不看二元组阈值）
+            'mood'     => ['min_hits' => 0, 'min_ratio' => 0.0, 'text_enabled' => false], //情绪氛围，无字面主体，交给画面闸门
+            'abstract' => ['min_hits' => 0, 'min_ratio' => 0.0, 'text_enabled' => false], //抽象概念，同上
+        ],
+    ],
+
+    // AI 找素材词级账本与预算（v4 方案）：总开关关闭时全链路保持旧行为，仅作为灰度开关
+    'ai_material_grab' => [
+        'enabled'                    => false, //总开关：false=完全走旧逻辑（词循环不带账本、不启用泛词打底）
+        'generic_ratio'              => 0.3,   //词集合中泛词打底最低占比（0~1），仅供开启后抽词供给侧校验用
+        'max_candidates_per_keyword' => 2,     //单个关键词每类型最多尝试的候选数，0=不限（旧的数字口播链路口径）
+        'max_transcode_fail'         => 3,     //连续转存失败熔断阈值，0=不熔断
+        'max_transcode_sec'          => 15,    //单笔下载/转码硬超时（秒），0=不启用（仅日志检查点）
+        'max_keyword_elapsed_sec'    => 25,    //词级墙钟预算（秒），0=不启用
+        'max_elapsed_sec'            => 60,    //抓取阶段全局墙钟预算（秒），0=不启用；素材混剪等大缺口场景按 90 计算
+    ],
+
+    // 素材检索关键词规划：把叙事短语改写成素材库能检索的具体画面查询词
+    'material_keyword_plan' => [
+        'enabled'        => true, //是否用对话模型改写关键词；false 时只走纯规则改写
+        'model'          => '',   //改写模型别名，空=默认 deepseek
+        'timeout'        => 10,   //模型改写请求超时（秒），剩余时间不足 3 秒时自动跳过
+        'max_alternates' => 1,    //每个关键词最多追加的备选查询数（主查询之外）
+        'max_keywords'   => 30,   //单次规划最多处理的原始关键词数量
     ],
 
     // 各种默认图片

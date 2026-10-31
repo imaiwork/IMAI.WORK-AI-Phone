@@ -154,6 +154,15 @@
                             :maxlength="MAX_DESC_LENGTH"
                             placeholder="描述你想要生成的视频画面... (支持纯文本、纯素材或混合输入)"
                             class="!bg-[transparent] transparent-textarea" />
+                        <div
+                            class="mt-3 flex items-start gap-2 rounded-xl border border-[#0065fb]/15 bg-[#0065fb]/5 px-3 py-2">
+                            <span class="mt-0.5 flex-shrink-0">
+                                <Icon name="el-icon-Mic" color="#0065fb" :size="13" />
+                            </span>
+                            <span class="text-[12px] leading-relaxed text-slate-500">
+                                {{ speechTipText }}
+                            </span>
+                        </div>
                         <div class="flex items-center justify-between mt-3">
                             <div class="flex items-center gap-2">
                                 <button
@@ -163,8 +172,8 @@
                                 </button>
                                 <button
                                     class="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-[#0065fb]/10 text-primary hover:bg-[#0065fb]/15 transition-all text-[12px] font-black"
-                                    @click="openAiGenerateContent">
-                                    <Icon name="el-icon-MagicStick" :size="12" />智能体扩写
+                                    @click="openPromptGuide">
+                                    <Icon name="el-icon-MagicStick" :size="12" />提示词向导
                                 </button>
                             </div>
                         </div>
@@ -431,6 +440,7 @@
                                 class="custom-input"
                                 placeholder="请输入名称"
                                 maxlength="50"
+                                @input="nameTouched = true"
                                 :input-style="{
                                     textAlign: 'right',
                                     fontSize: '15px',
@@ -446,7 +456,7 @@
                             <span class="text-[13px] font-black text-slate-500 uppercase tracking-wider">参数设置</span>
                         </div>
 
-                        <div class="px-4 py-4 border-b border-slate-100">
+                        <div v-if="activeTab === 0" class="px-4 py-4 border-b border-slate-100">
                             <div class="flex flex-col gap-0.5 mb-3">
                                 <span class="text-[13px] font-medium text-slate-700">画面比例</span>
                                 <span class="text-[10px] text-slate-400">生成视频的宽高比</span>
@@ -597,14 +607,17 @@
                 </ElButton>
             </div>
         </div>
-        <generate-prompt
-            v-if="showGeneratePrompt"
-            ref="generatePromptRef"
-            :system-agent-ids="[7]"
+        <prompt-guide
+            v-if="showPromptGuide"
+            ref="promptGuideRef"
+            :duration="sliderDuration"
+            :aspect-ratio="formData.aspect_ratio"
+            :image-count="imageMaterials.length"
+            :video-count="videoMaterials.length"
+            :first-last-frame="activeTab === 1"
             :max-size="MAX_DESC_LENGTH"
-            :prompt-type="CreateVideoTypeEnum.STORYBOARD"
             @use-content="handleGenerateContent"
-            @close="showGeneratePrompt = false" />
+            @close="showPromptGuide = false" />
 
         <choose-history
             v-if="showChooseHistory"
@@ -639,14 +652,15 @@ import { createReusableTemplate } from "@vueuse/core";
 import dayjs from "dayjs";
 import { createSoraVideo } from "@/api/digital_human";
 import { useUserStore } from "@/stores/user";
-import { MontageTypeEnum, CreateVideoTypeEnum, SidebarTypeEnum } from "@/pages/app/digital_human/_enums";
-import GeneratePrompt from "@/pages/app/digital_human/_components/generate-prompt.vue";
+import { MontageTypeEnum, SidebarTypeEnum } from "@/pages/app/digital_human/_enums";
+import PromptGuide from "./_components/prompt-guide.vue";
 import MaterialMenuContent from "@/pages/app/digital_human/_components/material-menu-content.vue";
 import ChooseHistory from "@/pages/app/digital_human/_components/choose-history.vue";
 import ChooseMaterial from "@/pages/app/digital_human/_components/choose-material.vue";
 import CostPop from "@/pages/app/digital_human/_components/cost-pop.vue";
 import MaterialRule from "./_components/material-rule.vue";
 import feedback from "@/utils/feedback";
+import { validateText } from "@/utils/textValidator";
 import { getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
 
 // ─────────────────────────────────────────────
@@ -660,7 +674,7 @@ const IMAGE_RESOLUTION: any = [
     [300, 6000],
     [300, 6000],
 ];
-const MAX_DESC_LENGTH = 500;
+const MAX_DESC_LENGTH = 1000;
 const DURATION_MIN = 4;
 const DURATION_MAX = 15;
 const VIDEO_COUNT_MIN = 1;
@@ -669,15 +683,17 @@ const VIDEO_DURATION_LIMIT = 15;
 const VIDEO_DURATION_WARN = 12;
 const VIDEO_SINGLE_MIN = 2;
 const VIDEO_SINGLE_MAX = 15;
+/** 配音语速换算口径：每秒约 4.5 字，15 秒成片约 67 字（与后端 maxDialogueChars 一致） */
+const SPEECH_CHARS_PER_SECOND = 4.5;
 const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp,.bmp,.tiff,.gif";
 const VIDEO_ACCEPT = ".mp4,.mov";
 
 const VIDEO_PROPORTIONS = [
-    { label: "16:9", value: "16:9" },
+    { label: "9:16", value: "9:16" },
     { label: "4:3", value: "4:3" },
     { label: "1:1", value: "1:1" },
     { label: "3:4", value: "3:4" },
-    { label: "9:16", value: "9:16" },
+    { label: "16:9", value: "16:9" },
     { label: "21:9", value: "21:9" },
 ] as const;
 
@@ -736,15 +752,25 @@ const formData = reactive({
     name: dayjs().format("YYYYMMDDHHmm") + "一句话生成视频",
     content: "",
     materialList: [] as any[],
-    aspect_ratio: "16:9" as string,
+    aspect_ratio: "9:16" as string,
     resolution: "480p" as string,
     video_count: 1,
 });
 
+/** 用户是否自己改过视频名称：改过就不再被 AI 标题覆盖 */
+const nameTouched = ref(false);
+
+watch(
+    () => formData.content,
+    (val) => {
+        if (val.length > MAX_DESC_LENGTH) formData.content = val.slice(0, MAX_DESC_LENGTH);
+    },
+);
+
 // ─────────────────────────────────────────────
 // 弹窗显示状态
 // ─────────────────────────────────────────────
-const showGeneratePrompt = ref(false);
+const showPromptGuide = ref(false);
 const showMaterialRule = ref(false);
 const showTokensCost = ref(false);
 const showVideoPreview = ref(false);
@@ -756,7 +782,7 @@ const imagePreviewUrl = ref("");
 // ─────────────────────────────────────────────
 // Refs
 // ─────────────────────────────────────────────
-const generatePromptRef = shallowRef<InstanceType<typeof GeneratePrompt>>();
+const promptGuideRef = shallowRef<InstanceType<typeof PromptGuide>>();
 const uploadMenuPopoverRef = useTemplateRef<any>("uploadMenuPopoverRef");
 const materialRulePopupRef = shallowRef<InstanceType<typeof MaterialRule>>();
 const chooseHistoryRef = shallowRef<InstanceType<typeof ChooseHistory>>();
@@ -771,7 +797,7 @@ const hideUploadMenuPopover = () => uploadMenuPopoverRef.value?.hide?.();
 // ─────────────────────────────────────────────
 /**
  * 打开一个需要先设 showFlag 再 nextTick 再调 open() 的弹窗
- * @example openDialog(showGeneratePrompt, generatePromptRef)
+ * @example openDialog(showPromptGuide, promptGuideRef)
  */
 const openDialog = async (showFlag: Ref<boolean>, ref: Ref<{ open: () => void } | undefined>) => {
     showFlag.value = true;
@@ -796,6 +822,17 @@ const durationBarClass = computed(() => {
         return { bg: "bg-amber-50 border-amber-200", text: "text-amber-500", bar: "bg-amber-500" };
     return { bg: "bg-[#0065fb]/5 border-[#0065fb]/20", text: "text-primary", bar: "bg-primary" };
 });
+
+/**
+ * 口播语速提示
+ * 画面描述里除了口播文案，还会包含镜头、风格等限制条件与提示词，字数不能等同于文案长度，
+ * 因此这里不做输入框字数比对，只按每秒 4.5 字说明所选生成时长的建议口播字数。
+ */
+const recommendedSpeechChars = computed(() => Math.floor(sliderDuration.value * SPEECH_CHARS_PER_SECOND));
+const speechTipText = computed(
+    () =>
+        `建议口播文案控制在 ${recommendedSpeechChars.value} 字以内（每秒约 4.5 字），文案过多会导致配音语速过快、听不清；只有口播文案占用时长，画面、风格等描述不计入。`,
+);
 
 // ─────────────────────────────────────────────
 // ③ 素材选择器状态（合并两个 limit computed 为一个）
@@ -993,16 +1030,22 @@ const handleVideoCount = (type: "minus" | "add") => {
     }
 };
 
-const openAiGenerateContent = () => openDialog(showGeneratePrompt, generatePromptRef);
+const openPromptGuide = () => openDialog(showPromptGuide, promptGuideRef);
 const openTokensCostDialog = () => openDialog(showTokensCost, costPopRef);
 
-const handleGenerateContent = (res: any) => {
-    formData.content = Array.isArray(res)
+const handleGenerateContent = (res: any, title = "") => {
+    const text = Array.isArray(res)
         ? res
               .map((item) => (typeof item === "string" ? item : item?.content ?? ""))
               .filter(Boolean)
               .join("\n")
         : res;
+    formData.content = String(text ?? "").slice(0, MAX_DESC_LENGTH);
+    // 视频名称默认是「时间戳 + 一句话生成视频」，用户没改过就用 AI 提炼的标题替换，
+    // 免得创作记录里全是看不出主题的默认名（后端还会再从提示词里兜底一次）
+    if (title && !nameTouched.value) {
+        formData.name = String(title).slice(0, 50);
+    }
 };
 
 const handleClearAllMaterials = () => {
@@ -1047,7 +1090,18 @@ const validateBeforeCreate = (): boolean => {
         const hasContent = formData.content.trim().length > 0;
         const hasMaterial = formData.materialList.length > 0;
         if (!hasContent && !hasMaterial) return warn(VALIDATION_MESSAGES.noContentOrMaterial);
-        if (formData.content.length >= MAX_DESC_LENGTH) return warn(VALIDATION_MESSAGES.contentTooLong);
+        if (formData.content.length > MAX_DESC_LENGTH) return warn(VALIDATION_MESSAGES.contentTooLong);
+        // 语种检测：乱码 / 空格拼接 → 阻断提交（仅当用户填写了文案时）
+        if (hasContent) {
+            const langResult = validateText(formData.content);
+            if (langResult.status !== "ok") {
+                return warn(
+                    langResult.type === "mojibake"
+                        ? "检测到外文乱码，请修改后再提交"
+                        : "疑似外文单词间缺少空格，请检查后再提交"
+                );
+            }
+        }
     } else {
         if (!firstFrame.value || !lastFrame.value) return warn(VALIDATION_MESSAGES.noBothFrames);
     }

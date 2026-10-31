@@ -6,6 +6,7 @@ namespace app\common\workerman\wechat\traits;
 
 use app\api\logic\wechat\sop\StageLogic;
 use app\common\model\sv\SvAddWechatRecord;
+use app\common\model\wechat\AiWechatAddRecord;
 use app\common\model\sv\SvAddWechatStrategy;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
@@ -276,6 +277,15 @@ trait TaskNoticeTrait
 
                 $record->update = time();
                 $record->save();
+
+                // 同步AI销售加微执行记录
+                $aiAddExecRecord = AiWechatAddRecord::where('task_id', $taskId)->limit(1)->findOrEmpty();
+                if (!$aiAddExecRecord->isEmpty()) {
+                    $aiAddExecRecord->status = $record->status;
+                    $aiAddExecRecord->result = $record->result;
+                    $aiAddExecRecord->update_time = time();
+                    $aiAddExecRecord->save();
+                }
 
                 $status = (int)$record->status;
                 $result = (string)$record->result;

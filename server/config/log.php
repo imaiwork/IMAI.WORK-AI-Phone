@@ -127,6 +127,13 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
+        'sv_contact_clean' => [ //存量官方服务号清理日志
+            'type'           => 'File',
+            'max_files'      => 30,
+            'path'           => app()->getRootPath() . '/runtime/log/sv_contact_clean/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
+        ],
         'device' => [
             'type'           => 'File',
             'max_files'      => 30,
@@ -286,7 +293,7 @@ return [
             'json'           => false,
             'format'         => '[%s][%s] %s',
         ],
-        'shanjianClipTemplate' => [ //闪剪视频风格模版删除日志
+        'shanjianClipTemplate' => [ //闪剪视频风格模版失效日志（风格不存在时置为隐藏）
             'type'           => 'File',
             'max_files'      => 30,
             'path'           => app()->getRootPath() . '/runtime/log/shanjianClipTemplate/',
@@ -417,6 +424,12 @@ return [
             'time_format'    => 'Y-m-d H:i:s',
             'format'         => '[%s][%s] %s',
             'realtime_write' => true,
+        ],
+        'ai_add_wechat' => [//AI销售加微线索加微信定时任务日志
+            'type'           => 'File',
+            'path'           => app()->getRootPath() . '/runtime/log/ai_add_wechat/',
+            'json'           => false,
+            'format'         => '[%s][%s] %s',
         ],
         // 其它日志通道配置
     ],

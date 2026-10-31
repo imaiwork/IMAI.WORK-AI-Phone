@@ -706,20 +706,23 @@ class MemberService
 
     /**
      * 计算下一次发放时间戳（基于自然月/年）
+     * 只比到天：发放任务每天 01:00 只触发一次，而 last_grant_time 记的是上次实际执行时刻（01:0x），
+     * 按精确时刻比较会让第二天的 01:00 差几分钟判成“还没到点”，整天空过一次发放。
      * @return int|null null 表示无需发放
      */
     private static function calcNextGrantTime(int $lastGrantTime, int $grantCycle, ?int $createTime): ?int
     {
         if ($lastGrantTime > 0) {
-            return match ($grantCycle) {
+            $dueAt = match ($grantCycle) {
                 UserLevel::CYCLE_DAY   => $lastGrantTime + 86400,
                 UserLevel::CYCLE_MONTH => strtotime('+1 month', $lastGrantTime),
                 UserLevel::CYCLE_YEAR  => strtotime('+1 year', $lastGrantTime),
                 default                => null,
             };
+            return $dueAt === null ? null : strtotime('today', $dueAt);
         }
-        // 首次发放：用 create_time 作为基准，此时 now >= create_time，立即发放
-        return $createTime ?? 0;
+        // 首次发放：用 create_time 作为基准，当天即发
+        return $createTime === null ? 0 : strtotime('today', $createTime);
     }
 
     /**

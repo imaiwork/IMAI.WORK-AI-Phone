@@ -90,6 +90,40 @@ export function formatEstimatedDuration(text: string): string {
 /** 「形象原音」音色哨兵：没有音色库记录，服务端按所选形象克隆出的原音下发 */
 export const WASH_ORIGIN_VOICE_ID = -1;
 
+/** 素材秒数锚点（与后端 ScriptService::materialAnchorSeconds 及热点追踪同口径）：
+ *  成片预估 = 真实口播秒数（字数 / 4.2 / 语速，夹 15~180），下发时长按字数/3 另算，取两者较大值；
+ *  素材总量需覆盖 [预估 × 0.5, 预估]，数字人口播按 floor、素材混剪按 ceil 作为本轮目标；
+ *  洗稿素材来源固定纯 AI（visual_material_source=1），无本地素材参与，
+ *  图片目标 = 目标秒数 × 15% / 每张 2 秒（夹 2~8 张），
+ *  预估条数 = 缺口按 5 秒均条长兜底折算，最低 2 视频 + 2 图片，50 条熔断，
+ *  条数仅作抓取上限，实际由后端按素材真实时长累加到目标秒数后收口 */
+export const WASH_MATERIAL_ANCHOR = {
+    /** 口播语速：每秒字数，与后端 ScriptService::CHARS_PER_SEC 一致 */
+    CHARS_PER_SEC: 4.2,
+    /** 下发时长换算：每秒字数，与后端 duration = 字数/3 同一口径 */
+    DURATION_CHARS_PER_SEC: 3,
+    FLOOR_RATIO: 0.5,
+    MIN_VIDEO: 2,
+    MIN_IMAGE: 2,
+    /** 图片固定可承载秒数：与后端 ScriptService::IMAGE_DISPLAY_SEC 一致 */
+    IMAGE_DISPLAY_SEC: 2,
+    /** 图片承载占比：与后端 ScriptService::MATERIAL_ANCHOR_IMAGE_SHARE 一致 */
+    IMAGE_SHARE: 0.15,
+    /** 图片张数上限：与后端 ScriptService::MATERIAL_ANCHOR_IMAGE_MAX 一致 */
+    IMAGE_MAX: 8,
+    /** 均条长兜底：洗稿无本地素材，与后端 resolveAnchorMaterialTargets 的 5 秒兜底一致 */
+    AVG_VIDEO_SEC_FALLBACK: 5,
+    /** 视频条数熔断上限：与后端 ScriptService::MATERIAL_ANCHOR_VIDEO_CAP 一致 */
+    VIDEO_CAP: 50,
+};
+
+/** 图片目标张数：目标秒数 × 15% / 每张 2 秒，夹 2~8 张（与后端 ScriptService::imageTargetCount 同公式） */
+export const washImageTargetCount = (targetSec: number): number => {
+    const { IMAGE_SHARE, IMAGE_DISPLAY_SEC, MIN_IMAGE, IMAGE_MAX } = WASH_MATERIAL_ANCHOR;
+    if (targetSec <= 0) return MIN_IMAGE;
+    return Math.max(MIN_IMAGE, Math.min(IMAGE_MAX, Math.ceil((targetSec * IMAGE_SHARE) / IMAGE_DISPLAY_SEC)));
+};
+
 export const WASH_GENERATION_TYPE_OPTIONS = [
     {
         val: WashGenerationType.DIGITAL_HUMAN,

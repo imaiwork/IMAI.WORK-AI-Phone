@@ -225,9 +225,12 @@ class DistributionAgentLogic extends BaseLogic
     {
         try {
             $user = User::where('id', $userId)->findOrEmpty();
-            $wechatMnpService = new WeChatMnpService();
+            // 邀请码必须由当前小程序所属团队生成：OEM 小程序邀请落地 OEM，
+            // 不能因为接口域名是主站 API 就回落到主站小程序凭证。
+            $teamId = \app\api\logic\TeamLogic::currentRequestSiteTeamId();
+            $wechatMnpService = new WeChatMnpService($teamId);
 
-            $path = public_path() . 'uploads/images/mnpqrcode/' . date('Ymd') . '/' . md5(time() . $user->sn) . '.png';
+            $path = public_path() . 'uploads/images/mnpqrcode/' . date('Ymd') . '/' . md5(time() . $user->sn . ':t' . $teamId) . '.png';
 
             if (!is_dir(dirname($path))) {
                 umask(0);
@@ -251,7 +254,8 @@ class DistributionAgentLogic extends BaseLogic
     {
         try {
             $user = User::where('id', $userId)->findOrEmpty();
-            $wechatMnpService = new WeChatMnpService();
+            $teamId = \app\api\logic\TeamLogic::currentRequestSiteTeamId();
+            $wechatMnpService = new WeChatMnpService($teamId);
             $params['sn'] = $user->sn;
             $result = $wechatMnpService->urlLink($params['path'], "sn={$params['sn']}");
             if (isset($result['errcode']) && $result['errcode'] == 0) {

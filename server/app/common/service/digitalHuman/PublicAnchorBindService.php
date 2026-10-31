@@ -109,7 +109,7 @@ class PublicAnchorBindService
     {
         return match ($status) {
             0 => '生成中',
-            1 => '部分完成',
+            1 => '生成中',
             2 => '已完成',
             3 => '生成失败',
             4 => 'AI视频合成中',

@@ -217,7 +217,7 @@ const handleChangeCopywriting = () => {
 };
 
 const getCopywritingLibraryLists = async () => {
-    const { lists } = await getCopywritingLibraryList({ page_size: 9999, copywriting_type: CopywritingTypeEnum.TITLE });
+    const { lists } = await getCopywritingLibraryList({ page_size: 9999, copywriting_type: CopywritingTypeEnum.CONTENT });
     if (lists.length > 0) {
         lists.forEach((item) => {
             item.title = item.title.map((t: any) => ({ ...t, checked: false }));

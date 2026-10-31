@@ -6,7 +6,7 @@
         <template v-if="isMarkdown">
             <ua-markdown :content="content"></ua-markdown>
         </template>
-        <text v-else user-select class="break-all leading-[40rpx] select-text">
+        <text v-else selectable user-select class="break-all leading-[40rpx] select-text">
             {{ content }}
         </text>
     </template>
@@ -61,15 +61,11 @@ const props = withDefaults(
     },
 );
 const { copy } = useCopy();
-// const { play, audioPlaying, pause, audioLoading } = useAudioPlay({
-//     api: getChatBroadcast,
-//     dataTransform(data) {
-//         return data.file_url
-//     },
-//     params: {
-//         records_id: props.recordId,
-//         content: props.index,
-//         type: 1
-//     }
-// })
 </script>
+
+<style scoped>
+.select-text {
+    user-select: text;
+    -webkit-user-select: text;
+}
+</style>

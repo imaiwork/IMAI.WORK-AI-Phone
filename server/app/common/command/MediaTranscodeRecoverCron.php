@@ -98,8 +98,8 @@ class MediaTranscodeRecoverCron extends Command
                 try {
                     $check = UploadService::checkTranscodeNeeded($localPath);
                     $reason = (string)($check['reason'] ?? '');
-                    // 只认明确“已符合规范”。探测失败/无视频流时 checkTranscodeNeeded 也会返回
-                    // need_transcode=false，不能当成成功，否则人设切片/爆款提交会吃到坏素材。
+                    // 只认明确“已符合规范”，不将探测失败/无视频流误标成功，
+                    // 否则人设切片/爆款提交会吃到坏素材。
                     if (in_array($reason, ['已符合视频规范', '已符合图片规范'], true)) {
                         File::where('id', $fileId)->update([
                             'transcode_status' => 3,

@@ -6,7 +6,7 @@ namespace app\common\service\sv;
 
 /**
  * 从简介 / 抖音号 / 封面 OCR 文本提取联系方式。
- * 正则规则复制自 TaskRecordSaveHandler，另加默认抖音号排除与 QQ 提示词门槛。
+ * 正则规则复制自 TaskRecordSaveHandler，另加默认抖音号排除、QQ 提示词门槛与官方服务号过滤。
  */
 class DyContactExtractService
 {
@@ -84,20 +84,6 @@ class DyContactExtractService
     private string $wechatPattern = '/[a-zA-Z][a-zA-Z0-9_-]{5,19}/';
     private string $phonePattern = '/1[3-9]\d{9}/';
 
-    /** @var list<string> */
-    private array $blacklist = [
-        'wechat',
-    ];
-
-    /** @var list<string> */
-    private array $serviceNumberBlacklist = [
-        '10000',
-        '10086',
-        '10010',
-        '10011',
-        '10001',
-    ];
-
     /**
      * @param array{contact_phone?:bool,contact_wechat?:bool,contact_qq?:bool} $opts
      * @return array{phones: list<string>, wechats: list<string>, qqs: list<string>, raw: list<string>}
@@ -164,8 +150,7 @@ class DyContactExtractService
         foreach ($matches[0] as $match) {
             $match = (string)$match;
             if (
-                $this->isBlacklistedContact($match)
-                || $this->containsPhoneNumber($match)
+                $this->containsPhoneNumber($match)
                 || DyDefaultIdFilter::isDefaultId($match)
             ) {
                 continue;
@@ -257,16 +242,6 @@ class DyContactExtractService
         return false;
     }
 
-    private function isBlacklistedContact(string $content): bool
-    {
-        return in_array(strtolower($content), $this->blacklist, true);
-    }
-
-    private function isServiceNumber(string $contact): bool
-    {
-        return in_array($contact, $this->serviceNumberBlacklist, true);
-    }
-
     private function isLikelyStatisticNumber(string $text, int $offset, int $length): bool
     {
         $before = mb_substr(substr($text, 0, $offset), -8);
@@ -288,7 +263,7 @@ class DyContactExtractService
         $result = [];
         foreach ($contacts as $contact) {
             $contact = trim((string)$contact);
-            if ($contact === '' || isset($result[$contact]) || $this->isServiceNumber($contact)) {
+            if ($contact === '' || isset($result[$contact]) || ServiceContactFilter::isServiceContact($contact)) {
                 continue;
             }
             $result[$contact] = $contact;

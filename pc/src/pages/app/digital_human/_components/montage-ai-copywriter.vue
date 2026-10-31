@@ -206,6 +206,7 @@ import { generateShanjianPrompt, generateNewsBodyPrompt } from "@/api/digital_hu
 import { copywritingLimit } from "@/pages/app/digital_human/_config";
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
+import { validateText } from "@/utils/textValidator";
 
 // 枚举定义
 enum MontageTypeEnum {
@@ -290,10 +291,20 @@ const handleGenerate = async () => {
                 number: currentPromptNum.value,
             });
             if (result.content && result.content.length > 0) {
-                chatContentList.value = result.content.map((item: any) => ({
-                    content: JSON.parse(item),
-                    status: "success",
-                }));
+                chatContentList.value = result.content.map((item: any, index: number) => {
+                    const parsed = JSON.parse(item);
+                    // 后端 warnings 或前端兜底校验
+                    const w = result.warnings?.find((w: any) => w.index === index)
+                        || (() => {
+                            const t = typeof parsed === 'string' ? parsed : JSON.stringify(parsed)
+                            const v = validateText(t)
+                            return v.status !== 'ok' ? { type: v.type, fixed: v.suggestedFix } : null
+                        })()
+                    return { content: parsed, status: "success", warning: w }
+                });
+                if (chatContentList.value.some((i: any) => i.warning)) {
+                    feedback.msgWarning("部分文案可能存在英文缺空格或外文乱码，请留意提示");
+                }
                 isGenerating.value = false;
             } else {
                 feedback.msgWarning("文案生成失败，请重新输入");
@@ -313,16 +324,27 @@ const handleGenerate = async () => {
                 number: currentPrompt.value.length,
             })
                 .then((result) => {
+                    // 后端 warnings 或前端兜底校验
+                    const w = result.warnings?.find((w: any) => w.index === 0)
+                        || (() => {
+                            const t = (result.title || '') + ' ' + (result.content || '')
+                            const v = validateText(t.trim())
+                            return v.status !== 'ok' ? { type: v.type, fixed: v.suggestedFix } : null
+                        })()
                     chatContentList.value[i] = {
                         title: result.title,
                         content: result.content,
                         status: "success",
+                        warning: w,
                     };
 
                     completedCount++;
                     if (completedCount === totalCount) {
                         userStore.getUser();
                         isGenerating.value = false;
+                        if (chatContentList.value.some((item: any) => item.warning)) {
+                            feedback.msgWarning("部分文案可能存在英文缺空格或外文乱码，请留意提示");
+                        }
                     }
                 })
                 .catch((error) => {
@@ -357,6 +379,42 @@ const handleUseContent = () => {
         return;
     }
 
+    // 前端兜底校验：对所有文案做一次本地语言检测 + 乱码/空格检测
+    const allTexts: string[] = []
+    chatContentList.value.forEach((item: any) => {
+        if (isNewsBody.value) {
+            allTexts.push(...(Array.isArray(item.content) ? item.content : [item.content]))
+        } else {
+            if (item.title) allTexts.push(item.title)
+            if (item.content) {
+                if (Array.isArray(item.content)) allTexts.push(...item.content)
+                else allTexts.push(item.content)
+            }
+        }
+    })
+    const issues: string[] = []
+    allTexts.forEach((text, idx) => {
+        const v = validateText((text || '').trim())
+        if (v.status !== 'ok') {
+            const label = v.type === 'mojibake' ? '外文乱码' : '疑似单词间缺空格'
+            issues.push(`第 ${idx + 1} 条：${label}`)
+        }
+    })
+    if (issues.length > 0) {
+        feedback.showConfirmModal({
+            title: `${issues.length} 条文案可能存在问题`,
+            message: issues.join('\n'),
+            confirmText: '直接使用',
+            cancelText: '返回查看',
+            onConfirm: () => doEmit(),
+        })
+        return
+    }
+
+    doEmit()
+}
+
+const doEmit = () => {
     emit("confirm", {
         type: props.type,
         content: isNewsBody.value

@@ -432,11 +432,13 @@ class CrawlingManualLogic extends SvBaseLogic
                         }
 
                         if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
-                            self::setLog($record['clue_wechat'] . '该账号不是有效的微信号,忽略');
+                            // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
+                            $invalidResult = \app\common\service\sv\WechatExistVerifyService::invalidErrorText($response) ?: '该线索经过校验为无效线索';
+                            self::setLog($record['clue_wechat'] . '该账号不是有效的微信号,忽略,校验结果说明:' . $invalidResult);
                             self::setLog($response);
                             SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
                                 'status' => 0,
-                                'result' => '该线索经过校验为无效线索',
+                                'result' => $invalidResult,
                                 'update_time' => time(),
                             ]);
                             continue;

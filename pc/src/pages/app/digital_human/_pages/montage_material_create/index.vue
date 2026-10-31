@@ -726,6 +726,12 @@ const validateBeforeCreate = async (): Promise<boolean> => {
             feedback.msgWarning(result?.firstErrorMsg ?? "请完善口播文案");
             return false;
         }
+        // warning 级（空格拼接等）：提示并阻断提交，让用户先回编辑器检查
+        const warningList = Object.values(result?.warnings ?? {});
+        if (warningList.length > 0) {
+            feedback.msgWarning(`文案提示：${warningList[0]}`);
+            return false;
+        }
     }
 
     if (copywritingMode.value === CopywritingTypeEnum.AUDIO && !formData.audio.length) {

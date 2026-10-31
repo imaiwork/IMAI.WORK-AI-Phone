@@ -3,6 +3,7 @@
 namespace app\api\logic\copywriting;
 
 use app\api\logic\ApiLogic;
+use app\common\service\copywriting\PublicCopywritingRewriteService;
 use app\common\service\copywriting\PublicCopywritingService;
 
 class PublicCopyLogic extends ApiLogic
@@ -33,6 +34,21 @@ class PublicCopyLogic extends ApiLogic
     {
         try {
             self::$returnData = PublicCopywritingService::addToPersona(
+                self::$uid,
+                (int)$params['persona_id'],
+                $params['ids'] ?? []
+            );
+            return true;
+        } catch (\Throwable $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    public static function rewrite(array $params): bool
+    {
+        try {
+            self::$returnData = PublicCopywritingRewriteService::rewrite(
                 self::$uid,
                 (int)$params['persona_id'],
                 $params['ids'] ?? []

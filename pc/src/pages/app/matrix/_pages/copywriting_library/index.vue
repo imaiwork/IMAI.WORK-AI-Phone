@@ -23,8 +23,8 @@
                         :show-arrow="false"
                         @change="resetPage()">
                         <ElOption label="全部类型" value=""></ElOption>
-                        <ElOption label="口播文案" :value="CopywritingTypeEnum.CONTENT"></ElOption>
-                        <ElOption label="内容文案" :value="CopywritingTypeEnum.TITLE"></ElOption>
+                        <ElOption label="口播文案" :value="CopywritingTypeEnum.ORAL"></ElOption>
+                        <ElOption label="内容文案" :value="CopywritingTypeEnum.CONTENT"></ElOption>
                     </ElSelect>
 
                     <div
@@ -66,7 +66,7 @@
                         </template>
 
                         <div class="flex flex-col gap-1 p-1">
-                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.CONTENT)">
+                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.ORAL)">
                                 <div class="icon-wrapper bg-blue-50">
                                     <Icon name="el-icon-Microphone" color="var(--color-primary)" :size="14"></Icon>
                                 </div>
@@ -76,7 +76,7 @@
                                 </div>
                             </div>
 
-                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.TITLE)">
+                            <div class="menu-item" @click="handleEdit(CopywritingTypeEnum.CONTENT)">
                                 <div class="icon-wrapper bg-[#eef2ff]">
                                     <Icon name="el-icon-Document" color="#6366f1" :size="14"></Icon>
                                 </div>
@@ -108,7 +108,7 @@
                                         class="w-10 h-10 rounded-lg bg-slate-50 group-hover:bg-[#0065fb]/10 group-hover:text-primary flex items-center justify-center transition-colors">
                                         <Icon
                                             :name="
-                                                item.copywriting_type === CopywritingTypeEnum.CONTENT
+                                                item.copywriting_type === CopywritingTypeEnum.ORAL
                                                     ? 'el-icon-Mic'
                                                     : 'el-icon-CollectionTag'
                                             "
@@ -117,15 +117,11 @@
                                     <span
                                         class="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider"
                                         :class="
-                                            item.copywriting_type === CopywritingTypeEnum.CONTENT
+                                            item.copywriting_type === CopywritingTypeEnum.ORAL
                                                 ? 'bg-[#EEF2FF] text-primary'
                                                 : 'bg-[#F0FDF4] text-[#22C55E]'
                                         ">
-                                        {{
-                                            item.copywriting_type === CopywritingTypeEnum.CONTENT
-                                                ? "内容文案"
-                                                : "口播文案"
-                                        }}
+                                        {{ CopywritingTypeMap[item.copywriting_type] ?? "未知类型" }}
                                     </span>
                                 </div>
 
@@ -178,7 +174,7 @@
 import { AppTypeEnum } from "@/enums/appEnums";
 import { getCopywritingLibraryList, deleteCopywritingLibrary, updateCopywritingLibrary } from "@/api/matrix";
 import { HandleMenuType } from "@/components/handle-menu/typings";
-import { CopywritingTypeEnum, SidebarTypeEnum } from "@/pages/app/matrix/_enums";
+import { CopywritingTypeEnum, CopywritingTypeMap, SidebarTypeEnum } from "@/pages/app/matrix/_enums";
 import CreatePanel from "./_components/create-panel.vue";
 const route = useRoute();
 
@@ -272,10 +268,10 @@ const getCopywritingContent = (data: any) => {
             );
         }
     };
-    if (copywriting_type == CopywritingTypeEnum.TITLE) {
+    if (copywriting_type == CopywritingTypeEnum.CONTENT) {
         return countStr("described", described);
     }
-    if (copywriting_type == CopywritingTypeEnum.CONTENT) {
+    if (copywriting_type == CopywritingTypeEnum.ORAL) {
         return countStr("oral_copy", oral_copy);
     }
     return "暂无文案内容...";

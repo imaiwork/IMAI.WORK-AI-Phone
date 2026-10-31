@@ -2,6 +2,7 @@ import useUpload from "@/hooks/useUpload";
 import { useMaterial } from "@/ai_modules/digital_human_create/hooks/useMaterial";
 import { montageConfig, calcMaterialDurationBudget } from "@/enums/montageEnums";
 import { UploadCategoryEnum, UploadAlbumTypeEnum } from "@/enums/appEnums";
+import { batchGetVideoInfoByUrl } from "@/api/app";
 
 interface UseMaterialStepOptions {
     formData: any;
@@ -41,15 +42,48 @@ export function useMaterialStep({ formData }: UseMaterialStepOptions) {
 
     const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
         isTranscode: true,
-        videoDuration: [1, 59],
+        videoDuration: montageConfig.videoDuration,
+        videoSize: montageConfig.videoSize,
         isFetchVideoInfo: true,
         onSuccess: (materials: any[]) => {
+            // 先把素材写入列表，让 UI 立即响应（useUpload 不 await onSuccess，
+            // showUploadProgress 会在本回调返回后关闭，不能阻塞）
             if (replaceMaterialIndex.value !== -1) {
                 formData.materialList[replaceMaterialIndex.value] = materials[0];
             } else {
                 formData.materialList = formData.materialList.concat(materials);
             }
             replaceMaterialIndex.value = -1;
+
+            // 后端转码未完成时 upload 接口可能返回 duration=0，
+            // 异步补全缺失的视频时长（与 useMaterial.processAndAppend 同口径）
+            const needFetch = materials.filter(
+                (item) => item.type === "video" && (!item.duration || Number(item.duration) <= 0),
+            );
+            if (needFetch.length > 0) {
+                // 进度弹窗已关闭，短暂 loading 提示用户仍在处理
+                uni.showLoading({ title: "时长获取中...", mask: true });
+                batchGetVideoInfoByUrl({
+                    video_urls: needFetch.map((item) => item.url),
+                })
+                    .then(({ results }: any) => {
+                        const durationMap = new Map(results.map((r: any) => [r.url, r.data.duration]));
+                        materials.forEach((item) => {
+                            if (item.type === "video" && (!item.duration || Number(item.duration) <= 0)) {
+                                const newDuration = durationMap.get(item.url);
+                                if (newDuration != null) {
+                                    item.duration = newDuration;
+                                }
+                            }
+                        });
+                    })
+                    .catch(() => {
+                        // 补全失败不阻塞主流程
+                    })
+                    .finally(() => {
+                        uni.hideLoading();
+                    });
+            }
         },
     });
 
@@ -98,7 +132,7 @@ export function useMaterialStep({ formData }: UseMaterialStepOptions) {
     // ─── 从素材库选择 ────────────────────────────────────────────
 
     const handleSelectMaterial = async (res: any[]): Promise<void> => {
-        processAndAppend({
+        await processAndAppend({
             rawList: res,
             urlField: "url",
             maxDuration: 59,

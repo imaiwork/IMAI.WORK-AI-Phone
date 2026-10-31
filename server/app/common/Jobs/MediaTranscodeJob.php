@@ -494,6 +494,18 @@ class MediaTranscodeJob
             );
         }
 
+        // 抓取/恢复队列也会直接投递，消费时再次检查，避免合规视频被模板重复压缩。
+        if ($localPath !== '' && is_file($localPath)) {
+            $customSpecs = is_array($data['custom_specs'] ?? null) ? $data['custom_specs'] : null;
+            $check = UploadService::checkTranscodeNeeded($localPath, $customSpecs);
+            if ($check['media_type'] === 'video' && !$check['need_transcode']) {
+                $this->markTranscodeSuccess($fileId, $ossUri, $meta);
+                Log::channel('ffmpeg')->write("[转码跳过] OSS 队列保留合规原视频 file_id={$fileId}");
+                $this->cleanLocalFiles($localPath, basename($ossUri));
+                return;
+            }
+        }
+
         $inputObject = OssMediaProcessService::toObjectKey($ossUri);
         // 输出到独立对象，避免与并行切片抢同一 OSS 源文件
         $dir = str_replace('\\', '/', dirname($inputObject));

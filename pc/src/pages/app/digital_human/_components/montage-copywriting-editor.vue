@@ -106,6 +106,12 @@
                                         <Icon name="el-icon-Warning" :size="12" />
                                         {{ copywritingErrors[currentActiveIndex] }}
                                     </span>
+                                    <span
+                                        v-else-if="copywritingWarnings[currentActiveIndex]"
+                                        class="text-[11px] text-amber-500 font-medium flex items-center gap-1">
+                                        <Icon name="el-icon-Warning" :size="12" />
+                                        {{ copywritingWarnings[currentActiveIndex] }}
+                                    </span>
                                     <span v-else class="text-[11px] text-slate-300 italic">
                                         字数需在 {{ contentMinLength }} ~ {{ contentMaxLength }} 之间
                                     </span>
@@ -113,7 +119,11 @@
                                 <span
                                     :class="[
                                         'text-[10px] font-black italic',
-                                        copywritingErrors[currentActiveIndex] ? 'text-red-400' : 'text-slate-300',
+                                        copywritingErrors[currentActiveIndex]
+                                            ? 'text-red-400'
+                                            : copywritingWarnings[currentActiveIndex]
+                                            ? 'text-amber-500'
+                                            : 'text-slate-300',
                                     ]">
                                     {{ modelValue[currentActiveIndex].content?.length || 0 }} / {{ contentMaxLength }}
                                 </span>
@@ -140,6 +150,7 @@
 import { CreateVideoTypeEnum } from "@/pages/app/digital_human/_enums";
 import { copywritingLimit } from "@/pages/app/digital_human/_config";
 import GeneratePrompt from "@/pages/app/digital_human/_components/generate-prompt.vue";
+import { validateText } from "@/utils/textValidator";
 
 // ─── 类型 ────────────────────────────────────────────────────
 export interface CopywritingItem {
@@ -153,6 +164,8 @@ export interface ValidateResult {
     firstErrorIndex: number;
     firstErrorMsg: string;
     errors: Record<number, string>;
+    /** warning 级（如空格拼接）：不阻断提交，仅用于上层 toast 提示 */
+    warnings?: Record<number, string>;
 }
 
 // ─── Props / Emits ───────────────────────────────────────────
@@ -186,11 +199,16 @@ const showGeneratePrompt = ref(false);
 const generatePromptRef = shallowRef<InstanceType<typeof GeneratePrompt>>();
 
 // ─── 校验 ─────────────────────────────────────────────────────
+// error 级（空/长度/乱码）：阻断提交，validate() 返回 invalid
 const copywritingErrors = computed<Record<number, string | undefined>>(() => {
     const errors: Record<number, string | undefined> = {};
     props.modelValue.forEach((item, index) => {
-        const contentLength = item.content?.trim().length ?? 0;
-        const titleLength = item.title?.trim().length ?? 0;
+        const contentTrimmed = item.content?.trim() ?? "";
+        const titleTrimmed = item.title?.trim() ?? "";
+        const contentLength = contentTrimmed.length;
+        const titleLength = titleTrimmed.length;
+
+        // 1. 基础长度校验（原逻辑）
         if (showTitle.value) {
             if (titleLength === 0) {
                 errors[index] = "口播标题不能为空";
@@ -204,11 +222,33 @@ const copywritingErrors = computed<Record<number, string | undefined>>(() => {
             errors[index] = `内容过短，至少需要 ${contentMinLength.value} 个字符（当前 ${contentLength} 个）`;
         } else if (contentLength > contentMaxLength.value) {
             errors[index] = `内容过长，最多 ${contentMaxLength.value} 个字符（当前 ${contentLength} 个）`;
-        } else {
-            errors[index] = undefined;
+        }
+
+        // 2. error 级语种校验：仅乱码（mojibake）阻断提交
+        if (!errors[index] && contentLength > 0) {
+            const v = validateText(contentTrimmed);
+            if (v.status === "error" && v.type === "mojibake") {
+                errors[index] = "检测到外文乱码，请修改";
+            }
         }
     });
     return errors;
+});
+
+// warning 级（空格拼接）：仅提示，不阻断提交（与 uniapp 端策略一致）
+const copywritingWarnings = computed<Record<number, string | undefined>>(() => {
+    const warnings: Record<number, string | undefined> = {};
+    props.modelValue.forEach((item, index) => {
+        // 已有 error 时不再叠加 warning，避免重复提示
+        if (copywritingErrors.value[index]) return;
+        const contentTrimmed = item.content?.trim() ?? "";
+        if (!contentTrimmed) return;
+        const v = validateText(contentTrimmed);
+        if (v.status === "warning" && v.type === "latin_no_space") {
+            warnings[index] = "疑似外文单词间缺少空格，建议检查";
+        }
+    });
+    return warnings;
 });
 
 // ─── 方法 ─────────────────────────────────────────────────────
@@ -249,12 +289,18 @@ const validate = async (): Promise<ValidateResult> => {
         return { valid: false, firstErrorIndex: -1, firstErrorMsg: "请至少添加一条口播内容", errors: {} };
     }
 
+    // warning 级（不阻断）：过滤掉 undefined 项
+    const warningEntries = Object.entries(copywritingWarnings.value).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined,
+    );
+    const warnings = Object.fromEntries(warningEntries.map(([k, v]) => [Number(k), v]));
+
     const errorEntries = Object.entries(copywritingErrors.value).filter(
         (entry): entry is [string, string] => entry[1] !== undefined,
     );
 
     if (errorEntries.length === 0) {
-        return { valid: true, firstErrorIndex: -1, firstErrorMsg: "", errors: {} };
+        return { valid: true, firstErrorIndex: -1, firstErrorMsg: "", errors: {}, warnings };
     }
 
     const firstErrorIndex = Math.min(...errorEntries.map(([k]) => Number(k)));
@@ -266,6 +312,7 @@ const validate = async (): Promise<ValidateResult> => {
         firstErrorIndex,
         firstErrorMsg,
         errors: Object.fromEntries(errorEntries.map(([k, v]) => [Number(k), v])),
+        warnings,
     };
 };
 

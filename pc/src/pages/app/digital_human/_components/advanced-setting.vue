@@ -102,8 +102,10 @@
                     @click="onSystemMusic('', '')">
                     <span class="min-w-0 flex-1 truncate text-left">系统随机</span>
                 </button>
+                <!-- 分组筛选：全部 + 后台维护的各分组 -->
+                <MusicGroupTabs v-model="activeGroup" :groups="systemGroups" />
                 <div
-                    v-for="item in systemMusics"
+                    v-for="item in visibleSystemMusics"
                     :key="item.id"
                     class="system-music-row cursor-pointer"
                     :class="modelValue.system_music_id === item.id ? 'border-primary text-primary bg-[#0065fb]/5' : 'border-slate-200 text-slate-700'"
@@ -122,8 +124,8 @@
                         <span class="block text-[11px] text-slate-400">{{ formatDuration(item.duration_sec) }}</span>
                     </div>
                 </div>
-                <div v-if="systemMusicLoaded && !systemMusics.length" class="text-[12px] text-slate-400 py-6 text-center">
-                    暂无上架曲目，将使用系统随机
+                <div v-if="systemMusicLoaded && !visibleSystemMusics.length" class="text-[12px] text-slate-400 py-6 text-center">
+                    {{ systemMusics.length ? "该分组暂无曲目" : "暂无上架曲目，将使用系统随机" }}
                 </div>
             </div>
         </ElDialog>
@@ -131,9 +133,10 @@
 </template>
 
 <script setup lang="ts">
-import { getSystemMusicList } from "@/api/digital_human";
+import { getSystemMusicGroups, getSystemMusicList } from "@/api/digital_human";
 import { MusicSourceEnum } from "@/pages/app/digital_human/_enums";
 import { getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
+import MusicGroupTabs from "./music-group-tabs.vue";
 import {
     ADVANCED_MUSIC_ACCEPT,
     ADVANCED_MUSIC_SIZE,
@@ -199,6 +202,14 @@ const musicVolumePercent = computed(() => Math.round(musicVolume.value * 100));
 const showSystemMusic = ref(false);
 const systemMusics = ref<any[]>([]);
 const systemMusicLoaded = ref(false);
+const systemGroups = ref<Array<{ id: number; name: string }>>([]);
+// 0 = 全部
+const activeGroup = ref(0);
+
+const visibleSystemMusics = computed(() => {
+    if (!activeGroup.value) return systemMusics.value;
+    return systemMusics.value.filter((item: any) => Number(item?.group_id) === activeGroup.value);
+});
 
 const musicTip = computed(() => {
     if (musicSource.value === MusicSourceEnum.CUSTOM && props.modelValue.music_name) {
@@ -320,10 +331,16 @@ watch(showSystemMusic, async (open) => {
     }
     if (systemMusicLoaded.value) return;
     try {
-        const res = await getSystemMusicList();
-        systemMusics.value = Array.isArray(res) ? res : [];
+        // 曲库与分组一起拉：分组拉不到时按「全部」展示，不影响选曲
+        const [list, groups] = await Promise.all([
+            getSystemMusicList().catch(() => []),
+            getSystemMusicGroups().catch(() => []),
+        ]);
+        systemMusics.value = Array.isArray(list) ? list : [];
+        systemGroups.value = Array.isArray(groups) ? groups : [];
     } catch {
         systemMusics.value = [];
+        systemGroups.value = [];
     } finally {
         systemMusicLoaded.value = true;
     }

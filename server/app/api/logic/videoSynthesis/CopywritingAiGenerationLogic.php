@@ -15,6 +15,7 @@ use app\common\model\minimax\MinimaxShanjianTask;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\sv\CloudSvDevice;
 use app\common\model\sv\SvDevice;
+use app\common\service\aiPersona\PersonaTypePlanService;
 use app\common\service\hotspot\HotspotLog;
 use app\common\service\hotspot\HotspotUpstreamException;
 use app\common\service\hotspot\PersonaService;
@@ -140,8 +141,13 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                 throw new \Exception('-绑定的人设未配置文案来源为无需文案的合成规则');
             }
 
+            // 无文案只出素材混剪(3)：条数取 type 3 的类型条数，配 0 时兜底 1 条
+            $noCopywritingCloudCount = PersonaTypePlanService::resolveCloudTypeCount(
+                $config,
+                AiPersonaSynthesisConfig::GENERATION_TYPE_MATERIAL
+            );
             $execTimes = self::isCloudRunDevice($device)
-                ? self::buildCloudPublishTimeSlots(self::resolveCloudDailyVideoCount($device))
+                ? self::buildCloudPublishTimeSlots($noCopywritingCloudCount > 0 ? $noCopywritingCloudCount : 1)
                 : self::getExecTime(self::getTimesByType($persona->persona_type), $device, $persona->persona_type);
             if (empty($execTimes)) {
                 throw new \Exception('-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的执行时间');
@@ -283,7 +289,14 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                 ->count() > 0;
 
             if ($hasConfig) {
-                return self::formatContentScheduleSlots(self::getAutoSchedule($persona, self::CONTENT_PUBLISH_SCENE));
+                // 出片配额与内容发布建单同口径：剔除非视频时段（如小红书纯图文），
+                // 否则图文时段也被计入视频出片数，多产出用不掉的视频。
+                $schedules = self::getAutoSchedule($persona, self::CONTENT_PUBLISH_SCENE)
+                    ->filter(static function ($schedule) use ($persona) {
+                        return AiPersona::scheduleNeedsVideoPublish($persona, $schedule->platform);
+                    });
+
+                return self::formatContentScheduleSlots($schedules);
             }
         }
 
@@ -472,9 +485,24 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
         $publishTimeSlots = self::getContentPublishTimeSlots($persona, $device);
         $publishCount = count($publishTimeSlots);
         if ($publishCount <= 0) {
-            $publishCount = MarketingTemplateSchedule::getTodayPublishTaskCount((int)$device->persona_id);
+            $publishCount = MarketingTemplateSchedule::getTodayVideoPublishTaskCount((int)$device->persona_id);
         }
         if ($publishCount <= 0) {
+            // 已配置内容发布时段但时段内无视频素材（均为图文平台）→ 视频合成无待办，
+            // 标记完成，避免设备每轮被挑中却不出片；完全未配置时段则保持待办等下轮。
+            if (!self::isCloudRunDevice($device)
+                && MarketingTemplateSchedule::getTodayPublishTaskCount((int)$device->persona_id) > 0
+            ) {
+                $device->markSynthesisDone(SvDevice::SYNTHESIS_SCENE_SOCIAL);
+                $device->save();
+                Log::channel('ipVideoSynthesis')->write(sprintf(
+                    '设备号%s%s发布时段无视频素材（均为图文），标记完成',
+                    (string)$device->device_code,
+                    $scene
+                ));
+                return true;
+            }
+
             return false;
         }
 
@@ -516,17 +544,52 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
     }
 
     /**
-     * 无手机模式的每日出片条数：取「视频剪辑」员工配置的 daily_video_count，
-     * 未配置(0)时兜底 1 条——不能回落到发布时段，否则又绕回了要配发布时段才出片。
+     * 无手机模式的每日出片条数：取「视频剪辑」员工配置的分类型条数之和，
+     * 没配过时回落 daily_video_count，再空兜底 1 条——不能回落到发布时段，
+     * 否则又绕回了要配发布时段才出片。
      */
     private static function resolveCloudDailyVideoCount(SvDevice $device): int
     {
-        $count = AiPersonaSynthesisConfig::normalizeDailyVideoCount(
-            AiPersonaSynthesisConfig::where('persona_id', (int)$device->persona_id)
-                ->where('user_id', (int)$device->user_id)
-                ->value('daily_video_count')
-        );
-        return $count > 0 ? $count : AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+        $config = AiPersonaSynthesisConfig::where('persona_id', (int)$device->persona_id)
+            ->where('user_id', (int)$device->user_id)
+            ->findOrEmpty();
+        if ($config->isEmpty()) {
+            return AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+        }
+        return PersonaTypePlanService::resolveCloudTargetCount($config);
+    }
+
+    /**
+     * 无手机模式按类型条数取本批要建的类型序列（已做音色降级）。
+     * 手机模式不调用，仍走 generation_types 轮转。
+     *
+     * @param array<int, string> $remainingSlots 扣除今日已占用后的剩余时段
+     * @return array<int, int>
+     */
+    private static function buildCloudSelectedTypes(mixed $config, SvDevice $device, int $allPublishCount, array $remainingSlots): array
+    {
+        $need = count($remainingSlots);
+        if ($need <= 0) {
+            return [];
+        }
+        // 每条任务占一个时段，用「总量 - 剩余」当计划游标即可，不必再看最后一条任务的类型
+        $offset = max(0, $allPublishCount - $need);
+        $types = PersonaTypePlanService::sliceCloudPlan($config, $offset, $need);
+        if ($types === []) {
+            // 配置被改小、计划不够铺满剩余时段时按首类型补足，保证配额能收口
+            $order = AiPersonaSynthesisConfig::resolveGenerationOrder($config);
+            $fallback = $order[0] ?? AiPersonaSynthesisConfig::GENERATION_TYPE_DIGITAL_HUMAN;
+            $types = array_fill(0, $need, $fallback);
+        }
+        $selected = [];
+        foreach ($types as $type) {
+            $selected[] = self::resolveTaskTypeByVoice(
+                (int)$type,
+                (int)$device->persona_id,
+                (int)$device->user_id
+            );
+        }
+        return $selected;
     }
 
     /**
@@ -660,6 +723,10 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
 
             $publishTimeSlots = self::getContentPublishTimeSlots($persona, $device);
             if (empty($publishTimeSlots)) {
+                // 已配置时段但无视频素材（均为图文）→ 视频合成无待办，标记完成；未配置时段才抛错重试
+                if (self::markSocialSynthesisFinishedIfQuotaReached($device, '文案库')) {
+                    return true;
+                }
                 throw new \Exception('-绑定的人设' . $device->persona_id . '下没有可用的内容发布时间段');
             }
             $publishCount = count($publishTimeSlots);
@@ -680,31 +747,36 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             }
 
             $taskCountNeeded = count($publishTimeSlots);
-            $startIndex = 0;
-            $lastTask = Db::name('shanjian_video_task')
-                ->where('device_code', $deviceCode)
-                ->where('auto_type', 1)
-                ->where('wechat_type', 0)
-                ->where('persona_id', $device->persona_id)
-                ->order('id', 'desc')
-                ->field('shanjian_type')
-                ->find();
+            if (self::isCloudRunDevice($device)) {
+                // 无手机模式：按分类型条数交错出片，不再看最后一条任务的类型
+                $selectedTypesForToday = self::buildCloudSelectedTypes($config, $device, $publishCount, $publishTimeSlots);
+            } else {
+                $startIndex = 0;
+                $lastTask = Db::name('shanjian_video_task')
+                    ->where('device_code', $deviceCode)
+                    ->where('auto_type', 1)
+                    ->where('wechat_type', 0)
+                    ->where('persona_id', $device->persona_id)
+                    ->order('id', 'desc')
+                    ->field('shanjian_type')
+                    ->find();
 
-            $lastType = $lastTask ? (int)$lastTask['shanjian_type'] : null;
-            if ($lastType !== null) {
-                $foundKey = array_search($lastType, $allVideoTypes);
-                $startIndex = ($foundKey !== false) ? (($foundKey + 1) % count($allVideoTypes)) : 0;
-            }
+                $lastType = $lastTask ? (int)$lastTask['shanjian_type'] : null;
+                if ($lastType !== null) {
+                    $foundKey = array_search($lastType, $allVideoTypes);
+                    $startIndex = ($foundKey !== false) ? (($foundKey + 1) % count($allVideoTypes)) : 0;
+                }
 
-            $selectedTypesForToday = [];
-            $totalTypes = count($allVideoTypes);
-            for ($i = 0; $i < $taskCountNeeded; $i++) {
-                $index = ($startIndex + $i) % $totalTypes;
-                $selectedTypesForToday[] = self::resolveTaskTypeByVoice(
-                    (int)$allVideoTypes[$index],
-                    (int)$device->persona_id,
-                    (int)$device->user_id
-                );
+                $selectedTypesForToday = [];
+                $totalTypes = count($allVideoTypes);
+                for ($i = 0; $i < $taskCountNeeded; $i++) {
+                    $index = ($startIndex + $i) % $totalTypes;
+                    $selectedTypesForToday[] = self::resolveTaskTypeByVoice(
+                        (int)$allVideoTypes[$index],
+                        (int)$device->persona_id,
+                        (int)$device->user_id
+                    );
+                }
             }
 
             $groupedData = self::getMaterialsForImitation(
@@ -769,6 +841,10 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
 
             $publishTimeSlots = self::getContentPublishTimeSlots($persona, $device);
             if (empty($publishTimeSlots)) {
+                // 已配置时段但无视频素材（均为图文）→ 视频合成无待办，标记完成；未配置时段才抛错重试
+                if (self::markSocialSynthesisFinishedIfQuotaReached($device, '热点生成')) {
+                    return true;
+                }
                 throw new \Exception('-绑定的人设' . $device->persona_id . '下没有可用的内容发布时间段');
             }
             $publishCount = count($publishTimeSlots);
@@ -789,24 +865,29 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             }
 
             $taskCountNeeded = count($publishTimeSlots);
-            $lastTask = Db::name('shanjian_video_task')
-                ->where('device_code', $deviceCode)
-                ->where('auto_type', 1)
-                ->where('wechat_type', 0)
-                ->where('persona_id', $device->persona_id)
-                ->order('id', 'desc')
-                ->field('shanjian_type')
-                ->find();
+            if (self::isCloudRunDevice($device)) {
+                // 无手机模式：按分类型条数交错出片
+                $selectedTypesForToday = self::buildCloudSelectedTypes($config, $device, $publishCount, $publishTimeSlots);
+            } else {
+                $lastTask = Db::name('shanjian_video_task')
+                    ->where('device_code', $deviceCode)
+                    ->where('auto_type', 1)
+                    ->where('wechat_type', 0)
+                    ->where('persona_id', $device->persona_id)
+                    ->order('id', 'desc')
+                    ->field('shanjian_type')
+                    ->find();
 
-            $lastType = $lastTask ? (int)$lastTask['shanjian_type'] : null;
-            $rotatedTypes = self::rotateGenerationTypes($allVideoTypes, $taskCountNeeded, $lastType);
-            $selectedTypesForToday = [];
-            foreach ($rotatedTypes as $type) {
-                $selectedTypesForToday[] = self::resolveTaskTypeByVoice(
-                    (int)$type,
-                    (int)$device->persona_id,
-                    (int)$device->user_id
-                );
+                $lastType = $lastTask ? (int)$lastTask['shanjian_type'] : null;
+                $rotatedTypes = self::rotateGenerationTypes($allVideoTypes, $taskCountNeeded, $lastType);
+                $selectedTypesForToday = [];
+                foreach ($rotatedTypes as $type) {
+                    $selectedTypesForToday[] = self::resolveTaskTypeByVoice(
+                        (int)$type,
+                        (int)$device->persona_id,
+                        (int)$device->user_id
+                    );
+                }
             }
 
             $groupedData = self::$hotspotTestHooks['groupedData'] ?? self::getMaterialsForImitation(
@@ -876,6 +957,10 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
 
             $publishTimeSlots = self::getContentPublishTimeSlots($persona, $device);
             if (empty($publishTimeSlots)) {
+                // 已配置时段但无视频素材（均为图文）→ 视频合成无待办，标记完成；未配置时段才抛错重试
+                if (self::markSocialSynthesisFinishedIfQuotaReached($device, 'AI生成')) {
+                    return true;
+                }
                 throw new \Exception('-绑定的人设' . AiPersona::formatLabel($persona) . '下没有可用的内容发布时间段');
             }
             $publishCount = count($publishTimeSlots);
@@ -895,31 +980,36 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             }
 
             $taskCountNeeded = count($publishTimeSlots);
-            $startIndex = 0;
-            $lastTask = Db::name('shanjian_video_task')
-                ->where('device_code', $deviceCode)
-                ->where('auto_type', 1)
-                ->where('wechat_type', 0)
-                ->where('persona_id', $device->persona_id)
-                ->order('id', 'desc')
-                ->field('shanjian_type')
-                ->find();
+            if (self::isCloudRunDevice($device)) {
+                // 无手机模式：按分类型条数交错出片，不受上一条任务的类型影响
+                $selectedTypesForToday = self::buildCloudSelectedTypes($config, $device, $publishCount, $publishTimeSlots);
+            } else {
+                $startIndex = 0;
+                $lastTask = Db::name('shanjian_video_task')
+                    ->where('device_code', $deviceCode)
+                    ->where('auto_type', 1)
+                    ->where('wechat_type', 0)
+                    ->where('persona_id', $device->persona_id)
+                    ->order('id', 'desc')
+                    ->field('shanjian_type')
+                    ->find();
 
-            $lastType = $lastTask ? (int)$lastTask['shanjian_type'] : null;
-            if ($lastType !== null) {
-                $foundKey = array_search($lastType, $allVideoTypes);
-                $startIndex = ($foundKey !== false) ? (($foundKey + 1) % count($allVideoTypes)) : 0;
-            }
+                $lastType = $lastTask ? (int)$lastTask['shanjian_type'] : null;
+                if ($lastType !== null) {
+                    $foundKey = array_search($lastType, $allVideoTypes);
+                    $startIndex = ($foundKey !== false) ? (($foundKey + 1) % count($allVideoTypes)) : 0;
+                }
 
-            $selectedTypesForToday = [];
-            $totalTypes = count($allVideoTypes);
-            for ($i = 0; $i < $taskCountNeeded; $i++) {
-                $index = ($startIndex + $i) % $totalTypes;
-                $selectedTypesForToday[] = self::resolveTaskTypeByVoice(
-                    (int)$allVideoTypes[$index],
-                    (int)$device->persona_id,
-                    (int)$device->user_id
-                );
+                $selectedTypesForToday = [];
+                $totalTypes = count($allVideoTypes);
+                for ($i = 0; $i < $taskCountNeeded; $i++) {
+                    $index = ($startIndex + $i) % $totalTypes;
+                    $selectedTypesForToday[] = self::resolveTaskTypeByVoice(
+                        (int)$allVideoTypes[$index],
+                        (int)$device->persona_id,
+                        (int)$device->user_id
+                    );
+                }
             }
             if ($forceVideoTypes !== null) {
                 $allowedTypes = array_map('intval', $forceVideoTypes);

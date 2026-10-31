@@ -199,6 +199,15 @@ class DySearchWechatVerifyService
             ) {
                 return ['pending' => false, 'log' => $wechat . '加微记录已处理，跳过'];
             }
+            if (ServiceContactFilter::isServiceContact($wechat)) {
+                if ((int)$existing->status !== self::ADD_STATUS_INVALID) {
+                    $existing->status = self::ADD_STATUS_INVALID;
+                    $existing->result = '官方服务号，直接判定为无效线索';
+                    $existing->update_time = time();
+                    $existing->save();
+                }
+                return ['pending' => false, 'log' => $wechat . ' 属官方服务号，不发起校验直接判无效'];
+            }
             $checked = WechatExistVerifyService::check(
                 $wechat,
                 self::HTTP_CONNECT_TIMEOUT,
@@ -214,8 +223,9 @@ class DySearchWechatVerifyService
                 return ['pending' => false, 'log' => $checked['log']];
             }
             if ($checked['outcome'] === WechatExistVerifyService::OUTCOME_INVALID) {
+                // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
                 $existing->status = self::ADD_STATUS_INVALID;
-                $existing->result = self::INVALID_RESULT;
+                $existing->result = WechatExistVerifyService::invalidErrorText($checked['response']) ?: self::INVALID_RESULT;
                 $existing->update_time = time();
                 $existing->save();
                 return ['pending' => false, 'log' => $checked['log']];
@@ -229,6 +239,9 @@ class DySearchWechatVerifyService
             return ['pending' => true, 'log' => $checked['log']];
         }
 
+        if (ServiceContactFilter::isServiceContact($wechat)) {
+            return ['pending' => false, 'log' => $wechat . ' 属官方服务号，跳过校验'];
+        }
         $checked = WechatExistVerifyService::check(
             $wechat,
             self::HTTP_CONNECT_TIMEOUT,
@@ -241,7 +254,9 @@ class DySearchWechatVerifyService
             return ['pending' => false, 'log' => $checked['log']];
         }
         if ($checked['outcome'] === WechatExistVerifyService::OUTCOME_INVALID) {
-            self::enqueueFromRecord($task, $record, $wechat, self::ADD_STATUS_INVALID, self::INVALID_RESULT);
+            // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
+            $invalidResult = WechatExistVerifyService::invalidErrorText($checked['response']) ?: self::INVALID_RESULT;
+            self::enqueueFromRecord($task, $record, $wechat, self::ADD_STATUS_INVALID, $invalidResult);
             return ['pending' => false, 'log' => $checked['log']];
         }
         return ['pending' => true, 'log' => $checked['log']];

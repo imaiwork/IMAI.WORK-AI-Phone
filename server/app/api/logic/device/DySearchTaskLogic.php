@@ -353,7 +353,8 @@ class DySearchTaskLogic extends ApiLogic
                     $searchMode,
                     $historyKeywords,
                     $remarks,
-                    $scanConfig['miss_scripts'] ?? []
+                    $scanConfig['miss_scripts'] ?? [],
+                    $params['removed_keywords'] ?? []
                 );
             } catch (\Throwable $ignore) {
                 Log::channel('device')->write('抖音获客线索词与话术历史保存失败：' . $ignore->getMessage());

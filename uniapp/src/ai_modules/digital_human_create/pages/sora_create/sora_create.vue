@@ -57,13 +57,42 @@
                                     </view>
                                     <view
                                         class="w-[60rpx] h-[60rpx] rounded-[14rpx] bg-white shadow-sm flex items-center justify-center border border-solid border-[#E5E9F0]"
-                                        @click="showChooseAgent = true">
+                                        @click="handleSelectAgent">
                                         <image
                                             src="@/ai_modules/digital_human_create/static/icons/star_primary.svg"
                                             class="w-[30rpx] h-[30rpx]" />
                                     </view>
                                 </view>
                             </view>
+                        </view>
+
+                        <view
+                            class="mx-[24rpx] mt-[16rpx] flex items-start gap-[12rpx] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#D6E4FF] bg-[#F0F6FF]">
+                            <u-icon
+                                name="mic"
+                                color="#0065fb"
+                                size="26"
+                                class="flex-shrink-0 mt-[2rpx]" />
+                            <text class="text-[22rpx] text-[#4B5563] leading-relaxed flex-1">
+                                {{ speechTipText }}
+                            </text>
+                        </view>
+
+                        <view
+                            v-if="activeTab === 0"
+                            class="mx-[24rpx] mt-[16rpx] flex items-start gap-[12rpx] rounded-[16rpx] px-[20rpx] py-[16rpx] border border-solid border-[#E5E9F0] bg-[#FAFBFC]">
+                            <u-icon
+                                name="photo"
+                                color="#9CA3AF"
+                                size="26"
+                                class="flex-shrink-0 mt-[2rpx]" />
+                            <text class="text-[22rpx] text-[#6B7280] leading-relaxed flex-1">
+                                引用素材请写
+                                <text class="font-bold text-[#4B5563]">@图片1</text>
+                                /
+                                <text class="font-bold text-[#4B5563]">@视频1</text>
+                                （前后各留一个空格），编号按上传顺序，AI 帮写会自动带上。
+                            </text>
                         </view>
 
                         <view v-if="activeTab === 0" class="mx-[24rpx] mb-[24rpx] mt-4">
@@ -356,7 +385,7 @@
                             </view>
                         </view>
                         <view class="px-[28rpx] py-[28rpx] flex flex-col gap-[36rpx]">
-                            <view>
+                            <view v-if="activeTab === 0">
                                 <text class="font-semibold text-[#374151] block mb-[20rpx]">画面比例</text>
                                 <scroll-view scroll-x class="whitespace-nowrap">
                                     <view class="flex gap-[16rpx] py-[4rpx]">
@@ -480,6 +509,7 @@
                                     maxlength="50"
                                     placeholder-style="font-size:26rpx;color:#C0C4CC;"
                                     placeholder="请输入视频名称"
+                                    @input="nameTouched = true"
                                     clearable />
                             </view>
                         </view>
@@ -577,12 +607,6 @@
         :type="activeTab === 0 ? 'all' : 'image'"
         :limit="chooseMaterialLimit"
         @select="handleSelectHistory" />
-    <choose-agent
-        v-if="showChooseAgent"
-        v-model="showChooseAgent"
-        is-sora
-        :system-agent-ids="[7]"
-        @select="handleSelectAgent" />
     <upload-progress v-if="showUploadProgress" v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <create-success-pop
         v-if="showCreateSuccess"
@@ -616,9 +640,8 @@ import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { useMaterial } from "@/ai_modules/digital_human_create/hooks/useMaterial";
 import TokensCost from "@/components/tokens-cost/tokens-cost.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human_create/components/create-success-pop/create-success-pop.vue";
-import ChooseAgent from "@/ai_modules/digital_human_create/components/choose-agent/choose-agent.vue";
 
-const MAX_DESC_LENGTH = 500;
+const MAX_DESC_LENGTH = 1000;
 const DURATION_MIN = 4;
 const DURATION_MAX = 15;
 const VIDEO_COUNT_MIN = 1;
@@ -627,13 +650,15 @@ const VIDEO_DURATION_LIMIT = 15;
 const VIDEO_DURATION_WARN = 12;
 const VIDEO_SINGLE_MIN = 2;
 const VIDEO_SINGLE_MAX = 15;
+/** 配音语速换算口径：每秒约 4.5 字（与后端 VideoPromptService::maxDialogueChars 一致），15 秒成片约 67 字 */
+const SPEECH_CHARS_PER_SECOND = 4.5;
 
 const VIDEO_PROPORTIONS = [
-    { label: "16:9", value: "16:9" },
+    { label: "9:16", value: "9:16" },
     { label: "4:3", value: "4:3" },
     { label: "1:1", value: "1:1" },
     { label: "3:4", value: "3:4" },
-    { label: "9:16", value: "9:16" },
+    { label: "16:9", value: "16:9" },
     { label: "21:9", value: "21:9" },
 ] as const;
 
@@ -676,7 +701,6 @@ const showMaterialRule = ref(false);
 const showTokensCost = ref(false);
 const showCreateSuccess = ref(false);
 const showVideoPreview = ref(false);
-const showChooseAgent = ref(false);
 const showChooseRole = ref(false);
 const firstFrame = ref<any>(null);
 const lastFrame = ref<any>(null);
@@ -697,10 +721,13 @@ const formData = reactive({
     name: uni.$u.timeFormat(Date.now(), "yyyymmddhhMM") + "一句话生成视频",
     content: "",
     materialList: [] as any[],
-    aspect_ratio: "16:9",
+    aspect_ratio: "9:16",
     resolution: "480p",
     video_count: 1,
 });
+
+/** 用户是否自己改过视频名称：改过就不再被 AI 标题覆盖 */
+const nameTouched = ref(false);
 
 const { processAndAppend } = useMaterial(toRef(formData, "materialList"));
 
@@ -709,6 +736,17 @@ const totalVideoDuration = computed(() =>
     videoMaterials.value.reduce((sum: number, i: any) => sum + (Number(i.duration) || 0), 0),
 );
 const remainVideoDuration = computed(() => Math.max(VIDEO_DURATION_LIMIT - totalVideoDuration.value, 0));
+
+/**
+ * 口播语速提示
+ * 画面描述里除了口播文案，还会包含镜头、风格等限制条件与提示词，字数不能等同于文案长度，
+ * 因此这里不做输入框字数比对，只按每秒 4.5 字说明所选生成时长的建议口播字数。
+ */
+const recommendedSpeechChars = computed(() => Math.floor(sliderDuration.value * SPEECH_CHARS_PER_SECOND));
+const speechTipText = computed(
+    () =>
+        `建议口播文案控制在 ${recommendedSpeechChars.value} 字以内（每秒约 4.5 字），文案过多会导致配音语速过快、听不清；只有口播文案占用时长，画面、风格等描述不计入。`,
+);
 
 const handleVideoCount = (type: "minus" | "add") => {
     if (type === "minus") {
@@ -872,10 +910,24 @@ const previewMaterial = (item: any) => {
     uni.previewImage({ urls: [item.pic] });
 };
 
-const handleSelectAgent = ({ data }: any) => {
+const handleSelectAgent = () => {
+    // AI 帮写的参数（时长/比例/素材数量）必须一起带过去：
+    // 镜头数与口播字数上限由后端按这些值算好塞进提示词，页面自己再推一遍只会两边不一致。
+    const imageCount =
+        activeTab.value === 0
+            ? formData.materialList.filter((item: any) => item.type !== "video").slice(0, 9).length
+            : 0;
+    const videoCount = videoMaterials.value.slice(0, 3).length;
     uni.$u.route({
         url: "/ai_modules/digital_human_create/pages/sora_ai_copywriter/sora_ai_copywriter",
-        params: { agentData: JSON.stringify(data), content: formData.content },
+        params: {
+            content: formData.content,
+            duration: String(sliderDuration.value),
+            aspect_ratio: formData.aspect_ratio,
+            image_count: String(imageCount),
+            video_count: String(videoCount),
+            first_last_frame: activeTab.value === 0 ? "0" : "1",
+        },
     });
 };
 
@@ -960,8 +1012,12 @@ const handleRelaunch = () => {
 };
 
 onLoad(() => {
-    on("confirm", ({ type, data }: any) => {
-        if (type === ListenerTypeEnum.SORA_AI_COPYWRITER) formData.content = data;
+    on("confirm", ({ type, data, title }: any) => {
+        if (type === ListenerTypeEnum.SORA_AI_COPYWRITER) {
+            formData.content = data;
+            // 视频名称还是默认值时才用 AI 标题覆盖，用户改过就保留用户的
+            if (title && !nameTouched.value) formData.name = String(title).slice(0, 50);
+        }
     });
 });
 </script>

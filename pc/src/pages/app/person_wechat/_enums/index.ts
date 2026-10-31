@@ -14,7 +14,25 @@ export enum SidebarTypeEnum {
     MATERIAL_LIBRARY = 13,
     DEVICE_MANAGEMENT = 14,
     WECHAT_MANAGEMENT = 15,
+    ADD_WECHAT_RECORD = 16,
 }
+
+// 加微记录状态
+export enum AddRecordStatusEnum {
+    FAIL = 0, // 失败
+    SUCCESS = 1, // 成功
+    RUNNING = 2, // 执行中
+    COOLING = 3, // 冷却
+    LIMITED = 4, // 频繁
+}
+
+export const AddRecordStatusMap = {
+    [AddRecordStatusEnum.FAIL]: { label: "失败", color: "danger" },
+    [AddRecordStatusEnum.SUCCESS]: { label: "成功", color: "success" },
+    [AddRecordStatusEnum.RUNNING]: { label: "执行中", color: "primary" },
+    [AddRecordStatusEnum.COOLING]: { label: "冷却", color: "warning" },
+    [AddRecordStatusEnum.LIMITED]: { label: "频繁", color: "danger" },
+} as const;
 
 export enum MsgTypeEnum {
     UnknownMsg = "UnknownMsg", //未知消息

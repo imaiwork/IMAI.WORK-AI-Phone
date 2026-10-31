@@ -1114,7 +1114,7 @@ class MaterialSliceBatchService
         $attempts = [
             // 对齐旧 VideoSliceService：本地输入 + 无 -map
             'reencode' => sprintf(
-                '%s -hide_banner -loglevel error -y -i %s -ss %s -t %s -c:v libx264 -preset veryfast -crf 28 -c:a aac -b:a 128k -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s 2>&1',
+                '%s -hide_banner -loglevel error -y -i %s -ss %s -t %s -c:v libx264 -preset veryfast -crf 20 -c:a aac -b:a 128k -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s 2>&1',
                 escapeshellcmd($ffmpeg),
                 escapeshellarg($source),
                 escapeshellarg($startText),
@@ -1123,7 +1123,7 @@ class MaterialSliceBatchService
             ),
             // 去掉音频，规避坏音轨/音频编码器崩溃
             'video_only' => sprintf(
-                '%s -hide_banner -loglevel error -y -i %s -ss %s -t %s -an -c:v libx264 -preset veryfast -crf 28 -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s 2>&1',
+                '%s -hide_banner -loglevel error -y -i %s -ss %s -t %s -an -c:v libx264 -preset veryfast -crf 20 -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s 2>&1',
                 escapeshellcmd($ffmpeg),
                 escapeshellarg($source),
                 escapeshellarg($startText),
@@ -1132,7 +1132,7 @@ class MaterialSliceBatchService
             ),
             // 前置 seek，降低部分 ffmpeg 构建在精确定位重编码时的崩溃概率
             'seek_before' => sprintf(
-                '%s -hide_banner -loglevel error -y -ss %s -i %s -t %s -an -c:v libx264 -preset ultrafast -crf 28 -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s 2>&1',
+                '%s -hide_banner -loglevel error -y -ss %s -i %s -t %s -an -c:v libx264 -preset ultrafast -crf 20 -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s 2>&1',
                 escapeshellcmd($ffmpeg),
                 escapeshellarg($startText),
                 escapeshellarg($source),

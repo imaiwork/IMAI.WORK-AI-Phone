@@ -1,5 +1,6 @@
 import useUpload from "@/hooks/useUpload";
 import { useMaterial } from "@/ai_modules/digital_human_create/hooks/useMaterial";
+import { montageConfig } from "@/enums/montageEnums";
 
 interface UseRealPersonAnchorOptions {
     formData: any;
@@ -16,9 +17,10 @@ export function useRealPersonAnchor({ formData }: UseRealPersonAnchorOptions) {
 
     const { processAndAppend } = useMaterial(toRef(formData, "anchorLists"));
 
-    const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles } = useUpload({
+    const { showUploadProgress, uploadMaterialList, uploadAndProcessFiles: uploadFiles } = useUpload({
         isTranscode: true,
-        videoDuration: [1, 59],
+        videoDuration: montageConfig.anchorVideoDuration,
+        videoSize: montageConfig.anchorVideoSize,
         isFetchVideoInfo: true,
         onSuccess: (materials: any[]) => {
             if (replaceMaterialIndex.value !== -1) {
@@ -29,6 +31,13 @@ export function useRealPersonAnchor({ formData }: UseRealPersonAnchorOptions) {
             replaceMaterialIndex.value = -1;
         },
     });
+
+    // 主视频最长 5 分钟，转码规范需放宽到 300s，避免后端默认 60s 把长视频截短
+    const uploadAndProcessFiles = (fileCategory: "video", extraFormData: Record<string, any> = {}) =>
+        uploadFiles(fileCategory, {
+            "custom_specs[video][duration]": montageConfig.anchorVideoDuration[1],
+            ...extraFormData,
+        });
 
     // ─── 播放预览 ────────────────────────────────────────────────
 
@@ -84,7 +93,7 @@ export function useRealPersonAnchor({ formData }: UseRealPersonAnchorOptions) {
         await processAndAppend({
             rawList: lists,
             urlField: "url",
-            maxDuration: 59,
+            maxDuration: montageConfig.anchorVideoDuration[1],
             replaceIndex: replaceMaterialIndex.value,
         });
     };

@@ -59,6 +59,8 @@ export const confirmGenerationOptions = (data: {
     clip_template_id?: string
     /** 洗稿自选背景音乐地址；传空串=改回系统音乐随机，不传则沿用已有设置 */
     music_url?: string
+    /** 洗稿系统背景音乐ID；传空串=不指定，不传则沿用已有设置 */
+    system_music_id?: string
 }) => {
     return request.post({ url: '/videoImitation.task/confirmGenerationOptions', data })
 }

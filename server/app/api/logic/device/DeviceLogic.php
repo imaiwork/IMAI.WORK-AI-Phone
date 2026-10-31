@@ -1207,8 +1207,15 @@ class DeviceLogic extends BasePersonaLogic
                     unset($item['id']);
                     unset($item['thumbnail_url']);
                 }
-                if (in_array($shanjianType, [3, 4])) {
-                    $extradata['volume'] = 0.6;
+                // 背景音乐与音量按生成类型取；未配置合成规则时沿用旧口径（3/4 类型 60%）
+                if ($config->isEmpty()) {
+                    if (in_array($shanjianType, [3, 4])) {
+                        $extradata['volume'] = 0.6;
+                    }
+                    $taskMusic = ['url' => CopywritingImitationLogic::resolveSystemMusicUrl()];
+                } else {
+                    $taskMusic = CopywritingImitationLogic::resolveMusicForTask($config, (int)$persona->id, (int)$shanjianType);
+                    $extradata['volume'] = AiPersonaSynthesisConfig::normalizeMusicVolume($taskMusic['volume']);
                 }
                 $shanjianVideoSettingData['name'] = '社媒平台-' . mb_substr($taskTitle, 0, 6) . '-' . date('YmdHis') . '-' . $typeName;
                 if ($shanjianType == 1) {
@@ -1218,14 +1225,15 @@ class DeviceLogic extends BasePersonaLogic
                 if ($shanjianType == 4) {
                     $taskTitle = $copywritingResult4['0']['title'] ?? $taskTitle;
                 }
-                $clip_template_id = ShanjianClipTemplate::where('scene', $scene)->where('auto_type', $auto_type)->column('id');
+                $clip_template_id = ShanjianClipTemplate::visibleIdsByScene((string)$scene, (int)$auto_type);
+                if (empty($clip_template_id)) {
+                    Log::channel('device')->write('设备号: ' . $deviceCode . ' 场景' . $scene . ' 无可用剪辑模板(全部被后台隐藏)，跳过本条');
+                    continue;
+                }
                 $clip_template_total = count($clip_template_id) - 1;
                 $clip = random_int(0, $clip_template_total);
                 $clip_id =  $clip_template_id[$clip];
-                $music_url = CopywritingImitationLogic::resolveMusicUrlByConfig(
-                    $config->isEmpty() ? [] : $config,
-                    (int)$persona->id
-                );
+                $music_url = $taskMusic['url'];
                 $shanjianVideoSettingData['material'] = json_encode($selectedMaterials, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 // $shanjianVideoSettingData['copywriting'] = json_encode($copywritingContent, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 $shanjianVideoSettingData['voice'] = $voice_id;

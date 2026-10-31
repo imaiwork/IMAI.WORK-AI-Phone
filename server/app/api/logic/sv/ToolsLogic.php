@@ -64,7 +64,7 @@ class ToolsLogic extends BaseLogic
                     if(isset($params['auto'])){
                         $extra = ['自动化生成线索词' => $params['auto'] . '个'];
                     }else{
-                        $extra = [];
+                        $extra = ['手动生成线索词' => $num . '个'];
                     }
 
                     //记录日志

@@ -1,4 +1,5 @@
 import { chooseFile } from "@/components/file-upload/choose-file";
+import { isPrivacyError } from "@/utils/privacy";
 import { uploadFile } from "@/api/app";
 import { isImageUrl } from "@/utils/util";
 
@@ -359,6 +360,8 @@ export default function useUpload(options: UseUploadOptions = {}) {
             }
         } catch (error: unknown) {
             const err = error as any;
+            // 隐私协议类失败已在 choose-file/privacy 工具里给过中文引导，这里再弹会盖成英文原报错
+            if (isPrivacyError(err)) return;
             if (!err?.errMsg?.includes("cancel")) {
                 uni.showToast({
                     title: err?.errMsg ?? String(err) ?? "上传失败",

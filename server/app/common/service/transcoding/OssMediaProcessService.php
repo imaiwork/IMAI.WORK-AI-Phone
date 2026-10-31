@@ -11,6 +11,7 @@ use AlibabaCloud\Tea\Exception\TeaError;
 use AlibabaCloud\Tea\Utils\Utils\RuntimeOptions;
 use app\common\service\ConfigService;
 use app\common\service\FileService;
+use app\common\service\VideoInfoService;
 use Darabonba\OpenApi\Models\Config;
 use think\facade\Log;
 
@@ -123,8 +124,33 @@ class OssMediaProcessService
         $output = [
             'OutputObject' => rawurlencode($outputObject),
             'TemplateId' => $this->config['TemplateId'],
+            // 小于模板分辨率时沿用输入尺寸，而不是放大或让任务失败。
+            'TransConfig' => [
+                'IsCheckReso' => 'true',
+                'IsCheckResoFail' => 'false',
+            ],
         ];
         if ($clipTimeSpan !== null) {
+            // 模板中未显式覆盖的帧率仍可能生效，不能靠省略 Fps 保留原片。
+            $info = (new VideoInfoService())->extractVideoInfo(FileService::getFileUrl($inputObject), 30);
+            $video = $info['video'] ?? [];
+            $fps = (float)($video['fps'] ?? 0);
+            $width = (int)($video['width'] ?? 0);
+            $height = (int)($video['height'] ?? 0);
+            if ($fps <= 0 || $width <= 0 || $height <= 0) {
+                throw new \RuntimeException('无法识别原片尺寸或帧率，停止提交 OSS 切片');
+            }
+            $output['Video'] = [
+                'Codec' => 'H.264',
+                'Crf' => '20',
+                'Preset' => 'medium',
+                'PixFmt' => 'yuv420p',
+                'Width' => (string)$width,
+                'Height' => (string)$height,
+                'LongShortMode' => 'false',
+                'Fps' => (string)min(60.0, $fps),
+            ];
+            $output['TransConfig']['TransMode'] = 'fixCRF';
             $output['Clip'] = [
                 'TimeSpan' => [
                     'Seek' => (string)$clipTimeSpan['Seek'],

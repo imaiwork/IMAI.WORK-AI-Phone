@@ -32,10 +32,23 @@ export enum MaterialTypeEnum {
     MUSIC = 6,
 }
 
+/**
+ * 文案类型，口径与后端 SvCopywritingLibraryLogic::add() 的命名保持一致：
+ * 1 = 内容文案（标题 title + 正文描述 described），2 = 口播文案（口播稿 oral_copy），3 = 口播混剪文案
+ */
 export enum CopywritingTypeEnum {
-    TITLE = 1,
-    CONTENT = 2,
+    /** 内容文案：标题 + 正文描述 */
+    CONTENT = 1,
+    /** 口播文案：口播稿 */
+    ORAL = 2,
 }
+
+// 文案类型文本映射
+export const CopywritingTypeMap: Record<number, string> = {
+    [CopywritingTypeEnum.CONTENT]: "内容文案",
+    [CopywritingTypeEnum.ORAL]: "口播文案",
+    3: "口播混剪文案",
+};
 
 export enum ContentGenModeEnum {
     NEW = "new",

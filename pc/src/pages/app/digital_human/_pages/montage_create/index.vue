@@ -62,8 +62,7 @@
                         <h3 class="text-[16px] font-black text-slate-700 whitespace-nowrap">参考素材</h3>
                         <div
                             class="text-[11px] text-slate-400 font-medium bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
-                            总量限制：全部素材总时长不得超过{{ montageUploadConfig.materialTotalDuration }}分钟
-                            (图片按{{ montageUploadConfig.imageDuration }}秒/张，视频按实际时长/个)
+                            总量限制：单张图片计算为{{ montageUploadConfig.imageDuration }}秒，单个视频素材不能超过60秒，所有素材总时长不能超过{{ montageUploadConfig.materialTotalDuration }}分钟；
                         </div>
                     </div>
                     <div v-if="formData.materialList.length > 0" class="flex flex-col items-end gap-2">
@@ -580,7 +579,7 @@ const usageToggleRows = [
 
 const calcTotalDuration = () => {
     const videoDur = formData.materialList.reduce(
-        (acc: number, item: any) => (item.type === "video" ? acc + (item.duration ?? 0) : acc),
+        (acc: number, item: any) => (item.type === "video" ? acc + (Number(item.duration) || 0) : acc),
         0,
     );
     const imageDur =
@@ -673,7 +672,7 @@ const handleMaterialAction = async (action: MaterialAction) => {
             duration = montageUploadConfig.imageDuration;
         } else {
             pic = data.thumbnail_path;
-            duration = data.duration;
+            duration = Number(data.duration) || 0;
         }
 
         handleMaterialData([{ url: data.uri, type: chooseMaterialType.value, pic, duration }], true);
@@ -685,7 +684,8 @@ const { processAndAppend } = useMaterial(toRef(formData, "materialList"));
 // ─── 素材选择弹窗回调────────────────────
 const handleSelectMaterial = async (list: any[]) => {
     handleMaterialData(
-        list.map((item) => ({ url: item.url, type: item.type, pic: item.pic, duration: item.duration })),
+        // 素材库 duration 可能是字符串（如 "10.000000"），统一转成数字，避免累加成 NaN
+        list.map((item) => ({ url: item.url, type: item.type, pic: item.pic, duration: Number(item.duration) || 0 })),
     );
 };
 
@@ -696,7 +696,7 @@ const handleSelectHistory = async (list: any[]) => {
             url: item.url,
             type: item.type,
             pic: item.pic,
-            duration: item.duration,
+            duration: Number(item.duration) || 0,
         })),
     );
 };
@@ -706,10 +706,17 @@ const handleMaterialData = async (
     skipProcess = false,
 ) => {
     const maxSeconds = montageUploadConfig.materialTotalDuration * 60;
+    const maxVideoSeconds = montageUploadConfig.videoDuration[1];
     let skippedCount = 0;
+    let tooLongCount = 0;
     let currentDuration = calcTotalDuration();
 
     const filteredList = list.filter((item) => {
+        // 单个视频素材不能超过 60s（创作历史里可能有几分钟的成片，需先按单条上限拦截）
+        if (item.type === "video" && item.duration > maxVideoSeconds) {
+            tooLongCount++;
+            return false;
+        }
         const itemDuration = calcMaterialDurationBudget(item.type === "image", item.duration);
         if (currentDuration + itemDuration > maxSeconds) {
             skippedCount++;
@@ -719,6 +726,9 @@ const handleMaterialData = async (
         return true;
     });
 
+    if (tooLongCount > 0) {
+        feedback.msgWarning(`${tooLongCount} 个视频素材超过 ${maxVideoSeconds} 秒已过滤`);
+    }
     if (skippedCount > 0) {
         feedback.msgWarning(`${skippedCount} 个素材超出总时长限制已过滤`);
     }
@@ -828,6 +838,12 @@ const validateBeforeCreate = async () => {
     const copywritingErrors = await copywritingEditorRef.value?.validate();
     if (!copywritingErrors?.valid) {
         feedback.msgWarning(copywritingErrors.firstErrorMsg);
+        return false;
+    }
+    // warning 级（空格拼接等）：提示并阻断提交，让用户先回编辑器检查
+    const warningList = Object.values(copywritingErrors?.warnings ?? {});
+    if (warningList.length > 0) {
+        feedback.msgWarning(`文案提示：${warningList[0]}`);
         return false;
     }
     if (formData.extra.clip === 1 && formData.clip.length === 0) {

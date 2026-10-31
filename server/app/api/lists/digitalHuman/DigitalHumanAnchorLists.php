@@ -3,6 +3,7 @@
 namespace app\api\lists\digitalHuman;
 
 use app\api\lists\BaseApiDataLists;
+use app\api\logic\DigitalHumanLogic;
 use app\api\logic\shanjian\ShanjianAnchorLogic;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\digitalHuman\DigitalHumanAnchor;
@@ -58,6 +59,13 @@ class DigitalHumanAnchorLists extends BaseApiDataLists implements ListsSearchInt
                 'height' => $weiju->height ?? ($chanjing->height ?? ''),
                 'shanjian_voice_id' => !empty($shanjianFast) ? ($shanjianFast->voice_id ?? '') : '',
             ];
+            $item['status'] = DigitalHumanLogic::aggregatePublicAnchorStatus(
+                (int)$item['status'],
+                $cloneMode,
+                (int)($shanjianFast->status ?? 0),
+                (int)($shanjianPro->status ?? 0),
+                (int)($chanjing->status ?? 0)
+            );
             $item['status_text'] = PublicAnchorBindService::publicStatusText((int)$item['status']);
             $item = UserDisplaySanitizer::digitalHumanAnchorItem($item);
         }

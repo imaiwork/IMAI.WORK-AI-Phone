@@ -154,6 +154,7 @@ class SynthesisConfigLogic extends BaseLogic
         $fields = [
             'generation_types',
             'template_config',
+            'type_config',
             'visual_material_source',
             'square_group_ids',
             'material_use_mode',
@@ -200,6 +201,19 @@ class SynthesisConfigLogic extends BaseLogic
 
         if (array_key_exists('daily_video_count', $data)) {
             $data['daily_video_count'] = AiPersonaSynthesisConfig::normalizeDailyVideoCount($data['daily_video_count']);
+            if (!array_key_exists('type_config', $data)) {
+                // 老后台只传总条数：按启用类型均分回填条数（已配好的类型音乐保留），
+                // 总条数为 0 时不动，与 API 端同口径
+                $rebuilt = ApiSynthesisConfigLogic::buildTypeConfigFromTotal($data, $config);
+                if ($rebuilt !== []) {
+                    $data['type_config'] = $rebuilt;
+                }
+            }
+        }
+
+        if (array_key_exists('type_config', $data)) {
+            // 与 API 端同一套归一/校验：分组回落、指定曲目下架抛错、派生总条数与顶层音乐
+            $data = ApiSynthesisConfigLogic::applyTypeConfigDerivedFields($data, $config);
         }
 
         if (array_key_exists('copywriting_source', $data)) {
@@ -355,6 +369,31 @@ class SynthesisConfigLogic extends BaseLogic
         $data['system_music_name'] = (string)($hit['name'] ?? '');
         $data['system_music_enabled'] = $pinned === '' || $hit !== [];
         $data['system_musics'] = \app\common\service\SystemMusicService::publicList();
+        $data['system_music_groups'] = \app\common\service\SystemMusicService::allGroups();
+
+        // 分类型配置回显：老数据按 daily_video_count 均分条数、音乐继承顶层，与 API 端同口径
+        $counts = AiPersonaSynthesisConfig::resolveCloudTypeCounts($data);
+        $typeConfig = [];
+        foreach (AiPersonaSynthesisConfig::TYPE_CONFIG_KEYS as $type) {
+            $music = AiPersonaSynthesisConfig::resolveTypeMusic($data, $type);
+            $pinnedMusic = trim((string)$music['pinned_id']);
+            $musicHit = $pinnedMusic === '' ? [] : \app\common\service\SystemMusicService::findEnabled($pinnedMusic);
+            $typeConfig[$type] = [
+                'video_count' => (int)($counts[$type] ?? 0),
+                'music_source' => (int)$music['source'],
+                'music_group_id' => (int)$music['group_id'],
+                'system_music_id' => $pinnedMusic,
+                'system_music_name' => (string)($musicHit['name'] ?? ''),
+                'system_music_enabled' => $pinnedMusic === '' || $musicHit !== [],
+                'music_volume' => (float)$music['volume'],
+                'speech_rate' => AiPersonaSynthesisConfig::resolveTypeSpeechRate($data, $type),
+                // 一镜到底：仅新闻体混剪可开，与 API 端同口径
+                'single_shot' => AiPersonaSynthesisConfig::resolveTypeSingleShot($data, $type)
+                    ? AiPersonaSynthesisConfig::SINGLE_SHOT_ON
+                    : AiPersonaSynthesisConfig::SINGLE_SHOT_OFF,
+            ];
+        }
+        $data['type_config'] = $typeConfig;
         return $data;
     }
 }

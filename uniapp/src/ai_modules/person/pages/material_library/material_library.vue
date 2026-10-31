@@ -82,10 +82,16 @@
                         <view class="flex-shrink-0 mt-[2rpx]">
                             <u-icon name="warning" color="#F97316" size="26"></u-icon>
                         </view>
-                        <text class="text-xs leading-relaxed text-[#EA580C]">
+                        <text class="flex-1 text-xs leading-relaxed text-[#EA580C]">
                             <text class="font-bold">提醒：</text>
-                            您有部分素材使用已达3次，重复抽取可能造成视频流量下降，建议及时删除或补充。
+                            您有部分素材使用已达{{ cleanThreshold }}次，重复抽取可能造成视频流量下降，建议及时删除或补充。
                         </text>
+                        <view
+                            v-if="showCleanButton"
+                            class="flex-shrink-0 px-[20rpx] py-[8rpx] rounded-full bg-[#EA580C] active:bg-[#c2410c] transition-all"
+                            @click="handleCleanOverUsed">
+                            <text class="text-[22rpx] text-white font-bold">一键清理</text>
+                        </view>
                     </view>
                     <view
                         v-else
@@ -171,6 +177,16 @@
                                             >AI抓取</text
                                         >
                                     </view>
+
+                                    <!-- 从素材库分组整组导入：标出源分组，重复导入该组时会按这个来源跳过 -->
+                                    <view
+                                        v-if="Number(item.source_group_id) > 0"
+                                        class="absolute top-2 right-2 max-w-[220rpx] px-[10rpx] py-[4rpx] rounded-[10rpx]"
+                                        style="background: rgba(15, 159, 110, 0.9)">
+                                        <text class="text-white text-[18rpx] font-bold leading-none line-clamp-1">
+                                            来自·{{ item.source_group_name || "素材分组" }}
+                                        </text>
+                                    </view>
                                 </view>
 
                                 <view class="p-3">
@@ -210,12 +226,13 @@
         </template>
     </view>
 
-    <upload-category-panel v-model="showUploadCategoryPanel" @select="handleSelectCategory" />
+    <upload-category-panel v-model="showUploadCategoryPanel" album-last @select="handleSelectCategory" />
     <choose-history v-model="showHistory" :limit="9" @select="handleSelectHistory" />
     <choose-material
         v-model="showMaterialLibrary"
         :mode="materialType"
         :limit="replaceMaterialIndex === -1 ? 9 : 1"
+        :unlimited-by-group="replaceMaterialIndex === -1"
         @select="handleSelectMaterial" />
     <upload-progress v-model="showUploadProgress" :upload-list="uploadMaterialList" />
     <video-preview-v2
@@ -240,13 +257,17 @@ import {
     batchAddMaterial,
     deleteMaterial,
     updateMaterial,
+    cleanOverUsedMaterial,
 } from "@/api/person";
 import { UploadAlbumTypeEnum, UploadCategoryEnum } from "@/enums/appEnums";
 import useUpload from "@/hooks/useUpload";
+import { useLockFn } from "@/hooks/useLockFn";
+import { useAppStore } from "@/stores/app";
 import { formatAudioTime, setFormData } from "@/utils/util";
 import { useMaterial } from "@/ai_modules/person/hooks/useMaterial";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
 import { MaterialSourceEnum } from "./enums";
+import { PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY } from "@/ai_modules/person/enums";
 import RulePop from "@/ai_modules/person/pages/material_library/components/rule-pop.vue";
 import RuleSettingPop from "@/ai_modules/person/pages/material_library/components/rule-setting-pop.vue";
 
@@ -262,6 +283,10 @@ interface MaterialItem {
     material_type: number;
     use_num: number;
     grab_type: number;
+    /** 整组导入来源：素材库分组 id / 素材 id / 分组名称快照，0 表示非分组导入 */
+    source_group_id?: number;
+    source_material_id?: number;
+    source_group_name?: string;
 }
 
 interface PersonDetail {
@@ -280,7 +305,43 @@ interface MaterialPayload {
     material_name: string;
     duration: number;
     thumbnail_url: string;
+    /** 整组导入来源（素材库分组），单独勾选的素材不带这三个字段 */
+    source_group_id?: number;
+    source_material_id?: number;
+    source_group_name?: string;
 }
+
+/** 从素材选择器拿到的整组导入来源；单独勾选的素材返回空对象，保持可重复导入 */
+const pickSourceGroup = (item: any): Partial<MaterialPayload> => {
+    const groupId = Number(item?.source_group_id) || 0;
+    const materialId = Number(item?.source_material_id) || 0;
+    if (groupId <= 0 || materialId <= 0) return {};
+    return {
+        source_group_id: groupId,
+        source_material_id: materialId,
+        source_group_name: String(item?.source_group_name || ""),
+    };
+};
+
+/** 批量入库结果提示：重复导入与时长超限被跳过的条数一并告知 */
+const toastAddResult = (res: any, durationSkipped = 0): void => {
+    const added = Number(res?.count ?? 0);
+    const skipped = Number(res?.skipped ?? 0);
+    const skipParts: string[] = [];
+    if (skipped > 0) skipParts.push(`${skipped} 个已导入`);
+    if (durationSkipped > 0) skipParts.push(`${durationSkipped} 个时长超限`);
+    if (skipParts.length) {
+        uni.showToast({
+            title: added > 0
+                ? `已导入 ${added} 个，跳过 ${skipParts.join("、")}`
+                : `未导入新素材，跳过 ${skipParts.join("、")}`,
+            icon: "none",
+            duration: 3000,
+        });
+        return;
+    }
+    uni.showToast({ title: "添加成功", icon: "none", duration: 3000 });
+};
 
 interface RulesState {
     synthTypes: string[];
@@ -328,6 +389,11 @@ const currentRulesState = ref<RulesState | null>(null);
 const ruleSettingPopRef = ref<InstanceType<typeof RuleSettingPop>>();
 const pendingOpenRule = ref<boolean>(false);
 
+// ─── 一键清理（后台开关 + 次数阈值） ───────────────────────────────
+const appStore = useAppStore();
+const showCleanButton = computed(() => Number(appStore.getPersonaMaterialConfig?.clean_switch) === 1);
+const cleanThreshold = computed(() => Number(appStore.getPersonaMaterialConfig?.clean_threshold) || 3);
+
 // ─── 计算属性 ─────────────────────────────────────────────────────
 const isMaterialEmpty = computed(() => materialList.value.length === 0);
 
@@ -335,7 +401,39 @@ const isMaterialConflict = computed(
     () => currentRulesState.value?.materialSource === MaterialSourceEnum.PureLib && isMaterialEmpty.value,
 );
 
-const hasOverusedMaterial = computed(() => materialList.value.some((m) => m.use_num >= 3));
+// hasOverusedMaterial 的次数口径与后端清理接口一致：达到阈值的素材均可清理
+const hasOverusedMaterial = computed(() => materialList.value.some((m) => m.use_num >= cleanThreshold.value));
+
+// ─── 一键清理 ─────────────────────────────────────────────────────
+const { lockFn: handleCleanOverUsed } = useLockFn(async (): Promise<void> => {
+    uni.showModal({
+        title: "提示",
+        content: `将删除使用达${cleanThreshold.value}次及以上的全部素材，删除后不可恢复，确定清理吗？`,
+        confirmColor: "#F56C6C",
+        success: async ({ confirm }) => {
+            if (!confirm) return;
+            uni.showLoading({ title: "清理中...", mask: true });
+            try {
+                const result: any = await cleanOverUsedMaterial({ persona_id: personId.value });
+                pagingRef.value?.reload();
+                const deleted = Number(result?.deleted_count) || 0;
+                uni.showToast({
+                    title: deleted > 0 ? `已清理${deleted}个素材` : "没有满足清理条件的素材",
+                    icon: "none",
+                    duration: 3000,
+                });
+            } catch (error: any) {
+                uni.showToast({
+                    title: typeof error === "string" ? error : "清理失败，请重试",
+                    icon: "none",
+                    duration: 3000,
+                });
+            } finally {
+                uni.hideLoading();
+            }
+        },
+    });
+});
 
 // ─── AI合成规则确认回调 ───────────────────────────────────────────
 const handleRulesConfirm = (state: RulesState, summary: string): void => {
@@ -370,7 +468,10 @@ const handleSelectCategory = (category: UploadAlbumTypeEnum | UploadCategoryEnum
         UploadAlbumTypeEnum.Image == category ||
         UploadAlbumTypeEnum.Video == category
     ) {
-        uploadAndProcessFiles(category, { persona_id: personId.value });
+        uploadAndProcessFiles(category, {
+            persona_id: personId.value,
+            ...PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY,
+        });
     } else if (category === "library" || category === "group") {
         materialType.value = category === "library" ? "all" : "group";
         showMaterialLibrary.value = true;
@@ -386,7 +487,7 @@ const handleSelectHistory = (selected: any[]): void => {
         urlField: "url",
         maxDuration: 59,
         replaceIndex: replaceMaterialIndex.value,
-        onSuccess: (formatted) => {
+        onSuccess: (formatted, meta) => {
             showHistory.value = false;
             const items: MaterialPayload[] = formatted.map((item) => ({
                 file_url: item.url,
@@ -395,7 +496,7 @@ const handleSelectHistory = (selected: any[]): void => {
                 material_name: item.name,
                 duration: Number(item.duration),
             }));
-            handleAddMaterial(items);
+            handleAddMaterial(items, meta.droppedByDuration);
         },
     });
 };
@@ -406,27 +507,34 @@ const handleSelectMaterial = (selected: any[]): void => {
         rawList: selected,
         urlField: "url",
         maxDuration: 59,
-        onSuccess: () => {
+        // 整组导入同样按 59 秒过滤：超时长视频不入库，提示里带「N 个时长超限」
+        onSuccess: (formatted, meta) => {
             showMaterialLibrary.value = false;
-            const items: MaterialPayload[] = selected.map((item) => ({
+            const items: MaterialPayload[] = formatted.map((item) => ({
                 file_url: item.url,
                 material_type: item.type === "image" ? 2 : 1,
                 material_name: item.name,
-                duration: item.duration ?? 0,
+                // 时长探测失败时 useMaterial 会留 -1 占位，入库写入非法值，这里兜成 0
+                duration: Math.max(0, Number(item.duration) || 0),
                 thumbnail_url: item.pic,
+                ...pickSourceGroup(item),
             }));
-            handleAddMaterial(items);
+            handleAddMaterial(items, meta.droppedByDuration);
         },
     });
 };
 
 // ─── 添加素材 ─────────────────────────────────────────────────────
-const handleAddMaterial = async (items: MaterialPayload[]): Promise<void> => {
+const handleAddMaterial = async (items: MaterialPayload[], durationSkipped = 0): Promise<void> => {
+    if (!items.length) {
+        showMaterialLibrary.value = false;
+        return;
+    }
     if (adding.value) return;
     uni.showLoading({ title: "添加中...", mask: true });
     try {
         adding.value = true;
-        await batchAddMaterial({
+        const res = await batchAddMaterial({
             persona_id: personId.value,
             items: items.map((item: any) => ({
                 ...item,
@@ -434,7 +542,7 @@ const handleAddMaterial = async (items: MaterialPayload[]): Promise<void> => {
             })),
         });
         uni.hideLoading();
-        uni.showToast({ title: "添加成功", icon: "none", duration: 3000 });
+        toastAddResult(res, durationSkipped);
         pagingRef.value?.reload();
     } catch (error: unknown) {
         uni.hideLoading();

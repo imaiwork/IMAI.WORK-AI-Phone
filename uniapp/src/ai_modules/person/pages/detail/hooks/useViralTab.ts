@@ -309,6 +309,8 @@ const listLoading = ref(false);
 const dismissedLoading = ref(false);
 const dayParam = ref<string>(getTomorrowDateString());
 const hasCustomDayParam = ref(false);
+/** 人设当前视频文案来源，0 表示未知；不是爆款仿写时爆款库的仿写稿不会进视频 */
+const viralCopywritingSource = ref<number>(0);
 
 const applyExtendTabsCount = (tabs: Array<Record<string, any>> | undefined | null): void => {
     if (!Array.isArray(tabs) || !tabs.length) return;
@@ -372,6 +374,7 @@ const fetchViralList = async (): Promise<void> => {
         const lists = Array.isArray(res?.lists) ? res.lists : Array.isArray(res) ? res : [];
         viralList.value = lists.map(mapRecordToViralItem);
         applyExtendTabsCount(res?.extend?.tabs);
+        viralCopywritingSource.value = Number(res?.extend?.copywriting_source) || 0;
         // 重新拉取后清掉过期的展开态（手动排队条目用 listKey）
         expandedViralIds.value = expandedViralIds.value.filter((key) =>
             viralList.value.some((v) => v.listKey === key),
@@ -558,6 +561,7 @@ export const useViralTab = (options?: UseViralTabOptions) => {
         viralList,
         viralPlatformCounts,
         viralPlatformTabs,
+        viralCopywritingSource,
         fetchViralList,
         fetchDismissedList,
         handleClearDismissedViral,

@@ -204,6 +204,8 @@ async function downloadAll() {
     color: #4b5563;
     margin-bottom: 12px;
     line-height: 1.5;
+    user-select: text;
+    -webkit-user-select: text;
     b {
         color: #1f2937;
         font-weight: 600;

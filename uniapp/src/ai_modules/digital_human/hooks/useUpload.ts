@@ -1,4 +1,5 @@
 import { ChooseResult, chooseFile } from "@/components/file-upload/choose-file";
+import { isPrivacyError } from "@/utils/privacy";
 import { uploadImage, uploadFile, videoTranscoding } from "@/api/app";
 import { DigitalHumanModelVersionEnum } from "@/enums/appEnums";
 
@@ -141,7 +142,8 @@ export const useUpload = (options: Options) => {
             //     duration: 4000,
             // });
             // return;
-        } else if (!isDurationValid) {
+        }
+        if (!isDurationValid) {
             uni.showToast({
                 title: `上传视频时长不能小于${duration[0]}秒或大于${duration[1]}秒`,
                 icon: "none",
@@ -153,13 +155,14 @@ export const useUpload = (options: Options) => {
             await uploadVideo(file.tempFilePath);
             onSuccess?.(uploadResult);
         } catch (error: any) {
-            if (
-                error.errMsg &&
-                error.errMsg === "chooseMedia:fail api scope is not declared in the privacy agreement"
-            ) {
-                uni.$u.toast("请完善隐私协议，否则无法使用");
+            // 隐私协议类失败由 choose-file/privacy 工具统一提示，这里不能再弹一次英文 errMsg
+            if (isPrivacyError(error)) {
+                onError?.(error);
+                return;
             }
-            if (error.indexOf("abort") == -1) {
+            const errMsg = String(error?.errMsg || error || "");
+            // 原实现对 error 直接 indexOf，但 chooseFile reject 的是对象，走到这里会抛 TypeError
+            if (!errMsg.includes("cancel") && !errMsg.includes("abort")) {
                 uni.$u.toast("上传失败");
             }
             onError?.({

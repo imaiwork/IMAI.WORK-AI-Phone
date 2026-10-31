@@ -6,7 +6,8 @@
         @refresh="refreshImageTextDetail"
         @publish="onPublishImageText" />
 
-    <view v-else class="h-screen flex flex-col overflow-hidden bg-[#F7F8FA]">
+    <!-- iOS Safari 100vh 包含键盘区域，根容器需要动态减去 keyboardHeight 才能让 docked bar 不被键盘盖住 -->
+    <view v-else class="flex flex-col overflow-hidden bg-[#F7F8FA]" :style="rootStyle">
         <u-navbar title="创作详情" :border-bottom="false" :background="{ background: '#F7F8FA' }"></u-navbar>
 
         <view
@@ -28,7 +29,7 @@
             scroll-y
             class="w-full grow min-h-0"
             :scroll-into-view="keyboardScrollInto"
-            scroll-with-animation>
+            :scroll-with-animation="keyboardHeight <= 0">
             <view class="pb-[400rpx]">
                 <template v-if="isLoading">
                     <view
@@ -314,6 +315,7 @@
                                         v-if="step.washConfig && step.status === 'confirm'"
                                         :task-id="taskId"
                                         :submitting="washSubmitting"
+                                        :script-text="washScriptText"
                                         @confirm="onConfirmWashConfig" />
                                     <step-content
                                         v-else
@@ -371,7 +373,7 @@
                 <text class="text-base font-semibold text-white">{{ retrying ? "重试中..." : "重新尝试" }}</text>
             </view>
         </view>
-        <view class="flex-shrink-0" :style="{ height: keyboardHeight + 'px' }"></view>
+        <view class="flex-shrink-0" :style="{ height: placeholderHeight + 'px' }"></view>
 
         <video-preview-v2 v-model:show="showVideoPreview" :video-url="videoUrl" />
     </view>
@@ -611,6 +613,7 @@ const KEYBOARD_TAP_LOCK_MS = 400;
 const activeConfirmStep = ref<Step | null>(null);
 const keyboardScrollInto = ref("");
 let keyboardTapLocked = false;
+let pendingKeyboardScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
 const stepAnchorId = (id: number) => `hot-write-step-${id}`;
 
@@ -619,12 +622,38 @@ const keyboardConfirmStep = computed(() => {
     if (keyboardHeight.value <= 0 || !step || step.status !== "confirm") return null;
     return step;
 });
+
+/** 根容器高度：H5 上 iOS Safari 100vh 包含键盘区域，需动态减去 keyboardHeight 避免 docked bar 被遮挡 */
+const rootStyle = computed<Record<string, string>>(() => {
+    // #ifdef H5
+    return { height: `calc(100vh - ${keyboardHeight.value}px)` };
+    // #endif
+    // #ifndef H5
+    return { height: "100vh" };
+    // #endif
+});
+
+/** 底部占位高度：仅非 H5 需要（H5 已通过 rootStyle 收缩根容器） */
+const placeholderHeight = computed(() => {
+    // #ifdef H5
+    return 0;
+    // #endif
+    // #ifndef H5
+    return keyboardHeight.value;
+    // #endif
+});
 const isImageText = computed(() => isImageTextTask(taskDetail.value));
 const isTaskFailed = computed(() => Number(taskDetail.value?.status) === HotWriteTaskStatus.FAIL);
 const failReason = computed(() => String(taskDetail.value?.remarks || "").trim() || "任务失败");
 
 const groupA = computed(() => allSteps.value.filter((s) => s.id <= 7));
 const groupB = computed(() => allSteps.value.filter((s) => s.id > 7));
+
+/** 洗稿确认文案：优先取步骤 7 的确认内容，用于在洗稿配置里展示素材秒数锚点 */
+const washScriptText = computed(() => {
+    const step7 = allSteps.value.find((s) => s.id === 7);
+    return String(step7?.confirmContent || taskDetail.value?.rewritten_text || "");
+});
 
 const doneCount = computed(
     () => allSteps.value.filter((s) => s.status === "done" || s.status === "failed").length || 0,
@@ -922,19 +951,46 @@ const scrollToBottom = () => {
 
 const onTextareaFocus = (step: Step) => {
     activeConfirmStep.value = step;
+    scrollToStep(step.id);
+};
+
+/** scroll-into-view 需要先清空再赋值才能触发滚动，配合两次调用确保键盘弹起后也能滚到正确位置 */
+const scrollToStep = (id: number) => {
+    const anchor = stepAnchorId(id);
     keyboardScrollInto.value = "";
     nextTick(() => {
-        keyboardScrollInto.value = stepAnchorId(step.id);
+        keyboardScrollInto.value = anchor;
     });
 };
 
 // 不在输入框 blur 时撤掉确认条：点「确认文案」会先 blur，按钮若跟着消失，这次点击就落空
 watch(keyboardHeight, (height) => {
     if (height <= 0) {
+        // 收起键盘时取消任何待执行的滚动
+        if (pendingKeyboardScrollTimer) {
+            clearTimeout(pendingKeyboardScrollTimer);
+            pendingKeyboardScrollTimer = null;
+        }
         activeConfirmStep.value = null;
         return;
     }
-    if (activeConfirmStep.value?.status === "confirm") return;
+    // iOS Safari 键盘弹起动画期间 visualViewport resize 会触发多次（0→150→280→350），
+    // 每次都算一次 keyboardHeight 变化。这里清除上一次的延迟滚动，等高度稳定后只滚一次。
+    if (pendingKeyboardScrollTimer) {
+        clearTimeout(pendingKeyboardScrollTimer);
+        pendingKeyboardScrollTimer = null;
+    }
+    if (activeConfirmStep.value?.status === "confirm") {
+        // 立即滚一次（键盘正在动画中），然后等键盘完全弹出后再滚一次补偿最终高度
+        scrollToStep(activeConfirmStep.value.id);
+        pendingKeyboardScrollTimer = setTimeout(() => {
+            pendingKeyboardScrollTimer = null;
+            if (activeConfirmStep.value?.status === "confirm") {
+                scrollToStep(activeConfirmStep.value.id);
+            }
+        }, 380);
+        return;
+    }
     activeConfirmStep.value = allSteps.value.find((item) => item.status === "confirm" && !item.washConfig) ?? null;
 });
 

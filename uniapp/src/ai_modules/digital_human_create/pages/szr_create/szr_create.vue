@@ -316,7 +316,7 @@
                         <view class="px-[28rpx] pb-[28rpx]">
                             <navigator
                                 v-if="formData.audio_type == CreateTypeEnum.TEXT"
-                                :url="`/ai_modules/digital_human_create/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
+                                :url="`/ai_modules/digital_human_create/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&strict=1&content=${formData.msg}`"
                                 hover-class="none"
                                 class="bg-[#F8FAFC] rounded-[24rpx] p-[24rpx] border border-solid border-[#F1F5F9] relative">
                                 <view
@@ -444,7 +444,7 @@
                                         </view>
                                     </view>
                                     <navigator
-                                        :url="`/ai_modules/digital_human_create/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&content=${formData.msg}`"
+                                        :url="`/ai_modules/digital_human_create/pages/szr_copywriter/szr_copywriter?limit=${textLimit}&strict=1&content=${formData.msg}`"
                                         hover-class="none"
                                         class="bg-white rounded-[16rpx] p-[20rpx] shadow-sm border border-solid border-[#F1F5F9]">
                                         <text class="text-[#475569] leading-relaxed">{{ formData.msg }}</text>
@@ -543,6 +543,7 @@ import { useAudio } from "@/hooks/useAudio";
 import usePolling from "@/hooks/usePolling";
 import { formatAudioTime } from "@/utils/util";
 import { createVideoCopywriter } from "@/ai_modules/digital_human_create/config/copywriter";
+import { getCopyLangFailReason } from "@/utils/textValidator";
 import SelectAnchor from "@/ai_modules/digital_human_create/components/choose-anchor/choose-anchor.vue";
 import ChooseModel from "@/ai_modules/digital_human_create/components/choose-model/choose-model.vue";
 import ChooseTone from "@/ai_modules/digital_human_create/components/choose-tone/choose-tone.vue";
@@ -1146,6 +1147,14 @@ const confirmCreate = async () => {
     if (!isAudioCreate.value && formData.msg?.length > textLimit.value) {
         uni.$u.toast("文案超出限制，请重新编辑文案");
         return;
+    }
+    // 文案语言检测硬拦截：不通过不允许生成
+    if (!isAudioCreate.value) {
+        const failReason = getCopyLangFailReason(formData.msg);
+        if (failReason) {
+            uni.$u.toast(`文案${failReason}，请修改后再生成`);
+            return;
+        }
     }
     // 后端在 music_source=自定义 且没有音乐时会直接报错，这里先拦一次
     if (

@@ -29,9 +29,9 @@ class PlayVideoTemplateSyncService
         'video_url', 'cover_url', 'face_count', 'allow_bg_replace', 'script', 'sort',
     ];
 
-    public static function syncFromTemplateCenter(): array
+    public static function syncFromTemplateCenter(bool $useCache = true): array
     {
-        $templates = TemplateCenterClient::playTemplates();
+        $templates = TemplateCenterClient::playTemplates($useCache);
 
         $stats = [
             'created' => 0, 'updated' => 0, 'unchanged' => 0, 'deleted' => 0,

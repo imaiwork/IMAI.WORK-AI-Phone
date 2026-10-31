@@ -37,8 +37,15 @@ const mindMapContainerWrapper = shallowRef<HTMLElement | null>(null);
 const mindMapContainer = shallowRef<SVGSVGElement | null>(null);
 const { toolbarContainer, isFullscreen, mindMapInit, mindMapFit, mindMapExportAsPNG } = useMindMap();
 
+// 导出复用同一份渲染配置，导出图和页面上的观感保持一致
+const mindMapOptions = {
+    color: (node: any) => "#2353f4",
+    spacingVertical: 10,
+    spacingHorizontal: 20,
+};
+
 const handleExport = () => {
-    mindMapExportAsPNG(mindMapContainerWrapper.value);
+    mindMapExportAsPNG(formData.reply, mindMapOptions);
 };
 
 // 获取思维导图
@@ -55,11 +62,7 @@ const getMindMap = async () => {
 };
 
 const initMindMap = async () => {
-    mindMapInit(mindMapContainer.value, {
-        color: (node: any) => "#2353f4",
-        spacingVertical: 10,
-        spacingHorizontal: 20,
-    });
+    mindMapInit(mindMapContainer.value, mindMapOptions);
     await nextTick();
     mindMapFit(formData.reply);
 };

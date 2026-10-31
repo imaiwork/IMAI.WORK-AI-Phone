@@ -213,6 +213,11 @@ export const createSoraVideo = (data: Record<string, any>) => {
     return request.post({ url: '/sora.soraVideoSetting/add', data })
 }
 
+// sora AI 帮写提示词（镜头级，直接投喂视频生成模型）
+export const createSoraPrompt = (data: Record<string, any>) => {
+    return request.post({ url: '/sora.soraVideoSetting/prompt', data })
+}
+
 // 闪剪成片重新下载/转存
 export const downloadShanjianVideoTask = (data: { id: number }) => {
     return request.post({ url: '/shanjian.shanjianVideoTask/download', data })
@@ -225,6 +230,12 @@ export const shanjianVoiceClone = (data: Record<string, any>) => {
 
 export const getSystemMusicList = () => {
     return request.get({ url: '/shanjian.voice/musicLists' })
+}
+
+// 选曲分组 tab：只返回当前有可用曲目的分组（「全部」由前端自己拼）
+// all=1：配置页选分组用，返回全部分组（含暂时没有曲目的空分组）
+export const getSystemMusicGroups = (params?: { all?: number }) => {
+    return request.get({ url: '/shanjian.voice/musicGroups', params })
 }
 
 // sora发布任务创建

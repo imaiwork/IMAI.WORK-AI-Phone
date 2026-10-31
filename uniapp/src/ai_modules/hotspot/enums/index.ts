@@ -158,6 +158,53 @@ export const platformActiveBg = (key: string): string =>
 export const platformWhiteIcon = (key: string): string =>
     HOTSPOT_PLATFORM_OPTIONS.find((p) => p.key === key)?.iconWhite || IconMusicWhite;
 
+/** 素材秒数锚点（与后端 ScriptService::materialAnchorSeconds 同口径）：
+ *  成片预估 = 真实口播秒数（字数 / 4.2 / 语速，夹 15~180），素材总量需覆盖 [预估 × 0.5, 预估]；
+ *  数字人口播的目标秒数取下限（floor），素材混剪取上限（ceil）；
+ *  AI 找素材最低 2 视频 + 2 图片兜底，秒数不足时按缺口继续找（50 条费用熔断），
+ *  图片目标 = 目标秒数 × 15% / 每张 2 秒，夹 2~8 张；
+ *  条数仅作抓取上限：实际由后端按素材真实时长累加到目标秒数后收口，
+ *  均条长兜底仅用于后端首轮预算，不再作为前端展示口径 */
+export const HOTSPOT_MATERIAL_ANCHOR: {
+    CHARS_PER_SEC: number;
+    FLOOR_RATIO: number;
+    MIN_VIDEO: number;
+    MIN_IMAGE: number;
+    IMAGE_DISPLAY_SEC: number;
+    IMAGE_SHARE: number;
+    IMAGE_MAX: number;
+    AVG_VIDEO_SEC_FALLBACK: number;
+    VIDEO_CAP: number;
+    SCENE: Record<string, string>;
+} = {
+    /** 口播语速：每秒字数，与后端 ScriptService::CHARS_PER_SEC 一致 */
+    CHARS_PER_SEC: 4.2,
+    FLOOR_RATIO: 0.5,
+    MIN_VIDEO: 2,
+    MIN_IMAGE: 2,
+    /** 图片固定可承载秒数：与后端 ScriptService::IMAGE_DISPLAY_SEC 一致 */
+    IMAGE_DISPLAY_SEC: 2,
+    /** 图片承载占比：与后端 ScriptService::MATERIAL_ANCHOR_IMAGE_SHARE 一致 */
+    IMAGE_SHARE: 0.15,
+    /** 图片张数上限：与后端 ScriptService::MATERIAL_ANCHOR_IMAGE_MAX 一致 */
+    IMAGE_MAX: 8,
+    /** 已选视频均条长缺失时的兜底：与后端 config('hotspot.avg_video_sec_fallback') 默认一致 */
+    AVG_VIDEO_SEC_FALLBACK: 5,
+    /** 视频条数熔断上限：与后端 ScriptService::MATERIAL_ANCHOR_VIDEO_CAP 一致 */
+    VIDEO_CAP: 50,
+    SCENE: {
+        [HotspotVideoType.DIGITAL]: "穿插在口播画面中",
+        [HotspotVideoType.CLIPS]: "作为混剪画面",
+    },
+};
+
+/** 图片目标张数：目标秒数 × 15% / 每张 2 秒，夹 2~8 张（与后端 ScriptService::imageTargetCount 同公式） */
+export const hotspotImageTargetCount = (targetSec: number): number => {
+    const { IMAGE_SHARE, IMAGE_DISPLAY_SEC, MIN_IMAGE, IMAGE_MAX } = HOTSPOT_MATERIAL_ANCHOR;
+    if (targetSec <= 0) return MIN_IMAGE;
+    return Math.max(MIN_IMAGE, Math.min(IMAGE_MAX, Math.ceil((targetSec * IMAGE_SHARE) / IMAGE_DISPLAY_SEC)));
+};
+
 /** options 接口离线兜底（与后端 ScriptService::options 同构） */
 export const HOTSPOT_DEFAULT_OPTIONS = {
     goals: [

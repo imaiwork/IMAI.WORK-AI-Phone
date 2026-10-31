@@ -6,6 +6,7 @@ use app\api\lists\BaseApiDataLists;
 use app\common\enum\DeviceEnum;
 use app\common\lists\ListsExtendInterface;
 use app\common\lists\ListsSearchInterface;
+use app\common\model\aiPersona\AiPersonaSynthesisConfig;
 use app\common\model\sv\SvDeviceViralManualImport;
 use app\common\model\sv\SvDeviceViralRecord;
 use app\common\service\FileService;
@@ -88,7 +89,25 @@ class DeviceViralRecordLists extends BaseApiDataLists implements ListsSearchInte
             'keyword_list' => $this->getKeywordList(),
             'uninterested_count' => $this->buildQuery(0, false)->count()
                 + $this->buildManualImportQuery(false, 0)->count(),
+            'copywriting_source' => $this->getPersonaCopywritingSource(),
         ];
+    }
+
+    /**
+     * 人设当前的视频文案来源。不是「爆款仿写」时，爆款库里的仿写稿不会进视频，
+     * 前端据此提示，避免用户拿爆款库去对成片文案。未传人设返回 0。
+     */
+    private function getPersonaCopywritingSource(): int
+    {
+        $personaId = $this->getPersonaId();
+        if ($personaId <= 0) {
+            return 0;
+        }
+
+        return (int)AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->where('user_id', $this->userId)
+            ->order('id desc')
+            ->value('copywriting_source');
     }
 
     /**

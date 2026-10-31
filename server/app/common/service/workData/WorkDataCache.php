@@ -35,6 +35,35 @@ class WorkDataCache
     }
 
     /**
+     * 每日同步标记 key —— 同一个账号同一天只允许定时同步一次。
+     * key 名带日期，TTL 到次日凌晨自动过期。
+     */
+    public static function dailySyncedKey(string $platform, string $account): string
+    {
+        return 'work_data:synced:' . date('Y-m-d') . ':' . $platform . ':' . strtolower($account);
+    }
+
+    /**
+     * 今日是否已定时同步过。
+     */
+    public static function isSyncedToday(string $platform, string $account): bool
+    {
+        return (bool)self::storeGet(self::dailySyncedKey($platform, $account));
+    }
+
+    /**
+     * 标记今日已同步，TTL 到明天 00:00。
+     */
+    public static function markSyncedToday(string $platform, string $account): void
+    {
+        // 计算到次日零点的秒数
+        $now = time();
+        $midnight = strtotime('tomorrow');
+        $ttl = max(60, $midnight - $now);
+        self::storeSet(self::dailySyncedKey($platform, $account), 1, $ttl);
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public static function getPayload(string $platform, string $account): ?array

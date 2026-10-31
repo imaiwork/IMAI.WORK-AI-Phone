@@ -127,9 +127,15 @@
                 v-if="state.publishMode === 1 && !state.showingMaterialGroupList && state.hasOverusedMaterial"
                 class="bg-[#FFF7ED] rounded-[28rpx] px-[26rpx] py-[22rpx] flex gap-[16rpx] mb-[18rpx] border border-solid border-[#FED7AA]">
                 <u-icon name="warning" color="#F97316" size="28" class="shrink-0 mt-[2rpx]"></u-icon>
-                <text class="text-xs text-[#EA580C] leading-relaxed">
-                    有素材使用已达3次，建议及时替换，避免影响内容流量权重。
+                <text class="flex-1 min-w-0 text-xs text-[#EA580C] leading-relaxed">
+                    有素材使用已达{{ state.materialCleanThreshold }}次，建议及时替换，避免影响内容流量权重。
                 </text>
+                <view
+                    v-if="state.showCleanButton"
+                    class="shrink-0 self-center px-[22rpx] py-[12rpx] rounded-full bg-[#EA580C] active:opacity-80"
+                    @click="actions.cleanOverUsed()">
+                    <text class="text-[22rpx] font-semibold text-white">一键清理</text>
+                </view>
             </view>
 
             <view
@@ -246,11 +252,18 @@
                                 style="background: rgba(180, 83, 9, 0.85)">
                                 原图
                             </text>
+                            <!-- 从素材库分组整组导入：标出源分组，重复导入该组时会按这个来源跳过 -->
+                            <text
+                                v-if="Number(item.source_group_id) > 0"
+                                class="text-[18rpx] font-bold text-white px-[10rpx] py-[4rpx] rounded-[8rpx] max-w-[200rpx] line-clamp-1"
+                                style="background: rgba(15, 159, 110, 0.88)">
+                                来自·{{ item.source_group_name || "素材分组" }}
+                            </text>
                         </view>
                         <view
                             v-if="
                                 state.publishMode === 1 &&
-                                item.use_num >= 3 &&
+                                item.use_num >= state.materialCleanThreshold &&
                                 !state.batchDeleteMode &&
                                 !state.isMaterialSliceFailed(item)
                             "
@@ -311,7 +324,7 @@
                                     v-else-if="item.source !== 'square'"
                                     class="text-[20rpx] font-semibold px-[12rpx] py-[4rpx] rounded-[8rpx]"
                                     :class="
-                                        item.use_num >= 3
+                                        item.use_num >= state.materialCleanThreshold
                                             ? 'text-[#CC7A00] bg-[#FFF7ED]'
                                             : item.use_num > 0
                                             ? 'text-[#19BE6B] bg-[#F0FDF4]'
@@ -711,6 +724,7 @@
                                         {{ item.title || "未填写标题" }}
                                     </text>
                                     <text v-if="isPublicCopy(item)" class="copy-badge copy-badge--public">公共</text>
+                                    <text v-else-if="isAiRewriteCopy(item)" class="copy-badge copy-badge--ai">AI仿写</text>
                                     <text v-if="item.has_update" class="copy-badge copy-badge--upd">有更新</text>
                                     <text v-else-if="item.edited" class="copy-badge copy-badge--edit">已改过</text>
                                 </view>
@@ -933,6 +947,7 @@ import {
     CopyDriverTypeEnum,
     CopyLibraryTypeEnum,
     isNewsCopy,
+    isAiRewriteCopy,
     isPublicCopy,
     isPublishCopy,
     type CopyItem,
@@ -967,6 +982,8 @@ const props = defineProps<{
         ungroupedCount: number;
         showingMaterialGroupList: boolean;
         hasOverusedMaterial: boolean;
+        materialCleanThreshold: number;
+        showCleanButton: boolean;
         failedMaterialCount: number;
         hasSlicingMaterial: boolean;
         hasSlicingTask: boolean;
@@ -1031,6 +1048,7 @@ const props = defineProps<{
         cancelBatchDelete: () => void;
         confirmBatchDelete: () => void;
         deleteFailedSlices: () => void;
+        cleanOverUsed: () => void;
         previewMaterial: (item: any) => void;
         playMaterial: (item: any) => void;
         playMusic: (item: any) => void;
@@ -1637,6 +1655,9 @@ const handleCopyManage = (): void => {
 }
 .copy-badge--edit {
     background: #909399;
+}
+.copy-badge--ai {
+    background: #7b61ff;
 }
 
 .copy-results {

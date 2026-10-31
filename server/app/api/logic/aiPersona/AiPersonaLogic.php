@@ -1397,16 +1397,17 @@ class AiPersonaLogic extends ApiLogic
 
     /**
      * 无手机模式每天出几条。与 AutoVideoSynthesis::resolveCloudDailyCount 同口径：
-     * 未配置（0）时兜底 1 条，所以这一项永远有有效值。
+     * 优先分类型条数之和，未配置回落 daily_video_count，再兜底 1 条。
      */
     private static function cloudDailyVideoCount(int $personaId, int $userId): int
     {
-        $configured = AiPersonaSynthesisConfig::normalizeDailyVideoCount(
-            AiPersonaSynthesisConfig::where('persona_id', $personaId)
-                ->where('user_id', $userId)
-                ->value('daily_video_count')
-        );
-        return $configured > 0 ? $configured : AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+        $config = AiPersonaSynthesisConfig::where('persona_id', $personaId)
+            ->where('user_id', $userId)
+            ->findOrEmpty();
+        if ($config->isEmpty()) {
+            return AiPersonaSynthesisConfig::DAILY_VIDEO_COUNT_CLOUD_DEFAULT;
+        }
+        return \app\common\service\aiPersona\PersonaTypePlanService::resolveCloudTargetCount($config);
     }
 
     /**

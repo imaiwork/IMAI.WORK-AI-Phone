@@ -5,6 +5,7 @@ import {
     batchAddMaterial,
     batchDeleteMaterial,
     batchUpdateMaterialGroup,
+    cleanOverUsedMaterial,
     deleteMaterialGroup,
     bindAvatarVoice,
     deleteAvatar,
@@ -24,11 +25,17 @@ import { getSquareRefs, removeSquareRefs } from "@/api/square";
 import { isSquareMaterial, SquareSourceEnum } from "@/ai_modules/person/enums/square";
 import { UploadAlbumTypeEnum, UploadCategoryEnum } from "@/enums/appEnums";
 import { useMaterial } from "@/ai_modules/person/hooks/useMaterial";
-import { MATERIAL_KIND_TO_USE_MODE, MaterialKindEnum, normalizeMaterialUseMode } from "@/ai_modules/person/enums";
+import {
+    MATERIAL_KIND_TO_USE_MODE,
+    MaterialKindEnum,
+    normalizeMaterialUseMode,
+    PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY,
+} from "@/ai_modules/person/enums";
 import useUpload, { type UploadFailedItem } from "@/hooks/useUpload";
 import usePolling from "@/hooks/usePolling";
 import { useAudio } from "@/hooks/useAudio";
 import cache from "@/utils/cache";
+import { useAppStore } from "@/stores/app";
 import { saveImageToPhotosAlbum, saveVideoToPhotosAlbum } from "@/utils/file";
 import { computed, nextTick, reactive, ref, toRef, watch, type Ref } from "vue";
 
@@ -90,6 +97,10 @@ export interface MaterialItem {
     slice_status_text?: string;
     /** 1 = 原图模式入库（keep_original），合成时不压缩不适配 */
     keep_original?: number;
+    /** 整组导入来源：素材库分组 id / 素材 id / 分组名称快照，0 表示非分组导入 */
+    source_group_id?: number;
+    source_material_id?: number;
+    source_group_name?: string;
     source_type?: string;
     source_type_text?: string;
     source?: string;
@@ -177,7 +188,47 @@ interface MaterialPayload {
     material_name: string;
     duration: number;
     thumbnail_url: string;
+    /** 整组导入来源（素材库分组），单独勾选的素材不带这三个字段 */
+    source_group_id?: number;
+    source_material_id?: number;
+    source_group_name?: string;
 }
+
+/** 从素材选择器拿到的整组导入来源；单独勾选的素材返回空对象，保持可重复导入 */
+const pickSourceGroup = (item: any): {
+    source_group_id?: number;
+    source_material_id?: number;
+    source_group_name?: string;
+} => {
+    const groupId = Number(item?.source_group_id) || 0;
+    const materialId = Number(item?.source_material_id) || 0;
+    if (groupId <= 0 || materialId <= 0) return {};
+    return {
+        source_group_id: groupId,
+        source_material_id: materialId,
+        source_group_name: String(item?.source_group_name || ""),
+    };
+};
+
+/** 批量入库结果提示：重复导入与时长超限被跳过的条数一并告知 */
+const toastAddResult = (res: any, durationSkipped = 0): void => {
+    const added = Number(res?.count ?? 0);
+    const skipped = Number(res?.skipped ?? 0);
+    const skipParts: string[] = [];
+    if (skipped > 0) skipParts.push(`${skipped} 个已导入`);
+    if (durationSkipped > 0) skipParts.push(`${durationSkipped} 个时长超限`);
+    if (skipParts.length) {
+        uni.showToast({
+            title: added > 0
+                ? `已导入 ${added} 个，跳过 ${skipParts.join("、")}`
+                : `未导入新素材，跳过 ${skipParts.join("、")}`,
+            icon: "none",
+            duration: 3000,
+        });
+        return;
+    }
+    uni.showToast({ title: "添加成功", icon: "none", duration: 3000 });
+};
 
 export interface AvatarItem {
     id: string;
@@ -447,7 +498,11 @@ export const useMaterialsTab = ({
     const currMusicId = ref<string | null>(null);
     const { isPlaying, play, pause, destroy } = useAudio();
 
-    const hasOverusedMaterial = computed(() => materialList.value.some((m) => m.use_num >= 3));
+    // 一键清理（后台「人设设置」下发：clean_switch 显隐 + clean_threshold 阈值，口径与后端清理接口一致）
+    const appStore = useAppStore();
+    const materialCleanThreshold = computed(() => Number(appStore.getPersonaMaterialConfig?.clean_threshold) || 3);
+    const showCleanButton = computed(() => Number(appStore.getPersonaMaterialConfig?.clean_switch) === 1);
+    const hasOverusedMaterial = computed(() => materialList.value.some((m) => m.use_num >= materialCleanThreshold.value));
     const selectedMaterialCount = computed(() => selectedMaterialIds.value.length);
     // 全选状态：当前已加载素材全部被选中（空列表不算全选）
     const isAllMaterialSelected = computed(
@@ -756,7 +811,7 @@ export const useMaterialsTab = ({
         if (!items.length) return;
         uni.showLoading({ title: "添加中...", mask: true });
         try {
-            await batchAddMaterial({
+            const res = await batchAddMaterial({
                 persona_id: personId.value,
                 // 原图模式：服务端按 MP3/M4A/AAC/WAV 校验并标 keep_original=1，合成时不重新编码
                 ...(isOriginalKind() ? { material_kind: MaterialKindEnum.ORIGINAL } : {}),
@@ -767,7 +822,7 @@ export const useMaterialsTab = ({
                     thumbnail_url: item.thumbnail_url || "",
                 })),
             });
-            uni.showToast({ title: "添加成功", icon: "none", duration: 3000 });
+            toastAddResult(res);
             await resetMusicList();
         } catch (error: any) {
             uni.showToast({ title: error || "添加失败，请重试", icon: "none", duration: 3000 });
@@ -1130,7 +1185,7 @@ export const useMaterialsTab = ({
     const startAlbumUpload = (category: UploadAlbumTypeEnum, cutMode: "cut" | "none" | null = null) => {
         if (isDirectUploadScene()) {
             shouldManualAddAfterUpload.value = false;
-            uploadAndProcessFiles(category, {});
+            uploadAndProcessFiles(category, { ...PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY });
             return;
         }
         // 原图模式：不转码不切割，material_kind=original + ffmpeg=0（缺一不可，服务端会拒），校验通过直接入库
@@ -1141,6 +1196,7 @@ export const useMaterialsTab = ({
                 ffmpeg: 0,
                 material_kind: MaterialKindEnum.ORIGINAL,
                 ...uploadGroupFields(),
+                ...PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY,
             });
             return;
         }
@@ -1148,11 +1204,16 @@ export const useMaterialsTab = ({
         if (cutMode === "none") {
             shouldManualAddAfterUpload.value = true;
             // 这里只传文件，分组在后面的手动入库里带。上传请求没有人设，带了分组会被当成分组不存在。
-            uploadAndProcessFiles(category, { ffmpeg: 1 });
+            uploadAndProcessFiles(category, { ffmpeg: 1, ...PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY });
             return;
         }
         shouldManualAddAfterUpload.value = false;
-        uploadAndProcessFiles(category, { persona_id: personId.value, ffmpeg: 2, ...uploadGroupFields() });
+        uploadAndProcessFiles(category, {
+            persona_id: personId.value,
+            ffmpeg: 2,
+            ...uploadGroupFields(),
+            ...PERSONA_UPLOAD_SYNC_MEDIA_LIBRARY,
+        });
     };
 
     const handleSelectCategory = (category: UploadAlbumTypeEnum | UploadCategoryEnum): void => {
@@ -1221,7 +1282,7 @@ export const useMaterialsTab = ({
             urlField: "url",
             maxDuration: getCurrentMaxDuration(scene),
             replaceIndex: replaceMaterialIndex.value,
-            onSuccess: (formatted) => {
+            onSuccess: (formatted, meta) => {
                 showHistory.value = false;
                 directMaterialScratchList.value = [];
                 const items: MaterialPayload[] = formatted.map((item) => ({
@@ -1231,7 +1292,7 @@ export const useMaterialsTab = ({
                     material_name: item.name,
                     duration: Number(item.duration),
                 }));
-                handleAddMaterial(items, scene);
+                handleAddMaterial(items, scene, meta.droppedByDuration);
             },
         });
     };
@@ -1254,6 +1315,7 @@ export const useMaterialsTab = ({
                 material_name: item.name?.replace(/\.[^.]+$/, "") || item.name,
                 duration: Number(item.duration) || 0,
                 thumbnail_url: "",
+                ...pickSourceGroup(item),
             }));
             showMaterialLibrary.value = false;
             handleAddMusicMaterial(items);
@@ -1264,29 +1326,36 @@ export const useMaterialsTab = ({
             rawList: selected,
             urlField: "url",
             maxDuration: getCurrentMaxDuration(scene),
-            onSuccess: () => {
+            // 整组导入同样按当前库的时长上限过滤：超时长视频不入库，提示里带「N 个时长超限」
+            onSuccess: (formatted, meta) => {
                 showMaterialLibrary.value = false;
                 directMaterialScratchList.value = [];
-                const items: MaterialPayload[] = selected.map((item) => ({
+                const items: MaterialPayload[] = formatted.map((item) => ({
                     file_url: item.url,
                     material_type: item.type === "image" ? 2 : 1,
                     material_name: item.name,
-                    duration: item.duration ?? 0,
+                    // 时长探测失败时 useMaterial 会留 -1 占位，入库写入非法值，这里兜成 0
+                    duration: Math.max(0, Number(item.duration) || 0),
                     thumbnail_url: item.pic,
+                    ...pickSourceGroup(item),
                 }));
-                handleAddMaterial(items, scene);
+                handleAddMaterial(items, scene, meta.droppedByDuration);
             },
         });
     };
 
-    const handleAddMaterial = async (items: MaterialPayload[], scene = uploadScene.value): Promise<void> => {
+    const handleAddMaterial = async (
+        items: MaterialPayload[],
+        scene = uploadScene.value,
+        durationSkipped = 0
+    ): Promise<void> => {
         if (!items.length) return;
         uni.showLoading({ title: "添加中...", mask: true });
         // 原图是剪辑原片库的素材模式，成品直发库不分模式。按目标库判定，
         // 不能只看 scene：在成品直发库点通用上传时 scene 仍是 COMPOSE
         const targetPublishMode = scene === MaterialUploadScene.DIRECT ? 2 : publishMode.value;
         try {
-            await batchAddMaterial({
+            const res = await batchAddMaterial({
                 persona_id: personId.value,
                 // 原图模式手动同步（素材库 / 素材组 / 创作库选入）：服务端逐条探测规格，不合格整批拒绝并给原因
                 ...(isOriginalKind() && targetPublishMode === 1
@@ -1300,7 +1369,7 @@ export const useMaterialsTab = ({
                     publish_mode: targetPublishMode,
                 })),
             });
-            uni.showToast({ title: "添加成功", icon: "none", duration: 3000 });
+            toastAddResult(res, durationSkipped);
             refreshGroupsIfListing();
             if (scene === MaterialUploadScene.DIRECT) {
                 await resetDirectMaterialList();
@@ -1457,6 +1526,34 @@ export const useMaterialsTab = ({
                     await syncSliceProgressWithMaterialList();
                 } catch (error: any) {
                     uni.showToast({ title: error || "删除失败", icon: "none", duration: 3000 });
+                } finally {
+                    uni.hideLoading();
+                }
+            },
+        });
+    };
+
+    const handleCleanOverUsedMaterial = (): void => {
+        uni.showModal({
+            title: "一键清理",
+            content: `将删除使用已达${materialCleanThreshold.value}次及以上的全部素材，删除后不可恢复，确定清理吗？`,
+            confirmColor: "#F56C6C",
+            confirmText: "清理",
+            success: async ({ confirm }) => {
+                if (!confirm) return;
+                uni.showLoading({ title: "清理中...", mask: true });
+                try {
+                    const res = await cleanOverUsedMaterial({ persona_id: personId.value });
+                    const deletedCount = Number(res?.deleted_count ?? 0);
+                    uni.showToast({
+                        title: deletedCount > 0 ? `已清理 ${deletedCount} 个素材` : "没有满足清理条件的素材",
+                        icon: "none",
+                        duration: 2000,
+                    });
+                    await reloadMaterialList();
+                    await syncSliceProgressWithMaterialList();
+                } catch (error: any) {
+                    uni.showToast({ title: error || "清理失败", icon: "none", duration: 3000 });
                 } finally {
                     uni.hideLoading();
                 }
@@ -1958,7 +2055,10 @@ export const useMaterialsTab = ({
         handleToggleMusicSelected,
         handleToggleSelectAll,
         handleToggleSelectAllMusic,
+        handleCleanOverUsedMaterial,
         hasOverusedMaterial,
+        materialCleanThreshold,
+        showCleanButton,
         isAllMaterialSelected,
         isAllMusicSelected,
         hasSlicingMaterial,

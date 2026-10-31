@@ -155,7 +155,9 @@ class ManualAssetService
         foreach (self::VIDEO_TYPE_GENERATION as $videoType => $generationType) {
             $rows = ShanjianClipTemplate::where('scene', SynthesisTemplateConfigService::sceneByType($generationType))
                 ->where('auto_type', 1)
-                ->order(['sort' => 'desc', 'id' => 'desc'])
+                // 后台隐藏的模板不进用户可选列表
+                ->where('status', 1)
+                ->orderRaw(ShanjianClipTemplate::SORT_EXPRESSION . ' DESC, id DESC')
                 ->select();
             $items = [];
             foreach ($rows as $row) {
@@ -187,6 +189,7 @@ class ManualAssetService
         $hit = ShanjianClipTemplate::where('id', $clipTemplateId)
             ->where('scene', $scene)
             ->where('auto_type', 1)
+            ->where('status', 1)
             ->findOrEmpty();
         if ($hit->isEmpty()) {
             HotspotLog::write(sprintf(

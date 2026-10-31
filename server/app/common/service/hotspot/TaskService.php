@@ -81,6 +81,11 @@ class TaskService
             throw new HotspotUpstreamException('口播文案不能为空');
         }
         $options = ScriptService::normalizeOptions(self::asArray($params['options'] ?? []));
+        // 摘要随任务落库：清缓存后从任务现场还原时，重新生成口播仍要带上 AI 联网搜索内容
+        $summary = trim((string)($params['summary'] ?? ''));
+        if ($summary !== '') {
+            $options['summary'] = $summary;
+        }
         $title = (string)(($params['title'] ?? '') !== '' ? $params['title'] : ($params['topic'] ?? ''));
         $script = ScriptService::stripLeadingTitle($script, $title);
         if (isset($params['hashtags'])) {
@@ -415,6 +420,8 @@ class TaskService
         $options['retry_seq'] = (int)($options['retry_seq'] ?? 0) + 1;
         $options['dispatch_status'] = 'pending';
         $options['dispatch_locked_at'] = 0;
+        // 旧一轮的素材时长缺口随重试作废，新一轮下发收口后会重新写入
+        unset($options['material_gate']);
         unset($options[PublishContentService::OPTION_KEY]);
         return $options;
     }
@@ -788,6 +795,9 @@ class TaskService
     private static function toApi(HotspotTask $row, bool $withPic = false): array
     {
         $options = self::asArray($row->options_json);
+        // 摘要不混在 options 里回给前端（避免再随设置提交回来），单独作为现场字段还原
+        $summary = trim((string)($options['summary'] ?? ''));
+        unset($options['summary']);
         $copy = [
             'title' => trim((string)($row->publish_title ?? '')),
             'content' => trim((string)($row->publish_content ?? '')),
@@ -804,12 +814,15 @@ class TaskService
             'script' => (string)$row->script,
             'persona' => self::asArray($row->persona_json),
             'core_points' => self::asArray($row->core_points_json),
+            // 摘要只在详情/现场还原时返回，列表按行带会白白放大载荷
+            'summary' => $withPic ? $summary : '',
             'citations' => self::asArray($row->citations_json),
             'analysis' => self::asArray($row->analysis_json),
             'options' => $options,
             'status' => (string)$row->status,
             'step_status' => self::asArray($row->step_status_json),
             'error' => (string)$row->error,
+            'material_warning' => self::materialWarningText($options),
             'video_url' => self::formatVideoUrl((string)$row->video_url),
             'shanjian_video_task_id' => self::resolveBoundVideoTaskId($row),
             // 仅详情场景查封面（列表按行查会 N+1）
@@ -828,6 +841,27 @@ class TaskService
         }
         $pic = (string)(\app\common\model\shanjian\ShanjianVideoTask::where('id', $videoTaskId)->value('pic') ?? '');
         return $pic !== '' ? FileService::getFileUrl($pic) : '';
+    }
+
+    /**
+     * 素材时长缺口提示：下发收口后缺口>0 的任务给用户一句可读的风险说明。
+     * 收口明细（预估/需求/实有/缺口）完整保留在 options.material_gate，前端要展示明细直接取。
+     */
+    public static function materialWarningText(array $options): string
+    {
+        $gate = self::asArray($options['material_gate'] ?? null);
+        $gap = (float)($gate['gap_sec'] ?? 0);
+        if ($gap <= 0) {
+            return '';
+        }
+        $est = (int)($gate['est_duration_sec'] ?? 0);
+        $available = (float)($gate['available_sec'] ?? 0);
+        return sprintf(
+            '素材总时长约%.1f秒，口播预估约%d秒，仍缺%.1f秒，成片画面会重复使用；建议在素材库补充素材，或缩短文案后重新生成',
+            $available,
+            $est,
+            $gap
+        );
     }
 
     public static function formatDateTime(mixed $row, string $field): string

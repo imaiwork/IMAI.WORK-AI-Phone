@@ -164,7 +164,7 @@
                     </template>
                 </ElTableColumn>
                 <template #empty>
-                    <div class="py-20 flex flex-col items-center">
+                    <!-- <div class="py-20 flex flex-col items-center">
                         <div class="w-20 h-20 bg-[#0065fb]/10 rounded-full flex items-center justify-center mb-4">
                             <Icon name="local-icon-add_circle" :size="40" color="var(--color-primary)" />
                         </div>
@@ -175,7 +175,7 @@
                             @click="handleCreate">
                             立即发布任务
                         </ElButton>
-                    </div>
+                    </div> -->
                 </template>
             </ElTable>
         </div>

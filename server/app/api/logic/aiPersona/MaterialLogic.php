@@ -6,10 +6,13 @@ use app\api\logic\ApiLogic;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
+use app\api\lists\aiPersona\MaterialUseLogLists;
 use app\common\model\sv\SvDevice;
+use app\common\model\sv\SvMediaMaterialGroup;
 use app\common\service\ffmpeg\MaterialService as VideoSliceMaterialService;
 use app\common\service\MusicDurationService;
 use app\common\service\OriginalMaterialSpec;
+use app\common\service\ConfigService;
 use think\facade\Cache;
 use think\facade\Db;
 
@@ -123,6 +126,23 @@ class MaterialLogic extends ApiLogic
             }
             $batchGroupId = (int)($params['group_id'] ?? 0);
 
+            // 整组导入的来源（素材库分组 → 人设素材库）：同一分组重复导入时按
+            // (persona_id, source_group_id, source_material_id, 库 + 模式) 判重，已导入过的直接跳过。
+            // 「库 + 模式」必须参与判重：剪辑原片库的自动适配 / 原图各是一套独立列表（keep_original），
+            // 成品直发库又是另一套（publish_mode）。不带这两维判重的话，在自动适配下整组导入过的分组
+            // 切到原图模式再整组导入会被全部当成「已导入」跳过，表现为提示已跳过、列表里一条没有。
+            // 单独点选的素材不带来源，保持可以重复导入的原有行为。
+            $sourceGroupKeys = [];
+            foreach ($items as $item) {
+                $sourceGroupId = max(0, (int)($item['source_group_id'] ?? 0));
+                $sourceMaterialId = max(0, (int)($item['source_material_id'] ?? 0));
+                if ($sourceGroupId > 0 && $sourceMaterialId > 0) {
+                    $sourceGroupKeys[$sourceGroupId][$sourceMaterialId] = true;
+                }
+            }
+            $importedGroupMaterials = self::loadImportedGroupMaterials((int)$params['persona_id'], $sourceGroupKeys);
+            $skippedCount = 0;
+
             $insertData = [];
             foreach ($items as $key => $item) {
                 $file_url = Material::rawFileUrl($item);
@@ -131,6 +151,22 @@ class MaterialLogic extends ApiLogic
                     continue;
                 }
                 $materialType = (int)($item['material_type'] ?? 1);
+                $sourceGroupId = max(0, (int)($item['source_group_id'] ?? 0));
+                $sourceMaterialId = max(0, (int)($item['source_material_id'] ?? 0));
+                // 原图判定提前到这里：判重键要带模式，后面入库与门禁复用同一个结果
+                $wantsOriginal = OriginalMaterialSpec::wantsOriginal($item) || OriginalMaterialSpec::wantsOriginal($params);
+                $keepOriginal = $wantsOriginal ? Material::KEEP_ORIGINAL_YES : Material::KEEP_ORIGINAL_NO;
+                if ($sourceGroupId > 0 && $sourceMaterialId > 0
+                    && isset($importedGroupMaterials[$sourceGroupId][self::groupImportDedupeKey(
+                        $materialType,
+                        $publishMode,
+                        $keepOriginal,
+                        $sourceMaterialId
+                    )])
+                ) {
+                    $skippedCount++;
+                    continue;
+                }
                 $itemData = [
                     'persona_id' => $params['persona_id'],
                     'user_id' => self::$uid,
@@ -144,10 +180,15 @@ class MaterialLogic extends ApiLogic
                     'height' => $item['height'] ?? 0,
                     'use_status' => $item['use_status'] ?? 1,
                     'publish_mode' => $publishMode,
+                    'source_group_id' => $sourceGroupId,
+                    'source_material_id' => $sourceGroupId > 0 ? $sourceMaterialId : 0,
+                    'source_group_name' => $sourceGroupId > 0
+                        ? mb_substr(trim((string)($item['source_group_name'] ?? '')), 0, 60)
+                        : '',
                     'create_time' => time(),
                     'update_time' => time(),
                 ];
-                if (OriginalMaterialSpec::wantsOriginal($item) || OriginalMaterialSpec::wantsOriginal($params)) {
+                if ($wantsOriginal) {
                     $guard = self::evaluateOriginalIngestGuard(array_merge($item, [
                         'material_type' => $materialType,
                         'file_url' => $file_url,
@@ -199,11 +240,21 @@ class MaterialLogic extends ApiLogic
                 }
 
                 $insertData[] = $itemData;
+                if ($sourceGroupId > 0 && (int)$itemData['source_material_id'] > 0) {
+                    // 同一批里重复提交同一素材也不重复入库
+                    $importedGroupMaterials[$sourceGroupId][self::groupImportDedupeKey(
+                        (int)$itemData['material_type'],
+                        (int)$itemData['publish_mode'],
+                        (int)($itemData['keep_original'] ?? Material::KEEP_ORIGINAL_NO),
+                        (int)$itemData['source_material_id']
+                    )] = true;
+                }
             }
 
             if (empty($insertData)) {
                 self::$returnData = [
                     'count' => 0,
+                    'skipped' => $skippedCount,
                     'items' => []
                 ];
                 return true;
@@ -212,6 +263,7 @@ class MaterialLogic extends ApiLogic
             $result = (new Material())->saveAll($insertData);
             self::$returnData = [
                 'count' => count($result),
+                'skipped' => $skippedCount,
                 'items' => $result
             ];
             return true;
@@ -219,6 +271,56 @@ class MaterialLogic extends ApiLogic
             self::setError($th->getMessage());
             return false;
         }
+    }
+
+    /**
+     * 当前人设下已通过「素材库分组整组导入」进来的来源集合。
+     * 返回 [source_group_id => [判重键 => true]]，只查本次提交涉及的分组。
+     * Material 是软删模型，已被删掉的素材不在此集合里，再次导入会重新入库。
+     */
+    private static function loadImportedGroupMaterials(int $personaId, array $sourceGroupKeys): array
+    {
+        if ($personaId <= 0 || empty($sourceGroupKeys)) {
+            return [];
+        }
+        $rows = Material::where('persona_id', $personaId)
+            ->where('user_id', self::$uid)
+            ->whereIn('source_group_id', array_keys($sourceGroupKeys))
+            ->field('source_group_id,source_material_id,material_type,publish_mode,keep_original')
+            ->select();
+        $map = [];
+        foreach ($rows as $row) {
+            $groupId = (int)($row['source_group_id'] ?? 0);
+            $materialId = (int)($row['source_material_id'] ?? 0);
+            if ($groupId > 0 && $materialId > 0) {
+                $map[$groupId][self::groupImportDedupeKey(
+                    (int)($row['material_type'] ?? 0),
+                    (int)($row['publish_mode'] ?? Material::PUBLISH_MODE_MAKE_VIDEO),
+                    (int)($row['keep_original'] ?? Material::KEEP_ORIGINAL_NO),
+                    $materialId
+                )] = true;
+            }
+        }
+        return $map;
+    }
+
+    /**
+     * 整组导入的判重键。口径跟着列表可见范围走，否则会出现「提示已导入、列表里看不见」：
+     * - 剪辑原片库分自动适配 / 原图两套列表，各自独立（keep_original）；
+     * - 成品直发库与剪辑原片库是两套列表（publish_mode）；
+     * - 音乐库两种模式共用一份列表（见 useMaterialsTab::queryMusicList 不传 keep_original），
+     *   所以音乐不分库也不分模式：按模式判重只会在第二个模式里插出一条一模一样的音频。
+     */
+    private static function groupImportDedupeKey(
+        int $materialType,
+        int $publishMode,
+        int $keepOriginal,
+        int $sourceMaterialId
+    ): string {
+        if ($materialType === Material::MATERIAL_TYPE_MUSIC) {
+            return 'music:' . $sourceMaterialId;
+        }
+        return $publishMode . ':' . $keepOriginal . ':' . $sourceMaterialId;
     }
 
     public static function batchUpdateGroup(array $params): bool
@@ -422,6 +524,100 @@ class MaterialLogic extends ApiLogic
         }
     }
 
+    /**
+     * 后台未配置时的清理次数阈值默认值（与 adminapi 端 PersonaMaterialSettingLogic 保持同默认值）
+     */
+    const DEFAULT_CLEAN_THRESHOLD = 3;
+
+    /**
+     * 一键清理当前人设下「使用次数达到阈值」的素材：软删除素材 + 删除使用记录。
+     * 使用次数与素材列表「已用N次」同口径：使用状态成功的记录，手动热点任务(auto_type=0)不计次。
+     */
+    public static function cleanOverUsed(array $params): bool
+    {
+        Db::startTrans();
+        try {
+            $personaId = (int)($params['persona_id'] ?? 0);
+            $persona = AiPersona::where('user_id', self::$uid)->where('id', $personaId)->findOrEmpty();
+            if ($persona->isEmpty()) {
+                self::setError('IP人设不存在');
+                Db::rollback();
+                return false;
+            }
+
+            $threshold = (int)ConfigService::get('aiPersona', 'material_clean_threshold', self::DEFAULT_CLEAN_THRESHOLD);
+            if ($threshold < 1) {
+                $threshold = self::DEFAULT_CLEAN_THRESHOLD;
+            }
+
+            $materialIds = Material::where('user_id', self::$uid)
+                ->where('persona_id', $personaId)
+                ->column('id');
+            if (empty($materialIds)) {
+                Db::commit();
+                self::$returnData = ['deleted_count' => 0, 'ids' => []];
+                return true;
+            }
+
+            $delIds = MaterialUseLog::alias('log')
+                ->leftJoin('shanjian_video_task task', 'task.id = log.task_id')
+                ->whereIn('log.material_id', $materialIds)
+                ->where('log.use_status', 1)
+                ->where(function ($query) {
+                    $query->whereNull('task.id')
+                        ->whereOr('task.auto_type', '=', MaterialUseLogLists::AUTO_TASK);
+                })
+                ->group('log.material_id')
+                ->having('COUNT(*) >= ' . $threshold)
+                ->column('log.material_id');
+            $delIds = array_values(array_map('intval', $delIds));
+            if (empty($delIds)) {
+                Db::commit();
+                self::$returnData = ['deleted_count' => 0, 'ids' => []];
+                return true;
+            }
+
+            // 软删使用记录前先收集素材用过的设备号，供事务提交后清理素材-设备维度的 Redis 缓存
+            $deviceCodes = MaterialUseLog::alias('log')
+                ->leftJoin('shanjian_video_task task', 'task.id = log.task_id')
+                ->whereIn('log.material_id', $delIds)
+                ->where('task.device_code', '<>', '')
+                ->group('task.device_code')
+                ->column('task.device_code');
+
+            $now = time();
+            Material::whereIn('id', $delIds)
+                ->where('user_id', self::$uid)
+                ->update([
+                    'use_status' => Material::USE_STATUS_DELETED,
+                    'delete_time' => $now,
+                    'update_time' => $now,
+                ]);
+            self::deleteUseLogs($delIds);
+
+            Db::commit();
+
+            // 素材-设备维度的计数/状态缓存与设备解绑人设的清理口径一致；updateStatus 与合成计数分属 redis / material_redis 两个 store，同名 key 各删一次
+            foreach ($delIds as $materialId) {
+                foreach ($deviceCodes as $deviceCode) {
+                    $redisKey = 'material_' . $materialId . '_device_' . $deviceCode;
+                    Cache::store('redis')->delete($redisKey);
+                    Cache::store('material_redis')->delete($redisKey);
+                }
+            }
+
+            self::$returnData = [
+                'deleted_count' => count($delIds),
+                'ids' => $delIds,
+            ];
+            return true;
+        } catch (\Throwable $th) {
+            Db::rollback();
+            self::setError($th->getMessage());
+            return false;
+        }
+    }
+
     public static function detail(array $params): bool
     {
         try {
@@ -452,6 +648,16 @@ class MaterialLogic extends ApiLogic
                 (string)($materialData['source_type'] ?? ''),
                 (int)($materialData['keep_original'] ?? 0)
             );
+            // 来源分组名以素材库当前名称为准，源分组删掉时保留入库时的快照
+            $sourceGroupId = (int)($materialData['source_group_id'] ?? 0);
+            if ($sourceGroupId > 0) {
+                $sourceGroupName = SvMediaMaterialGroup::where('user_id', self::$uid)
+                    ->where('id', $sourceGroupId)
+                    ->value('name');
+                if ($sourceGroupName !== null && $sourceGroupName !== '') {
+                    $materialData['source_group_name'] = (string)$sourceGroupName;
+                }
+            }
 
             self::$returnData = [
                 'material' => $materialData,

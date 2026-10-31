@@ -120,6 +120,7 @@
 import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import { COPYWRITER_LIMIT } from "@/ai_modules/digital_human_create/hooks/useCopywriter";
+import { validateText } from "@/utils/textValidator";
 
 const { emit } = useEventBusManager();
 
@@ -130,8 +131,65 @@ const formData = reactive({
 
 const copywriterLimit = ref(COPYWRITER_LIMIT);
 const isNewsBody = ref(false);
+// 语言检测硬拦截模式：由入口页通过 sendData 传入，开启后文案不通过不允许确认
+const strictCheck = ref(false);
 
 const back = () => {
+    const textsToValidate = isNewsBody.value ? [formData.title] : [formData.title, formData.content].filter(Boolean)
+    const mojibakeTexts: string[] = []
+    const noSpaceTexts: string[] = []
+
+    for (const text of textsToValidate) {
+        const v = validateText(text.trim())
+        if (v.status === "error" && v.type === "mojibake") {
+            mojibakeTexts.push(text.trim())
+        } else if (v.status === "warning" && v.type === "latin_no_space") {
+            // 空格拼接 warning（英文/俄文/法文等）：轻提示，不阻断
+            noSpaceTexts.push(text.trim())
+        }
+    }
+
+    // warning 级：toast 提示并停留在当前页，让用户自行修改后再点完成
+    if (noSpaceTexts.length > 0 && mojibakeTexts.length === 0) {
+        uni.showToast({
+            title: `检测到 ${noSpaceTexts.length} 处疑似单词间缺空格，请检查`,
+            icon: "none",
+            duration: 2500,
+        })
+        return
+    }
+
+    // error 级：Modal 阻断
+    if (mojibakeTexts.length > 0) {
+        const example = mojibakeTexts[0].slice(0, 80) + (mojibakeTexts[0].length > 80 ? "..." : "")
+        // 严格模式：语言检测不通过不允许跳过，必须修改后才能完成
+        if (strictCheck.value) {
+            uni.showModal({
+                title: "检测到外文乱码",
+                content: `"${example}"\n\n文案语言检测不通过，请修改后再完成`,
+                confirmText: "去修复",
+                showCancel: false,
+            })
+            return
+        }
+        uni.showModal({
+            title: "检测到外文乱码",
+            content: `"${example}"\n\n请手动修改后再提交，或跳过直接使用`,
+            confirmText: "去修复",
+            cancelText: "跳过提交",
+            success: (res) => {
+                if (!res.confirm) {
+                    doBack()
+                }
+                // 去修复 → 只关闭弹框，用户留在当前页手动修改
+            },
+        })
+        return
+    }
+    doBack()
+}
+
+const doBack = () => {
     if (isNewsBody.value) {
         if (formData.title.trim() === "") {
             uni.$u.toast("请输入标题");
@@ -197,6 +255,9 @@ onLoad((options: any) => {
         }
         if (data.limit) {
             copywriterLimit.value = data.limit;
+        }
+        if (data.strictCheck) {
+            strictCheck.value = true;
         }
     });
 });

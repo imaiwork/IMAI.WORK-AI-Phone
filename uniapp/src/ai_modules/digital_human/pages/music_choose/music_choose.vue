@@ -69,8 +69,10 @@
                         <text class="text-xs font-extrabold text-[#0D1117]">系统音乐</text>
                         <view class="flex-1 h-[1rpx] bg-[#F0F2F5]" />
                     </view>
+                    <!-- 分组筛选：全部 + 后台维护的各分组 -->
+                    <music-group-tabs v-model="activeGroup" :groups="systemGroups" />
                     <view
-                        v-for="item in systemMusics"
+                        v-for="item in visibleSystemMusics"
                         :key="item.id"
                         class="bg-white rounded-[20rpx] overflow-hidden shadow-[0_2rpx_8rpx_rgba(0,0,0,0.05),0_0_0_1rpx_rgba(0,0,0,0.04)] flex items-center gap-[20rpx] px-[20rpx] h-[112rpx]"
                         :class="systemMusicId === item.id ? 'shadow-[0_0_0_1.5rpx_#BFDBFE,0_4rpx_16rpx_rgba(0,101,251,0.12)]' : ''"
@@ -260,11 +262,12 @@
 
 <script setup lang="ts">
 import { getMaterialLibraryList, addMaterialLibrary } from "@/api/material";
-import { getSystemMusicList } from "@/api/digital_human";
+import { getSystemMusicGroups, getSystemMusicList } from "@/api/digital_human";
 import { ListenerTypeEnum } from "@/enums/digitalHuman";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
 import useUpload from "@/hooks/useUpload";
 import { useAudio } from "@/hooks/useAudio";
+import MusicGroupTabs from "@/components/music-group-tabs/music-group-tabs.vue";
 
 const { emit } = useEventBusManager();
 const pagingRef = ref<any>(null);
@@ -274,6 +277,13 @@ const isAiMusic = ref(false);
 const systemMusicId = ref("");
 const systemMusicName = ref("");
 const systemMusics = ref<any[]>([]);
+// 分组 tab：0 = 全部（不筛选，和以前一样列出整个曲库）
+const systemGroups = ref<Array<{ id: number; name: string }>>([]);
+const activeGroup = ref(0);
+const visibleSystemMusics = computed(() => {
+    if (!activeGroup.value) return systemMusics.value;
+    return systemMusics.value.filter((item: any) => Number(item?.group_id) === activeGroup.value);
+});
 const currentMusicId = ref<any>(null);
 const currentVolume = ref(0);
 const changeVolume = ref(0);
@@ -427,12 +437,18 @@ const handleConfirm = () => {
 
 const loadSystemMusics = async () => {
     try {
-        const res = await getSystemMusicList();
-        systemMusics.value = Array.isArray(res) ? res : [];
+        // 曲库与分组一起拉：分组拉不到时按「全部」展示，不影响选曲
+        const [list, groups] = await Promise.all([
+            getSystemMusicList().catch(() => []),
+            getSystemMusicGroups().catch(() => []),
+        ]);
+        systemMusics.value = Array.isArray(list) ? list : [];
+        systemGroups.value = Array.isArray(groups) ? groups : [];
         const hit = systemMusics.value.find((item) => item.id == systemMusicId.value);
         if (hit) systemMusicName.value = hit.name || "";
     } catch {
         systemMusics.value = [];
+        systemGroups.value = [];
     }
 };
 

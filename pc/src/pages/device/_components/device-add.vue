@@ -70,6 +70,8 @@
                         type="image"
                         accept="image/*"
                         :limit="1"
+                        :multiple="false"
+                        :disabled="legacyQrcodeLoading"
                         :show-file-list="false"
                         class="w-full mt-5"
                         @change="handleLegacyQrcodeChange">
@@ -91,7 +93,7 @@
 import { getRpaQrcode, getRpaQrcodeStatus } from "@/api/user";
 import { addDeviceAuthPhone } from "@/api/device_auth";
 import { scanOldDeviceQrcode } from "@/api/device";
-import type { UploadRawFile } from "element-plus";
+import type { UploadFile, UploadRawFile } from "element-plus";
 import jsQR from "jsqr";
 import Upload from "@/components/upload/index.vue";
 
@@ -107,6 +109,7 @@ const emit = defineEmits<{
 
 const loading = ref(false);
 const legacyQrcodeLoading = ref(false);
+let legacyQrcodeRequestId = 0;
 const activeTab = ref<"new" | "old">("new");
 
 const popupRef = ref<any>(null);
@@ -157,8 +160,14 @@ const getRpaQrcodeData = async () => {
     }
 };
 
+const resetLegacyQrcode = () => {
+    legacyQrcodeRequestId += 1;
+    legacyQrcodeLoading.value = false;
+};
+
 const handleChangeTab = (tab: "new" | "old") => {
     if (activeTab.value === tab) return;
+    resetLegacyQrcode();
     activeTab.value = tab;
     end();
     if (tab === "new") {
@@ -196,82 +205,105 @@ const parseOldQrcodePayload = (text: string) => {
     };
 };
 
-const decodeQrcodeWithBarcodeDetector = async (file: File) => {
+const decodeQrcodeWithBarcodeDetector = async (image: HTMLImageElement) => {
     const BarcodeDetector = (window as any).BarcodeDetector;
     if (!BarcodeDetector) {
         return "";
     }
     const detector = new BarcodeDetector({ formats: ["qr_code"] });
-    const image = await createImageBitmap(file);
+    const [result] = await detector.detect(image);
+    return result?.rawValue || "";
+};
+
+const decodeQrcodeWithJsQr = (image: HTMLImageElement) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d");
+    if (!context) return "";
+    context.drawImage(image, 0, 0);
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    return jsQR(imageData.data, imageData.width, imageData.height)?.data || "";
+};
+
+const decodeQrcodeImage = async (file: Blob) => {
+    const objectUrl = URL.createObjectURL(file);
     try {
-        const [result] = await detector.detect(image);
-        return result?.rawValue || "";
+        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error("图片读取失败"));
+            image.src = objectUrl;
+        });
+        try {
+            const nativeValue = await decodeQrcodeWithBarcodeDetector(image);
+            if (nativeValue) return nativeValue;
+        } catch {
+            // 原生识别失败时继续使用 jsQR 兜底解析
+        }
+
+        return decodeQrcodeWithJsQr(image);
     } finally {
-        image.close();
+        URL.revokeObjectURL(objectUrl);
     }
 };
 
-const decodeQrcodeWithJsQr = async (file: File) => {
-    const image = await createImageBitmap(file);
-    try {
-        const canvas = document.createElement("canvas");
-        canvas.width = image.width;
-        canvas.height = image.height;
-        const context = canvas.getContext("2d");
-        if (!context) return "";
-        context.drawImage(image, 0, 0);
-        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-        return jsQR(imageData.data, imageData.width, imageData.height)?.data || "";
-    } finally {
-        image.close();
+const handleLegacyQrcodeChange = async (file: UploadRawFile | UploadFile) => {
+    if (legacyQrcodeLoading.value || activeTab.value !== "old") return;
+    const rawFile = file instanceof Blob ? file : file?.raw;
+    if (!(rawFile instanceof Blob)) {
+        feedback.msgError("未获取到二维码图片，请重新选择图片");
+        return;
     }
-};
-
-const decodeQrcodeImage = async (file: File) => {
-    try {
-        const nativeValue = await decodeQrcodeWithBarcodeDetector(file);
-        if (nativeValue) return nativeValue;
-    } catch {
-        // 原生识别失败时继续使用 jsQR 兜底解析
-    }
-
-    const jsQrValue = await decodeQrcodeWithJsQr(file);
-    if (jsQrValue) return jsQrValue;
-    throw new Error("二维码解析失败，请上传清晰的设备二维码图片");
-};
-
-const handleLegacyQrcodeChange = async (rawFile: UploadRawFile) => {
+    const requestId = ++legacyQrcodeRequestId;
     legacyQrcodeLoading.value = true;
     try {
-        const rawValue = await decodeQrcodeImage(rawFile);
+        let rawValue = "";
+        try {
+            rawValue = await decodeQrcodeImage(rawFile);
+        } catch {
+            // 图片解码异常统一按识别失败提示，不直接暴露浏览器异常。
+        }
+        if (requestId !== legacyQrcodeRequestId) return;
+        if (!rawValue) {
+            feedback.msgError("二维码识别失败，请上传清晰、完整的设备二维码图片（PNG、JPG 或 WebP）");
+            return;
+        }
         const payload = parseOldQrcodePayload(rawValue);
         if (!payload.device_code) {
             feedback.msgError("二维码信息不完整");
             return;
         }
         await scanOldDeviceQrcode(payload);
+        if (requestId !== legacyQrcodeRequestId) return;
         feedback.msgSuccess("绑定成功");
         emit("confirm");
         close();
     } catch (error: any) {
-        feedback.msgError(error?.message || error || "二维码解析失败");
+        if (requestId !== legacyQrcodeRequestId) return;
+        feedback.msgError(typeof error === "string" ? error : "设备绑定失败，请稍后重试");
     } finally {
-        legacyQrcodeLoading.value = false;
+        if (requestId === legacyQrcodeRequestId) legacyQrcodeLoading.value = false;
     }
 };
 
 const open = () => {
+    resetLegacyQrcode();
     popupRef.value.open();
     activeTab.value = "new";
     getRpaQrcodeData();
 };
 
 const close = () => {
+    resetLegacyQrcode();
     emit("close");
     end();
 };
 
-onUnmounted(() => end());
+onUnmounted(() => {
+    resetLegacyQrcode();
+    end();
+});
 
 defineExpose({
     open,

@@ -38,6 +38,7 @@ use app\common\service\display\DySearchIntentionMapper;
 use app\common\service\sv\DySearchAccountNormalizer;
 use app\common\service\sv\DySearchWechatDispatchService;
 use app\common\service\sv\DySearchWechatVerifyService;
+use app\common\service\sv\ServiceContactFilter;
 use app\common\service\sv\CircleInteractionActionService;
 use Channel\Client as ChannelClient;
 use think\cache\driver\Redis;
@@ -733,11 +734,13 @@ trait DeviceTaskTrait
                         }
 
                         if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
-                            self::setLog($record['clue_wechat'] . '该账号不是有效的微信号,忽略', 'add_wechat');
+                            // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
+                            $invalidResult = \app\common\service\sv\WechatExistVerifyService::invalidErrorText($response) ?: '该线索经过校验为无效线索';
+                            self::setLog($record['clue_wechat'] . '该账号不是有效的微信号,忽略,校验结果说明:' . $invalidResult, 'add_wechat');
                             self::setLog($response, 'add_wechat');
                             SvCrawlingManualTaskRecord::where('id', $record['id'])->update([
                                 'status' => 0,
-                                'result' => '该线索经过校验为无效线索',
+                                'result' => $invalidResult,
                                 'update_time' => time(),
                             ]);
                             continue;
@@ -908,11 +911,13 @@ trait DeviceTaskTrait
                         }
 
                         if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
-                            self::setLog($record['reg_wechat'] . '该账号不是有效的微信号,忽略', 'add_wechat');
+                            // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
+                            $invalidResult = \app\common\service\sv\WechatExistVerifyService::invalidErrorText($response) ?: '该线索经过校验为无效线索';
+                            self::setLog($record['reg_wechat'] . '该账号不是有效的微信号,忽略,校验结果说明:' . $invalidResult, 'add_wechat');
                             self::setLog($response, 'add_wechat');
                             SvAddWechatRecord::where('id', $record['id'])->update([
                                 'status' => 0,
-                                'result' => '该线索经过校验为无效线索',
+                                'result' => $invalidResult,
                                 'update_time' => time(),
                             ]);
                             $find = SvCrawlingRecord::where('user_id', $record['user_id'])
@@ -2195,6 +2200,18 @@ trait DeviceTaskTrait
                 }
                 $recordId = (int)($record['id'] ?? 0);
                 if ($recordId < 1) {
+                    continue;
+                }
+                $regWechat = trim((string)($record['reg_wechat'] ?? ''));
+                if ($regWechat !== '' && ServiceContactFilter::isServiceContact($regWechat)) {
+                    SvAddWechatRecord::where('id', $recordId)
+                        ->where('status', 'in', DySearchWechatVerifyService::DISPATCH_STATUSES)
+                        ->update([
+                            'status' => DySearchWechatVerifyService::ADD_STATUS_INVALID,
+                            'result' => '官方服务号，派发前拦截',
+                            'update_time' => time(),
+                        ]);
+                    self::setLog('抖音获客加微派发拦截官方服务号 record_id=' . $recordId . ' 联系方式=' . $regWechat, 'dy_search');
                     continue;
                 }
                 $claimed = SvAddWechatRecord::where('id', $recordId)

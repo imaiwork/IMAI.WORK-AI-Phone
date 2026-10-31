@@ -29,6 +29,15 @@ class UserController extends BaseAdminController
         return $this->dataLists(new UserLists());
     }
 
+    /**
+     * @notes 导出用户数据（独立权限 controlled by user.user/export）
+     * @return \think\response\Json
+     */
+    public function export()
+    {
+        return $this->dataLists(new UserLists());
+    }
+
     public function accountLogLists()
     {
         return $this->dataLists(new AccountLogLists());

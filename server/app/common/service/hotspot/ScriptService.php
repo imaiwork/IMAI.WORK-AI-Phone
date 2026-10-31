@@ -12,6 +12,62 @@ class ScriptService
 {
     public const CHARS_PER_SEC = 4.2;
 
+    /** 图片素材的固定可承载秒数：与 ShanjianVideoSettingLogic::trimMaterialsByDuration 的图片 2 秒口径一致 */
+    public const IMAGE_DISPLAY_SEC = 2.0;
+
+    /** 图片承载占比：图片目标秒数 = 目标秒数 × 15%，再按每张 2 秒折算张数 */
+    public const MATERIAL_ANCHOR_IMAGE_SHARE = 0.15;
+
+    /** 图片目标张数上限：避免长文案把图片堆成相册 */
+    public const MATERIAL_ANCHOR_IMAGE_MAX = 8;
+
+    /** AI 找素材最低兜底条数：视频 2 条 + 图片 2 张，秒数不足才继续加 */
+    public const MATERIAL_ANCHOR_MIN_VIDEO = 2;
+
+    public const MATERIAL_ANCHOR_MIN_IMAGE = 2;
+
+    /** AI 找素材视频条数熔断上限：仅防极端长文案抓取费用失控，正常长度文案不会触顶 */
+    public const MATERIAL_ANCHOR_VIDEO_CAP = 50;
+
+    /**
+     * 素材秒数锚点：成片预估改用真实口播秒数（字数 / 4.2 / 语速，夹 15~180），
+     * 素材总量需覆盖 [成片预估 × 0.5, 成片预估]。
+     * $baselineSec 用于下发时长比口播更长的场景（爆款复刻按「字数/3」下发），取两者较大值作上限。
+     * 空文案返回全 0，调用方跳过素材闸门。
+     *
+     * @return array{est_sec:float,floor_sec:float,ceil_sec:float}
+     */
+    public static function materialAnchorSeconds(string $script, float $speedRatio = 1.0, float $baselineSec = 0.0): array
+    {
+        $spoken = self::estimateSpokenDurationSec($script, $speedRatio);
+        if ($spoken <= 0) {
+            return ['est_sec' => 0.0, 'floor_sec' => 0.0, 'ceil_sec' => 0.0];
+        }
+        $base = (float)$spoken;
+        if ($baselineSec > $base) {
+            $base = $baselineSec;
+        }
+        return [
+            'est_sec' => round($base, 2),
+            'floor_sec' => round($base * 0.5, 2),
+            'ceil_sec' => round($base, 2),
+        ];
+    }
+
+    /**
+     * 图片目标张数：承载秒数 = 目标秒数 × 15%，每张 IMAGE_DISPLAY_SEC 秒，夹 [2, 8] 张。
+     * 与 hotspot/hot_write 前端常量同口径。
+     */
+    public static function imageTargetCount(float $targetSec): int
+    {
+        if ($targetSec <= 0) {
+            return self::MATERIAL_ANCHOR_MIN_IMAGE;
+        }
+        $carry = $targetSec * self::MATERIAL_ANCHOR_IMAGE_SHARE;
+        $count = (int)ceil($carry / self::IMAGE_DISPLAY_SEC);
+        return max(self::MATERIAL_ANCHOR_MIN_IMAGE, min(self::MATERIAL_ANCHOR_IMAGE_MAX, $count));
+    }
+
     public const VIDEO_TYPES = ['digital', 'clips'];
 
     /** 人设模式：按所选人设的形象/音色/素材合成（历史默认） */
@@ -327,6 +383,63 @@ class ScriptService
         return mb_strlen(preg_replace('/\s+/u', '', $text) ?? '');
     }
 
+    /**
+     * 口播实际预估秒数：字数 / CHARS_PER_SEC，再按语速折算。
+     * speed_ratio < 1 表示语速放慢，同一份文案配音更长，素材充足性判断必须跟着放宽。
+     * 空文案返回 0，调用方跳过充足性闸门（下发链路对空文案本就另有兜底）。
+     */
+    public static function estimateSpokenDurationSec(string $script, float $speedRatio = 1.0): int
+    {
+        $wordCount = self::wordCount($script);
+        if ($wordCount <= 0) {
+            return 0;
+        }
+        $speedRatio = $speedRatio > 0 ? $speedRatio : 1.0;
+        $sec = (int)ceil($wordCount / self::CHARS_PER_SEC / $speedRatio);
+        return max(15, min(180, $sec));
+    }
+
+    /**
+     * 素材可承载时长盘点（口径与 ShanjianVideoSettingLogic::trimMaterialsByDuration 一致：
+     * 视频按 duration，图片固定 IMAGE_DISPLAY_SEC 秒）。
+     * 视频没有有效 duration 就按 0 秒计——库里的 duration 是 int 截断存储已属低估，
+     * 再把缺失时长的素材当“够用”会让闸门失真，宁可按缺口多补一轮。
+     *
+     * @return array{video_sec:float,image_sec:float,video_count:int,image_count:int,unknown_dur_count:int}
+     */
+    public static function sumMaterialSeconds(array $materials): array
+    {
+        $videoSec = 0.0;
+        $imageSec = 0.0;
+        $videoCount = 0;
+        $imageCount = 0;
+        $unknownDurCount = 0;
+        foreach ($materials as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            if (($item['type'] ?? '') === 'video') {
+                $videoCount++;
+                $duration = (float)($item['duration'] ?? 0);
+                if ($duration > 0) {
+                    $videoSec += $duration;
+                } else {
+                    $unknownDurCount++;
+                }
+            } else {
+                $imageCount++;
+                $imageSec += self::IMAGE_DISPLAY_SEC;
+            }
+        }
+        return [
+            'video_sec' => round($videoSec, 2),
+            'image_sec' => round($imageSec, 2),
+            'video_count' => $videoCount,
+            'image_count' => $imageCount,
+            'unknown_dur_count' => $unknownDurCount,
+        ];
+    }
+
     public static function trimScriptToMaxChars(string $script, int $maxChars, int $minChars = 0): string
     {
         $script = trim($script);
@@ -515,7 +628,7 @@ class ScriptService
         return [
             'model' => 1,
             'persona' => self::resolvePersonaClue($persona, $userId),
-            'original' => self::composeOriginal($topic, $summary, !empty($opt['include_topic_in_original'])),
+            'original' => self::composeOriginal($topic, self::copywritingBackground($summary, $corePoints), !empty($opt['include_topic_in_original'])),
             'voice' => $opt['direction'] ?? '',
             'hook' => self::composeCopywritingHook($opt),
             'channelVersion' => self::CHANNEL_VERSION,
@@ -549,6 +662,30 @@ class ScriptService
         }
         $line = '热点话题：' . $topic;
         return $summary === '' ? $line : $line . "\n" . $summary;
+    }
+
+    /**
+     * 口播重新生成时摘要可能丢（清缓存后从任务现场还原，任务未持久化摘要），
+     * 此时用核心要点兜底 original，避免原文为空让中台工作流回落到内置示例话题。
+     */
+    private static function copywritingBackground(string $summary, array $corePoints): string
+    {
+        $summary = trim($summary);
+        if ($summary !== '') {
+            return $summary;
+        }
+        $lines = [];
+        foreach ($corePoints as $point) {
+            if (!is_array($point)) {
+                continue;
+            }
+            $label = trim((string)($point['label'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+            $lines[] = '- ' . $label . '：' . trim((string)($point['detail'] ?? ''));
+        }
+        return implode("\n", $lines);
     }
 
     public static function composeCopywritingHook(array $opt): string

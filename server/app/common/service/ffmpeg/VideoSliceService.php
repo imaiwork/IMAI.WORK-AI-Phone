@@ -759,7 +759,7 @@ class VideoSliceService
             $outputPath = (string)$item['temp_path'];
 
             $command = sprintf(
-                '%s -hide_banner -loglevel error -y -i %s -ss %s -t %s -c:v libx264 -preset veryfast -crf 28 -c:a aac -b:a 128k -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s',
+                '%s -hide_banner -loglevel error -y -i %s -ss %s -t %s -c:v libx264 -preset veryfast -crf 20 -c:a aac -b:a 128k -pix_fmt yuv420p -movflags +faststart -avoid_negative_ts make_zero %s',
                 escapeshellcmd($ffmpegBin),
                 escapeshellarg($sourcePath),
                 escapeshellarg($this->formatSeconds($start)),

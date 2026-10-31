@@ -3,10 +3,10 @@
   "usingComponents": {
     "u-icon": "../../../../uni_modules/vk-uview-ui/components/u-icon/u-icon",
     "u-button": "../../../../uni_modules/vk-uview-ui/components/u-button/u-button",
-    "dragon-button": "../../../../components/dragon-button/dragon-button",
     "recharge-popup": "../../../../components/recharge-popup/recharge-popup",
     "recorder-control": "../../components/recorder-control/recorder-control",
     "basic-info-step": "./components/basic-info-step",
-    "business-desc-step": "./components/business-desc-step"
+    "business-desc-step": "./components/business-desc-step",
+    "ai-quick-fill": "./components/ai-quick-fill"
   }
 }

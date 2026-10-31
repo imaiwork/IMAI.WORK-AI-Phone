@@ -460,6 +460,12 @@ const validateBeforeCreate = async () => {
         feedback.msgWarning(copywritingErrors.firstErrorMsg);
         return false;
     }
+    // warning 级（空格拼接等）：提示并阻断提交，让用户先回编辑器检查
+    const warningList = Object.values(copywritingErrors?.warnings ?? {});
+    if (warningList.length > 0) {
+        feedback.msgWarning(`文案提示：${warningList[0]}`);
+        return false;
+    }
     if (formData.extra.clip === 1 && formData.clip.length === 0) {
         feedback.msgWarning("已选择手动指定风格，请至少选择一个视频风格");
         return false;

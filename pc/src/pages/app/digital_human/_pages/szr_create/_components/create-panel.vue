@@ -30,6 +30,7 @@ import {
     SpeechEngineTypeEnum,
 } from "../../../_enums";
 import { toPackagingParams, withResolvedSystemMusicUrl } from "../../../_config/advanced-setting";
+import { validateText } from "@/utils/textValidator";
 
 const DIGITAL_HUMAN_SPEECH_SHANJIAN_TYPE = 5;
 const VIDEO_NAME_SUFFIX = "数字人口播";
@@ -102,6 +103,16 @@ const validateFormData = (formData: any) => {
     }
     if (msg.length > props.textLimit) {
         feedback.msgError("文案超出限制，请重新编辑文案");
+        return false;
+    }
+    // 语种检测：乱码 / 空格拼接 → 阻断提交
+    const langResult = validateText(msg);
+    if (langResult.status !== "ok") {
+        feedback.msgError(
+            langResult.type === "mojibake"
+                ? "检测到外文乱码，请修改后再提交"
+                : "疑似外文单词间缺少空格，请检查后再提交"
+        );
         return false;
     }
     return true;

@@ -22,6 +22,13 @@
 .user-bubble__text {
     @apply text-[28rpx] leading-relaxed break-all;
 }
+.studio-select-text,
+.user-bubble__text.studio-select-text,
+.err-bubble__text.studio-select-text,
+.img-card__status-text {
+    user-select: text;
+    -webkit-user-select: text;
+}
 .user-bubble__ref {
     @apply block mt-[8rpx] text-[22rpx] opacity-75;
 }

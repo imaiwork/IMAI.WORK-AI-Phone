@@ -89,12 +89,6 @@
             <p class="text-[#94A3B8] font-medium">暂无思维导图文档</p>
         </div>
     </div>
-
-    <div class="fixed top-[-9999px] left-[-9999px] opacity-0" v-if="showExport">
-        <div ref="exportContainerRef">
-            <svg ref="exportSvg" class="w-[1200px] h-[800px]"></svg>
-        </div>
-    </div>
 </template>
 
 <script setup lang="ts">
@@ -126,10 +120,7 @@ const handleDelete = async (id: number | string, index: number) => {
 
 // Markmap 渲染核心逻辑
 const mindMapContainer = shallowRef<SVGSVGElement[]>([]);
-const { createCanvasPng } = useMindMap();
-const showExport = ref(false);
-const exportSvg = ref<SVGSVGElement>(null);
-const exportContainerRef = ref<HTMLElement>(null);
+const { mindMapExportAsPNG } = useMindMap();
 
 const createMindMap = async (dom: SVGSVGElement, value?: string) => {
     if (!dom || !value) return;
@@ -170,16 +161,9 @@ const initMindMap = async () => {
 };
 
 const handleExport = async (index: number) => {
-    showExport.value = true;
-    feedback.loading("正在导出高清图片...");
-    await nextTick();
-    const mm = await createMindMap(exportSvg.value, stripMarkdownFence(pager.lists[index].reply));
-    mm.fit();
-    setTimeout(() => {
-        createCanvasPng(exportContainerRef.value);
-        showExport.value = false;
-        feedback.closeLoading();
-    }, 1000);
+    await mindMapExportAsPNG(stripMarkdownFence(pager.lists[index].reply), {
+        filename: pager.lists[index].ask || "mindmap",
+    });
 };
 
 const load = async (e: any) => {

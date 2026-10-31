@@ -33,8 +33,9 @@ use app\common\model\sv\SvWechatStrategy;
 use app\common\model\wechat\AiWechatCircleTask;
 use app\common\model\wechat\AiWechatCircleTaskConfig;
 use app\common\traits\{DeviceTaskTrait};
+use app\common\workerman\rpa\Support\ConnectionRepository;
 use think\facade\Db;
-
+use think\cache\driver\Redis;
 /**
  * 设备任务逻辑
  * Class TaskLogic
@@ -697,7 +698,7 @@ class TaskLogic extends ApiLogic
         try {
 
             $source = $params['source'] ?? 0;
-            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type,sub_data_id,source,task_scene')
+            $task = SvDeviceTask::field('start_time,end_time,account_type,account,status,device_code,task_name,task_type,auto_type,sub_data_id,source,task_scene,exec_version')
                 ->where('id', $params['id'])
                 ->where('user_id', self::$uid)
                 ->findOrEmpty()->toArray();
@@ -958,7 +959,13 @@ class TaskLogic extends ApiLogic
             $task['end_time'] = date('H:i', $task['end_time']);
             $task['task_type'] = DeviceEnum::getTaskTypeByAuto($task['task_type']);
             $task['log'] = SvDeviceTaskLog::where('task_id', $params['id'])->order('create_time', 'asc')->group('task_id,task_source,device_code,message')->select()->toArray();
-
+            // exec_version 历史脏值可能带 serialize 包装(如 s:6:"2.9.87";),统一净化后再兜底 Redis
+            $execVersion = $task['exec_version'];
+            if ($execVersion === null || $execVersion === '') {
+                $execVersion = self::redis()->get("xhs:device:{$task['device_code']}:version");
+            }
+            $execVersion = ConnectionRepository::unwrapSerialized((string)($execVersion ?? ''));
+            $task['exec_version'] = $execVersion !== '' ? $execVersion : '未知';
             self::$returnData = $task;
             return true;
         } catch (\Exception $e) {
@@ -1126,5 +1133,18 @@ class TaskLogic extends ApiLogic
             Db::rollback();
             throw new \Exception($e->getMessage());
         }
+    }
+
+    private static function redis(): Redis
+    {
+
+        return new Redis([
+            'host'        => env('redis.HOST', '127.0.0.1'),
+            'port'        => env('redis.PORT', 6379),
+            'password'    => env('redis.PASSWORD', '123456'),
+            'select'      => env('redis.WS_SELECT', 8),
+            'timeout'     => 0,
+            'persistent'  => true,
+        ]);
     }
 }

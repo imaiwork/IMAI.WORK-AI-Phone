@@ -11,7 +11,8 @@ interface ProcessAndAppendOptions extends ImageValidateOptions {
     urlField: string
     replaceIndex?: number
     maxDuration?: number
-    onSuccess?: (formatted: any[]) => void
+    /** formatted 为过滤后的合规素材；droppedByDuration 为因时长超限被丢掉的视频条数 */
+    onSuccess?: (formatted: any[], meta: { droppedByDuration: number }) => void
 }
 
 const getImageResolution = (url: string): Promise<{ width: number; height: number }> => {
@@ -108,36 +109,57 @@ export const useMaterial = (materialListRef: any) => {
         if (needFetch.length > 0) {
             uni.showLoading({ title: '信息获取中...', mask: true })
             try {
-                const { results } = isParseVideoElement
-                    ? await batchGetVideoInfoByUrl({
-                          video_urls: needFetch.map((item) => item[urlField])
-                      })
-                    : { results: [] }
-
-                const durationMap = new Map(results.map((r: any) => [r.url, r.data.duration]))
-
-                rawList.forEach((item) => {
-                    if (item.type === 'video' && (!item.duration || Number(item.duration) <= 0)) {
-                        item.duration = durationMap.get(item[urlField]) ?? -1
+                if (isParseVideoElement) {
+                    // 接口单次最多 50 条：整组导入可能一次上百条，按 50 分片取，单片失败不影响其余
+                    const CHUNK_SIZE = 50
+                    const durationMap = new Map<string, number>()
+                    for (let i = 0; i < needFetch.length; i += CHUNK_SIZE) {
+                        const chunk = needFetch.slice(i, i + CHUNK_SIZE)
+                        try {
+                            const { results = [] } = await batchGetVideoInfoByUrl({
+                                video_urls: chunk.map((item) => item[urlField])
+                            })
+                            results.forEach((r: any) => {
+                                if (r?.url) durationMap.set(r.url, Number(r.data?.duration) || 0)
+                            })
+                        } catch {
+                            // 分片失败时这批素材的时长保持缺失，后续过滤会兜住
+                        }
                     }
-                })
+                    rawList.forEach((item) => {
+                        if (item.type === 'video' && (!item.duration || Number(item.duration) <= 0)) {
+                            item.duration = durationMap.get(item[urlField]) ?? -1
+                        }
+                    })
+                }
             } finally {
                 uni.hideLoading()
             }
         }
 
         // ---- 视频时长过滤（duration > 0 且 < maxDuration 才合规，即过滤掉 >= maxDuration）----
+        // 整组导入与单独勾选同一口径：超时长视频不入库，由调用方提示跳过了几条
+        const isDurationAllowed = (item: any): boolean => {
+            const duration = Number(item.duration)
+            return duration > 0 && duration < maxDuration
+        }
         const afterVideoFilter = rawList.filter((item) => {
             if (item.type === 'image') return true
-            if (item.type === 'video') {
-                const duration = Number(item.duration)
-                return duration > 0 && duration < maxDuration
-            }
+            if (item.type === 'video') return isDurationAllowed(item)
             return false
         })
+        // 时长超限被丢掉的条数，用于提示用户跳过了多少
+        const droppedByDuration = rawList.filter(
+            (item) => item.type === 'video' && !isDurationAllowed(item)
+        ).length
 
         if (!afterVideoFilter.length) {
-            uni.showToast({ title: '没有符合条件的素材', icon: 'none' })
+            uni.showToast({
+                title: droppedByDuration > 0 && droppedByDuration === rawList.length
+                    ? `视频时长超出限制，需小于 ${maxDuration} 秒`
+                    : '没有符合条件的素材',
+                icon: 'none'
+            })
             return
         }
 
@@ -177,7 +199,7 @@ export const useMaterial = (materialListRef: any) => {
             materialListRef.value = [...materialListRef.value, ...formatted]
         }
 
-        onSuccess?.(formatted)
+        onSuccess?.(formatted, { droppedByDuration })
     }
 
     return {

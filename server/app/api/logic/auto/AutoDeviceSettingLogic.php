@@ -1056,7 +1056,11 @@ class AutoDeviceSettingLogic extends ApiLogic
                             if (!$shanjian_voice_id  && in_array($type, [1, 3])) {
                                 continue;
                             }
-                            $clip_template_id = ShanjianClipTemplate::where('scene', $scene)->where('auto_type', $auto_type)->column('id');
+                            $clip_template_id = ShanjianClipTemplate::visibleIdsByScene((string)$scene, (int)$auto_type);
+                            if (empty($clip_template_id)) {
+                                \think\facade\Log::channel('automedia')->info('自动创作 场景' . $scene . ' 无可用剪辑模板(全部被后台隐藏)，跳过本条');
+                                continue;
+                            }
                             $clip_template_total = count($clip_template_id) - 1;
                             $clip = random_int(0, $clip_template_total);
                             $clip_id =  $clip_template_id[$clip];
@@ -1457,6 +1461,17 @@ class AutoDeviceSettingLogic extends ApiLogic
 
             $result = self::requestUrl($request, $scene, $userId, $taskId, $withBillingMeta);
             if (!empty($result) && isset($result['content'])) {
+                // ─── 文案质量校验：英文缺空格 / 外文乱码 ───
+                $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
+                $result['content'] = $sanitized['content'];
+                if (!empty($sanitized['warnings'])) {
+                    $result['warnings'] = $sanitized['warnings'];
+                    \think\facade\Log::channel('automedia')->warning('文案质量校验发现问题: ' . json_encode([
+                        'scene'    => $scene,
+                        'task_id'  => $taskId,
+                        'warnings' => $sanitized['warnings'],
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                }
                 return $result;
             } else {
                 throw new \Exception('生成失败：' . $result['message'] ?? '未知coze错误');

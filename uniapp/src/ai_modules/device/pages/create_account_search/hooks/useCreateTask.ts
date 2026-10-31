@@ -1,14 +1,19 @@
 import { checkTaskPublishTime, createDySearchTask } from '@/api/device'
 import WechatOA from '@/utils/wechat'
-import { MissActionEnum } from './types'
+import { MissActionEnum, SearchModeEnum } from './types'
 import { buildDySearchPayload } from './payload'
+import type { Ref } from 'vue'
 import type { AccountSearchFormData } from './types'
 
 /**
  * 第 4 步创建任务：校验 → 提交 → 成功回调。
  * 设备型任务（同 create_add_wechat）不走发布时间冲突检测。
+ * historyKeywordsSnapshot 是进页面时回填的历史关键词快照，用于算出本次被删掉的词。
  */
-export function useCreateTask(formData: AccountSearchFormData) {
+export function useCreateTask(
+    formData: AccountSearchFormData,
+    historyKeywordsSnapshot?: Ref<string[]>
+) {
     const currentFrequency = ref(0)
     const taskErrorMsg = ref('')
     const showCreateTaskSuccessDialog = ref(false)
@@ -35,10 +40,20 @@ export function useCreateTask(formData: AccountSearchFormData) {
         return null
     }
 
+    /**
+     * 本次会话回填过的历史关键词里被用户从表单删掉的，随单上报让后端从历史同步移除；
+     * 指定账号模式不产生关键词历史，不报删除。
+     */
+    const buildRemovedKeywords = (): string[] => {
+        if (formData.search_mode !== SearchModeEnum.KEYWORD) return []
+        const currentKeywords = new Set(formData.keywords.map((item) => item.trim()))
+        return historyKeywordsSnapshot?.value.filter((item) => !currentKeywords.has(item)) ?? []
+    }
+
     const executeCreateTask = async () => {
         uni.showLoading({ title: '创建中...', mask: true })
         try {
-            await createDySearchTask(buildDySearchPayload(formData))
+            await createDySearchTask(buildDySearchPayload(formData, buildRemovedKeywords()))
             showCreateTaskSuccessDialog.value = true
             WechatOA.notify()
         } catch (error: any) {

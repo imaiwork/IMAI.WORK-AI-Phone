@@ -10,6 +10,7 @@ use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\aiPersona\MaterialUseLog;
+use app\common\model\sv\SvMediaMaterialGroup;
 
 class MaterialLists extends BaseApiDataLists implements ListsSearchInterface, ListsExtendInterface
 {
@@ -25,7 +26,7 @@ class MaterialLists extends BaseApiDataLists implements ListsSearchInterface, Li
 
     public function lists(): array
     {
-        return $this->baseQuery()
+        $list = $this->baseQuery()
             ->order(['id' => 'desc'])
             ->limit($this->limitOffset, $this->limitLength)
             ->select()->each(function ($item) {
@@ -47,6 +48,26 @@ class MaterialLists extends BaseApiDataLists implements ListsSearchInterface, Li
                 );
             })
             ->toArray();
+
+        // 整组导入的来源分组名以素材库当前名称为准（分组改过名也显示新的），
+        // 源分组已删除时回落到入库时的名称快照。
+        $sourceGroupIds = array_values(array_unique(array_filter(array_map(
+            fn($row) => (int)($row['source_group_id'] ?? 0),
+            $list
+        ))));
+        if ($sourceGroupIds) {
+            $sourceGroupNames = SvMediaMaterialGroup::where('user_id', $this->userId)
+                ->whereIn('id', $sourceGroupIds)
+                ->column('name', 'id');
+            foreach ($list as $index => $row) {
+                $groupId = (int)($row['source_group_id'] ?? 0);
+                if ($groupId > 0 && isset($sourceGroupNames[$groupId])) {
+                    $list[$index]['source_group_name'] = (string)$sourceGroupNames[$groupId];
+                }
+            }
+        }
+
+        return $list;
     }
 
     public function count(): int

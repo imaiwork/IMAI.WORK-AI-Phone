@@ -48,6 +48,13 @@
 
         <view v-else class="px-[36rpx] pt-[28rpx]">
             <view v-show="activeStep === 'info'">
+                <ai-quick-fill
+                    v-if="isAddMode"
+                    v-model="quickFillText"
+                    :analyzing="analyzing"
+                    :token-score="getAnalysisTokenScore"
+                    @analyze="handleTextAnalyze"
+                    @open-voice="openVoicePop" />
                 <basic-info-step
                     ref="basicInfoStepRef"
                     :basic-form="basicForm"
@@ -57,11 +64,7 @@
             </view>
 
             <view v-show="activeStep === 'biz'">
-                <business-desc-step
-                    :is-add-mode="isAddMode"
-                    :analysis-token-score="getAnalysisTokenScore"
-                    :current-sub-form="currentSubForm"
-                    @open-voice="openVoicePop" />
+                <business-desc-step :current-sub-form="currentSubForm" />
             </view>
         </view>
 
@@ -96,15 +99,6 @@
                 </view>
             </u-button>
         </view>
-
-        <dragon-button :x-edge="-20" :y-edge="100" v-if="isAddMode && isReleaseVersion()">
-            <view
-                class="w-[100rpx] h-[100rpx] rounded-full flex items-center justify-center"
-                style="background: linear-gradient(180deg, rgba(77, 163, 255, 1) 0%, rgba(0, 122, 255, 1) 100%)"
-                @click="openVoicePop">
-                <u-icon name="mic" color="#ffffff" size="48"></u-icon>
-            </view>
-        </dragon-button>
     </view>
 
     <recorder-control
@@ -120,7 +114,6 @@ import {
     getPersonDetail,
     createPerson,
     editPerson,
-    createPersonAnalysis,
     generatePersonAnalysisReport,
     getPersonClueWords,
     getPersonInteractionWords,
@@ -129,16 +122,14 @@ import {
 import { useUserStore } from "@/stores/user";
 import { TokensSceneEnum } from "@/enums/appEnums";
 import { PersonTypeEnum } from "@/ai_modules/person/enums";
-import { isReleaseVersion } from "@/utils/env";
 import RecorderControl from "@/ai_modules/person/components/recorder-control/recorder-control.vue";
 import BasicInfoStep from "./components/basic-info-step.vue";
 import BusinessDescStep from "./components/business-desc-step.vue";
+import AiQuickFill from "./components/ai-quick-fill.vue";
+import { usePersonAnalysisFill } from "@/ai_modules/person/hooks/usePersonAnalysisFill";
 import { setFormData } from "@/utils/util";
 import {
     OPTIONS_CONFIG,
-    ACCOUNT_STYLE_OPTION_NAMES,
-    ACTION_GOAL_OPTION_NAMES,
-    INDUSTRY_DIRECTION_OPTION_NAMES,
     PERSON_TYPE_NAME_MAP,
     REPORT_MODEL_MAP,
     buildPersonPayload,
@@ -167,6 +158,8 @@ const { userTokens } = toRefs(userStore);
 const source = ref<string>("");
 const personId = ref<string>("");
 const showRecorder = ref(false);
+/** 「一句话分析」输入框内容：语音转写也写进这里，由用户确认后再触发分析 */
+const quickFillText = ref("");
 const basicInfoStepRef = shallowRef<{ closePopups?: () => void }>();
 const basicPopupVisible = ref(false);
 const footerHidden = computed(() => basicPopupVisible.value || showRecorder.value);
@@ -192,6 +185,9 @@ const hasFormChanged = (): boolean => {
 
 const recorderRef = shallowRef<InstanceType<typeof RecorderControl>>();
 const rechargePopupRef = shallowRef();
+const analyzing = ref(false);
+
+const { analyzeByContents } = usePersonAnalysisFill(basicForm, formData);
 
 const currentSubForm = computed<Record<string, any>>(() => formData as unknown as Record<string, any>);
 const isAddMode = computed(() => createMode.value === "add");
@@ -255,93 +251,59 @@ const handleFooterClick = async (): Promise<void> => {
 };
 
 const openVoicePop = async () => {
+    if (analyzing.value) return;
     await recorderRef.value?.authorize(recorderRef.value.proxy);
     showRecorder.value = true;
 };
 
-const recorderSuccess = async (res: any) => {
+const recorderSuccess = (res: any) => {
     showRecorder.value = false;
-    const { message } = res;
+    const message = String(res?.message || "").trim();
+    if (!message) {
+        uni.showToast({ title: "没听清内容，请重录或直接打字描述", icon: "none", duration: 3000 });
+        return;
+    }
+    // 语音只做转写，不直接触发分析：说错/识别错时用户可以先改文字，避免白扣一次分析算力
+    quickFillText.value = message;
+    scrollToTop();
+    uni.showToast({ title: "已转成文字，可修改后点「AI 分析并填写」", icon: "none", duration: 3000 });
+};
+
+/** 文字分析（手动输入与语音转写共用）：算力校验、loading、回填都在这里 */
+const runAnalysis = async (contents: string): Promise<boolean> => {
+    const text = String(contents || "").trim();
+    if (!text) return false;
 
     syncBasicInfoToPayloadFields();
 
     if (userTokens.value <= getAnalysisTokenScore.value) {
         rechargePopupRef.value?.open();
-        return;
+        return false;
     }
 
+    analyzing.value = true;
     uni.showLoading({ title: "AI分析中...", mask: true });
 
     try {
-        const analysisResult = await createPersonAnalysis({
-            contents: message,
-            model: formData.persona_type,
-        });
-
-        // 统一字段匹配：支持 string / string[]，模糊匹配到选择器可选项
-        const parseAndMatchOptions = (
-            value: string | string[] | undefined,
-            availableOptions: readonly string[],
-        ): string[] => {
-            if (!value) return [];
-            const items = (Array.isArray(value) ? value : String(value).split(/[,，;；、\s]+/))
-                .map((item) => String(item).trim())
-                .filter((item) => item.length > 0);
-            const matched: string[] = [];
-            items.forEach((item) => {
-                const exactMatch = availableOptions.find(
-                    (option) => option === item || option.includes(item) || item.includes(option),
-                );
-                if (exactMatch && !matched.includes(exactMatch)) matched.push(exactMatch);
-            });
-            return matched;
-        };
-
-        // 新版语音分析接口返回统一字段（不再按人设类型区分 key）
-        const {
-            ip_name,
-            ip_intro,
-            what_you_do,
-            main_share,
-            target_viewers,
-            tone,
-            location_city,
-            desired_action,
-            what_you_sell,
-            target_buyers,
-            advantage,
-        } = analysisResult;
-
-        // 步骤1 基础信息（绑定 basicForm，直接回显）
-        if (ip_name) basicForm.ai_name = ip_name;
-        if (ip_intro) basicForm.intro = ip_intro;
-        if (main_share) basicForm.content_direction = main_share;
-        if (target_viewers) basicForm.target_audience = target_viewers;
-        if (location_city) basicForm.city_position = location_city;
-
-        // 步骤1 选择器（匹配到可选项才回填，匹配不到保留原值）
-        const matchedIndustry = parseAndMatchOptions(what_you_do, INDUSTRY_DIRECTION_OPTION_NAMES);
-        if (matchedIndustry.length) basicForm.industry_direction = matchedIndustry;
-        const matchedStyle = parseAndMatchOptions(tone, ACCOUNT_STYLE_OPTION_NAMES);
-        if (matchedStyle.length) basicForm.account_style = matchedStyle[0];
-        const matchedGoal = parseAndMatchOptions(desired_action, ACTION_GOAL_OPTION_NAMES);
-        if (matchedGoal.length) basicForm.action_goal = matchedGoal[0];
-
-        // 步骤2 业务描述（绑定 formData，直接回显）
-        if (what_you_sell) formData.main_business = what_you_sell;
-        if (target_buyers) formData.target_pain_points = target_buyers;
-        if (advantage) formData.conversion_hook = advantage;
-
+        await analyzeByContents(text);
         uni.hideLoading();
-        uni.showToast({ title: "AI分析完成", icon: "none", duration: 3000 });
+        uni.showToast({ title: "AI分析完成，请核对填写内容", icon: "none", duration: 3000 });
+        return true;
     } catch (error: any) {
         uni.hideLoading();
         uni.showToast({
-            title: error || "语音分析失败，请检查网络后重试",
+            title: error || "AI分析失败，请检查网络后重试",
             icon: "none",
             duration: 3000,
         });
+        return false;
+    } finally {
+        analyzing.value = false;
     }
+};
+
+const handleTextAnalyze = async (contents: string): Promise<void> => {
+    await runAnalysis(contents);
 };
 
 const handleAvatarUpdate = (imageUrl: string): void => {

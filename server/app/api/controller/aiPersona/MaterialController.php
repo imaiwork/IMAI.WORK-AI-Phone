@@ -97,6 +97,23 @@ class MaterialController extends BaseApiController
         }
     }
 
+    /**
+     * 一键清理当前人设下「使用次数达到阈值」的素材（阈值来自后台 IP人设设置，默认3次）
+     */
+    public function cleanOverUsed()
+    {
+        try {
+            $params = (new MaterialValidate())->post()->goCheck('cleanOverUsed');
+            $result = MaterialLogic::cleanOverUsed($params);
+            if ($result) {
+                return $this->success('清理成功', MaterialLogic::getReturnData());
+            }
+            return $this->fail(MaterialLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
+
     public function detail()
     {
         try {

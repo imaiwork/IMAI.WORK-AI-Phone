@@ -144,7 +144,7 @@ const count = computed(() => {
 const getCopywritingLibraryLists = async () => {
     const { lists } = await getCopywritingLibraryList({
         page_size: 9999,
-        copywriting_type: CopywritingTypeEnum.CONTENT,
+        copywriting_type: CopywritingTypeEnum.ORAL,
     });
     if (lists.length > 0) {
         // 为每个口播文案条目添加 `checked` 属性

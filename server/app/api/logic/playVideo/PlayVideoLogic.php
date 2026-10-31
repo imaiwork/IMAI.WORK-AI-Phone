@@ -27,6 +27,10 @@ class PlayVideoLogic extends BaseLogic
 {
     private const BG_PRESETS = ['store', 'office', 'street', 'studio'];
 
+    // 数据侧把「素材/写出地址 HTTP 非 2xx」压成同一句话，两种成因的修复方向完全相反；
+    // 落到用户/后台的文案不能再含糊，具体是哪种由 diagnoseWriteFailure 当场取证后写日志。
+    private const WRITE_FAILURE_HINT = '生成失败：数据侧无法写入本站存储，请联系管理员检查 OSS 桶的写入授权';
+
     // ─────────────────────────── 提交 ───────────────────────────
 
     /**
@@ -126,13 +130,19 @@ class PlayVideoLogic extends BaseLogic
                 $data = PlayVideoMidService::submit($play, $midParams);
             } catch (\Throwable $e) {
                 PlayVideoBillingService::refundIfHeld($task, '提交生成失败退费');
+                $raw = (string)$e->getMessage();
+                $hitWrite = self::isWriteAccessFailure($raw);
+                $reason = mb_substr($hitWrite ? self::WRITE_FAILURE_HINT : $raw, 0, 250);
                 $task->save([
                     'status'      => PlayVideoEnum::STATUS_FAILED,
-                    'fail_reason' => mb_substr($e->getMessage(), 0, 250),
+                    'fail_reason' => $reason,
                     'finish_time' => time(),
                     'update_time' => time(),
                 ]);
-                return self::failWith($e->getMessage());
+                if ($hitWrite) {
+                    self::diagnoseWriteFailure($task);
+                }
+                return self::failWith($reason);
             }
 
             $task->save([
@@ -335,7 +345,9 @@ class PlayVideoLogic extends BaseLogic
                 }
                 return;
             case 'FAILURE':
-                $reason = mb_substr((string)($payload['fail_reason'] ?? '生成失败'), 0, 250);
+                $raw = (string)($payload['fail_reason'] ?? '生成失败');
+                $hitWrite = self::isWriteAccessFailure($raw);
+                $reason = mb_substr($hitWrite ? self::WRITE_FAILURE_HINT : $raw, 0, 250);
                 $won = PlayVideoTask::where('id', (int)$task->id)
                     ->whereIn('status', [PlayVideoEnum::STATUS_PENDING, PlayVideoEnum::STATUS_GENERATING])
                     ->update([
@@ -347,6 +359,10 @@ class PlayVideoLogic extends BaseLogic
                     ]);
                 $task->refresh();
                 if ($won > 0) {
+                    // 回调/cron/惰性三路都会走到这里，只在 CAS 赢家侧探一次，避免重复打点
+                    if ($hitWrite) {
+                        self::diagnoseWriteFailure($task);
+                    }
                     PlayVideoBillingService::refundIfHeld($task, $reason . '（自动退费）');
                 }
                 return;
@@ -655,6 +671,17 @@ class PlayVideoLogic extends BaseLogic
     }
 
     /**
+     * 本站桶原生域名的访问地址。数据侧（云剪辑/IMS）不认自定义域名，直写与素材都要走
+     * bucket.endpoint 形式；buildMidParams 与失败诊断共用，保证日志里的地址＝真实送出的地址。
+     *
+     * @param array{bucket:string,location:string} $target
+     */
+    private static function bucketHostUrl(array $target, string $relativePath): string
+    {
+        return 'https://' . $target['bucket'] . '.' . $target['location'] . '.aliyuncs.com/' . ltrim($relativePath, '/');
+    }
+
+    /**
      * 组中台契约参数（01 文档 §2.1）。人脸/背景图此刻换 48h 签名 URL。
      *
      * @throws \Exception
@@ -689,7 +716,7 @@ class PlayVideoLogic extends BaseLogic
                 throw new \Exception('影视引流拼接需要配置阿里云OSS存储（地域限北京/杭州/上海/深圳）');
             }
             $params['region'] = $target['region'];
-            $params['output_media_url'] = 'https://' . $target['bucket'] . '.' . $target['location'] . '.aliyuncs.com/uploads/playvideo/' . date('Ymd') . '/' . $sn . '.mp4';
+            $params['output_media_url'] = self::bucketHostUrl($target, 'uploads/playvideo/' . date('Ymd') . '/' . $sn . '.mp4');
             $params['transition'] = (string)$input['transition'];
             $params['splice_sfx'] = (bool)$input['splice_sfx'];
             if (($input['hook_text'] ?? '') !== '') {
@@ -703,7 +730,7 @@ class PlayVideoLogic extends BaseLogic
         $needsSpeech = $play === PlayVideoEnum::PLAY_FACE || (($input['speech_text'] ?? '') !== '');
         if ($needsSpeech && ($target = self::ossDirectWriteTarget()) !== null) {
             $params['region'] = $target['region'];
-            $params['work_media_url'] = 'https://' . $target['bucket'] . '.' . $target['location'] . '.aliyuncs.com/uploads/playvideo/tmp/' . date('Ymd') . '/' . $sn . '_trim.mp4';
+            $params['work_media_url'] = self::bucketHostUrl($target, 'uploads/playvideo/tmp/' . date('Ymd') . '/' . $sn . '_trim.mp4');
         }
         if ($play === PlayVideoEnum::PLAY_FACE) {
             $params['lines'] = $input['lines'];
@@ -753,6 +780,89 @@ class PlayVideoLogic extends BaseLogic
             Log::channel('playvideo')->warning('play_video 成片转存失败,暂存上游临时链接(24h内有效): ' . $url);
         }
         return $saved;
+    }
+
+    /**
+     * 数据侧「写入地址无法访问」的识别串（中台原文，非本站文案）。
+     */
+    private static function isWriteAccessFailure(string $raw): bool
+    {
+        return str_contains($raw, '写入地址无法访问');
+    }
+
+    /**
+     * 失败当场取证：素材逐个探一遍，再按建单日期还原本次直写地址，一条日志给运营对照。
+     * 素材全部 2xx/3xx 却仍报「写入地址无法访问」，问题只可能出在本站桶对数据侧的写授权
+     * （bucket policy / RAM），不是用户素材、也不是代码——别再让人肉排查。
+     */
+    private static function diagnoseWriteFailure(PlayVideoTask $task): void
+    {
+        $input = (array)json_decode((string)$task->input, true);
+        $template = (array)json_decode((string)$task->template_snapshot, true);
+        $materials = array_filter([
+            '商品视频' => (string)($input['product_video_url'] ?? ''),
+            '模板视频' => (string)($template['video_url'] ?? ''),
+        ]);
+        $reach = [];
+        $unreachable = [];
+        foreach ($materials as $label => $url) {
+            $code = self::probeRemoteUrl($url);
+            $reach[] = $label . '=' . $code . ' <' . $url . '>';
+            if ($code < 200 || $code >= 400) {
+                $unreachable[] = $label;
+            }
+        }
+        $target = self::ossDirectWriteTarget();
+        $output = $target === null
+            ? '本站未配阿里云OSS直写'
+            : self::bucketHostUrl($target, 'uploads/playvideo/' . date('Ymd', (int)$task->create_time) . '/' . $task->sn . '.mp4');
+        $verdict = $target === null ? '存储配置缺失'
+            : ($unreachable === [] ? '素材均可达，问题在本站桶对数据侧的写授权' : '素材不可达: ' . implode('、', $unreachable));
+        Log::channel('playvideo')->error('play_video 写出地址诊断 sn=' . $task->sn . ' play=' . $task->play
+            . ' | 素材可达性: ' . ($reach === [] ? '无素材URL' : implode(' ', $reach))
+            . ' | 成片直写: ' . $output
+            . ' | 判定: ' . $verdict);
+    }
+
+    /**
+     * 探一次远程可达性，返回 HTTP 状态码；被 SSRF 防线拦掉或连不上返回 0。
+     */
+    private static function probeRemoteUrl(string $url): int
+    {
+        if ($url === '' || !FileService::isSafeRemoteUrl($url)) {
+            return 0;
+        }
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return 0;
+        }
+        // Range GET 而不是 HEAD：数据侧取流走的是 GET，OSS/CDN 对两者的鉴权与缓存行为不一致
+        $written = 0;
+        curl_setopt_array($ch, [
+            CURLOPT_RANGE => '0-0',
+            // 回调首参是 curl 句柄，签名写错会直接抛 TypeError
+            CURLOPT_WRITEFUNCTION => function ($handle, string $chunk) use (&$written): int {
+                $written += strlen($chunk);
+                // 对端不认 Range 时及时掐断，诊断不该为了探状态码把整条视频拉进内存
+                return $written >= 64 ? 0 : strlen($chunk);
+            },
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 3,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $ok = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+        $errno = curl_errno($ch);
+        curl_close($ch);
+        // 主动掐断（WRITE_ERROR）时状态码已经拿到，别当成不可达；其余传输失败记 0
+        if ($ok === false) {
+            return $errno === CURLE_WRITE_ERROR && $code > 0 ? $code : 0;
+        }
+        return $code;
     }
 
     /**

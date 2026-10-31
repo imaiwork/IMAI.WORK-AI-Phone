@@ -8,6 +8,8 @@ use app\common\enum\FileEnum;
 use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\Material;
 use app\common\model\lianlian\LlConversation;
+use app\common\model\sv\SvMediaMaterial;
+use app\common\service\aiPersona\PersonaMediaLibrarySyncService;
 use app\common\service\OriginalMaterialSpec;
 use app\common\service\UploadService;
 use Exception;
@@ -93,6 +95,8 @@ class UploadController extends BaseApiController
                 $result['material_id'] = (int)$material['id'];
                 $result['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
                 $result['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                // 走人设素材库相册上传时，校验通过后额外写一份到外部素材库（平台素材库）
+                $this->mirrorToMediaLibrary($result, SvMediaMaterial::TYPE_IMAGE, (int)$ffmpeg);
                 return $this->success('上传成功', $result);
             }
 
@@ -100,6 +104,8 @@ class UploadController extends BaseApiController
             if (!empty($material['id'])) {
                 $result['material_id'] = (int)$material['id'];
             }
+
+            $this->mirrorToMediaLibrary($result, SvMediaMaterial::TYPE_IMAGE, (int)$ffmpeg);
 
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
@@ -137,6 +143,13 @@ class UploadController extends BaseApiController
                 $thumbnailOptions,
                 $fetchVideoInfo,
                 $personaId
+            );
+
+            // 走人设素材库相册上传时，先把文件写进外部素材库（仅图片/视频，音频等跳过）
+            $this->mirrorToMediaLibrary(
+                $result,
+                PersonaMediaLibrarySyncService::mediaTypeByUploadType((int)($result['type'] ?? 0)),
+                (int)$ffmpeg
             );
 
             return $this->success('上传成功', $result);
@@ -179,6 +192,8 @@ class UploadController extends BaseApiController
             $cid = $this->request->post('cid/d', 0);
             $ffmpeg = $this->request->post('ffmpeg/d', 0);
             $clip = $this->request->post('clip/a', []);
+            // 主视频按 5 分钟转码时需要覆盖默认 60s 规范，避免长视频被截断
+            $customSpecs = $this->request->post('custom_specs/a', []);
             $personaId = $this->request->post('persona_id/d', 0);
             $materialKind = ShanjianVideoSettingLogic::inferMaterialKind(
                 (string)$this->request->post('material_kind', ''),
@@ -236,7 +251,8 @@ class UploadController extends BaseApiController
                 $personaId,
                 '',
                 $scene,
-                $groupId
+                $groupId,
+                $customSpecs ?: null
             );
 
             // ffmpeg=0：完整视频立即入库，不转码、不切割、不扣费（需 persona_id）。
@@ -261,6 +277,8 @@ class UploadController extends BaseApiController
                 $result['material_id'] = (int)$material['id'];
                 $result['source_type'] = Material::SOURCE_TYPE_ORIGINAL;
                 $result['keep_original'] = Material::KEEP_ORIGINAL_YES;
+                // 走人设素材库相册上传时，校验通过后额外写一份到外部素材库（平台素材库）
+                $this->mirrorToMediaLibrary($result, SvMediaMaterial::TYPE_VIDEO, (int)$ffmpeg);
                 return $this->success('上传成功', $result);
             }
 
@@ -268,6 +286,8 @@ class UploadController extends BaseApiController
             if (!empty($material['id'])) {
                 $result['material_id'] = (int)$material['id'];
             }
+
+            $this->mirrorToMediaLibrary($result, SvMediaMaterial::TYPE_VIDEO, (int)$ffmpeg);
 
             return $this->success('上传成功', $result);
         } catch (Exception $e) {
@@ -375,6 +395,23 @@ class UploadController extends BaseApiController
         } catch (Exception $e) {
             return $this->fail($e->getMessage());
         }
+    }
+
+    /**
+     * @notes 相册上传带同步标记时，把文件额外写一份到外部素材库（平台素材库），
+     *        供其他 IP 人设素材库复用；人设素材本身仍按原链路入库。
+     */
+    private function mirrorToMediaLibrary(array $uploadResult, int $mediaType, int $ffmpeg = 0): void
+    {
+        $flag = $this->request->post(PersonaMediaLibrarySyncService::SYNC_PARAM . '/d', 0);
+        if (!PersonaMediaLibrarySyncService::requested($flag)) {
+            return;
+        }
+        // 切割上传只留在当前 IP 人设素材库：原片切片后会被删除，同步出去就是坏素材
+        if (PersonaMediaLibrarySyncService::skipForCutUpload($uploadResult, $ffmpeg)) {
+            return;
+        }
+        PersonaMediaLibrarySyncService::mirrorUpload($this->userId, $uploadResult, $mediaType);
     }
 
     /**

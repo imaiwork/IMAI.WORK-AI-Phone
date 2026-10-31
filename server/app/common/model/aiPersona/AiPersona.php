@@ -75,7 +75,7 @@ class AiPersona extends BaseModel
         return $config;
     }
 
-    public static function normalizeTrackingMode($value): int
+    public static function normalizeTrackingMode(mixed $value): int
     {
         $mode = (int)$value;
         return in_array($mode, [self::TRACKING_MODE_AUTO, self::TRACKING_MODE_ACCOUNT], true)
@@ -83,7 +83,7 @@ class AiPersona extends BaseModel
             : self::TRACKING_MODE_AUTO;
     }
 
-    public static function normalizeTrackingFilterValue($value): int
+    public static function normalizeTrackingFilterValue(mixed $value): int
     {
         $value = (int)$value;
         return in_array($value, [0, 1, 2, 3], true) ? $value : 0;
@@ -92,7 +92,7 @@ class AiPersona extends BaseModel
     /**
      * 追踪视频时长：0不限 / 1一分钟内 / 2一到五分钟 / 35分钟以上；非法值回落默认1分钟以下
      */
-    public static function normalizeTrackingDuration($value): int
+    public static function normalizeTrackingDuration(mixed $value): int
     {
         $value = (int)$value;
         return in_array($value, [
@@ -103,7 +103,7 @@ class AiPersona extends BaseModel
         ], true) ? $value : self::TRACKING_DURATION_DEFAULT;
     }
 
-    public static function normalizeTrackingAccountConfig($config, bool $withDefault = true): array
+    public static function normalizeTrackingAccountConfig(mixed $config, bool $withDefault = true): array
     {
         if (is_string($config)) {
             $decoded = json_decode($config, true);
@@ -188,7 +188,7 @@ class AiPersona extends BaseModel
         ];
     }
 
-    public static function normalizeContentPublishConfig($value): array
+    public static function normalizeContentPublishConfig(mixed $value): array
     {
         if (is_string($value)) {
             $decoded = json_decode($value, true);
@@ -254,7 +254,7 @@ class AiPersona extends BaseModel
         ];
     }
 
-    public static function getPlatformContentPublishConfig($config, int $platform): array
+    public static function getPlatformContentPublishConfig(mixed $config, int $platform): array
     {
         $config = self::normalizeContentPublishConfig($config);
         if (isset($config['platform_configs'][(string)$platform])) {
@@ -262,6 +262,69 @@ class AiPersona extends BaseModel
         }
 
         return self::normalizePlatformContentPublishConfig([], $platform, $config);
+    }
+
+    /**
+     * 归一化发布时段里的平台配置列表（兼容 JSON 串/对象/数组，按 order 升序）。
+     * 出片配额与内容发布建单共用这一份，避免两处口径漂移。
+     */
+    public static function normalizeContentPublishPlatforms(mixed $platforms): array
+    {
+        if (is_string($platforms)) {
+            $platforms = json_decode($platforms, true) ?: [];
+        }
+        if (!is_array($platforms)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($platforms as $index => $platform) {
+            if (is_object($platform)) {
+                $platform = (array)$platform;
+            }
+            if (!is_array($platform) || empty($platform['account_type'])) {
+                continue;
+            }
+            $platform['order'] = (int)($platform['order'] ?? ($index + 1));
+            $normalized[] = $platform;
+        }
+
+        usort($normalized, static function ($a, $b) {
+            return $a['order'] <=> $b['order'];
+        });
+
+        return $normalized;
+    }
+
+    /**
+     * 平台发布素材类型：仅小红书配置图文时返回图文(2)，其余一律视频(1)。
+     * 图文平台不产出视频任务，不应计入视频出片配额。
+     */
+    public static function platformPublishMaterialType(AiPersona $persona, int $platform): int
+    {
+        $config = self::getPlatformContentPublishConfig($persona['content_publish_config'], $platform);
+        if ($platform === self::PUBLISH_PLATFORM_XHS
+            && (int)$config['publish_media_type'] === self::PUBLISH_MEDIA_TYPE_IMAGE_TEXT
+        ) {
+            return self::PUBLISH_MEDIA_TYPE_IMAGE_TEXT;
+        }
+
+        return self::PUBLISH_MEDIA_TYPE_VIDEO;
+    }
+
+    /**
+     * 一条发布时段是否需要视频素材：时段内只要存在一个视频平台即需要。
+     * 纯图文时段（如小红书配置图文）不计入视频出片配额。
+     */
+    public static function scheduleNeedsVideoPublish(AiPersona $persona, mixed $platforms): bool
+    {
+        foreach (self::normalizeContentPublishPlatforms($platforms) as $platform) {
+            if (self::platformPublishMaterialType($persona, (int)$platform['account_type']) === self::PUBLISH_MEDIA_TYPE_VIDEO) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function normalizeContentPublishBaseConfig(array $value, array $default): array
@@ -404,7 +467,7 @@ class AiPersona extends BaseModel
         ];
     }
 
-    private static function normalizeTopicTags($topicTags): array
+    private static function normalizeTopicTags(mixed $topicTags): array
     {
         if (is_string($topicTags)) {
             $topicTags = explode(',', $topicTags);
@@ -420,7 +483,7 @@ class AiPersona extends BaseModel
         }));
     }
 
-    public static function mergeContentPublishConfigOverrides($config, array $params): array
+    public static function mergeContentPublishConfigOverrides(mixed $config, array $params): array
     {
         $config = self::normalizeContentPublishConfig($config);
         $incoming = $params['content_publish_config'] ?? null;
@@ -523,7 +586,7 @@ class AiPersona extends BaseModel
         return '';
     }
 
-    private static function pickFirstValue(array $source, array $keys, $default)
+    private static function pickFirstValue(array $source, array $keys, mixed $default)
     {
         foreach ($keys as $key) {
             if (array_key_exists($key, $source)) {
@@ -553,73 +616,73 @@ class AiPersona extends BaseModel
     }
 
     // 获取器：处理报告内容JSON
-    public function getReportContentAttr($value)
+    public function getReportContentAttr(mixed $value)
     {
         return $value ? json_decode($value, true) : [];
     }
 
     // 修改器：处理报告内容JSON
-    public function setReportContentAttr($value)
+    public function setReportContentAttr(mixed $value)
     {
         return is_array($value) ? json_encode($value, JSON_UNESCAPED_UNICODE) : $value;
     }
 
-    public function getContentPublishConfigAttr($value)
+    public function getContentPublishConfigAttr(mixed $value)
     {
         return self::normalizeContentPublishConfig($value);
     }
 
-    public function setContentPublishConfigAttr($value)
+    public function setContentPublishConfigAttr(mixed $value)
     {
         return json_encode(self::normalizeContentPublishConfig($value), JSON_UNESCAPED_UNICODE);
     }
 
-    public function getTrackingModeAttr($value)
+    public function getTrackingModeAttr(mixed $value)
     {
         return self::normalizeTrackingMode($value);
     }
 
-    public function getDurationAttr($value)
+    public function getDurationAttr(mixed $value)
     {
         return self::normalizeTrackingDuration($value);
     }
 
-    public function getPublishDayAttr($value)
+    public function getPublishDayAttr(mixed $value)
     {
         return self::normalizeTrackingFilterValue($value);
     }
 
-    public function getTrackingAccountConfigAttr($value)
+    public function getTrackingAccountConfigAttr(mixed $value)
     {
         return self::normalizeTrackingAccountConfig($value);
     }
 
-    public function setTrackingAccountConfigAttr($value)
+    public function setTrackingAccountConfigAttr(mixed $value)
     {
         return json_encode(self::normalizeTrackingAccountConfig($value), JSON_UNESCAPED_UNICODE);
     }
 
-    public function searchStartTimeAttr($query, $value)
+    public function searchStartTimeAttr(mixed $query, mixed $value)
     {
         if ($value) {
             $query->where('create_time', '>=', strtotime($value));
         }
     }
 
-    public function searchEndTimeAttr($query, $value)
+    public function searchEndTimeAttr(mixed $query, mixed $value)
     {
         if ($value) {
             $query->where('create_time', '<=', strtotime($value));
         }
     }
 
-    public function getAvatarUrlAttr($value)
+    public function getAvatarUrlAttr(mixed $value)
     {
         return $value ? FileService::getFileUrl($value, '', true) : '';
     }
 
   
-    public function setAvatarUrlAttr($value)
+    public function setAvatarUrlAttr(mixed $value)
     {
         return $value ? FileService::setFileUrl($value) : '';
     }
@@ -661,7 +724,7 @@ class AiPersona extends BaseModel
     }
 
     /** 运行模式取值归一：只有 2 算无手机模式，其余一律手机模式 */
-    public static function normalizeRunMode($value): int
+    public static function normalizeRunMode(mixed $value): int
     {
         return (int)$value === self::RUN_MODE_CLOUD ? self::RUN_MODE_CLOUD : self::RUN_MODE_PHONE;
     }
@@ -670,7 +733,7 @@ class AiPersona extends BaseModel
      * 入参校验：非法值直接拒，不静默归一
      * @throws \Exception
      */
-    public static function requireValidRunMode($value): int
+    public static function requireValidRunMode(mixed $value): int
     {
         $invalid = is_bool($value) || is_array($value) || is_object($value)
             || (is_string($value) && !is_numeric(trim($value)));

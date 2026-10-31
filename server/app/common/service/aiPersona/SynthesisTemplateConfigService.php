@@ -112,6 +112,8 @@ class SynthesisTemplateConfigService
             $validIds = ShanjianClipTemplate::whereIn('id', $item['template_ids'])
                 ->where('scene', $scene)
                 ->where('auto_type', 1)
+                // 后台隐藏的模板对用户端不可见，配置里的旧 id 视为失效并自动剔除
+                ->where('status', 1)
                 ->column('id');
             $validIds = array_values(array_map('strval', $validIds));
             $invalidIds = array_values(array_diff($item['template_ids'], $validIds));
@@ -170,6 +172,7 @@ class SynthesisTemplateConfigService
             $customIds = ShanjianClipTemplate::whereIn('id', $item['template_ids'])
                 ->where('scene', $scene)
                 ->where('auto_type', $autoType)
+                ->where('status', 1)
                 ->column('id');
             $customIds = array_values(array_map('strval', $customIds));
             if (!empty($customIds)) {
@@ -194,6 +197,7 @@ class SynthesisTemplateConfigService
 
         $templateIds = ShanjianClipTemplate::where('scene', $scene)
             ->where('auto_type', $autoType)
+            ->where('status', 1)
             ->column('id');
         $templateIds = array_values(array_map('strval', $templateIds));
         if (empty($templateIds)) {

@@ -11,7 +11,7 @@
                     <div v-else class="flex h-full w-full items-center justify-center text-[28px] text-white">📄</div>
                 </div>
             </div>
-            <div v-if="text" class="break-words">{{ text }}</div>
+            <div v-if="text" class="break-words chat-user-text">{{ text }}</div>
         </div>
         <div
             class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white">
@@ -41,3 +41,10 @@ withDefaults(
     }
 )
 </script>
+
+<style scoped>
+.chat-user-text {
+    user-select: text;
+    -webkit-user-select: text;
+}
+</style>

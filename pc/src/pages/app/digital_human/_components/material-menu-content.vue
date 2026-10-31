@@ -9,12 +9,13 @@
                 ffmpeg: ffmpeg ? 1 : 0,
                 generate_thumbnail: generateThumbnail ? 1 : 0,
                 fetch_video_info: fetchVideoInfo ? 1 : 0,
+                ...(type === 'video' ? { 'custom_specs[video][duration]': getVideoMaxDuration } : {}),
             }"
             :limit="getLimit"
             :show-file-list="false"
             :max-size="getUploadSize"
             :min-duration="montageUploadConfig.videoDuration[0]"
-            :max-duration="montageUploadConfig.videoDuration[1]"
+            :max-duration="getVideoMaxDuration"
             :image-resolution="getImageResolution"
             :video-resolution="getVideoResolution"
             @change="handleUploadChange(type, $event)">
@@ -103,6 +104,7 @@ const props = withDefaults(
         videoLimit?: number;
         imageSize?: number;
         videoSize?: number;
+        videoMaxDuration?: number;
         imageResolution?: ResolutionRange;
         videoResolution?: ResolutionRange;
         ffmpeg?: boolean;
@@ -114,7 +116,8 @@ const props = withDefaults(
         imageAccept: "",
         videoAccept: "",
         imageSize: 30,
-        videoSize: 100,
+        videoSize: montageUploadConfig.videoSize,
+        videoMaxDuration: montageUploadConfig.videoDuration[1],
         ffmpeg: true,
         generateThumbnail: true,
         fetchVideoInfo: true,
@@ -184,6 +187,10 @@ const getLimit = computed<number>(() => {
     if (type === "video" && videoLimit != null) return videoLimit;
     return montageUploadConfig.count;
 });
+
+const getVideoMaxDuration = computed<number>(
+    () => props.videoMaxDuration ?? montageUploadConfig.videoDuration[1],
+);
 
 const getUploadSize = computed<number>(() => {
     const { type, imageSize, videoSize } = props;

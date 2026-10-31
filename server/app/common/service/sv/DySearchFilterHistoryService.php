@@ -101,13 +101,34 @@ class DySearchFilterHistoryService
     }
 
     /**
+     * 从列表中剔除指定项（用于同步用户在表单里删掉的线索词）。
+     *
+     * @param mixed $existing
+     * @param mixed $removed
+     * @return array<int, string>
+     */
+    public static function excludeList($existing, $removed): array
+    {
+        $existing = self::normalizeList($existing);
+        $removed = self::normalizeList($removed);
+        if ($removed === []) {
+            return $existing;
+        }
+        $removedMap = array_fill_keys($removed, true);
+        return array_values(array_filter($existing, static function (string $item) use ($removedMap): bool {
+            return !isset($removedMap[$item]);
+        }));
+    }
+
+    /**
      * 任务创建成功后合并写入；空内容且无旧行则跳过。
      *
      * @param mixed $keywords
      * @param mixed $remarks
      * @param mixed $missScripts
+     * @param mixed $removedKeywords 前端随单上报的「本次在表单里删掉的线索词」，从历史同步移除
      */
-    public static function saveAfterAdd(int $userId, string $searchMode, $keywords, $remarks, $missScripts): void
+    public static function saveAfterAdd(int $userId, string $searchMode, $keywords, $remarks, $missScripts, $removedKeywords = []): void
     {
         if ($userId < 1) {
             return;
@@ -130,15 +151,12 @@ class DySearchFilterHistoryService
             return;
         }
 
-        // keyword 模式下，本次提交的关键词清单视为用户的最新选择，需将被删除的词从历史中移除；
-        // account 模式不产出关键词历史，保持原有合并逻辑即可。
-        if ($searchMode === 'keyword') {
-            $row->keywords = self::replaceList($row->keywords, $incoming['keywords']);
-        } else {
-            $row->keywords = self::mergeList($row->keywords, $incoming['keywords']);
-        }
-        $row->remarks = $incoming['remarks'];
-        $row->miss_scripts = $incoming['miss_scripts'];
+        // 关键词合并去重：旧词不丢、新词插到最前；本次提交里被用户从表单删掉的词从历史移除。
+        // account 模式不产出关键词历史（incoming 为空），mergeList 保持旧词不重排。
+        $row->keywords = self::mergeList(self::excludeList($row->keywords, $removedKeywords), $incoming['keywords']);
+        // 话术/备注：非空传入全量替换（覆盖删除场景），空传入保持历史不变（防止「直接跳过」或关备注把历史清空）。
+        $row->remarks = self::replaceList($row->remarks, $incoming['remarks']);
+        $row->miss_scripts = self::replaceList($row->miss_scripts, $incoming['miss_scripts']);
         $row->save();
     }
 

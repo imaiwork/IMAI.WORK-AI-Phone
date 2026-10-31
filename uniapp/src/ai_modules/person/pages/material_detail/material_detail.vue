@@ -41,6 +41,13 @@
                     <text class="text-[30rpx] font-extrabold text-[#1A1A1A] leading-snug line-clamp-2 break-all">
                         {{ detail.material_name }}
                     </text>
+                    <view v-if="Number(detail.source_group_id) > 0" class="mt-2">
+                        <text
+                            class="text-[22rpx] font-semibold text-[#0F9F6E] px-[14rpx] py-[6rpx] rounded-[10rpx]"
+                            style="background: rgba(15, 159, 110, 0.1)">
+                            来自素材分组：{{ detail.source_group_name || "已删除的分组" }}
+                        </text>
+                    </view>
                 </view>
             </view>
 

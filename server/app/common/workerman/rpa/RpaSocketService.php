@@ -12,6 +12,7 @@ use app\common\workerman\rpa\Support\ChannelBus;
 use app\common\workerman\rpa\Support\ConnectionRepository;
 use app\common\workerman\rpa\Support\DeviceIndex;
 use app\common\workerman\rpa\Support\ProcessFdLimit;
+use app\common\workerman\rpa\Support\RedisConnectionGuard;
 use app\common\workerman\rpa\Validator\MessageValidator;
 use app\common\workerman\rpa\Tool\ToolUtil;
 use app\common\workerman\rpa\Service\DeviceUnbindService;
@@ -36,6 +37,13 @@ class RpaSocketService
     private MessageValidator $messageValidator;
     private ToolUtil $toolUtil;
     private DeviceUnbindService $deviceUnbindService;
+    private RedisConnectionGuard $redisGuard;
+
+    /** 重建进行中标志：防止 initServices(true) 被守卫反复触发导致递归 */
+    private bool $rebuilding = false;
+
+    /** 最近一次强制重建尝试的时间戳：兜底自检与守卫重建共用冷却窗口 */
+    private int $lastRebuildAttemptAt = 0;
 
     public function __construct(Worker $object)
     {
@@ -55,17 +63,80 @@ class RpaSocketService
      */
     private function initServices(bool $force = false): void
     {
-        $this->_connRedis($force);
-        $this->repository = new ConnectionRepository($this->redis);
-        $this->channelBus = new ChannelBus();
-        $this->messageValidator = new MessageValidator($this, $this->repository);
-        $this->toolUtil = new ToolUtil();
-        $this->deviceUnbindService = new DeviceUnbindService(
-            $this->repository,
-            function (array $content): void {
-                $this->sendWeb($content);
-            },
-        );
+        if ($this->rebuilding) {
+            // 重建过程中被守卫重复触发时直接返回，避免递归重建
+            return;
+        }
+
+        $this->rebuilding = true;
+        try {
+            try {
+                $this->_connRedis($force);
+            } catch (\Throwable $e) {
+                // Redis 暂时不可用时不中断进程启动：保留已构建的惰性句柄，
+                // 后续业务调用失败会由 redisGuard 触发重建
+                $this->setLog('Redis 初始连接失败，等待自动重建: ' . $e->getMessage(), 'error');
+            }
+
+            $this->repository = new ConnectionRepository($this->redis);
+            $this->redisGuard = new RedisConnectionGuard(fn(): bool => $this->rebuildServices());
+            $this->redisGuard->setProbe(fn(): bool => $this->pingRedis());
+            $this->redisGuard->setLogger(function (string $level, string $message): void {
+                $this->setLog($message, $level);
+            });
+            $this->channelBus = new ChannelBus();
+            $this->messageValidator = new MessageValidator($this, $this->repository);
+            $this->toolUtil = new ToolUtil();
+            $this->deviceUnbindService = new DeviceUnbindService(
+                $this->repository,
+                function (array $content): void {
+                    $this->sendWeb($content);
+                },
+            );
+        } finally {
+            $this->rebuilding = false;
+        }
+    }
+
+    /**
+     * 守卫触发时的强制重建入口：失败返回 false 交由守卫走默认值兜底。
+     */
+    private function rebuildServices(): bool
+    {
+        if ($this->rebuilding) {
+            return false;
+        }
+
+        $now = time();
+        if ($now - $this->lastRebuildAttemptAt < 5) {
+            return false;
+        }
+        $this->lastRebuildAttemptAt = $now;
+
+        try {
+            $this->initServices(true);
+            return true;
+        } catch (\Throwable $e) {
+            $this->setLog('Redis 强制重建异常: ' . $e->getMessage(), 'error');
+            return false;
+        }
+    }
+
+    /**
+     * 探活当前 Redis 连接。
+     */
+    private function pingRedis(): bool
+    {
+        if ($this->redis === null) {
+            return false;
+        }
+
+        try {
+            $this->redis->handler()->ping();
+            return true;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     public function onConnect(TcpConnection $connection): void
@@ -327,13 +398,29 @@ class RpaSocketService
         if ((int)$worker->id === 0) {
             $this->cleanupInvalidConnectionKeys();
             Timer::add(300, function (): void {
-                $this->cleanupInvalidConnectionKeys();
+                try {
+                    $this->cleanupInvalidConnectionKeys();
+                } catch (\Throwable $e) {
+                    // Redis 等异常不允许打断定时器生命周期（Workerman 会对定时器异常触发整组退出）
+                    $this->setLog('清理无效connection异常: ' . $e->getMessage(), 'error');
+                }
             });
         }
 
         Timer::add(10, function () use ($worker): void {
-            $this->cleanupStaleHandshakeConnections($worker);
-            $this->checkDeviceHeartbeats($worker);
+            try {
+                // 兜底自检：部分 phpredis 环境对断连命令只返回 false 不抛异常，
+                // 守卫等不到异常就无从重建；每 10s 主动探活一次，失效即强制重建
+                if (!$this->redisGuard->isRedisAvailable()) {
+                    $this->rebuildServices();
+                }
+
+                $this->cleanupStaleHandshakeConnections($worker);
+                $this->checkDeviceHeartbeats($worker);
+            } catch (\Throwable $e) {
+                // 孤儿连接清理/心跳检查失败不允许打断定时器生命周期
+                $this->setLog('常态定时器回调异常: ' . $e->getMessage(), 'error');
+            }
         });
 
         // EasyWeChat 等 SDK 的对象图带循环引用，常驻进程里引用计数放不掉，连带 curl 句柄和连接一起漏 fd
@@ -556,9 +643,13 @@ class RpaSocketService
             return $this->closeLocalConnection($uid, $reason);
         }
 
-        $workerId = $this->repository->getConnectionWorkerId($uid);
+        $workerId = $this->redisGuard->run(
+            fn() => $this->repository->getConnectionWorkerId($uid),
+            null,
+            '跨进程关闭连接'
+        );
         if ($workerId === null) {
-            $this->repository->forgetConnection($uid);
+            $this->redisGuard->run(fn() => $this->repository->forgetConnection($uid), null, '清理无效连接绑定');
             $this->setLog('closeConnection uid未找到: ' . $uid, 'channel');
             return false;
         }
@@ -580,7 +671,12 @@ class RpaSocketService
 
         $this->closeLocalWebUserConnections($userId, $source, $excludeUid, $reason);
 
-        foreach ($this->repository->getWebUserConnectionUids($source, $userId) as $uid) {
+        $uids = $this->redisGuard->run(
+            fn(): array => $this->repository->getWebUserConnectionUids($source, $userId),
+            [],
+            '查找WebUser跨进程连接'
+        );
+        foreach ($uids as $uid) {
             if ($uid !== $excludeUid) {
                 $this->closeConnection($uid, $reason);
             }
@@ -614,8 +710,12 @@ class RpaSocketService
     public function sendChannelMessage(string $deviceId, array $data, string $targetProcess = 'device'): void
     {
         $uid = $targetProcess === 'device'
-            ? $this->repository->getDeviceUid($deviceId)
-            : $this->redis->get("xhs:user:{$targetProcess}:{$deviceId}");
+            ? $this->redisGuard->run(fn(): ?string => $this->repository->getDeviceUid($deviceId), null, '设备消息路由')
+            : $this->redisGuard->run(
+                fn() => $this->redis->get("xhs:user:{$targetProcess}:{$deviceId}"),
+                null,
+                'WebUser消息路由'
+            );
         if ($uid) {
             $this->send((string)$uid, $data);
             return;
@@ -635,40 +735,55 @@ class RpaSocketService
         }
         $channel = "{$type}.{$id}.message";
         $this->channelBus->subscribe($channel, function ($data) use ($connection, $id, $type, $channel): void {
-            $message = $data['data'] ?? '';
-            if ($type === 'device') {
-                $connectionUid = (string)($connection->uid ?? '');
-                $connectionDeviceId = trim((string)($connection->deviceid ?? ''));
-                $activeUid = $this->repository->getDeviceUid($id);
+            try {
+                $message = $data['data'] ?? '';
+                if ($type === 'device') {
+                    $connectionUid = (string)($connection->uid ?? '');
+                    $connectionDeviceId = trim((string)($connection->deviceid ?? ''));
+                    $activeUid = $this->redisGuard->run(
+                        fn(): ?string => $this->repository->getDeviceUid($id),
+                        null,
+                        '设备频道消息归属判定'
+                    );
 
-                if (
-                    $connectionUid === ''
-                    || $connectionDeviceId !== $id
-                    || ($connection->clientType ?? '') !== WorkerEnum::WS_DEVICE_TYPE
-                    || $activeUid !== $connectionUid
-                ) {
-                    $this->setLog([
-                        'msg' => '跳过旧设备频道消息',
-                        'channel' => $channel,
-                        'deviceId' => $id,
-                        'connection_uid' => $connectionUid,
-                        'active_uid' => $activeUid,
-                        'connection_deviceid' => $connectionDeviceId,
-                        'client_type' => $connection->clientType ?? '',
-                        'workerId' => $connection->workerId ?? '',
-                    ], 'channel');
-                    return;
+                    if (
+                        $connectionUid === ''
+                        || $connectionDeviceId !== $id
+                        || ($connection->clientType ?? '') !== WorkerEnum::WS_DEVICE_TYPE
+                        || $activeUid !== $connectionUid
+                    ) {
+                        $this->setLog([
+                            'msg' => '跳过旧设备频道消息',
+                            'channel' => $channel,
+                            'deviceId' => $id,
+                            'connection_uid' => $connectionUid,
+                            'active_uid' => $activeUid,
+                            'connection_deviceid' => $connectionDeviceId,
+                            'client_type' => $connection->clientType ?? '',
+                            'workerId' => $connection->workerId ?? '',
+                        ], 'channel');
+                        return;
+                    }
                 }
-            }
 
-            $connection->send((string)$message);
+                $connection->send((string)$message);
 
-            if (!is_array($message)) {
-                $message = json_decode($message, true);
-                $message = is_array($message) ? $message : [];
-                $message['uid'] = $connection->uid ?? '';
-                $message['workerId'] = $connection->workerId ?? '';
-                $this->setLog($message, 'channel');
+                if (!is_array($message)) {
+                    $message = json_decode($message, true);
+                    $message = is_array($message) ? $message : [];
+                    $message['uid'] = $connection->uid ?? '';
+                    $message['workerId'] = $connection->workerId ?? '';
+                    $this->setLog($message, 'channel');
+                }
+            } catch (\Throwable $e) {
+                // Channel 消息回调异常会直接打穿事件循环，必须就地兜底
+                $this->setLog([
+                    'msg' => '设备/用户频道消息分发异常',
+                    'channel' => $channel,
+                    'deviceId' => $id,
+                    'uid' => (string)($connection->uid ?? ''),
+                    'error' => $e->getMessage(),
+                ], 'error');
             }
         });
         $this->setLog('Channel listener registered: ' . $channel . ' uid: ' . ($connection->uid ?? '')  . ' workerId: ' . ($connection->workerId ?? ''), 'channel');
@@ -680,23 +795,25 @@ class RpaSocketService
             return;
         }
 
-        $this->repository->bindConnection((string)$connection->uid, (int)$this->worker->id, (string)($connection->clientType ?? ''));
-        if (($connection->clientType ?? '') === WorkerEnum::WS_DEVICE_TYPE && ($connection->deviceid ?? '') !== '') {
-            $this->repository->bindDevice(
-                (string)$connection->deviceid,
-                (string)$connection->uid,
-                (int)$this->worker->id,
-                (string)($connection->appversion ?? WorkerEnum::APP_VERSION)
-            );
-        }
-        if (($connection->clientType ?? '') === WorkerEnum::WS_CLIENT_TYPE && (int)($connection->userid ?? 0) > 0) {
-            $this->repository->bindWebUser(
-                (string)($connection->sourceType ?? WorkerEnum::WS_SOURCE_PC_TYPE),
-                (int)$connection->userid,
-                (string)$connection->uid,
-                (int)$this->worker->id
-            );
-        }
+        $this->redisGuard->run(function () use ($connection): void {
+            $this->repository->bindConnection((string)$connection->uid, (int)$this->worker->id, (string)($connection->clientType ?? ''));
+            if (($connection->clientType ?? '') === WorkerEnum::WS_DEVICE_TYPE && ($connection->deviceid ?? '') !== '') {
+                $this->repository->bindDevice(
+                    (string)$connection->deviceid,
+                    (string)$connection->uid,
+                    (int)$this->worker->id,
+                    (string)($connection->appversion ?? WorkerEnum::APP_VERSION)
+                );
+            }
+            if (($connection->clientType ?? '') === WorkerEnum::WS_CLIENT_TYPE && (int)($connection->userid ?? 0) > 0) {
+                $this->repository->bindWebUser(
+                    (string)($connection->sourceType ?? WorkerEnum::WS_SOURCE_PC_TYPE),
+                    (int)$connection->userid,
+                    (string)$connection->uid,
+                    (int)$this->worker->id
+                );
+            }
+        }, null, '刷新连接归属');
     }
 
     public function getWorker(): Worker
@@ -736,7 +853,11 @@ class RpaSocketService
 
     public function cleanupInvalidConnectionKeys(): array
     {
-        $result = $this->repository->cleanupInvalidConnectionKeys(array_keys($this->worker->uidConnections ?? []));
+        $result = $this->redisGuard->run(
+            fn(): array => $this->repository->cleanupInvalidConnectionKeys(array_keys($this->worker->uidConnections ?? [])),
+            ['checked' => 0, 'deleted' => [], 'reserved' => []],
+            '清理无效connection'
+        );
         if (!empty($result['deleted'])) {
             $this->setLog('清理无效connection: ' . json_encode($result, JSON_UNESCAPED_UNICODE), 'info');
         }
@@ -865,112 +986,126 @@ class RpaSocketService
     private function subscribeWorkerChannel(int $workerId): void
     {
         $this->channelBus->subscribe($this->channelBus->workerChannel($workerId), function ($message): void {
-            $uid = (string)($message['uid'] ?? '');
-            $action = (string)($message['action'] ?? 'send');
-            if ($action === 'closeConnection') {
-                $this->closeLocalConnection($uid, (string)($message['reason'] ?? '连接被替换'));
-                return;
-            }
-            if ($action === 'scheduleForceClose') {
-                $delaySec = (int)($message['delaySec'] ?? 10);
-                if ($delaySec <= 0) {
-                    $delaySec = 10;
-                }
-                $deviceId = trim((string)($message['deviceId'] ?? ''));
-                $token = (string)($message['token'] ?? '');
-                $reason = (string)($message['reason'] ?? '设备已解绑超时未断开');
-                $traceId = (string)($message['trace_id'] ?? '');
-                if ($traceId === '' && $deviceId !== '') {
-                    $traceId = \app\common\service\device\RpaDeviceDispatchService::getTraceId($deviceId);
-                }
-                Timer::add($delaySec, function () use ($uid, $deviceId, $token, $reason, $traceId): void {
-                    try {
-                        if ($deviceId !== '' && $token !== '') {
-                            $current = \app\common\service\device\RpaDeviceDispatchService::getUnbindCloseToken($deviceId);
-                            if ($current === null || $current !== $token) {
-                                \app\common\service\device\RpaDeviceDispatchService::logUnbind('unbind_close_skipped', [
-                                    'trace_id' => $traceId,
-                                    'device_code' => $deviceId,
-                                    'uid' => $uid,
-                                    'msg' => '延迟踢线已取消或 token 不匹配，跳过',
-                                    'result' => 'skip',
-                                    'reason' => $reason,
-                                ]);
-                                return;
-                            }
-                        }
-
-                        $targetUid = $uid;
-                        if ($deviceId !== '') {
-                            $liveUid = \app\common\service\device\RpaDeviceDispatchService::getLiveDeviceUid($deviceId);
-                            if ($liveUid !== null && $liveUid !== '') {
-                                $targetUid = $liveUid;
-                            }
-                        }
-
-                        $closed = false;
-                        $logged = false;
-                        // 优先关本进程连接，避免依赖 Channel 回环
-                        if ($targetUid !== '' && isset($this->worker->uidConnections[$targetUid])) {
-                            $closed = $this->closeLocalConnection($targetUid, $reason);
-                        }
-                        if (!$closed && $uid !== '' && $uid !== $targetUid && isset($this->worker->uidConnections[$uid])) {
-                            $closed = $this->closeLocalConnection($uid, $reason);
-                            $targetUid = $uid;
-                        }
-                        // 连接在其他 worker 时走 Channel（forceClose 内部已记 unbind_close_executed）
-                        if (!$closed && $deviceId !== '') {
-                            $closed = \app\common\service\device\RpaDeviceDispatchService::forceClose($deviceId, $reason, $uid);
-                            $logged = $closed;
-                        } elseif (!$closed && $uid !== '') {
-                            $closed = $this->closeLocalConnection($uid, $reason);
-                        }
-
-                        if ($deviceId !== '') {
-                            \app\common\service\device\RpaDeviceDispatchService::cancelDelayedForceClose($deviceId, [
-                                'silent' => true,
-                                'trace_id' => $traceId,
-                            ]);
-                        }
-
-                        if ($closed && !$logged) {
-                            \app\common\service\device\RpaDeviceDispatchService::logUnbind('unbind_close_executed', [
-                                'trace_id' => $traceId,
-                                'device_code' => $deviceId,
-                                'uid' => $targetUid,
-                                'msg' => '延迟踢线已执行',
-                                'result' => 'ok',
-                                'reason' => $reason,
-                            ]);
-                        }
-                    } catch (\Throwable $e) {
-                        \app\common\service\device\RpaDeviceDispatchService::logUnbind('unbind_error', [
-                            'trace_id' => $traceId,
-                            'device_code' => $deviceId,
-                            'uid' => $uid,
-                            'msg' => '延迟踢线执行失败',
-                            'result' => 'fail',
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }, [], false);
-                return;
-            }
-            if ($action === 'closeWebUserConnections') {
-                $this->closeLocalWebUserConnections(
-                    (int)($message['userId'] ?? 0),
-                    (string)($message['source'] ?? WorkerEnum::WS_SOURCE_PC_TYPE),
-                    (string)($message['excludeUid'] ?? ''),
-                    (string)($message['reason'] ?? 'WebSocket连接被替换')
-                );
-                return;
-            }
-
-            $content = $message['content'] ?? null;
-            if ($uid !== '' && is_array($content)) {
-                $this->sendToLocalConnection($uid, $content);
+            try {
+                $this->handleWorkerChannelMessage($message);
+            } catch (\Throwable $e) {
+                // 跨进程消息回调异常会直接打穿事件循环，必须就地兜底
+                $this->setLog('跨进程消息回调异常: ' . $e->getMessage(), 'error');
             }
         });
+    }
+
+    /**
+     * 处理跨进程 worker 私有频道消息：发消息 / 踢线 / 延迟踢线 / 关闭Web用户连接。
+     */
+    private function handleWorkerChannelMessage($message): void
+    {
+        $message = is_array($message) ? $message : [];
+        $uid = (string)($message['uid'] ?? '');
+        $action = (string)($message['action'] ?? 'send');
+        if ($action === 'closeConnection') {
+            $this->closeLocalConnection($uid, (string)($message['reason'] ?? '连接被替换'));
+            return;
+        }
+        if ($action === 'scheduleForceClose') {
+            $delaySec = (int)($message['delaySec'] ?? 10);
+            if ($delaySec <= 0) {
+                $delaySec = 10;
+            }
+            $deviceId = trim((string)($message['deviceId'] ?? ''));
+            $token = (string)($message['token'] ?? '');
+            $reason = (string)($message['reason'] ?? '设备已解绑超时未断开');
+            $traceId = (string)($message['trace_id'] ?? '');
+            if ($traceId === '' && $deviceId !== '') {
+                $traceId = \app\common\service\device\RpaDeviceDispatchService::getTraceId($deviceId);
+            }
+            Timer::add($delaySec, function () use ($uid, $deviceId, $token, $reason, $traceId): void {
+                try {
+                    if ($deviceId !== '' && $token !== '') {
+                        $current = \app\common\service\device\RpaDeviceDispatchService::getUnbindCloseToken($deviceId);
+                        if ($current === null || $current !== $token) {
+                            \app\common\service\device\RpaDeviceDispatchService::logUnbind('unbind_close_skipped', [
+                                'trace_id' => $traceId,
+                                'device_code' => $deviceId,
+                                'uid' => $uid,
+                                'msg' => '延迟踢线已取消或 token 不匹配，跳过',
+                                'result' => 'skip',
+                                'reason' => $reason,
+                            ]);
+                            return;
+                        }
+                    }
+
+                    $targetUid = $uid;
+                    if ($deviceId !== '') {
+                        $liveUid = \app\common\service\device\RpaDeviceDispatchService::getLiveDeviceUid($deviceId);
+                        if ($liveUid !== null && $liveUid !== '') {
+                            $targetUid = $liveUid;
+                        }
+                    }
+
+                    $closed = false;
+                    $logged = false;
+                    // 优先关本进程连接，避免依赖 Channel 回环
+                    if ($targetUid !== '' && isset($this->worker->uidConnections[$targetUid])) {
+                        $closed = $this->closeLocalConnection($targetUid, $reason);
+                    }
+                    if (!$closed && $uid !== '' && $uid !== $targetUid && isset($this->worker->uidConnections[$uid])) {
+                        $closed = $this->closeLocalConnection($uid, $reason);
+                        $targetUid = $uid;
+                    }
+                    // 连接在其他 worker 时走 Channel（forceClose 内部已记 unbind_close_executed）
+                    if (!$closed && $deviceId !== '') {
+                        $closed = \app\common\service\device\RpaDeviceDispatchService::forceClose($deviceId, $reason, $uid);
+                        $logged = $closed;
+                    } elseif (!$closed && $uid !== '') {
+                        $closed = $this->closeLocalConnection($uid, $reason);
+                    }
+
+                    if ($deviceId !== '') {
+                        \app\common\service\device\RpaDeviceDispatchService::cancelDelayedForceClose($deviceId, [
+                            'silent' => true,
+                            'trace_id' => $traceId,
+                        ]);
+                    }
+
+                    if ($closed && !$logged) {
+                        \app\common\service\device\RpaDeviceDispatchService::logUnbind('unbind_close_executed', [
+                            'trace_id' => $traceId,
+                            'device_code' => $deviceId,
+                            'uid' => $targetUid,
+                            'msg' => '延迟踢线已执行',
+                            'result' => 'ok',
+                            'reason' => $reason,
+                        ]);
+                    }
+                } catch (\Throwable $e) {
+                    \app\common\service\device\RpaDeviceDispatchService::logUnbind('unbind_error', [
+                        'trace_id' => $traceId,
+                        'device_code' => $deviceId,
+                        'uid' => $uid,
+                        'msg' => '延迟踢线执行失败',
+                        'result' => 'fail',
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }, [], false);
+            return;
+        }
+        if ($action === 'closeWebUserConnections') {
+            $this->closeLocalWebUserConnections(
+                (int)($message['userId'] ?? 0),
+                (string)($message['source'] ?? WorkerEnum::WS_SOURCE_PC_TYPE),
+                (string)($message['excludeUid'] ?? ''),
+                (string)($message['reason'] ?? 'WebSocket连接被替换')
+            );
+            return;
+        }
+
+        $content = $message['content'] ?? null;
+        if ($uid !== '' && is_array($content)) {
+            $this->sendToLocalConnection($uid, $content);
+        }
     }
 
     /**
@@ -1005,7 +1140,7 @@ class RpaSocketService
     private function closeLocalConnection(string $uid, string $reason = '连接被替换'): bool
     {
         if (!isset($this->worker->uidConnections[$uid])) {
-            $this->repository->forgetConnection($uid);
+            $this->redisGuard->run(fn() => $this->repository->forgetConnection($uid), null, '本地关闭连接解绑');
             $this->setLog('本地关闭旧连接失败，uid不存在: ' . $uid, 'channel');
             return false;
         }
@@ -1157,7 +1292,11 @@ class RpaSocketService
         if ($deviceId === '') {
             return false;
         }
-        $activeUid = $this->repository->getDeviceUid($deviceId);
+        $activeUid = $this->redisGuard->run(
+            fn(): ?string => $this->repository->getDeviceUid($deviceId),
+            null,
+            '设备离线归属判定'
+        );
         if ($activeUid === null || $activeUid === '') {
             return true;
         }
@@ -1210,5 +1349,9 @@ class RpaSocketService
             'timeout'  => $timeout,
             'persistent' => false,
         ]);
+
+        // 启动即预热：显式连接/授权/选择库，失败在初始化阶段暴露，
+        // 避免惰性句柄（think\cache 懒加载）把连接问题推迟到事件循环回调里爆发
+        $this->redis->handler();
     }
 }

@@ -9,8 +9,11 @@ export const montageConfig = {
     videoAccept,
     imageSize: 20,
     imageResolution: [2000, 2000],
-    videoSize: 200,
-    videoDuration: [1, 59],
+    videoSize: 500,
+    videoDuration: [1, 59] as [number, number],
+    /** 真人口播混剪主视频（闪剪 videoUrl）：5 分钟内、500MB 以内 */
+    anchorVideoSize: 500,
+    anchorVideoDuration: [1, 300] as [number, number],
     videoResolution: [2000, 2000],
     fileAccept: [...imageAccept, ...videoAccept],
     fileSize: 100,

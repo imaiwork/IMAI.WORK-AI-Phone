@@ -6,6 +6,7 @@ namespace app\common\lists;
 
 
 use app\common\cache\ExportCache;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -59,7 +60,12 @@ trait ListsExcelTrait
             $column = 1;
             foreach ($item as $value) {
                 //单元格内容写入
-                $sheet->setCellValueByColumnAndRow($column, $row, $value);
+                if (is_string($value) && $value !== '' && in_array($value[0], ['=', '+', '-', '@'], true)) {
+                    //以 =、+、-、@ 开头的内容强制按文本写入，避免被 Excel/PhpSpreadsheet 解析为公式导致导出报错
+                    $sheet->getCell([$column, $row])->setValueExplicit($value, DataType::TYPE_STRING);
+                } else {
+                    $sheet->setCellValueByColumnAndRow($column, $row, $value);
+                }
                 $column++;
             }
             $row++;

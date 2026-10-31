@@ -1,3 +1,5 @@
+import { ensurePrivacyAuthorized, isPrivacyError, privacyError, PRIVACY_TIP } from "@/utils/privacy";
+
 const ERR_MSG_FAIL = "chooseFile:fail";
 interface BaseOptions {
     type: "file" | "image" | "video" | "all";
@@ -30,8 +32,46 @@ export interface FileData {
     errMsg: string;
 }
 
+/**
+ * chooseMedia 只在部分小程序端透传到原生能力；H5/App 的 uni 运行时没有实现，
+ * 调用直接 `TypeError: uni.chooseMedia is not a function`，所以这两端退回 chooseImage/chooseVideo。
+ */
+const canChooseMedia = (): boolean => typeof (uni as any).chooseMedia === "function";
+
+/**
+ * 统一失败出口：隐私类失败换成中文并带 privacy 标记（上层据此静默，不再弹英文 errMsg），
+ * 其余保留原 errMsg 供上层判断（如 cancel / auth / deny）。
+ */
+function rejectChoose(reject: (reason?: any) => void, res: any, errPrefix: string) {
+    if (isPrivacyError(res)) {
+        uni.$u.toast(PRIVACY_TIP);
+        reject(privacyError());
+        return;
+    }
+    reject({
+        errMsg: (res?.errMsg || "").replace(errPrefix, ERR_MSG_FAIL) || ERR_MSG_FAIL,
+        errno: res?.errno,
+    });
+}
+
+/**
+ * 隐私协议闸门：未同意时原生接口必然失败且只回英文，这里先走官方授权弹窗。
+ * 拒绝时用带 privacy 标记的错误 reject，避免上层再弹一次"上传失败"。
+ */
+async function withPrivacy(run: () => Promise<ChooseResult>): Promise<ChooseResult> {
+    const authorized = await ensurePrivacyAuthorized();
+    if (!authorized) {
+        throw privacyError();
+    }
+    return run();
+}
+
 function chooseImage(opts: ChooseMediaOption) {
     const { count, sizeType = ["original", "compressed"], sourceType } = opts;
+    // H5/App 兜底：uni.chooseImage 同样支持 count/sizeType/sourceType
+    if (!canChooseMedia()) {
+        return chooseImageByLegacy({ count, sizeType, sourceType });
+    }
     return new Promise<ChooseResult>((resolve, reject) => {
         uni.chooseMedia({
             count,
@@ -48,14 +88,42 @@ function chooseImage(opts: ChooseMediaOption) {
                 resolve(normalizeFileRes(normalizedRes, "image"));
             },
             fail(res: any) {
-                if (res?.errno === 112) {
-                    uni.$u.toast("请到对应小程序后台完善用户隐私保护指引");
-                }
-                // errno 112 也必须 reject，否则 Promise 永远挂起，外层表现为"点了没反应"
-                reject({
-                    errMsg: (res?.errMsg || "").replace("chooseImage:fail", ERR_MSG_FAIL) || ERR_MSG_FAIL,
-                    errno: res?.errno,
+                // errno 112（后台未声明隐私类型）也必须 reject，否则 Promise 永远挂起，外层表现为"点了没反应"
+                rejectChoose(reject, res, "chooseImage:fail");
+            },
+        });
+    });
+}
+
+/** H5/App 兜底：返回的 tempFiles 只有 path，补成 tempFilePath 后才能走 normalizeFileRes */
+function chooseImageByLegacy(opts: ChooseMediaOption) {
+    return new Promise<ChooseResult>((resolve, reject) => {
+        uni.chooseImage({
+            count: opts.count,
+            sizeType: opts.sizeType,
+            sourceType: opts.sourceType,
+            success(res: any) {
+                // H5 的 tempFiles 是原生 File：name/size/path 都是原型或 defineProperty 上的 getter，
+                // 用展开运算符拷不过来，必须逐个显式取值
+                const tempFiles = (res.tempFiles || []).map((file: any) => {
+                    const tempFilePath = file.tempFilePath || file.path || "";
+                    return {
+                        name: file.name || tempFilePath.substring(tempFilePath.lastIndexOf("/") + 1),
+                        tempFilePath,
+                        path: tempFilePath,
+                        size: file.size || 0,
+                    };
                 });
+                const normalizedRes: ChooseResult = {
+                    tempFilePaths: res.tempFilePaths || tempFiles.map((file: any) => file.tempFilePath),
+                    tempFiles,
+                    failedCount: 0,
+                    errMsg: res.errMsg,
+                };
+                resolve(normalizeFileRes(normalizedRes, "image"));
+            },
+            fail(res: any) {
+                rejectChoose(reject, res, "chooseImage:fail");
             },
         });
     });
@@ -63,6 +131,10 @@ function chooseImage(opts: ChooseMediaOption) {
 
 function chooseVideo(opts: ChooseMediaOption) {
     const { count, camera, maxDuration, sourceType, sizeType } = opts;
+    // H5/App 兜底：uni.chooseVideo 只能单选，count > 1 会退化成一次选一个
+    if (!canChooseMedia()) {
+        return chooseVideoByLegacy({ camera, maxDuration, sourceType });
+    }
     return new Promise<ChooseResult>((resolve, reject) => {
         uni.chooseMedia({
             count,
@@ -75,13 +147,41 @@ function chooseVideo(opts: ChooseMediaOption) {
                 resolve(normalizeFileRes(res as ChooseResult, "video"));
             },
             fail(res: any) {
-                if (res?.errno === 112) {
-                    uni.$u.toast("请到对应小程序后台完善用户隐私保护指引");
-                }
-                reject({
-                    errMsg: (res?.errMsg || "").replace("chooseVideo:fail", ERR_MSG_FAIL) || ERR_MSG_FAIL,
-                    errno: res?.errno,
-                });
+                rejectChoose(reject, res, "chooseVideo:fail");
+            },
+        });
+    });
+}
+
+/** H5/App 兜底：chooseVideo 返回扁平结构（tempFilePath/duration/size/width/height），包成 chooseMedia 形状 */
+function chooseVideoByLegacy(opts: ChooseMediaOption) {
+    return new Promise<ChooseResult>((resolve, reject) => {
+        uni.chooseVideo({
+            camera: opts.camera,
+            maxDuration: opts.maxDuration,
+            sourceType: opts.sourceType,
+            compressed: true,
+            success(res: any) {
+                const normalizedRes: ChooseResult = {
+                    tempFilePaths: [res.tempFilePath],
+                    tempFiles: [
+                        {
+                            name: res.name || res.tempFile?.name || "",
+                            tempFilePath: res.tempFilePath,
+                            path: res.tempFilePath,
+                            size: res.size || 0,
+                            duration: res.duration || 0,
+                            width: res.width || 0,
+                            height: res.height || 0,
+                        },
+                    ],
+                    failedCount: 0,
+                    errMsg: res.errMsg,
+                };
+                resolve(normalizeFileRes(normalizedRes, "video"));
+            },
+            fail(res: any) {
+                rejectChoose(reject, res, "chooseVideo:fail");
             },
         });
     });
@@ -107,13 +207,7 @@ function chooseAll(opts: ChooseFileOptions) {
                 resolve(normalizeFileRes(res as ChooseResult));
             },
             fail(res: any) {
-                if (res?.errno == 112) {
-                    uni.$u.toast("请到对应小程序后台完善用户隐私保护指引");
-                }
-                reject({
-                    errMsg: (res?.errMsg || "").replace("chooseFile:fail", ERR_MSG_FAIL) || ERR_MSG_FAIL,
-                    errno: res?.errno,
-                });
+                rejectChoose(reject, res, "chooseFile:fail");
             },
         });
     });
@@ -143,10 +237,12 @@ function chooseFile(
     },
 ): Promise<ChooseResult> {
     if (opts.type === "image") {
-        return chooseImage(opts as ChooseMediaOption);
+        // 相册/相机属微信隐私接口，未同意隐私协议时原生必然失败且只回英文
+        return withPrivacy(() => chooseImage(opts as ChooseMediaOption));
     } else if (opts.type === "video") {
-        return chooseVideo(opts as ChooseMediaOption);
+        return withPrivacy(() => chooseVideo(opts as ChooseMediaOption));
     }
+    // chooseMessageFile / chooseFile 不属隐私接口，不额外弹授权
     return chooseAll(opts as ChooseFileOptions);
 }
 

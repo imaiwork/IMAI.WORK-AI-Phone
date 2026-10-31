@@ -20,6 +20,7 @@ use app\common\model\user\User;
 use app\common\model\wechat\AiWechat;
 use app\common\model\wechat\AiWechatLog;
 use app\common\service\chat\ChatBillingService;
+use app\common\service\sv\ServiceContactFilter;
 use app\common\service\sv\SvSphClueDedupService;
 use app\common\traits\SphTaskTrait;
 use think\facade\Db;
@@ -732,6 +733,18 @@ class CrawlingTaskLogic extends SvBaseLogic
                     self::setLog('已完成当前添加任务', 'add_wechat');
                     continue;
                 }
+                // 官方服务号兜底：统一黑名单在消费入口再拦一次，防止历史名单漏放的存量数据触发下发
+                if (ServiceContactFilter::isServiceContact((string)$record['reg_wechat'])) {
+                    SvAddWechatRecord::where('id', $record['id'])
+                        ->where('status', 'in', [3, 4, 5])
+                        ->update([
+                            'status' => 0,
+                            'result' => '官方服务号，派发前拦截',
+                            'update_time' => time(),
+                        ]);
+                    self::setLog('视频号获客加微派发拦截官方服务号 record_id=' . $record['id'] . ' 联系方式=' . $record['reg_wechat'], 'add_wechat');
+                    continue;
+                }
                 $wxPattern = '/^[a-zA-Z][a-zA-Z0-9_-]{5,19}$/';
                 if (preg_match($wxPattern, $record['reg_wechat'])) {
                     $response = \app\common\service\ToolsService::Sv()->queryResult([
@@ -763,11 +776,13 @@ class CrawlingTaskLogic extends SvBaseLogic
                         }
 
                         if (isset($response['data']['valid']) && (bool)$response['data']['valid'] === false) {
-                            self::setLog($record['reg_wechat'] . '该账号不是有效的微信号,忽略', 'add_wechat');
+                            // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
+                            $invalidResult = \app\common\service\sv\WechatExistVerifyService::invalidErrorText($response) ?: '该线索经过校验为无效线索';
+                            self::setLog($record['reg_wechat'] . '该账号不是有效的微信号,忽略,校验结果说明:' . $invalidResult, 'add_wechat');
                             self::setLog($response, 'add_wechat');
                             SvAddWechatRecord::where('id', $record['id'])->update([
                                 'status' => 0,
-                                'result' => '该线索经过校验为无效线索',
+                                'result' => $invalidResult,
                                 'update_time' => time(),
                             ]);
                             $find = SvCrawlingRecord::where('user_id', $record['user_id'])
@@ -1092,6 +1107,13 @@ class CrawlingTaskLogic extends SvBaseLogic
                 break;
             }
 
+            // 官方服务号不发起远程校验，直接按无效线索闭环，避免反复消耗校验算力
+            if (ServiceContactFilter::isServiceContact($wechatNo)) {
+                $logs[] = $wechatNo . ' 属官方服务号，直接按无效线索处理';
+                $invalidCount++;
+                continue;
+            }
+
             // 跨设备/跨任务全局去重：user_id + reg_wechat
             $wechatExist = SvSphClueDedupService::existsAddWechatContact((int)$record->user_id, $wechatNo);
 
@@ -1173,14 +1195,16 @@ class CrawlingTaskLogic extends SvBaseLogic
             }
 
             if ((bool)$response['data']['valid'] === false) {
+                // valid=false 时优先使用中台返回的 error 作为校验结果说明，error 为空时保留原文案
+                $invalidResult = \app\common\service\sv\WechatExistVerifyService::invalidErrorText($response) ?: '该线索经过校验为无效线索';
                 if (!$wechatExist) {
-                    $res = self::createVerifyAddWechatRecord($record, $wechatNo, 0, '该线索经过校验为无效线索');
+                    $res = self::createVerifyAddWechatRecord($record, $wechatNo, 0, $invalidResult);
                     if ($res !== null) {
                         $logs[] = $res->toArray();
                     }
                 }
                 $invalidCount++;
-                $logs[] = $wechatNo . '无效';
+                $logs[] = $wechatNo . '无效,校验结果说明:' . $invalidResult;
                 $logs[] = $response;
                 continue;
             }
@@ -1231,6 +1255,13 @@ class CrawlingTaskLogic extends SvBaseLogic
     protected static function createVerifyAddWechatRecord(SvCrawlingRecord $record, string $wechatNo, int $status, string $result = '')
     {
         $userId = (int)$record->user_id;
+
+        // 官方服务号不进加微队列（新入队一律拦截）
+        if (ServiceContactFilter::isServiceContact($wechatNo)) {
+            self::setLog('官方服务号已过滤，跳过写入加微记录：' . $wechatNo, 'device');
+            return null;
+        }
+
         $lockValue = SvSphClueDedupService::claimAddWechatContact($userId, $wechatNo);
         if ($lockValue === null) {
             return null;

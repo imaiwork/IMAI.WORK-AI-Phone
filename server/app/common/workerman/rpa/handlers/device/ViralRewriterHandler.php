@@ -311,6 +311,7 @@ class ViralRewriterHandler extends BaseMessageHandler
             return $reserved['response'];
         }
         $record = $reserved['record'];
+        $recordDay = $reserved['day'] ?? date('Y-m-d');
 
         $persona = AiPersona::where('id', $task->persona_id)->findOrEmpty();
         if ($persona->isEmpty()) {
@@ -318,6 +319,32 @@ class ViralRewriterHandler extends BaseMessageHandler
                 'image_rewrite_status' => SvDeviceViralRecord::IMAGE_REWRITE_STATUS_FAIL,
             ]);
             return ['isContinue' => 1, 'msg' => '系统配置异常，已丢弃当前图文'];
+        }
+
+        // Legacy 图文路径意图检验（对齐视频路径，防止偏离搜索词/人设的内容通过）
+        $imageTextSource = $this->buildImageTextSourceText($content);
+        if (!$this->checkIntentRelevance($imageTextSource, $persona)) {
+            $record->status = 5;
+            $record->copywriting_type = 3;
+            $record->original_text = $imageTextSource;
+            $record->original_images = $images;
+            $record->remark = '图文内容与人设严重偏离';
+            $record->save();
+            $count = $this->getIntentRelevanceCount($task);
+            $this->setLog(
+                $record->device_code . 'Legacy图文内容与人设严重偏离，连续偏离次数=' . $count . '/' . self::MAX_INTENT_RELEVANCE_COUNT
+                . ' record_id=' . (int)$record->id,
+                'viral_rewrite'
+            );
+            if ($count >= self::MAX_INTENT_RELEVANCE_COUNT) {
+                $this->setLog($record->device_code . 'Legacy图文内容与人设严重偏离，连续偏离达上限，降级处理', 'viral_rewrite');
+                $degradedRecord = $this->createRecord($task, $shareContent, $hash, $keyword, (string)($images[0] ?? ''), $content, $recordDay, [
+                    'title_normalized' => $dedup['title_normalized'],
+                ]);
+                return $this->degradedGenerate($degradedRecord, $task, 'Legacy图文内容与人设偏离达上限');
+            } else {
+                return ['isContinue' => 1, 'msg' => '图文内容与人设不符，已丢弃并继续抓取'];
+            }
         }
 
         return $this->generateAndStoreImageTextCopywriting($record, $task, $content, $persona);
@@ -377,6 +404,7 @@ class ViralRewriterHandler extends BaseMessageHandler
             return $reserved['response'];
         }
         $record = $reserved['record'];
+        $recordDay = $reserved['day'] ?? date('Y-m-d');
 
         try {
             $noteContent = $this->extractXhsImageTextNote($shareUrl);
@@ -398,6 +426,42 @@ class ViralRewriterHandler extends BaseMessageHandler
             ]);
             $this->setLog($record->device_code . "TikHub未返回可用图文图片 record_id={$record->id}", 'viral_rewrite');
             return ['isContinue' => 1, 'msg' => '无法提取该链接，继续抓取下一条'];
+        }
+
+        // 图文内容与人设相关性检验（对齐视频路径的意图检验，偏离则丢弃不扣费）
+        $imageTextSource = $this->buildImageTextSourceText($content);
+        $persona = AiPersona::where('id', $task->persona_id)->findOrEmpty();
+        if ($persona->isEmpty()) {
+            $this->markRecordFailed($record, 'IP人设不存在', [
+                'original_text' => $imageTextSource,
+                'image_rewrite_status' => SvDeviceViralRecord::IMAGE_REWRITE_STATUS_FAIL,
+            ]);
+            $this->setLog($record->device_code . "图文仿写 IP人设不存在 record_id={$record->id}", 'viral_rewrite');
+            return ['isContinue' => 1, 'msg' => '系统配置异常，已丢弃当前图文'];
+        }
+        if (!$this->checkIntentRelevance($imageTextSource, $persona)) {
+            $record->status = 5;
+            $record->copywriting_type = 3;
+            $record->original_text = $imageTextSource;
+            $record->original_images = $images;
+            $record->tikhub_raw = $noteContent['tikhub_raw'] ?? [];
+            $record->remark = '图文内容与人设严重偏离';
+            $record->save();
+            $count = $this->getIntentRelevanceCount($task);
+            $this->setLog(
+                $record->device_code . '图文内容与人设严重偏离，连续偏离次数=' . $count . '/' . self::MAX_INTENT_RELEVANCE_COUNT
+                . ' record_id=' . (int)$record->id,
+                'viral_rewrite'
+            );
+            if ($count >= self::MAX_INTENT_RELEVANCE_COUNT) {
+                $this->setLog($record->device_code . '图文内容与人设严重偏离，连续偏离达上限，降级处理', 'viral_rewrite');
+                $degradedRecord = $this->createRecord($task, $shareUrl, $hash, $keyword, '', $content, $recordDay, [
+                    'title_normalized' => $titleNormalized,
+                ]);
+                return $this->degradedGenerate($degradedRecord, $task, '图文内容与人设偏离达上限');
+            } else {
+                return ['isContinue' => 1, 'msg' => '图文内容与人设不符，已丢弃并继续抓取'];
+            }
         }
 
         // 抓取费 + 图改写费一并按企业钱包预检，避免成员个人算力为 0 被误拦 / 余额不够仍继续跑
@@ -444,7 +508,7 @@ class ViralRewriterHandler extends BaseMessageHandler
         }
 
         $record->title_normalized = $titleNormalized;
-        $record->original_text = $this->buildImageTextSourceText($content);
+        $record->original_text = $imageTextSource;
         $record->original_images = $images;
         $record->tikhub_raw = $noteContent['tikhub_raw'] ?? [];
         $record->image = (string)($images[0] ?? '');
@@ -457,14 +521,6 @@ class ViralRewriterHandler extends BaseMessageHandler
             $this->chargeImageExplosionRewrite((int)$task->user_id, (int)$record->id, $shareUrl, (float)$rewriteUnit);
         } catch (\Throwable $th) {
             return $this->handleImageExplosionChargeFailure($record, $th);
-        }
-
-        $persona = AiPersona::where('id', $task->persona_id)->findOrEmpty();
-        if ($persona->isEmpty()) {
-            $this->markRecordFailed($record, 'IP人设不存在', [
-                'image_rewrite_status' => SvDeviceViralRecord::IMAGE_REWRITE_STATUS_FAIL,
-            ]);
-            return ['isContinue' => 1, 'msg' => '系统配置异常，已丢弃当前图文'];
         }
 
         return $this->generateAndStoreImageTextCopywriting($record, $task, $content, $persona);

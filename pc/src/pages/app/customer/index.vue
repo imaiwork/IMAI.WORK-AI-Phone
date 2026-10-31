@@ -10,6 +10,7 @@
 <script setup lang="ts">
 import Sidebar from "../_components/sidebar.vue";
 import CreateTask from "./_pages/create_task/index.vue";
+import CreateDouyinTask from "./_pages/create_douyin_task/index.vue";
 import AutoAddWechat from "./_pages/auto_add_wechat/index.vue";
 import ManualAddWechat from "./_pages/manual_add_wechat/index.vue";
 import useSidebar from "../_hooks/useSidebar";
@@ -19,6 +20,7 @@ const { sidebar, sidebarIndex, getComponents, getSliderIndex } = useSidebar();
 
 sidebar.value = [
     { name: "采集任务", components: markRaw(CreateTask), type: SidebarTypeEnum.AUTO_GET_CUSTOMER},
+    { name: "抖音获客", components: markRaw(CreateDouyinTask), type: SidebarTypeEnum.DOUYIN_GET_CUSTOMER},
     { name: "评论获客", components: "", type: SidebarTypeEnum.COMMENT_GET_CUSTOMER, disabled: true },
     { name: "私信获客", components: "", type: SidebarTypeEnum.MESSAGE_GET_CUSTOMER, disabled: true },
     { name: "采集加微", components: markRaw(AutoAddWechat), type: SidebarTypeEnum.AUTO_ADD_WECHAT },
@@ -35,6 +37,7 @@ enum SidebarGroupEnum {
 const getSidebar = computed(() => {
     const typeToGroupMap = {
         [SidebarTypeEnum.AUTO_GET_CUSTOMER]: SidebarGroupEnum.ACTIVE_GET_CUSTOMER,
+        [SidebarTypeEnum.DOUYIN_GET_CUSTOMER]: SidebarGroupEnum.ACTIVE_GET_CUSTOMER,
         [SidebarTypeEnum.COMMENT_GET_CUSTOMER]: SidebarGroupEnum.ACTIVE_GET_CUSTOMER,
         [SidebarTypeEnum.MESSAGE_GET_CUSTOMER]: SidebarGroupEnum.ACTIVE_GET_CUSTOMER,
         [SidebarTypeEnum.AUTO_ADD_WECHAT]: SidebarGroupEnum.LEAD_ADD_WECHAT,
