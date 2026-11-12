@@ -54,8 +54,10 @@ export interface ShanjianVideoPayload {
     music?: string[];
     clip?: { clip_template_id?: string }[];
     extra?: ShanjianExtra;
-    /** 封面图 URL */
+    /** 封面图 URL(仅手动上传封面时使用) */
     pic?: string;
+    /** 视频封面方式:1=首帧 2=AI封面 3=手动上传 */
+    video_cover_source?: 1 | 2 | 3;
 }
 
 /** 4 种闪剪混剪类型统一入口 */

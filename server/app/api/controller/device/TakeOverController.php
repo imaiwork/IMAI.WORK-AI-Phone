@@ -10,6 +10,8 @@ use app\api\validate\device\TakeOverValidate;
 use app\api\logic\device\TakeOverLogic;
 use app\api\lists\device\TakeOverLists;
 use app\api\lists\device\TakeOverSpeechHistoryLists;
+use app\common\enum\DeviceEnum;
+use app\common\service\ManualTaskSwitchService;
 
 /**
  * TakeOverController
@@ -51,6 +53,13 @@ class TakeOverController extends BaseApiController
     public function add()
     {
         try {
+            $accounts = (array)$this->request->post('accounts', []);
+            foreach ($accounts as $account) {
+                if ((int)($account['type'] ?? 0) === DeviceEnum::ACCOUNT_TYPE_SPH
+                    && !ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::SPH_PRIVATE_TAKE)) {
+                    return $this->fail(ManualTaskSwitchService::disabledMessage());
+                }
+            }
             $params = (new TakeOverValidate())->post()->goCheck('add');
             $result = TakeOverLogic::add($params);
             if ($result) {

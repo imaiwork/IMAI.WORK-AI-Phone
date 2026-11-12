@@ -8,6 +8,7 @@ use app\api\validate\sv\CrawlingTaskValidate;
 use app\api\lists\sv\CrawlingTaskLists;
 use app\api\lists\sv\CrawlingRecordLists;
 
+use app\common\service\ManualTaskSwitchService;
 use app\common\traits\SphTaskTrait;
 use think\exception\HttpResponseException;
 
@@ -27,8 +28,15 @@ class CrawlingTaskController extends BaseApiController
 
     public function add()
     {
+        if (!ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::SPH_CLUE)) {
+            return $this->fail(ManualTaskSwitchService::disabledMessage());
+        }
         try {
             $params = (new CrawlingTaskValidate())->post()->goCheck('add');
+            // 加微子任务受「自动加好友」开关控制，开关关闭时禁止创建（对应 ManualTaskSwitchService::WECHAT_FRIEND_ADD）
+            if ((int)$params['add_type'] === 1 && !ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::WECHAT_FRIEND_ADD)) {
+                return $this->fail(ManualTaskSwitchService::disabledMessage());
+            }
             $result = CrawlingTaskLogic::add($params);
             if ($result) {
                 return $this->data(CrawlingTaskLogic::getReturnData());

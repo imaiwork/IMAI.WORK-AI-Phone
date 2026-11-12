@@ -773,9 +773,19 @@ async function startVideoTask(copies: string[]) {
         const avatar = currentDigitalAvatar.value;
         if (!avatar) throw new Error("请先选择形象");
 
+        if (mode === "dh-video") {
+            const manualCover =
+                digitalState.settings.coverMode === 3 ? digitalState.settings.coverPic : "";
+            if (digitalState.settings.coverMode === 3 && !manualCover) {
+                throw new Error("请先上传封面图");
+            }
+        }
+
         // 数字人视频(纯口播)→ /human/createVideo,用蝉镜 anchor_id(C-... 格式)
         if (mode === "dh-video") {
             if (!avatar.chanjingAnchorId) throw new Error("当前形象没有蝉镜 anchor_id");
+            const manualCover =
+                digitalState.settings.coverMode === 3 ? digitalState.settings.coverPic : "";
             const tasks = await Promise.allSettled(
                 copies.map((c) =>
                     createPlainDigitalHumanVideo({
@@ -783,6 +793,7 @@ async function startVideoTask(copies: string[]) {
                         voice_id: digitalState.voiceId || undefined,
                         text: c,
                         title: c.slice(0, 20),
+                        ...(manualCover ? { pic: manualCover } : {}),
                     }),
                 ),
             );
@@ -830,6 +841,7 @@ async function startVideoTask(copies: string[]) {
                 music: 1, // 同样兜底,避免空 music 数组配 0 触发同类问题
                 clip: 1, // clip 也用顺序,空 clipData 时走 fallback 模板分支(更稳)
             },
+            video_cover_source: digitalState.settings.coverMode,
         };
         // 真人口播 / 新闻体:用户没"音色选择",不传 voice;其它两个传
         if (mode === "dh-montage" || mode === "material-montage") {
@@ -838,6 +850,11 @@ async function startVideoTask(copies: string[]) {
         // 已上传素材
         if (materials.length > 0) {
             payload.material = materials;
+        }
+        // 手动上传封面
+        if (digitalState.settings.coverMode === 3) {
+            if (!digitalState.settings.coverPic) throw new Error("请先上传封面图");
+            payload.pic = digitalState.settings.coverPic;
         }
 
         const res = await createShanjianVideo(payload);
@@ -1083,6 +1100,9 @@ const digitalState = reactive({
         useOriginalAudio: false,
         materialMode: "current" as "ai" | "persona" | "ai_persona" | "current",
         voice: "original",
+        // 视频封面:1=首帧 2=AI封面 3=手动上传
+        coverMode: 1 as 1 | 2 | 3,
+        coverPic: "",
     },
 });
 const currentDigitalAvatar = computed(() => DIGITAL_AVATARS.find((a) => a.id === digitalState.avatarId));

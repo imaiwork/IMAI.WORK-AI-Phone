@@ -153,6 +153,10 @@ class AiPersonaSynthesisConfig extends BaseModel
     const SINGLE_SHOT_OFF = 0;
     const SINGLE_SHOT_ON = 1;
 
+    /** 指定素材分组：开启后该生成类型只从所选素材分组取素材 */
+    const MATERIAL_GROUP_OFF = 0;
+    const MATERIAL_GROUP_ON = 1;
+
     /** 归一每日出片条数：非法或越界回落到未配置(0)，由调用方决定兜底 */
     public static function normalizeDailyVideoCount($value): int
     {
@@ -311,6 +315,41 @@ class AiPersonaSynthesisConfig extends BaseModel
         return self::SINGLE_SHOT_OFF;
     }
 
+    /** 指定素材分组开关：只认显式开启（1 / '1' / true），老数据缺键按关闭 */
+    public static function normalizeMaterialGroupEnabled($value): int
+    {
+        return self::normalizeSingleShot($value);
+    }
+
+    /**
+     * 素材分组 ID 归一：去重、剔除非正整数与非标量，兼容数组 / JSON 字符串。
+     *
+     * @return array<int, int>
+     */
+    public static function normalizeMaterialGroupIds($value): array
+    {
+        if (is_string($value)) {
+            $value = trim($value) === '' ? [] : (json_decode($value, true) ?: []);
+        }
+        if (!is_array($value)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($value as $id) {
+            if (is_array($id) || is_object($id) || is_bool($id)) {
+                continue;
+            }
+            if (is_string($id) && !is_numeric(trim($id))) {
+                continue;
+            }
+            $id = (int)$id;
+            if ($id > 0 && !in_array($id, $ids, true)) {
+                $ids[] = $id;
+            }
+        }
+        return $ids;
+    }
+
     /**
      * 结构归一：补全 1/3/4 三类、裁剪枚举与越界值。
      * 分组是否存在、指定曲目是否上架属于业务校验，在配置保存入口做，这里只管形状。
@@ -343,6 +382,11 @@ class AiPersonaSynthesisConfig extends BaseModel
                 'single_shot' => $type === self::GENERATION_TYPE_NEWS
                     ? self::normalizeSingleShot($item['single_shot'] ?? self::SINGLE_SHOT_OFF)
                     : self::SINGLE_SHOT_OFF,
+                // 指定素材分组：每个生成类型独立配置，关闭时保留已选 ID 方便再次开启
+                'material_group_enabled' => self::normalizeMaterialGroupEnabled(
+                    $item['material_group_enabled'] ?? self::MATERIAL_GROUP_OFF
+                ),
+                'material_group_ids' => self::normalizeMaterialGroupIds($item['material_group_ids'] ?? []),
             ];
         }
         // 三类合计不得超过每日上限：整条出片链路都按「当日 ≤ 20 条」估算成本与配额，
@@ -575,6 +619,58 @@ class AiPersonaSynthesisConfig extends BaseModel
             return false;
         }
         return self::normalizeSingleShot($item['single_shot']) === self::SINGLE_SHOT_ON;
+    }
+
+    /** 该生成类型是否开启「指定素材分组」 */
+    public static function resolveTypeMaterialGroupEnabled($config, int $type): bool
+    {
+        $item = self::typeConfigItem($config, $type);
+        if (!array_key_exists('material_group_enabled', $item)) {
+            return false;
+        }
+        return self::normalizeMaterialGroupEnabled($item['material_group_enabled']) === self::MATERIAL_GROUP_ON;
+    }
+
+    /**
+     * 该生成类型生效的素材分组 ID：只有显式开启才返回。
+     * 关闭 / 老数据缺键返回空数组，出片行为与改造前完全一致。
+     *
+     * @return array<int, int>
+     */
+    public static function resolveTypeMaterialGroupIds($config, int $type): array
+    {
+        if (!self::resolveTypeMaterialGroupEnabled($config, $type)) {
+            return [];
+        }
+        $item = self::typeConfigItem($config, $type);
+        return self::normalizeMaterialGroupIds($item['material_group_ids'] ?? []);
+    }
+
+    /**
+     * 该生成类型保存的素材分组 ID（不论开关是否开启），仅用于配置回显。
+     * 关闭状态也原样带出，站长再次打开开关时不用重新挑；出片侧仍走
+     * resolveTypeMaterialGroupIds()，关闭时恒返回空数组。
+     *
+     * @return array<int, int>
+     */
+    public static function resolveTypeMaterialGroupIdsForDisplay($config, int $type): array
+    {
+        $item = self::typeConfigItem($config, $type);
+        return self::normalizeMaterialGroupIds($item['material_group_ids'] ?? []);
+    }
+
+    /** 从 type_config 中取某个类型的原始配置项（结构归一由调用方决定） */
+    private static function typeConfigItem($config, int $type): array
+    {
+        $raw = self::configField($config, 'type_config');
+        if (is_string($raw)) {
+            $raw = trim($raw) === '' ? [] : (json_decode($raw, true) ?: []);
+        }
+        if (!is_array($raw)) {
+            return [];
+        }
+        $item = $raw[$type] ?? $raw[(string)$type] ?? [];
+        return is_array($item) ? $item : [];
     }
 
     /**

@@ -1,5 +1,6 @@
 import { checkTaskPublishTime, createDySearchTask } from '@/api/device'
 import WechatOA from '@/utils/wechat'
+import { useAppStore } from '@/stores/app'
 import { MissActionEnum, SearchModeEnum } from './types'
 import { buildDySearchPayload } from './payload'
 import type { Ref } from 'vue'
@@ -14,6 +15,7 @@ export function useCreateTask(
     formData: AccountSearchFormData,
     historyKeywordsSnapshot?: Ref<string[]>
 ) {
+    const appStore = useAppStore()
     const currentFrequency = ref(0)
     const taskErrorMsg = ref('')
     const showCreateTaskSuccessDialog = ref(false)
@@ -81,6 +83,13 @@ export function useCreateTask(
      * 有冲突就把 task_ids 带回去，用户确认后随请求一起提交，后端据此让路。
      */
     const handleCreateTask = async () => {
+        // 后台已关闭「自动加好友」时，本次拒绝提交加微配置，避免配置过期仍生成加微任务
+        if (formData.add_type === 1 && !appStore.getManualTaskSwitch.dy_search_friend_add) {
+            formData.add_type = 0
+            formData.add_remark_enable = 0
+            uni.$u.toast('后台已关闭自动加好友，本次仅创建获客任务')
+        }
+
         const errMsg = validateForm()
         if (errMsg) {
             uni.$u.toast(errMsg)

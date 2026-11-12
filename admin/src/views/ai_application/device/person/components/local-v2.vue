@@ -95,16 +95,8 @@
                     </div>
                 </div>
 
-                <div
-                    class="p-4 rounded-xl shadow-sm"
-                    style="background: linear-gradient(90deg, #06b6d4 0%, #3b82f6 100%)">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-white font-bold">🤖 {{ reportData.autoHookTitle }}</span>
-                    </div>
-                    <span class="text-[#ECFEFF] text-xs leading-relaxed">
-                        {{ reportData.autoHookDesc }}
-                    </span>
-                </div>
+                <!-- 「自动发送文件」卡片已下线：报告承诺的自动发送能力实际不存在，
+                     接口字段 autoHookTitle / autoHookDesc 保留但不再渲染 -->
             </div>
 
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F1F5F9]">
@@ -297,12 +289,6 @@
                             class="flex justify-between items-center px-4 py-3 rounded-xl border border-solid border-[#ffffff1a]"
                             style="background: rgba(255, 255, 255, 0.08)">
                             <span class="text-[11px] text-[#67E8F9]">阶段二</span>
-                            <span class="font-bold text-white">{{ reportData.phase2 }}</span>
-                        </div>
-                        <div
-                            class="flex justify-between items-center px-4 py-3 rounded-xl border border-solid border-[#ffffff1a]"
-                            style="background: rgba(255, 255, 255, 0.08)">
-                            <span class="text-[11px] text-[#67E8F9]">阶段三</span>
                             <span class="font-bold text-[#FDE047]">{{ reportData.phase3 }}</span>
                         </div>
                     </div>

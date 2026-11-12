@@ -185,6 +185,8 @@ import { AppTypeEnum } from '@/enums/appEnums'
 import { ListenerTypeEnum } from '@/ai_modules/device/enums'
 import { useDevice } from '@/ai_modules/device/hooks/useDevice'
 import { useEventBusManager } from '@/hooks/useEventBusManager'
+import wechatActiveIcon from '@/static/images/common/wechat_s.png'
+import sphActiveIcon from '@/static/images/common/sph_s.png'
 
 const { emit } = useEventBusManager()
 
@@ -192,17 +194,29 @@ const platformTypes = ref<any[]>([])
 const multiple = ref(1)
 const { platform } = useDevice()
 
-const tabs = ref<any[]>([
-    { value: 0, label: '全部' },
-    // { value: AppTypeEnum.SPH, label: '微信', icon: platform.value[AppTypeEnum.SPH].activeIcon },
-    { value: AppTypeEnum.XHS, label: '小红书', icon: platform.value[AppTypeEnum.XHS].activeIcon },
-    {
-        value: AppTypeEnum.DOUYIN,
-        label: '抖音',
-        icon: platform.value[AppTypeEnum.DOUYIN].activeIcon
-    },
-    { value: 5, label: '快手', icon: platform.value[AppTypeEnum.KUAISHOU].activeIcon }
-])
+// 平台类型 1 = 微信视频号：默认展示微信（合并个微账号），传视频号文案时只取视频号账号
+const typeOneLabel = ref('微信')
+const excludeWechat = ref(false)
+
+const tabs = ref<any[]>([])
+
+const buildTabs = () => {
+    tabs.value = [
+        { value: 0, label: '全部' },
+        {
+            value: AppTypeEnum.SPH,
+            label: typeOneLabel.value,
+            icon: excludeWechat.value ? sphActiveIcon : wechatActiveIcon
+        },
+        { value: AppTypeEnum.XHS, label: '小红书', icon: platform.value[AppTypeEnum.XHS].activeIcon },
+        {
+            value: AppTypeEnum.DOUYIN,
+            label: '抖音',
+            icon: platform.value[AppTypeEnum.DOUYIN].activeIcon
+        },
+        { value: 5, label: '快手', icon: platform.value[AppTypeEnum.KUAISHOU].activeIcon }
+    ]
+}
 
 const getTabs = () => {
     if (platformTypes.value.length === 0) return tabs.value
@@ -226,11 +240,14 @@ const handleTab = (item: any) => {
 
 const queryList = async (page_no: number, page_size: number) => {
     try {
-        const { lists } = await getPublishAccountList({
+        const params: any = {
             page_no,
             page_size,
             type: activeTab.value === 0 ? '' : activeTab.value
-        })
+        }
+        // 视频号 tab 只取 sv_account，排除 ai_wechat 个微账号
+        if (excludeWechat.value && activeTab.value === AppTypeEnum.SPH) params.exclude_wechat = 1
+        const { lists } = await getPublishAccountList(params)
         pagingRef.value?.complete(lists)
     } catch (error) {
         pagingRef.value?.complete([])
@@ -284,6 +301,9 @@ const handleConfirmChoose = () => {
 }
 
 onLoad((options: any) => {
+    if (options.typeOneLabel) typeOneLabel.value = decodeURIComponent(options.typeOneLabel)
+    excludeWechat.value = Number(options.excludeWechat) === 1
+    buildTabs()
     if (options.platformTypes) platformTypes.value = JSON.parse(options.platformTypes)
     if (options.multiple) multiple.value = parseInt(options.multiple)
     if (options.accounts) {

@@ -8,6 +8,7 @@ use think\exception\HttpResponseException;
 use app\api\validate\wechat\TodoValidate;
 use app\api\logic\wechat\CircleLogic;
 use app\api\lists\wechat\CircleTaskLists;
+use app\common\service\ManualTaskSwitchService;
 
 /**
  * CircleController
@@ -32,6 +33,9 @@ class CircleController extends BaseApiController
      */
     public function addTask()
     {
+        if (!ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::WECHAT_CIRCLE_PUBLISH)) {
+            return $this->fail(ManualTaskSwitchService::disabledMessage());
+        }
         $params = $this->request->post();
         $result = CircleLogic::addTask($params);
         if ($result)

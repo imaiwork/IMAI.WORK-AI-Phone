@@ -41,7 +41,9 @@
                 v-if="showAccounts"
                 :url="`/ai_modules/device/pages/account_choose/account_choose?accounts=${JSON.stringify(
                     formData.accounts,
-                )}&platformTypes=${JSON.stringify(platformTypes)}&multiple=${multiple}`"
+                )}&platformTypes=${JSON.stringify(platformTypes)}&multiple=${multiple}&typeOneLabel=${encodeURIComponent(
+                    typeOneLabel,
+                )}&excludeWechat=${excludeWechat ? 1 : 0}`"
                 class="flex items-center justify-between px-[28rpx] h-[100rpx]"
                 hover-class="none">
                 <text class="text-xs text-[#9CA3AF]">账号选择</text>
@@ -289,6 +291,9 @@ const props = withDefaults(
         showDevice?: boolean;
         showAccounts?: boolean;
         platformTypes?: AppTypeEnum[];
+        /** 平台类型 1 的 tab 文案与账号来源：默认为微信，传视频号时只取 sv_account */
+        typeOneLabel?: string;
+        excludeWechat?: boolean;
         currentFrequency?: number;
         timeInterval?: number;
         multiple?: 0 | 1;
@@ -297,6 +302,8 @@ const props = withDefaults(
     {
         showDevice: true,
         showAccounts: false,
+        typeOneLabel: "微信",
+        excludeWechat: false,
         currentFrequency: 0,
         timeInterval: 30,
         multiple: 1,

@@ -150,6 +150,7 @@ export function useGenerateSetting({
                 audio: copywriterTypeIndex.value === 1 ? formData.audio.map((item: any) => item.url) : [],
                 clip: formData.clip.map((item: any) => ({ clip_template_id: item })),
                 pic: formData.cover,
+                video_cover_source: formData.coverMode ?? 1,
             });
 
             if (formData.person_name && formData.person_introduction) {

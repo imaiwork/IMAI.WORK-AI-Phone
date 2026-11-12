@@ -615,7 +615,25 @@ class SynthesisConfigLogic extends ApiLogic
         $data['system_musics'] = \app\common\service\SystemMusicService::publicList();
         $data['system_music_groups'] = \app\common\service\SystemMusicService::allGroups();
         $data['type_config'] = self::appendTypeConfig($data);
+        $data['material_groups'] = self::materialGroupOptions($data);
         return $data;
+    }
+
+    /**
+     * 当前素材模式下该人设可选的素材分组（剪辑原片库）。
+     */
+    private static function materialGroupOptions(array $data): array
+    {
+        $personaId = (int)($data['persona_id'] ?? 0);
+        $userId = (int)($data['user_id'] ?? 0);
+        if ($personaId <= 0 || $userId <= 0) {
+            return [];
+        }
+        $keepOriginal = \app\api\logic\shanjian\ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId)
+            === \app\api\logic\shanjian\ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+            ? \app\common\model\aiPersona\Material::KEEP_ORIGINAL_YES
+            : \app\common\model\aiPersona\Material::KEEP_ORIGINAL_NO;
+        return MaterialGroupLogic::optionsForPersona($userId, $personaId, $keepOriginal);
     }
 
     /**
@@ -643,6 +661,11 @@ class SynthesisConfigLogic extends ApiLogic
                 'single_shot' => AiPersonaSynthesisConfig::resolveTypeSingleShot($data, $type)
                     ? AiPersonaSynthesisConfig::SINGLE_SHOT_ON
                     : AiPersonaSynthesisConfig::SINGLE_SHOT_OFF,
+                // 指定素材分组：每个类型独立开关，关闭时 ID 原样回显方便再次开启
+                'material_group_enabled' => AiPersonaSynthesisConfig::resolveTypeMaterialGroupEnabled($data, $type)
+                    ? AiPersonaSynthesisConfig::MATERIAL_GROUP_ON
+                    : AiPersonaSynthesisConfig::MATERIAL_GROUP_OFF,
+                'material_group_ids' => AiPersonaSynthesisConfig::resolveTypeMaterialGroupIdsForDisplay($data, $type),
             ];
         }
         return $result;
@@ -704,6 +727,7 @@ class SynthesisConfigLogic extends ApiLogic
     public static function applyTypeConfigDerivedFields(array $params, $config): array
     {
         $typeConfig = self::normalizeTypeConfigForSave($params['type_config']);
+        $typeConfig = self::validateTypeMaterialGroups($typeConfig, $params, $config);
 
         $sum = 0;
         foreach ($typeConfig as $item) {
@@ -769,6 +793,64 @@ class SynthesisConfigLogic extends ApiLogic
             $normalized[$type]['system_music_id'] = $pinned;
         }
         return $normalized;
+    }
+
+    /**
+     * 「指定素材分组」保存校验：
+     * - 分组必须属于该人设当前素材模式（自动适配 / 原图各一套分组），已删除或跨模式的分组静默剔除；
+     * - 开启但过滤后没有可选分组 → 抛错，避免保存出一条永远取不到素材的配置；
+     * - 成品库直发不消费 type_config，跳过校验，避免历史分组失效时挡住无关保存。
+     */
+    private static function validateTypeMaterialGroups(array $typeConfig, array $params, $config): array
+    {
+        $personaId = (int)AiPersonaSynthesisConfig::configField($config, 'persona_id', 0);
+        $userId = (int)AiPersonaSynthesisConfig::configField($config, 'user_id', 0);
+        if ($personaId <= 0 || $userId <= 0) {
+            return $typeConfig;
+        }
+        $workMode = array_key_exists('work_mode', $params)
+            ? (int)$params['work_mode']
+            : (int)AiPersonaSynthesisConfig::configField(
+                $config,
+                'work_mode',
+                AiPersonaSynthesisConfig::WORK_MODE_AI_SYNTHESIS
+            );
+        if ($workMode === AiPersonaSynthesisConfig::WORK_MODE_PRODUCT_DIRECT) {
+            return $typeConfig;
+        }
+
+        $keepOriginal = \app\api\logic\shanjian\ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId)
+            === \app\api\logic\shanjian\ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+            ? \app\common\model\aiPersona\Material::KEEP_ORIGINAL_YES
+            : \app\common\model\aiPersona\Material::KEEP_ORIGINAL_NO;
+        $allowed = MaterialGroupLogic::availableGroupIds($userId, $personaId, $keepOriginal);
+
+        foreach ($typeConfig as $type => $item) {
+            $ids = array_values(array_intersect(
+                (array)($item['material_group_ids'] ?? []),
+                $allowed
+            ));
+            $typeConfig[$type]['material_group_ids'] = $ids;
+            if ((int)($item['material_group_enabled'] ?? 0) === AiPersonaSynthesisConfig::MATERIAL_GROUP_ON
+                && $ids === []
+            ) {
+                throw new \Exception(sprintf(
+                    '「%s」已开启指定素材分组，请至少选择一个素材分组',
+                    self::generationTypeLabel((int)$type)
+                ));
+            }
+        }
+        return $typeConfig;
+    }
+
+    private static function generationTypeLabel(int $type): string
+    {
+        return match ($type) {
+            AiPersonaSynthesisConfig::GENERATION_TYPE_DIGITAL_HUMAN => '数字人口播',
+            AiPersonaSynthesisConfig::GENERATION_TYPE_MATERIAL => '纯素材混剪',
+            AiPersonaSynthesisConfig::GENERATION_TYPE_NEWS => '新闻体混剪',
+            default => '视频生成类型',
+        };
     }
 
     public static function getDigitalAvatar(array $params): bool

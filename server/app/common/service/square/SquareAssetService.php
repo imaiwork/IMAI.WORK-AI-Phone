@@ -7,6 +7,7 @@ use app\common\model\file\File;
 use app\common\model\square\SquareAsset;
 use app\common\model\square\SquareAssetGroup;
 use app\common\model\square\SquareAssetRef;
+use app\common\service\aiPersona\LeastUsedPicker;
 use app\common\service\ffmpeg\MaterialService;
 use app\common\service\FileService;
 use think\facade\Db;
@@ -570,28 +571,30 @@ class SquareAssetService
      *
      * @param list<array<string, mixed>> $own
      * @param list<array<string, mixed>> $square
+     * @param array<int, int> $usageCounts 自有素材 id => 使用次数
      * @return list<array<string, mixed>>
      */
-    public static function pickHalfAndFill(array $own, array $square, int $need): array
+    public static function pickHalfAndFill(array $own, array $square, int $need, array $usageCounts = []): array
     {
         $need = max(0, $need);
         if ($need === 0) {
             return [];
         }
-        shuffle($own);
-        shuffle($square);
         $half = intdiv($need, 2);
-        $pickedOwn = array_slice($own, 0, $half);
-        $pickedSquare = array_slice($square, 0, $half);
+        // 自有素材按使用次数轮转；广场素材没有本体系使用记录，保持随机
+        $pickedOwn = LeastUsedPicker::pick($own, $half, $usageCounts);
+        $pickedSquare = LeastUsedPicker::pick($square, $half);
         $ownUsed = count($pickedOwn);
         $squareUsed = count($pickedSquare);
         $gap = $need - $ownUsed - $squareUsed;
         if ($gap > 0) {
-            $fromOwn = array_slice($own, $ownUsed, $gap);
+            $remainingOwn = LeastUsedPicker::exclude($own, $pickedOwn);
+            $fromOwn = LeastUsedPicker::pick($remainingOwn, $gap, $usageCounts);
             $pickedOwn = array_merge($pickedOwn, $fromOwn);
             $gap -= count($fromOwn);
             if ($gap > 0) {
-                $pickedSquare = array_merge($pickedSquare, array_slice($square, $squareUsed, $gap));
+                $remainingSquare = LeastUsedPicker::exclude($square, $pickedSquare);
+                $pickedSquare = array_merge($pickedSquare, LeastUsedPicker::pick($remainingSquare, $gap));
             }
         }
         return array_merge($pickedOwn, $pickedSquare);
@@ -603,13 +606,14 @@ class SquareAssetService
         int $personaId,
         array $groupIds,
         int $needV,
-        int $needI
+        int $needI,
+        array $usageCounts = []
     ): array {
         [$own] = self::splitOwnAndSquare($ownGrouped);
         $square = self::publicGrouped($userId, $personaId, $groupIds);
         return array_merge(
-            self::pickHalfAndFill($own['videos'], $square['videos'], $needV),
-            self::pickHalfAndFill($own['images'], $square['images'], $needI)
+            self::pickHalfAndFill($own['videos'], $square['videos'], $needV, $usageCounts),
+            self::pickHalfAndFill($own['images'], $square['images'], $needI, $usageCounts)
         );
     }
 

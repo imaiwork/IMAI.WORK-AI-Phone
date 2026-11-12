@@ -2055,13 +2055,38 @@ class TikHubService
      * 作品数据整包：中台一次返回 analytics（账号/作品/窗口）。
      * 只封装 HTTP，不扣费、不写缓存。
      *
+     * @param string $cursor 上一页响应的 nextCursor；留空拉第一页
      * @return array<string, mixed>
      */
-    public function fetchWorkDataAnalytics(string $platform, string $account): array
+    public function fetchWorkDataAnalytics(string $platform, string $account, string $cursor = ''): array
     {
-        return HotspotMidClient::request('/api/hotspot/analytics', [
+        $body = [
             'platform' => $platform,
             'account' => $account,
+        ];
+        if ($cursor !== '') {
+            $body['cursor'] = $cursor;
+        }
+        return HotspotMidClient::request('/api/hotspot/analytics', $body, HotspotMidClient::KIND_ANALYTICS);
+    }
+
+    /**
+     * 作品数据回填：让中台一次请求内循环翻页合并，站长端只需调一次。
+     * 中台按 work_data_fetch fixed 扣一次费，站长端也按自己场景码 settle 一次。
+     */
+    public function fetchWorkDataBackfill(string $platform, string $account, int $maxPages = 5): array
+    {
+        if ($maxPages <= 0) {
+            $maxPages = 5;
+        }
+        if ($maxPages > 5) {
+            $maxPages = 5;
+        }
+        return HotspotMidClient::request('/api/hotspot/analytics_backfill', [
+            'platform' => $platform,
+            'account' => $account,
+            'refresh' => true,
+            'max_pages' => $maxPages,
         ], HotspotMidClient::KIND_ANALYTICS);
     }
 }
@@ -6131,5 +6156,40 @@ class GrabService
             ->response;
 
         return is_array($response) ? $response : [];
+    }
+}
+
+/**
+ * 通用AI服务（通用AI分析 + 通用OCR）
+ * 调用中台 /api/general/* 系列接口
+ */
+class GeneralService
+{
+    /**
+     * 通用AI分析
+     * @param array $params 请求参数（image_url / text / analyze_type / model 等）
+     */
+    public function analyze(array $params = []): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/general/analyze')
+            ->setRequest($params)
+            ->setMethod('POST')
+            ->send()
+            ->response;
+    }
+
+    /**
+     * 通用OCR识别（图片文字识别）
+     * @param array $params 请求参数（image_url / lang 等）
+     */
+    public function ocr(array $params = []): array
+    {
+        return app(ToolsService::class)
+            ->setApiUrl('/api/general/ocr')
+            ->setRequest($params)
+            ->setMethod('POST')
+            ->send()
+            ->response;
     }
 }

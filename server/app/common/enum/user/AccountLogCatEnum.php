@@ -261,6 +261,8 @@ class AccountLogCatEnum
             AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_CHAT,
             AccountLogEnum::TOKENS_DEC_HOTSPOT_ARK_SEARCH,
             AccountLogEnum::TOKENS_DEC_WORK_DATA_FETCH,
+            AccountLogEnum::TOKENS_DEC_GENERAL_ANALYZE,
+            AccountLogEnum::TOKENS_DEC_GENERAL_OCR,
         ]);
     }
 

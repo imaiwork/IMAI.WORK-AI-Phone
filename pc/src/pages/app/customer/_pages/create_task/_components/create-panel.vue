@@ -298,7 +298,9 @@
                             </div>
                         </div>
 
-                        <div class="bg-white p-6 rounded-2xl border border-br-extra-light relative overflow-hidden">
+                        <div
+                            v-if="friendAddEnabled"
+                            class="bg-white p-6 rounded-2xl border border-br-extra-light relative overflow-hidden">
                             <div class="flex justify-between items-center">
                                 <div class="text-base font-black flex items-center gap-2">
                                     <span class="w-1 h-4 bg-orange-500 rounded-full"></span>
@@ -608,6 +610,7 @@ import dayjs from "dayjs";
 import { AppTypeEnum, TokensSceneEnum } from "@/enums/appEnums";
 import { useCreateTask } from "@/pages/app/customer/_hooks/useCreateTask";
 import { CreateTypeEnum } from "@/pages/app/customer/_enums";
+import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import AiAddKeyword from "./ai-add-keyword.vue";
 import AiAddFriend from "./ai-add-friend.vue";
@@ -656,6 +659,10 @@ enum GreetingContentSettingTypeEnum {
 }
 
 const userStore = useUserStore();
+const appStore = useAppStore();
+
+/** 后台手动任务开关「自动加好友」：关闭时隐藏加微设置且不生成加微任务 */
+const friendAddEnabled = computed(() => appStore.getManualTaskSwitch.wechat_friend_add);
 
 const getOCRCloudToken = computed(() => {
     return userStore.getTokenByScene(TokensSceneEnum.SPH_OCR)?.score;
@@ -679,7 +686,7 @@ const formData = reactive<FormData>({
     chat_type: "0",
     chat_number: 30,
     chat_interval_time: 10,
-    add_type: "1",
+    add_type: friendAddEnabled.value ? "1" : "0",
     remark: "",
     add_number: 15,
     add_interval_time: 10,
@@ -734,6 +741,11 @@ watch(
     },
     { immediate: true },
 );
+
+// 配置可能在页面挂载后才返回，开关状态变化时同步（关闭强制 0，开启恢复默认开启）
+watch(friendAddEnabled, (enabled) => {
+    formData.add_type = enabled ? "1" : "0";
+});
 
 const crawlTypeOptions = [
     {
@@ -861,10 +873,14 @@ const { lockFn, isLock } = useLockFn(async () => {
         } else if (!checkTimeConfig()) {
             return;
         }
-    } else if (formData.wechat_time_type == 1 && !checkWechatTimeConfig()) {
+    } else if (formData.add_type == "1" && formData.wechat_time_type == 1 && !checkWechatTimeConfig()) {
         feedback.msgWarning("请选择加微任务执行时段");
         return;
-    } else if (formData.add_remark_enable == 1 && formData.remarks.length == 0) {
+    } else if (
+        formData.add_type == "1" &&
+        formData.add_remark_enable == 1 &&
+        formData.remarks.length == 0
+    ) {
         feedback.msgWarning("请输入加好友备注内容");
         return;
     }

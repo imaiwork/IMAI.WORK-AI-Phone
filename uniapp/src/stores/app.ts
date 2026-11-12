@@ -86,6 +86,24 @@ export const useAppStore = defineStore({
         getIsShowRobot: (state) => state.config.is_robot_show,
         /** 人设素材库一键清理：clean_switch(1显示/0隐藏) clean_threshold(次数阈值) */
         getPersonaMaterialConfig: (state) => state.config.persona_material || {},
+        /** 手动任务开关（未配置默认关闭，需后台开启；与后端 ManualTaskSwitchService 口径一致） */
+        getManualTaskSwitch: (state) => {
+            const config = state.config.manual_task_switch || {};
+            const keys = [
+                "wechat_friend_add",
+                "wechat_private_take",
+                "wechat_circle_publish",
+                "wechat_circle_interact",
+                "sph_clue",
+                "sph_private_take",
+                "dy_search_friend_add",
+            ];
+            const result: Record<string, boolean> = {};
+            keys.forEach((key) => {
+                result[key] = Number(config[key] ?? 0) === 1;
+            });
+            return result;
+        },
         getCommentFilterConfig: (state) => state.config.comment_screening || [],
         getCommentContentConfig: (state) => state.config.touch_speech || [],
         getChatModel: (state) => state.config.ai_model?.channel || [],
@@ -138,6 +156,18 @@ export const useAppStore = defineStore({
             const data = await getConfig(payload);
             this.config = data;
             this.getAiModelsData();
+        },
+        /** 只刷新后台手动任务开关：后台保存开关后，运行中的小程序无需重启即可生效 */
+        async refreshManualTaskSwitch() {
+            try {
+                const data = await getConfig();
+                const switchConfig = data?.manual_task_switch;
+                if (switchConfig && typeof switchConfig === "object") {
+                    this.config = { ...this.config, manual_task_switch: switchConfig };
+                }
+            } catch {
+                // 拉取失败沿用当前配置，页面按旧开关兜底
+            }
         },
         async getOem() {
             try {

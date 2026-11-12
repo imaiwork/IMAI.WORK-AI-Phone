@@ -104,16 +104,8 @@
                     </view>
                 </view>
 
-                <view
-                    class="p-4 rounded-xl shadow-sm"
-                    style="background: linear-gradient(90deg, #1d4ed8 0%, #1e293b 100%)">
-                    <view class="flex items-center gap-2 mb-2">
-                        <text class="text-white font-bold">🤖 {{ reportData.autoHookTitle }}</text>
-                    </view>
-                    <text class="text-[#BFDBFE] text-xs leading-relaxed">
-                        {{ reportData.autoHookDesc }}
-                    </text>
-                </view>
+                <!-- 「自动发送文件」卡片已下线：报告承诺的自动发送能力实际不存在，
+                     接口字段 autoHookTitle / autoHookDesc 保留但不再渲染 -->
             </view>
 
             <view class="bg-white rounded-2xl p-5 shadow-sm border border-solid border-[#F1F5F9]">
@@ -303,12 +295,6 @@
                             class="flex justify-between items-center px-4 py-3 rounded-xl border border-solid border-[#ffffff1a]"
                             style="background: rgba(255, 255, 255, 0.08)">
                             <text class="text-[22rpx] text-[#93C5FD]">阶段二</text>
-                            <text class="font-bold text-white">{{ reportData.phase2 }}</text>
-                        </view>
-                        <view
-                            class="flex justify-between items-center px-4 py-3 rounded-xl border border-solid border-[#ffffff1a]"
-                            style="background: rgba(255, 255, 255, 0.08)">
-                            <text class="text-[22rpx] text-[#93C5FD]">阶段三</text>
                             <text class="font-bold text-[#FCD34D]">{{ reportData.phase3 }}</text>
                         </view>
                     </view>

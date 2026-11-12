@@ -491,6 +491,54 @@
                             </div>
                         </div>
                     </div>
+                    <div class="setting-group">
+                        <label class="setting-label">视频封面</label>
+                        <div class="seg-row wrap">
+                            <div
+                                class="seg-item"
+                                :class="{ active: digitalState.settings.coverMode === 1 }"
+                                @click="selectCoverMode(1)">
+                                首帧
+                            </div>
+                            <div
+                                v-if="digitalState.mode !== 'dh-video'"
+                                class="seg-item"
+                                :class="{ active: digitalState.settings.coverMode === 2 }"
+                                @click="selectCoverMode(2)">
+                                AI封面
+                            </div>
+                            <div
+                                class="seg-item"
+                                :class="{ active: digitalState.settings.coverMode === 3 }"
+                                @click="selectCoverMode(3)">
+                                手动上传
+                            </div>
+                        </div>
+                        <div
+                            v-if="digitalState.settings.coverMode === 3"
+                            style="display: flex; align-items: center; gap: 8px; margin-top: 8px">
+                            <img
+                                v-if="digitalState.settings.coverPic"
+                                :src="digitalState.settings.coverPic"
+                                style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px" />
+                            <label style="cursor: pointer; font-size: 12px; color: #4f8cff">
+                                {{ coverUploading ? "上传中…" : digitalState.settings.coverPic ? "更换封面" : "上传封面" }}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    style="display: none"
+                                    :disabled="coverUploading"
+                                    @change="onCoverFileChange" />
+                            </label>
+                        </div>
+                        <p v-else style="margin: 6px 0 0; font-size: 12px; color: #999">
+                            {{
+                                digitalState.settings.coverMode === 2
+                                    ? "AI封面异步生成，不阻塞视频合成，失败自动回退首帧"
+                                    : "使用视频首帧作为封面"
+                            }}
+                        </p>
+                    </div>
                 </div>
             </div>
         </template>
@@ -540,6 +588,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import {
     RATIO_OPTIONS,
     PPT_PAGES,
@@ -551,7 +600,10 @@ import {
     DIGITAL_SETTING_VOICES,
     snapDimToMultipleOf16,
 } from "../../_enums/welcome-toolbar";
+import { uploadImage } from "@/api/app";
 import feedback from "@/utils/feedback";
+
+const coverUploading = ref(false);
 
 const props = defineProps<{
     activeMode: string;
@@ -575,6 +627,8 @@ const props = defineProps<{
             useOriginalAudio: boolean;
             materialMode: string;
             voice: string;
+            coverMode: number;
+            coverPic: string;
         };
     };
     currentImageDrawModel?: { logo?: string; name?: string } | null;
@@ -624,6 +678,33 @@ const emit = defineEmits<{
 
 function onToggle(name: string) {
     emit("toggle", name);
+}
+
+/** 切换封面方式:非手动模式清空已上传封面,避免脏数据 */
+function selectCoverMode(mode: number) {
+    props.digitalState.settings.coverMode = mode;
+    if (mode !== 3) {
+        props.digitalState.settings.coverPic = "";
+    }
+}
+
+/** 上传手动封面 */
+async function onCoverFileChange(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    coverUploading.value = true;
+    try {
+        const { uri } = await uploadImage({ file });
+        if (!uri) throw new Error("封面图上传失败");
+        props.digitalState.settings.coverPic = uri;
+    } catch (error: any) {
+        feedback.msgError(typeof error === "string" ? error : error?.message ?? "封面图上传失败");
+    } finally {
+        coverUploading.value = false;
+        input.value = "";
+    }
 }
 
 function closePopup() {

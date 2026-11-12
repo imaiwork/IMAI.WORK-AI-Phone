@@ -13,6 +13,56 @@ use app\common\service\workData\WorkDataSupport;
 
 class WorkDataLogic extends BaseLogic
 {
+    /**
+     * 历史回填：翻页拉取更多作品，按 id 去重合并（每页按次扣费）。
+     *
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>|false
+     */
+    public static function backfill(array $params, int $userId): array|false
+    {
+        $personaId = (int)($params['persona_id'] ?? 0);
+        $platform = (string)($params['platform'] ?? '');
+        $account = trim((string)($params['account'] ?? ''));
+        $maxPages = (int)($params['max_pages'] ?? 0);
+        try {
+            WorkDataChargeService::requireUser($userId);
+            $payload = WorkDataFetchService::backfill(
+                $userId,
+                $personaId,
+                $platform,
+                $account === '' ? null : $account,
+                $maxPages
+            );
+            $unit = WorkDataChargeService::price();
+            $pages = (int)($payload['backfill']['pages'] ?? 0);
+            // 整段回填只扣一次，页数仅用于说明本次翻了多少页
+            $payload['cost'] = [
+                'scene' => WorkDataChargeService::SCENE_FETCH,
+                'unit' => $unit,
+                'pages' => $pages,
+                'total' => round($unit, 2),
+            ];
+            return $payload;
+        } catch (WorkDataException $e) {
+            $msg = $e->getMessage();
+            if (str_contains($msg, '还没绑定')) {
+                return [
+                    'bound' => false,
+                    'platform' => $platform,
+                    'msg' => $msg,
+                ];
+            }
+            WorkDataLog::write('作品数据回填失败：' . $msg);
+            self::setError($msg);
+            return false;
+        } catch (\Throwable $e) {
+            WorkDataLog::exception('作品数据回填异常', $e);
+            self::setError(WorkDataException::translateUpstream($e->getMessage()));
+            return false;
+        }
+    }
+
     public static function syncSettings(array $params, int $userId): array|false
     {
         try {
@@ -67,9 +117,10 @@ class WorkDataLogic extends BaseLogic
         $refresh = WorkDataSupport::normalizeRefresh($params['refresh'] ?? false);
         $account = trim((string)($params['account'] ?? ''));
         $account = $account === '' ? null : $account;
+        $cursor = trim((string)($params['cursor'] ?? ''));
         try {
             WorkDataChargeService::requireUser($userId);
-            $payload = WorkDataFetchService::fetch($userId, $personaId, $platform, $refresh, $account);
+            $payload = WorkDataFetchService::fetch($userId, $personaId, $platform, $refresh, $account, false, $cursor);
             return $payload;
         } catch (WorkDataException $e) {
             $msg = $e->getMessage();

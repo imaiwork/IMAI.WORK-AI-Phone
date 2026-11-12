@@ -1220,7 +1220,10 @@ class ClueTouchLogic extends BasePersonaLogic
                     $agentId = $agentResolved['agent_id'];
                 }
 
-                //截流任务
+                //截流任务 —— intercept_max_number=0 表示"每个词不限"，send_num 不能被乘法乘成 0
+                $perWordCap = (int)($item->intercept_max_number ?? 10);
+                $sendNum = $perWordCap === 0 ? 1000 : count($acquireKeywords) * $perWordCap;
+
                 $params = [
                     'user_id' => $item->user_id,
                     'persona_id' => $item->persona_id,
@@ -1237,7 +1240,7 @@ class ClueTouchLogic extends BasePersonaLogic
                     'touch_type' => $touchType,
                     'agent_id' => $agentId,
                     'filter' => json_encode($item->intercept_keywords, JSON_UNESCAPED_UNICODE),
-                    'send_num' => count($acquireKeywords) * $item->intercept_max_number,
+                    'send_num' => $sendNum,
                     'is_like' => 1,
                     'is_follow' => 1,
                     'send_time' => 0,

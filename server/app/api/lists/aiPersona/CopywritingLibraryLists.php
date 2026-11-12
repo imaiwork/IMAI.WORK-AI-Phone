@@ -7,6 +7,7 @@ use app\common\lists\ListsExtendInterface;
 use app\common\lists\ListsSearchInterface;
 use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryPlatformUse;
+use app\common\model\shanjian\SystemMusicGroup;
 use app\common\service\copywriting\PublicCopywritingService;
 
 class CopywritingLibraryLists extends BaseApiDataLists implements ListsSearchInterface, ListsExtendInterface
@@ -75,7 +76,36 @@ class CopywritingLibraryLists extends BaseApiDataLists implements ListsSearchInt
         }
         unset($item);
 
-        return PublicCopywritingService::attachListFlags($list);
+        return PublicCopywritingService::attachListFlags(self::attachMusicGroupNames($list));
+    }
+
+    /** 批量回填分组名（一次 whereIn，避免逐条查库） */
+    private static function attachMusicGroupNames(array $list): array
+    {
+        $groupIds = [];
+        foreach ($list as $item) {
+            $groupId = (int)($item['music_group_id'] ?? 0);
+            if ($groupId > 0) {
+                $groupIds[$groupId] = $groupId;
+            }
+        }
+        $nameMap = [];
+        if ($groupIds) {
+            $rows = SystemMusicGroup::whereIn('id', array_values($groupIds))
+                ->field('id,name')
+                ->select()
+                ->toArray();
+            foreach ($rows as $row) {
+                $nameMap[(int)$row['id']] = (string)$row['name'];
+            }
+        }
+        foreach ($list as &$item) {
+            $groupId = (int)($item['music_group_id'] ?? 0);
+            $item['music_group_id'] = $groupId;
+            $item['music_group_name'] = $groupId > 0 ? ($nameMap[$groupId] ?? '') : '';
+        }
+        unset($item);
+        return $list;
     }
 
     public function count(): int

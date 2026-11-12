@@ -23,6 +23,7 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'ai_clip_enabled' => 'in:0,1,true,false',
         'engine_type' => 'in:1,2',
         'material_use_mode' => 'in:1,2',
+        'video_cover_source' => 'in:0,1,2,3',
     ];
 
     protected $message = [
@@ -39,6 +40,7 @@ class ShanjianVideoSettingValidate extends BaseValidate
         'ai_clip_enabled.in' => 'AI智剪开关值不正确',
         'engine_type.in' => '引擎类型不正确，1=闪剪 2=蝉镜',
         'material_use_mode.in' => '素材使用方式不正确，1=自动适配 2=原图',
+        'video_cover_source.in' => '视频封面方式不正确，0=未设置 1=首帧 2=AI封面 3=手动上传',
     ];
 
     /**
@@ -56,18 +58,36 @@ class ShanjianVideoSettingValidate extends BaseValidate
         return true;
     }
 
+    /**
+     * 手动上传封面时必须携带图片地址
+     */
+    protected function checkVideoCoverSource($value, $rule, $data = [])
+    {
+        if ((int)$value === 3 && trim((string)($data['pic'] ?? '')) === '') {
+            return '手动上传封面时请先上传封面图';
+        }
+
+        return true;
+    }
+
     // 添加场景
     public function sceneAdd()
     {
-        return $this->only(['anchor', 'voice', 'title', 'character_design', 'material', 'audio', 'copywriting', 'material_use_mode'])
-                   ->append(['audio' => 'checkAudioCopywriting']);
+        return $this->only(['anchor', 'voice', 'title', 'character_design', 'material', 'audio', 'copywriting', 'material_use_mode', 'video_cover_source'])
+                   ->append([
+                       'audio' => 'checkAudioCopywriting',
+                       'video_cover_source' => 'checkVideoCoverSource',
+                   ]);
     }
 
     // 更新场景
     public function sceneUpdate()
     {
-        return $this->only(['id', 'name', 'status', 'video_count', 'anchor', 'voice', 'title', 'character_design', 'material', 'clip', 'music', 'audio', 'copywriting', 'material_use_mode'])
-                   ->append(['audio' => 'checkAudioCopywriting']);
+        return $this->only(['id', 'name', 'status', 'video_count', 'anchor', 'voice', 'title', 'character_design', 'material', 'clip', 'music', 'audio', 'copywriting', 'material_use_mode', 'video_cover_source'])
+                   ->append([
+                       'audio' => 'checkAudioCopywriting',
+                       'video_cover_source' => 'checkVideoCoverSource',
+                   ]);
     }
 
     // 更新名称场景

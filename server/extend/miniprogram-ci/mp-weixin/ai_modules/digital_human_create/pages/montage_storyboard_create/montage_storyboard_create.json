@@ -12,6 +12,7 @@
     "choose-agent": "../../components/choose-agent/choose-agent",
     "choose-tone": "../../components/choose-tone/choose-tone",
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
+    "keywords-edit": "../../components/keywords-edit/keywords-edit",
     "tokens-cost": "../../../../components/tokens-cost/tokens-cost"
   }
 }

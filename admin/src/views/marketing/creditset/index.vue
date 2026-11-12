@@ -87,7 +87,9 @@ const tableData = ref<any[]>([]);
 const globalRate = ref<number>(100);
 
 const getCommonConfig = computed(() =>
-    tableData.value.filter((item) => ["coze_agent_chat", "coze_workflow"].includes(item.scene)),
+    tableData.value.filter((item) =>
+        ["coze_agent_chat", "coze_workflow", "general_ai_analyze", "general_ocr"].includes(item.scene),
+    ),
 );
 
 const getAiPersonConfig = computed(() => tableData.value.filter((item) => isAiPersonBillingItem(item)));

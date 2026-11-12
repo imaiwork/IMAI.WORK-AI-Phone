@@ -8,7 +8,7 @@
                     <h3 class="text-[16px] font-black text-slate-700 whitespace-nowrap">参考素材</h3>
                     <div class="flex items-center bg-orange-50 px-3 py-1 rounded-full whitespace-nowrap shrink-0">
                         <span class="text-orange-500 text-[11px] font-medium tracking-wider">
-                            {{ groups.length }} 个分组 · {{ totalMaterialCount }} 个素材
+                            {{ groups.length }} 个{{ groupLabel }} · {{ totalMaterialCount }} 个素材
                         </span>
                     </div>
                 </div>
@@ -16,7 +16,7 @@
                     @click="handleAddGroup"
                     class="h-9 px-4 bg-primary text-white rounded-xl text-xs font-medium flex items-center gap-2 shadow-light shadow-[#0065fb]/20 hover:scale-105 transition-all whitespace-nowrap shrink-0">
                     <Icon name="el-icon-Plus" :size="14" />
-                    新建分组
+                    新建{{ groupLabel }}
                 </button>
             </div>
             <div v-if="!isStoryboard" class="flex items-center justify-between gap-3 mt-3">
@@ -57,9 +57,28 @@
                                 <Icon name="el-icon-ArrowRight" color="var(--slate-400)" :size="14" />
                             </div>
                             <div class="flex-1 flex items-center gap-2 min-w-0">
-                                <span class="text-[14px] font-black text-slate-700 truncate max-w-[200px]">
-                                    {{ group.name }}
-                                </span>
+                                <ElInput
+                                    v-if="renamingGroupId === group.id"
+                                    ref="renameInputRef"
+                                    v-model="renameDraft"
+                                    class="rename-group-input"
+                                    size="small"
+                                    :maxlength="GROUP_NAME_MAX"
+                                    @click.stop
+                                    @keyup.enter.stop="commitRename(group)"
+                                    @keyup.esc.stop="cancelRename"
+                                    @blur="commitRename(group)" />
+                                <template v-else>
+                                    <span class="text-[14px] font-black text-slate-700 truncate max-w-[200px]">
+                                        {{ group.name }}
+                                    </span>
+                                    <button
+                                        class="w-5 h-5 rounded-md text-slate-300 hover:text-primary hover:bg-white flex items-center justify-center transition-all shrink-0"
+                                        title="重命名"
+                                        @click.stop="startRename(group)">
+                                        <Icon name="el-icon-EditPen" :size="12" />
+                                    </button>
+                                </template>
                                 <span
                                     :class="[
                                         'text-[10px] font-medium px-2 py-0.5 rounded-md border transition-colors',
@@ -171,7 +190,7 @@
                                             <Icon name="el-icon-Files" color="var(--slate-300)" :size="24" />
                                         </div>
                                         <div class="text-[12px] font-medium text-slate-400">
-                                            该分组暂无素材，点击右上角「添加素材」
+                                            该{{ groupLabel }}暂无素材，点击右上角「添加素材」
                                         </div>
                                     </div>
                                 </div>
@@ -189,7 +208,9 @@
                         <Icon name="el-icon-Folder" color="var(--slate-300)" :size="40" />
                     </div>
                 </div>
-                <div class="text-[15px] font-[1000] text-slate-400 mb-8 tracking-wider uppercase">还没有任何分组</div>
+                <div class="text-[15px] font-[1000] text-slate-400 mb-8 tracking-wider uppercase">
+                    还没有任何{{ groupLabel }}
+                </div>
                 <button @click="handleAddGroup" class="add-material-btn group">
                     <div
                         class="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl"></div>
@@ -199,7 +220,7 @@
                             class="w-6 h-6 rounded-lg bg-[#ffffff]/20 flex items-center justify-center group-hover:rotate-90 transition-transform duration-500">
                             <Icon name="el-icon-Plus" color="#ffffff" :size="18" />
                         </div>
-                        <span class="text-white font-[1000] text-base tracking-wide mr-1">创建第一个分组</span>
+                        <span class="text-white font-[1000] text-base tracking-wide mr-1">创建第一个{{ groupLabel }}</span>
                     </div>
                     <div
                         class="absolute -inset-1 border-2 border-[#0065fb]/30 rounded-[24px] animate-ping opacity-20 group-hover:hidden"></div>
@@ -265,6 +286,41 @@ const groups = computed({
     set: (val) => emit("update:modelValue", val),
 });
 
+/** 分镜混剪叫「镜头组」，其余混剪场景仍叫「分组」 */
+const groupLabel = computed(() => (props.isStoryboard ? "镜头组" : "分组"));
+
+// ──────────────────────────────────────────────────────────────
+// 镜头组 / 分组 重命名
+// ──────────────────────────────────────────────────────────────
+const GROUP_NAME_MAX = 12;
+const renamingGroupId = ref<string | null>(null);
+const renameDraft = ref("");
+const renameInputRef = shallowRef<any>();
+
+const startRename = async (group: MaterialGroup) => {
+    renamingGroupId.value = group.id;
+    renameDraft.value = group.name;
+    await nextTick();
+    renameInputRef.value?.focus?.();
+};
+
+const cancelRename = () => {
+    renamingGroupId.value = null;
+    renameDraft.value = "";
+};
+
+const commitRename = (group: MaterialGroup) => {
+    // blur 与 enter 会先后触发，第二次直接忽略
+    if (renamingGroupId.value !== group.id) return;
+    const name = renameDraft.value.trim();
+    cancelRename();
+    if (!name || name === group.name) return;
+    emit(
+        "update:modelValue",
+        groups.value.map((g) => (g.id === group.id ? { ...g, name } : g)),
+    );
+};
+
 // ──────────────────────────────────────────────────────────────
 // 滚动容器 ref
 // ──────────────────────────────────────────────────────────────
@@ -311,10 +367,14 @@ const setGroupPopoverRef = (el: any, id: string) => {
 
 const genGroupId = () => `g_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+/** 默认名称：镜头组与小程序保持一致（无空格），其余场景沿用「分组 N」 */
+const buildDefaultGroupName = (index: number) =>
+    props.isStoryboard ? `${groupLabel.value}${index}` : `${groupLabel.value} ${index}`;
+
 const handleAddGroup = () => {
     const newGroup: MaterialGroup = {
         id: genGroupId(),
-        name: `分组 ${groups.value.length + 1}`,
+        name: buildDefaultGroupName(groups.value.length + 1),
         materialList: [],
         ...(props.isStoryboard ? { useOriginalAudio: true } : {}),
     };
@@ -336,7 +396,7 @@ const handleRemoveGroup = (index: number) => {
         return;
     }
     useNuxtApp().$confirm({
-        title: "删除分组",
+        title: `删除${groupLabel.value}`,
         message: `「${group.name}」内有 ${group.materialList.length} 个素材，确认删除？`,
         confirmButtonText: "删除",
         cancelButtonText: "取消",
@@ -461,7 +521,7 @@ const handleSelectHistory = (list: any[]) => {
 const appendMaterials = async (list: MaterialItem[], skipProcess = false) => {
     const targetGroup = groups.value.find((g) => g.id === activeGroupId.value);
     if (!targetGroup) {
-        feedback.msgWarning("未找到目标分组");
+        feedback.msgWarning(`未找到目标${groupLabel.value}`);
         return;
     }
     let filteredList = list;
@@ -532,5 +592,27 @@ defineExpose({ calcTotalDuration, scrollToGroup });
     background: transparent;
     cursor: pointer;
     outline: none;
+}
+
+/* 镜头组重命名输入框 */
+.rename-group-input {
+    width: 160px;
+    flex-shrink: 0;
+    :deep(.el-input__wrapper) {
+        height: 28px;
+        padding: 0 8px;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 0 0 1px #e2e8f0 inset;
+    }
+    :deep(.el-input__wrapper.is-focus) {
+        box-shadow: 0 0 0 1px var(--color-primary, #0065fb) inset;
+    }
+    :deep(.el-input__inner) {
+        height: 28px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #334155;
+    }
 }
 </style>

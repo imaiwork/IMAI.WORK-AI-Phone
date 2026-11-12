@@ -76,6 +76,10 @@ class SynthesisConfig extends BaseModel
     const SINGLE_SHOT_OFF = 0;
     const SINGLE_SHOT_ON = 1;
 
+    /** 指定素材分组：开启后该生成类型只从所选素材分组取素材 */
+    const MATERIAL_GROUP_OFF = 0;
+    const MATERIAL_GROUP_ON = 1;
+
 
     protected $json = ['generation_types', 'template_config', 'square_group_ids', 'type_config'];
     protected $jsonAssoc = true;
@@ -211,6 +215,31 @@ class SynthesisConfig extends BaseModel
         return AiPersonaSynthesisConfig::resolveTypeSingleShot($config, $type);
     }
 
+    public static function normalizeMaterialGroupEnabled($value): int
+    {
+        return AiPersonaSynthesisConfig::normalizeMaterialGroupEnabled($value);
+    }
+
+    public static function normalizeMaterialGroupIds($value): array
+    {
+        return AiPersonaSynthesisConfig::normalizeMaterialGroupIds($value);
+    }
+
+    public static function resolveTypeMaterialGroupEnabled($config, int $type): bool
+    {
+        return AiPersonaSynthesisConfig::resolveTypeMaterialGroupEnabled($config, $type);
+    }
+
+    public static function resolveTypeMaterialGroupIds($config, int $type): array
+    {
+        return AiPersonaSynthesisConfig::resolveTypeMaterialGroupIds($config, $type);
+    }
+
+    public static function resolveTypeMaterialGroupIdsForDisplay($config, int $type): array
+    {
+        return AiPersonaSynthesisConfig::resolveTypeMaterialGroupIdsForDisplay($config, $type);
+    }
+
     public static function normalizeTypeConfig($raw): array
     {
         return AiPersonaSynthesisConfig::normalizeTypeConfig($raw);
@@ -254,5 +283,17 @@ class SynthesisConfig extends BaseModel
     public static function resolveTypeSpeechRate($config, int $type): float
     {
         return AiPersonaSynthesisConfig::resolveTypeSpeechRate($config, $type);
+    }
+
+    /** 读取配置字段：模型实例、数组（toArray 结果）都吃 */
+    public static function configField($config, string $field, $default = null)
+    {
+        if (is_object($config)) {
+            return $config->$field ?? $default;
+        }
+        if (is_array($config)) {
+            return $config[$field] ?? $default;
+        }
+        return $default;
     }
 }

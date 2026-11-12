@@ -41,7 +41,7 @@
             </scroll-view>
         </view>
 
-        <view class="px-[32rpx] my-2" v-if="currPlatformTab == 5">
+        <view class="px-[32rpx] my-2" v-if="currPlatformTab == 5 && sphClueEnabled">
             <navigator
                 url="/ai_modules/sph/pages/index/index"
                 hover-class="none"
@@ -399,6 +399,7 @@ import TaskPostIcon from "@/ai_modules/device/static/icons/task_post.svg";
 import TokensFlagIcon from "@/ai_modules/device/static/icons/tokens_flag.svg";
 import TokensTimeIcon from "@/ai_modules/device/static/icons/tokens_time.svg";
 import TokensIcon from "@/ai_modules/device/static/icons/tokens.svg";
+import { useAppStore } from "@/stores/app";
 
 enum TaskTypeEnum {
     PUBLISH = 1,
@@ -414,6 +415,10 @@ enum TaskTypeEnum {
 
 const { platform } = useDevice();
 const deviceCode = ref("");
+
+const appStore = useAppStore();
+// 视频号获客任务被后台关闭时不展示「AI线索采集」入口
+const sphClueEnabled = computed(() => appStore.getManualTaskSwitch.sph_clue);
 
 const tabList = ref<any[]>([
     { name: "24h任务", type: 1 },

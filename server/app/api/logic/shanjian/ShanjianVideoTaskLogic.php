@@ -6,6 +6,7 @@ use app\api\logic\ApiLogic;
 use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\device\TaskLogic;
 use app\api\logic\service\TokenLogService;
+use app\api\logic\videoSynthesis\CopywritingImitationLogic;
 use app\common\enum\DeviceEnum;
 use app\common\enum\FileEnum;
 use app\common\enum\user\AccountLogEnum;
@@ -32,6 +33,7 @@ use app\common\service\hotspot\VideoService;
 use app\common\service\MaterialReadinessService;
 use app\common\service\ResolutionValidator;
 use app\common\service\ShanjianQueueService;
+use app\common\service\shanjian\ShanjianVideoCoverService;
 use app\common\service\TeamBillingService;
 use app\common\service\TeamContextService;
 use app\common\service\UploadService;
@@ -604,12 +606,22 @@ class ShanjianVideoTaskLogic extends ApiLogic
             ]);
     }
 
-    private static function handleMaterialUseFailure($task): void
+    /**
+     * 任务判失败时把素材使用记录也标失败，让素材可以回到「未使用」池子里重试。
+     *
+     * 一镜到底（新闻体 single_shot）按「用过一次就不再取」选片，靠的就是这里的 use_status：
+     * 上游真挂了却留在 0/1 会把素材永久烧掉，所以所有判失败路径都要经过本方法。
+     *
+     * @param mixed $task 子任务模型（需含 id / persona_id / device_code）
+     * @param string|null $reason 失败原因，不传则取任务备注
+     */
+    public static function handleMaterialUseFailure($task, ?string $reason = null): void
     {
         if ($task->persona_id > 0) {
+            $failReason = $reason ?? (string)$task->remark;
             MaterialUseLog::where('task_id', $task->id)
                 ->where('persona_id', $task->persona_id)
-                ->update(['use_status' => 2, 'fail_reason' => $task->remark]);
+                ->update(['use_status' => 2, 'fail_reason' => $failReason]);
 
             $materialIds = MaterialUseLog::where('task_id', $task->id)
                 ->where('persona_id', $task->persona_id)
@@ -1872,10 +1884,14 @@ class ShanjianVideoTaskLogic extends ApiLogic
         $result = self::requestUrl($request, $scene, self::$uid, $taskId);
         if (!empty($result) && isset($result['content'])) {
             // ─── 文案质量校验：英文缺空格 / 外文乱码 ───
-            $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
-            $result['content'] = $sanitized['content'];
-            if (!empty($sanitized['warnings'])) {
-                $result['warnings'] = $sanitized['warnings'];
+            // 仅对数组型 content 校验，字符串型原样透传：sanitizeArray 的 array 类型约束
+            // 对字符串会抛 TypeError（\Error），catch(\Exception) 接不住会直接炸流程。
+            if (is_array($result['content'])) {
+                $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
+                $result['content'] = $sanitized['content'];
+                if (!empty($sanitized['warnings'])) {
+                    $result['warnings'] = $sanitized['warnings'];
+                }
             }
             self::$returnData = $result;
         } else {
@@ -3646,9 +3662,15 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 return false;
             }
 
-            $thumbStatus = ShanjianVideoTask::where('task_id', $data['task_id'])->value('thumb_status');
-            if ($thumbStatus !== null && in_array((int)$thumbStatus, [2, 3], true)) {
-                return true;
+            $coverState = ShanjianVideoTask::where('task_id', $data['task_id'])
+                ->field('thumb_status,cover_status')
+                ->find();
+            if ($coverState) {
+                $autoFinished = in_array((int)$coverState->thumb_status, [2, 3], true);
+                $manualFinished = in_array((int)$coverState->cover_status, [2, 3], true);
+                if ($autoFinished || $manualFinished) {
+                    return true;
+                }
             }
 
             $cover_url = '';
@@ -3668,7 +3690,10 @@ class ShanjianVideoTaskLogic extends ApiLogic
                 try {
                     $task = ShanjianVideoTask::where('task_id', $data['task_id'])
                         ->where('cover_result_id', $data['taskId'] ?? '')
-                        ->where('thumb_status', 1)
+                        ->where(function ($query) {
+                            $query->where('thumb_status', 1)
+                                ->whereOr('cover_status', ShanjianVideoCoverService::COVER_STATUS_GENERATING);
+                        })
                         ->lock(true)
                         ->find();
                     if (!$task) {
@@ -3677,19 +3702,41 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     }
 
                     $typeID = AccountLogEnum::TOKENS_DEC_SHANJIAN_AI_COVER;
+                    $isManualCover = (int)$task->cover_status === ShanjianVideoCoverService::COVER_STATUS_GENERATING;
                     if (isset($data['status'])) {
                         switch ($data['status']) {
                             case 'failed':
-                                $task->thumb_status = 3;
-                                $task->remark = $data['errorMessage'] ?? '处理失败';
+                                if ($isManualCover) {
+                                    $task->cover_status = ShanjianVideoCoverService::COVER_STATUS_FAILED;
+                                    $task->remark = 'AI封面生成失败，已回退首帧';
+                                } else {
+                                    $task->thumb_status = 3;
+                                    $task->remark = $data['errorMessage'] ?? '处理失败';
+                                }
                                 $userId = $task->user_id;
                                 $taskId = $task->task_id;
                                 AccountLogLogic::refundTaskOnce((int)$userId, (int)$typeID, (string)$taskId);
                                 break;
                             case 'succeed':
-                                $task->thumb_status = 2;
-                                if ($cover_url !== '') {
-                                    $task->pic = $cover_url;
+                                if ($isManualCover) {
+                                    if ($cover_url === '') {
+                                        // 回调声称成功但没带可用封面图：按失败收口并退费，避免「成功但无封面」卡死终态
+                                        $task->cover_status = ShanjianVideoCoverService::COVER_STATUS_FAILED;
+                                        $task->remark = 'AI封面回调缺少图片，已回退首帧';
+                                        AccountLogLogic::refundTaskOnce((int)$task->user_id, (int)$typeID, (string)$task->task_id);
+                                        Log::channel('shanjiannotice')->warning(
+                                            'AI封面回调成功但无图片, task_id: ' . $task->task_id
+                                        );
+                                    } else {
+                                        // 手动创作：封面只回填缩略图，thumb_status 保持 4，不影响已下发的视频
+                                        $task->cover_status = ShanjianVideoCoverService::COVER_STATUS_SUCCESS;
+                                        $task->pic = $cover_url;
+                                    }
+                                } else {
+                                    $task->thumb_status = 2;
+                                    if ($cover_url !== '') {
+                                        $task->pic = $cover_url;
+                                    }
                                 }
                                 break;
                         }
@@ -3697,6 +3744,12 @@ class ShanjianVideoTaskLogic extends ApiLogic
                     $task->update_time = time();
                     $task->save();
                     Db::commit();
+
+                    $manualCoverReady = (int)$task->cover_status === ShanjianVideoCoverService::COVER_STATUS_SUCCESS
+                        && $cover_url !== '';
+                    if ($manualCoverReady) {
+                        self::syncPendingPublishDetailCover($task, $cover_url);
+                    }
                     return true;
                 } catch (\Exception $e) {
                     self::safeRollback('covernotify');
@@ -3705,9 +3758,15 @@ class ShanjianVideoTaskLogic extends ApiLogic
                         Log::channel('shanjiannotice')->warning(
                             'covernotify 1205锁等待超时，第' . $attempt . '/' . $maxAttempts . '次重试, task_id: ' . ($data['task_id'] ?? '')
                         );
-                        $thumbStatus = ShanjianVideoTask::where('task_id', $data['task_id'])->value('thumb_status');
-                        if ($thumbStatus !== null && in_array((int)$thumbStatus, [2, 3], true)) {
-                            return true;
+                        $coverState = ShanjianVideoTask::where('task_id', $data['task_id'])
+                            ->field('thumb_status,cover_status')
+                            ->find();
+                        if ($coverState) {
+                            $autoFinished = in_array((int)$coverState->thumb_status, [2, 3], true);
+                            $manualFinished = in_array((int)$coverState->cover_status, [2, 3], true);
+                            if ($autoFinished || $manualFinished) {
+                                return true;
+                            }
                         }
                         usleep(400000 * $attempt);
                         continue;
@@ -3740,11 +3799,30 @@ class ShanjianVideoTaskLogic extends ApiLogic
     public static function checkCover()
     {
         try {
+            // 手动创作的AI封面：超过24小时仍未完成，统一收口并退费
+            try {
+                self::closeStaleAiCovers();
+            } catch (\Throwable $e) {
+                // 收口失败不阻断下面的首帧封面轮询
+                Log::channel('shanjiannotice')->error('AI封面超时收口异常: ' . $e->getMessage());
+            }
+
+            // 手动创作的AI封面：先提交生成任务，再由下面的轮询兜底
+            try {
+                self::submitPendingAiCovers();
+            } catch (\Throwable $e) {
+                // 提交失败不阻断下面的首帧封面轮询
+                Log::channel('shanjiannotice')->error('AI封面提交异常: ' . $e->getMessage());
+            }
+
             ShanjianVideoTask::where('thumb_status', 1)
                 ->where('create_time', '<', strtotime('-1440 minutes'))
                 ->update(['thumb_status' => 3, 'update_time' => time()]);
 
-            $tasks = ShanjianVideoTask::where('thumb_status', 1)
+            $tasks = ShanjianVideoTask::where(function ($query) {
+                $query->where('thumb_status', 1)
+                    ->whereOr('cover_status', ShanjianVideoCoverService::COVER_STATUS_GENERATING);
+            })
                 ->where('cover_result_id', '<>', '')
                 ->whereNotNull('cover_result_id')
                 ->where('create_time', '<=', strtotime('-30 minutes'))
@@ -3819,6 +3897,147 @@ class ShanjianVideoTaskLogic extends ApiLogic
             self::setError($e->getMessage());
             Log::channel('shanjiannotice')->error('checkCover 整体异常: ' . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * 提交手动创作的AI封面任务
+     *
+     * 建单时只标记 cover_status=1，避免在创建事务里调用外部接口；
+     * 这里按任务逐条提交，提交成功后由 checkCover 的轮询和 covernotify 兜底终态。
+     */
+    private static function submitPendingAiCovers(int $limit = 3): void
+    {
+        $tasks = ShanjianVideoTask::where('cover_status', ShanjianVideoCoverService::COVER_STATUS_GENERATING)
+            ->where('cover_result_id', '')
+            // 视频已失败的任务不再发起AI封面，避免为死任务扣费
+            ->where('status', '<>', ShanjianVideoTask::STATUS_FAILED)
+            ->where('create_time', '>=', strtotime('-1440 minutes'))
+            ->order('id', 'asc')
+            ->limit($limit)
+            ->select();
+
+        foreach ($tasks as $task) {
+            $lockKey = 'shanjian_video_task_cover_submit_' . $task->task_id;
+            if (!self::acquireRedisLock($lockKey, 180)) {
+                continue;
+            }
+
+            $keywords = trim((string)$task->msg);
+            if ($keywords === '') {
+                $keywords = trim((string)$task->title);
+            }
+            if ($keywords === '') {
+                $task->cover_status = ShanjianVideoCoverService::COVER_STATUS_FAILED;
+                $task->remark = '文案为空，AI封面已回退首帧';
+                $task->update_time = time();
+                $task->save();
+                self::releaseRedisLock($lockKey);
+                continue;
+            }
+
+            try {
+                $coverResultId = CopywritingImitationLogic::getAiCover(
+                    (string)$task->pic,
+                    $keywords,
+                    (int)$task->user_id,
+                    (string)$task->task_id
+                );
+                if ($coverResultId === '') {
+                    $task->cover_status = ShanjianVideoCoverService::COVER_STATUS_FAILED;
+                    $task->remark = 'AI封面生成失败，已回退首帧';
+                    $task->update_time = time();
+                    $task->save();
+                    self::releaseRedisLock($lockKey);
+                    continue;
+                }
+
+                $task->cover_result_id = (string)$coverResultId;
+                $task->update_time = time();
+                $task->save();
+                self::keepRedisLock($lockKey, 20);
+            } catch (\Throwable $e) {
+                self::releaseRedisLock($lockKey);
+
+                // 持续性异常（余额不足、中台配置错误等）不能无限重投：累计 3 次后按失败收口并退费
+                $extra = is_array($task->extra) ? $task->extra : [];
+                $attempts = (int)($extra[ShanjianVideoTask::EXTRA_AI_COVER_ATTEMPTS] ?? 0) + 1;
+                $extra[ShanjianVideoTask::EXTRA_AI_COVER_ATTEMPTS] = $attempts;
+                $task->extra = $extra;
+                $task->update_time = time();
+                if ($attempts >= 3) {
+                    $task->cover_status = ShanjianVideoCoverService::COVER_STATUS_FAILED;
+                    $task->remark = 'AI封面多次提交失败，已回退首帧';
+                    AccountLogLogic::refundTaskOnce(
+                        (int)$task->user_id,
+                        AccountLogEnum::TOKENS_DEC_SHANJIAN_AI_COVER,
+                        (string)$task->task_id
+                    );
+                }
+                $task->save();
+
+                Log::channel('shanjiannotice')->error(
+                    'AI封面提交异常, task_id: ' . ($task->task_id ?? '')
+                    . ', 第' . $attempts . '次, Error: ' . $e->getMessage()
+                );
+            }
+        }
+    }
+
+    /**
+     * 收口超过24小时仍未完成的AI封面任务并退费
+     */
+    private static function closeStaleAiCovers(int $limit = 20): void
+    {
+        $tasks = ShanjianVideoTask::where('cover_status', ShanjianVideoCoverService::COVER_STATUS_GENERATING)
+            ->where('create_time', '<', strtotime('-1440 minutes'))
+            ->order('id', 'asc')
+            ->limit($limit)
+            ->select();
+
+        foreach ($tasks as $task) {
+            $task->cover_status = ShanjianVideoCoverService::COVER_STATUS_FAILED;
+            $task->remark = 'AI封面生成超时，已回退首帧';
+            $task->update_time = time();
+            $task->save();
+            AccountLogLogic::refundTaskOnce(
+                (int)$task->user_id,
+                AccountLogEnum::TOKENS_DEC_SHANJIAN_AI_COVER,
+                (string)$task->task_id
+            );
+        }
+    }
+
+    /**
+     * AI封面生成完成后同步到待发布明细
+     */
+    private static function syncPendingPublishDetailCover(ShanjianVideoTask $task, string $coverUrl): void
+    {
+        $coverUrl = trim($coverUrl);
+        if ($coverUrl === '') {
+            return;
+        }
+
+        try {
+            $taskIds = [(int)$task->id];
+            if ((int)($task->origin_task_id ?? 0) > 0) {
+                $taskIds[] = (int)$task->origin_task_id;
+            }
+            $taskIds = array_values(array_unique($taskIds));
+
+            SvPublishSettingDetail::where('video_task_id', 'in', $taskIds)
+                ->where('user_id', (int)$task->user_id)
+                ->where('account_type', 'in', [1, 3, 4, 5])
+                ->where('status', 0)
+                ->whereRaw('NOT (task_type = 99 AND scene = 2)')
+                ->update([
+                    'pic' => FileService::getFileUrl($coverUrl),
+                    'update_time' => time(),
+                ]);
+        } catch (\Throwable $e) {
+            Log::channel('shanjiannotice')->error(
+                'AI封面同步待发布明细失败, task_id: ' . ($task->task_id ?? '') . ', Error: ' . $e->getMessage()
+            );
         }
     }
 }

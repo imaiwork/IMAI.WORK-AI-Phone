@@ -573,3 +573,12 @@ export const importCopywritingLibrary = (data: {
 }) => {
     return request.post({ url: "/aiPersona.copywritingLibrary/import", data }, { ignoreCancel: true });
 };
+
+// 文案库一键清理：清空当前人设下「当前类型」的全部文案（视频驱动按子类型，发布文案整库）
+export const cleanCopywritingLibrary = (data: {
+    persona_id: string | number;
+    library_type: number;
+    driver_type: number;
+}) => {
+    return request.post({ url: "/aiPersona.copywritingLibrary/clean", data });
+};

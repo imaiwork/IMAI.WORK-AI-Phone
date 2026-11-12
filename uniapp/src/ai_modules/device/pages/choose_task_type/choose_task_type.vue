@@ -93,6 +93,9 @@
 <script setup lang="ts">
 import config from "@/config";
 import { CreateTypeEnum } from "@/ai_modules/device/enums";
+import { useAppStore } from "@/stores/app";
+
+const appStore = useAppStore();
 
 const activeTab = ref(0);
 
@@ -165,7 +168,8 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["朋友圈"],
             key: CreateTypeEnum.CIRCLE,
-            hidden: true, // 暂时隐藏，恢复时删除本行
+            switchKey: "wechat_circle_publish",
+            hidden: false, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_circle/create_circle",
         },
     ],
@@ -179,7 +183,8 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["视频号"],
             key: CreateTypeEnum.CLUE_AUTO,
-            hidden: true,
+            switchKey: "sph_clue",
+            hidden: false,
             navUrl: "/ai_modules/sph/pages/create_task/create_task",
         },
         {
@@ -243,7 +248,8 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#FFF2E6",
             platforms: ["微信"],
             key: CreateTypeEnum.FRIEND_ADD,
-            hidden: true, // 暂时隐藏，恢复时删除本行
+            switchKey: "wechat_friend_add",
+            hidden: false, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_add_wechat/create_add_wechat",
         },
         {
@@ -254,7 +260,8 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["朋友圈"],
             key: CreateTypeEnum.CIRCLE_INTERACT,
-            hidden: true, // 暂时隐藏，恢复时删除本行
+            switchKey: "wechat_circle_interact",
+            hidden: false, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_circle_interact/create_circle_interact",
         },
         {
@@ -288,7 +295,8 @@ const menuMap: Record<number, any[]> = {
             lightColor: "#E6F9F6",
             platforms: ["微信"],
             key: CreateTypeEnum.WECHAT_MSG,
-            hidden: true, // 暂时隐藏，恢复时删除本行
+            switchKey: "wechat_private_take",
+            hidden: false, // 暂时隐藏，恢复时删除本行
             navUrl: "/ai_modules/device/pages/create_wechat_private/create_wechat_private",
         },
     ],
@@ -307,8 +315,15 @@ const menuMap: Record<number, any[]> = {
     ],
 };
 
-/** hidden 的条目只在代码里保留，不渲染入口 */
-const currentMenuList = computed(() => (menuMap[activeTab.value] ?? []).filter((item) => !item.hidden));
+/** hidden 的条目只在代码里保留，不渲染入口；被后台关闭的任务同样隐藏 */
+const currentMenuList = computed(() => {
+    const manualTaskSwitch = appStore.getManualTaskSwitch;
+    return (menuMap[activeTab.value] ?? []).filter((item) => {
+        if (item.hidden) return false;
+        if (item.switchKey && !manualTaskSwitch[item.switchKey]) return false;
+        return true;
+    });
+});
 
 const previewUrl = ref("");
 const showPreview = ref(false);

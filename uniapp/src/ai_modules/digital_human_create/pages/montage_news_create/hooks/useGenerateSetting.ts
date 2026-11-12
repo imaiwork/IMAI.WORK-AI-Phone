@@ -107,6 +107,7 @@ export function useGenerateSetting(formData: any) {
                 audio: formData.audio,
                 clip: formData.clip.map((item: any) => ({ clip_template_id: item })),
                 pic: formData.cover,
+                video_cover_source: formData.coverMode ?? 1,
             });
 
             // 静默保存人设，不阻塞主流程

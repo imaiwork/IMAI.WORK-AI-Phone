@@ -183,107 +183,113 @@
         </accordion-card>
 
         <!-- ── 识别到之后 ── -->
-        <!-- <accordion-card
-            title="自动添加好友"
-            sub="识别到联系方式后生成加好友任务，按下方节奏执行"
-            :value="summary.add.value"
-            :warn="summary.add.warn"
-            :open="isOpen(CardKey.ADD)"
-            @toggle="handleToggle(CardKey.ADD)"
-        >
-            <template #head>
-                <view class="flex-shrink-0" @click.stop>
-                    <u-switch v-model="autoAdd" size="42" active-color="#0065fb" />
-                </view>
-            </template>
+        <template v-if="friendAddEnabled">
+            <accordion-card
+                title="自动添加好友"
+                sub="识别到联系方式后生成加好友任务，按下方节奏执行"
+                :value="summary.add.value"
+                :warn="summary.add.warn"
+                :open="isOpen(CardKey.ADD)"
+                @toggle="handleToggle(CardKey.ADD)"
+            >
+                <template #head>
+                    <view class="flex-shrink-0" @click.stop>
+                        <u-switch v-model="autoAdd" size="42" active-color="#0065fb" />
+                    </view>
+                </template>
 
-            <view v-if="formData.add_type === 1" class="px-[28rpx] py-[24rpx]">
-                <text class="block mb-[12rpx] text-xs text-[#9CA3AF]">加微微信</text>
-                <data-select v-model="selectedWechatIds" multiple :localdata="wechatOptions" />
+                <view v-if="formData.add_type === 1" class="px-[28rpx] py-[24rpx]">
+                    <text class="block mb-[12rpx] text-xs text-[#9CA3AF]">加微微信</text>
+                    <data-select v-model="selectedWechatIds" multiple :localdata="wechatOptions" />
 
-                <text class="block mt-[28rpx] mb-[20rpx] text-xs text-[#9CA3AF]">加微规则</text>
-                <option-grid v-model="formData.add_rule" :options="addRuleOptions" :columns="2" />
+                    <text class="block mt-[28rpx] mb-[20rpx] text-xs text-[#9CA3AF]">加微规则</text>
+                    <option-grid
+                        v-model="formData.add_rule"
+                        :options="addRuleOptions"
+                        :columns="2"
+                    />
 
-                <view class="flex gap-[24rpx] mt-[28rpx]">
-                    <view class="flex-1 min-w-0">
-                        <text class="block mb-[12rpx] text-xs text-[#9CA3AF]">当前执行</text>
-                        <view
-                            class="flex items-center gap-[12rpx] bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] border border-solid border-[#E5E9F0]"
-                        >
-                            <u-input
-                                v-model="formData.add_number"
-                                type="number"
-                                class="flex-1"
-                                @blur="handleNumBlur('add_number')"
-                            />
-                            <text class="text-[24rpx] text-[#86909C] flex-shrink-0">次</text>
+                    <view class="flex gap-[24rpx] mt-[28rpx]">
+                        <view class="flex-1 min-w-0">
+                            <text class="block mb-[12rpx] text-xs text-[#9CA3AF]">当前执行</text>
+                            <view
+                                class="flex items-center gap-[12rpx] bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] border border-solid border-[#E5E9F0]"
+                            >
+                                <u-input
+                                    v-model="formData.add_number"
+                                    type="number"
+                                    class="flex-1"
+                                    @blur="handleNumBlur('add_number')"
+                                />
+                                <text class="text-[24rpx] text-[#86909C] flex-shrink-0">次</text>
+                            </view>
+                        </view>
+                        <view class="flex-1 min-w-0">
+                            <text class="block mb-[12rpx] text-xs text-[#9CA3AF]">每次间隔</text>
+                            <view
+                                class="flex items-center gap-[12rpx] bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] border border-solid border-[#E5E9F0]"
+                            >
+                                <u-input
+                                    v-model="formData.add_interval_time"
+                                    type="number"
+                                    class="flex-1"
+                                    @blur="handleNumBlur('add_interval_time')"
+                                />
+                                <text class="text-[24rpx] text-[#86909C] flex-shrink-0">分钟</text>
+                            </view>
                         </view>
                     </view>
-                    <view class="flex-1 min-w-0">
-                        <text class="block mb-[12rpx] text-xs text-[#9CA3AF]">每次间隔</text>
-                        <view
-                            class="flex items-center gap-[12rpx] bg-[#F7F9FC] rounded-[16rpx] px-[20rpx] h-[80rpx] border border-solid border-[#E5E9F0]"
-                        >
-                            <u-input
-                                v-model="formData.add_interval_time"
-                                type="number"
-                                class="flex-1"
-                                @blur="handleNumBlur('add_interval_time')"
-                            />
-                            <text class="text-[24rpx] text-[#86909C] flex-shrink-0">分钟</text>
-                        </view>
+
+                    <view
+                        v-if="!formData.wechat_id"
+                        class="mt-[24rpx] rounded-[16rpx] bg-[#FFF8E9] border border-solid border-[#FFE7BA] px-[22rpx] py-[20rpx]"
+                    >
+                        <text class="text-[22rpx] text-[#AD6800] leading-relaxed">
+                            还没选加微微信，任务会存下来但不会执行。
+                        </text>
                     </view>
                 </view>
-
-                <view
-                    v-if="!formData.wechat_id"
-                    class="mt-[24rpx] rounded-[16rpx] bg-[#FFF8E9] border border-solid border-[#FFE7BA] px-[22rpx] py-[20rpx]"
-                >
-                    <text class="text-[22rpx] text-[#AD6800] leading-relaxed">
-                        还没选加微微信，任务会存下来但不会执行。
+                <view v-else class="px-[28rpx] py-[24rpx]">
+                    <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                        已关闭。识别到的联系方式只存进客资库，不会自动去加。
                     </text>
                 </view>
-            </view>
-            <view v-else class="px-[28rpx] py-[24rpx]">
-                <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
-                    已关闭。识别到的联系方式只存进客资库，不会自动去加。
-                </text>
-            </view>
-        </accordion-card> -->
+            </accordion-card>
 
-        <!-- ── 好友验证语 ── -->
-        <!-- <accordion-card
-            title="加好友备注内容"
-            sub="好友验证语，随机取一条发"
-            :value="summary.remark.value"
-            :open="isOpen(CardKey.REMARK)"
-            @toggle="handleToggle(CardKey.REMARK)"
-        >
-            <template #head>
-                <view class="flex-shrink-0" @click.stop>
-                    <u-switch v-model="remarkOn" size="42" active-color="#0065fb" />
+            <!-- ── 好友验证语 ── -->
+            <accordion-card
+                title="加好友备注内容"
+                sub="好友验证语，随机取一条发"
+                :value="summary.remark.value"
+                :open="isOpen(CardKey.REMARK)"
+                @toggle="handleToggle(CardKey.REMARK)"
+            >
+                <template #head>
+                    <view class="flex-shrink-0" @click.stop>
+                        <u-switch v-model="remarkOn" size="42" active-color="#0065fb" />
+                    </view>
+                </template>
+
+                <view v-if="formData.add_remark_enable === 1" class="px-[28rpx] py-[24rpx]">
+                    <chip-list
+                        :list="formData.remarks"
+                        add-label="新增备注"
+                        empty-text="还没有验证语，点这里添加"
+                        @add="emit('add-remark')"
+                        @edit="emit('edit-remark', $event)"
+                        @remove="formData.remarks.splice($event, 1)"
+                    />
+                    <text class="block mt-[24rpx] text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                        带上来源（「抖音看到的」）通过率明显更高。
+                    </text>
                 </view>
-            </template>
-
-            <view v-if="formData.add_remark_enable === 1" class="px-[28rpx] py-[24rpx]">
-                <chip-list
-                    :list="formData.remarks"
-                    add-label="新增备注"
-                    empty-text="还没有验证语，点这里添加"
-                    @add="emit('add-remark')"
-                    @edit="emit('edit-remark', $event)"
-                    @remove="formData.remarks.splice($event, 1)"
-                />
-                <text class="block mt-[24rpx] text-[22rpx] text-[#9CA3AF] leading-relaxed">
-                    带上来源（「抖音看到的」）通过率明显更高。
-                </text>
-            </view>
-            <view v-else class="px-[28rpx] py-[24rpx]">
-                <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
-                    已关闭。发好友申请时不带验证语，通过率会低一些。
-                </text>
-            </view>
-        </accordion-card> -->
+                <view v-else class="px-[28rpx] py-[24rpx]">
+                    <text class="text-[22rpx] text-[#9CA3AF] leading-relaxed">
+                        已关闭。发好友申请时不带验证语，通过率会低一些。
+                    </text>
+                </view>
+            </accordion-card>
+        </template>
     </view>
 </template>
 
@@ -303,6 +309,7 @@ import {
     clampNumField
 } from '../hooks/types'
 import type { AccountSearchFormData, NumFieldKey } from '../hooks/types'
+import { useAppStore } from '@/stores/app'
 
 /** 六张卡的标识，只在这一屏用 */
 enum CardKey {
@@ -332,6 +339,10 @@ const emit = defineEmits<{
     (e: 'edit-miss-dm', index: number): void
     (e: 'edit-remark', index: number): void
 }>()
+
+/** 后台手动任务开关「抖音账号搜寻获客-自动加好友」：关闭时隐藏加好友设置 */
+const appStore = useAppStore()
+const friendAddEnabled = computed(() => appStore.getManualTaskSwitch.dy_search_friend_add)
 
 const formData = computed({
     get: () => props.modelValue,

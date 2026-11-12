@@ -100,4 +100,21 @@ class CopywritingLibraryController extends BaseApiController
             return $this->fail($e->getResponse()->getData()['msg'] ?? '');
         }
     }
+
+    /**
+     * 一键清理：软删除当前人设下当前类型的全部文案（视频驱动按子类型，发布文案整库）
+     */
+    public function clean()
+    {
+        try {
+            $params = (new CopywritingLibraryValidate())->post()->goCheck('clean');
+            $result = CopywritingLibraryLogic::clean($params);
+            if ($result) {
+                return $this->success('清理成功', CopywritingLibraryLogic::getReturnData());
+            }
+            return $this->fail(CopywritingLibraryLogic::getError());
+        } catch (HttpResponseException $e) {
+            return $this->fail($e->getResponse()->getData()['msg'] ?? '');
+        }
+    }
 }

@@ -343,7 +343,12 @@
 </template>
 
 <script setup lang="ts">
-import { getWorkDataAnalytics, getWorkDataPersonas, setWorkDataSyncSettings } from '@/api/work_data'
+import {
+    getWorkDataAnalytics,
+    getWorkDataBackfill,
+    getWorkDataPersonas,
+    setWorkDataSyncSettings
+} from '@/api/work_data'
 import { useLockFn } from '@/hooks/useLockFn'
 import {
     NA_PLAY_TEXT,
@@ -373,6 +378,8 @@ import ConfirmDialog from '@/components/confirm-dialog/confirm-dialog.vue'
 
 const DEFAULT_WINDOW = 30
 const NETWORK_ERROR_TEXT = '数据服务未连接'
+// 刷新时自动翻页回填，后端硬上限 5 页（约 100 条），整段只扣 1 次费用
+const MAX_BACKFILL_PAGES = 5
 
 const personas = ref<Persona[]>([])
 const personaLoading = ref(true)
@@ -469,7 +476,9 @@ const caliberLines = computed(() => {
     }
 
     if (refreshCostScore.value) {
-        lines.push(`每点一次「刷新」消耗 ${refreshCostText.value}，命中缓存时不扣费。`)
+        lines.push(
+            `「刷新」会自动翻页拉取更多${platform.workLabel}（最多 ${MAX_BACKFILL_PAGES} 页），每次消耗 ${refreshCostText.value}，不按页叠加。`
+        )
     }
 
     lines.push(
@@ -477,8 +486,10 @@ const caliberLines = computed(() => {
     )
 
     if (data?.truncated) {
+        // 按实际返回条数提示，回填后 items 可能远多于单页 pageSize
+        const listCount = data.items?.length || data.pageSize
         lines.push(
-            `${platform.workLabel}列表只取了最新 ${data.pageSize} 条，更早的${platform.workLabel}未包含在统计里。`
+            `${platform.workLabel}列表只取了最新 ${listCount} 条，更早的${platform.workLabel}未包含在统计里。`
         )
     }
     return lines
@@ -494,7 +505,7 @@ const refreshCostText = computed(() => {
 
 const refreshConfirmText = computed(
     () =>
-        `重新拉取${platformConfig.value.short}最新数据，本次将消耗 ${refreshCostText.value}。命中缓存时不扣费。`
+        `重新拉取${platformConfig.value.short}最新数据，本次消耗 ${refreshCostText.value}，最多翻 ${MAX_BACKFILL_PAGES} 页（约 100 条）；没有更多数据会提前结束。`
 )
 
 const loadAnalytics = async (refresh = false) => {
@@ -511,12 +522,20 @@ const loadAnalytics = async (refresh = false) => {
     loading.value = true
 
     try {
-        const data = await getWorkDataAnalytics({
-            persona_id: activePersona.value.id,
-            platform: activePlatform.value,
-            account: account.account,
-            refresh: refresh ? 1 : 0
-        })
+        // 刷新走回填：自动翻页拉更多作品，合并后一次返回，整段只扣 1 次费用
+        const data = refresh
+            ? await getWorkDataBackfill({
+                  persona_id: activePersona.value.id,
+                  platform: activePlatform.value,
+                  account: account.account,
+                  max_pages: MAX_BACKFILL_PAGES
+              })
+            : await getWorkDataAnalytics({
+                  persona_id: activePersona.value.id,
+                  platform: activePlatform.value,
+                  account: account.account,
+                  refresh: 0
+              })
         if (currentRequest !== requestId) return
         // 未绑定发布账号时后端只回 bound=false，按空状态处理
         const result = data as AnalyticsData

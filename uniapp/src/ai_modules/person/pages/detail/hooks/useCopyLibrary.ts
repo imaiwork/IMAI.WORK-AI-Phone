@@ -1,6 +1,7 @@
 import {
     addCopywritingLibrary,
     batchAddCopywritingLibrary,
+    cleanCopywritingLibrary,
     deleteCopywritingLibrary,
     getCopywritingLibraryList,
     importCopywritingLibrary,
@@ -37,6 +38,9 @@ export interface CopyItem {
     publish_title?: string;
     publish_content?: string;
     publish_topic?: string;
+    /** 绑定的公共音乐分组，0=未绑定 */
+    music_group_id?: number;
+    music_group_name?: string;
     source?: number;
     source_id?: number;
     source_version?: number;
@@ -61,6 +65,8 @@ export interface CopyFormData {
     publish_title: string;
     publish_content: string;
     publish_topic: string;
+    /** 背景音乐分组，0=不绑定（出片按人设配置或系统随机） */
+    music_group_id: number;
 }
 
 export const copyTabs = [
@@ -156,6 +162,14 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
         copyTab.value === CopyLibraryTypeEnum.PUBLISH ? CopyDriverTypeEnum.PUBLISH : copyDriveType.value,
     );
 
+    // 当前类型名称（清理提示里要写清楚清的是哪一档，避免用户以为是整个库）
+    const currentCopyTypeLabel = computed<string>(() => {
+        if (copyTab.value === CopyLibraryTypeEnum.PUBLISH) return "发布文案";
+        const label =
+            copyDriveTypes.find((item) => item.key === copyDriveType.value)?.label || "视频驱动文案";
+        return `视频驱动文案 · ${label}`;
+    });
+
     const handleCancelCopyBatch = (): void => {
         copyBatchMode.value = false;
         selectedCopyIds.value = [];
@@ -205,6 +219,47 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
         });
     };
 
+    /**
+     * 一键清理：清空当前类型下的全部文案。
+     * 弹窗写清「哪一档 + 多少条 + 不可恢复」，清理范围与列表筛选口径完全一致。
+     */
+    const handleCleanCopy = (): void => {
+        const count = copyList.value.length;
+        if (!count) {
+            uni.showToast({ title: "当前类型下没有文案", icon: "none", duration: 2000 });
+            return;
+        }
+        uni.showModal({
+            title: "一键清理",
+            content: `将清理「${currentCopyTypeLabel.value}」下的全部 ${count} 条文案，清理后不可恢复，确定清理吗？`,
+            confirmColor: "#F56C6C",
+            confirmText: "清理",
+            success: async ({ confirm }) => {
+                if (!confirm) return;
+                uni.showLoading({ title: "清理中...", mask: true });
+                try {
+                    const res: any = await cleanCopywritingLibrary({
+                        persona_id: personId.value,
+                        library_type: copyTab.value,
+                        driver_type: currentDriverType.value,
+                    });
+                    const deletedCount = Number(res?.deleted_count ?? 0);
+                    uni.showToast({
+                        title: deletedCount > 0 ? `已清理 ${deletedCount} 条文案` : "当前类型下没有文案",
+                        icon: "none",
+                        duration: 2000,
+                    });
+                    handleCancelCopyBatch();
+                    queryCopyList();
+                } catch (error: any) {
+                    uni.showToast({ title: error || "清理失败，请重试", icon: "none", duration: 3000 });
+                } finally {
+                    uni.hideLoading();
+                }
+            },
+        });
+    };
+
     const queryCopyList = async (): Promise<void> => {
         if (!personId.value) return;
         const requestId = ++copyRequestId;
@@ -247,6 +302,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
             publish_title: "",
             publish_content: "",
             publish_topic: "",
+            music_group_id: 0,
         };
         showCopyEdit.value = true;
     };
@@ -260,6 +316,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
             publish_title: item.publish_title ?? "",
             publish_content: item.publish_content ?? "",
             publish_topic: item.publish_topic ?? "",
+            music_group_id: Number(item.music_group_id) || 0,
         };
         showCopyEdit.value = true;
     };
@@ -275,6 +332,7 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
             publish_title: form.publish_title,
             publish_content: form.publish_content,
             publish_topic: form.publish_topic,
+            music_group_id: Number(form.music_group_id) || 0,
             sort: 0,
             status: 1,
         };
@@ -499,14 +557,25 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
                 return;
             }
             uni.showLoading({ title: "导入中...", mask: true });
-            await importCopywritingLibrary({
+            const importRes: any = await importCopywritingLibrary({
                 file: fileUrl,
                 persona_id: personId.value,
                 library_type: copyTab.value,
                 driver_type: driverType,
             });
             uni.hideLoading();
-            uni.showToast({ title: "导入成功", icon: "none", duration: 3000 });
+            // 背景音乐分组匹配不上时后端只给 warning，不阻断导入，这里一次性提示给用户
+            const warnings: string[] = Array.isArray(importRes?.warnings) ? importRes.warnings : [];
+            if (warnings.length) {
+                uni.showModal({
+                    title: "导入完成",
+                    content: warnings.slice(0, 3).join("\n"),
+                    showCancel: false,
+                    confirmText: "知道了",
+                });
+            } else {
+                uni.showToast({ title: "导入成功", icon: "none", duration: 3000 });
+            }
             // 视频驱动：导入后切到对应类型，方便查看结果
             if (copyTab.value === CopyLibraryTypeEnum.DRIVE) {
                 copyDriveType.value = driverType;
@@ -548,6 +617,8 @@ export const useCopyLibrary = (personId: Ref<string>, personaName: Ref<string>) 
         handleToggleSelectAllCopy,
         handleCancelCopyBatch,
         handleConfirmCopyBatchDelete,
+        handleCleanCopy,
+        currentCopyTypeLabel,
         showCopyImport,
         handleOpenImport,
         handleImportPick,

@@ -165,7 +165,7 @@
                         </div>
                     </section>
 
-                    <video-cover-upload v-model="formData.cover" />
+                    <video-cover-upload v-model="formData.cover" v-model:mode="formData.coverMode" />
 
                     <section class="space-y-3">
                         <div class="bg-slate-50 rounded-[20px] border border-br overflow-hidden">
@@ -450,6 +450,7 @@ import {
     SidebarTypeEnum,
     CreateVideoTypeEnum,
     MontageStylesType,
+    VideoCoverModeEnum,
 } from "@/pages/app/digital_human/_enums";
 import { montageUploadConfig } from "@/pages/app/digital_human/_config";
 import MaterialGroupPanel from "@/pages/app/digital_human/_components/material-group-panel.vue";
@@ -517,6 +518,7 @@ const formData = reactive<{
     };
     audio: CopywritingAudio[];
     cover: string;
+    coverMode: number;
 }>({
     name: dayjs().format("YYYYMMDDHHmm") + "素材混剪",
     materialGroups: [],
@@ -539,6 +541,7 @@ const formData = reactive<{
     },
     audio: [],
     cover: "",
+    coverMode: VideoCoverModeEnum.FIRST_FRAME,
 });
 
 const copywritingMode = ref<CopywritingTypeEnum>(CopywritingTypeEnum.TEXT);
@@ -751,6 +754,11 @@ const validateBeforeCreate = async (): Promise<boolean> => {
         return false;
     }
 
+    if (formData.coverMode === VideoCoverModeEnum.MANUAL_UPLOAD && !formData.cover) {
+        feedback.msgWarning("请上传视频封面");
+        return false;
+    }
+
     return true;
 };
 
@@ -788,6 +796,7 @@ const handleCreateVideo = async () => {
                 volume: formData.extra.volume.toFixed(1),
             },
             pic: formData.cover,
+            video_cover_source: formData.coverMode ?? VideoCoverModeEnum.FIRST_FRAME,
         };
         await createShanjianTask(params);
         handleCreateSuccess();

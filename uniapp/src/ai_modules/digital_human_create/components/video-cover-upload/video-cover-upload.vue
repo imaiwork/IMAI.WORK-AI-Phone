@@ -10,81 +10,107 @@
         </view>
 
         <view class="px-[28rpx] py-[24rpx]">
-            <view v-if="!modelValue" class="flex items-center gap-[24rpx]">
+            <view class="flex items-center gap-[16rpx] mb-[20rpx]">
                 <view
-                    class="w-[160rpx] h-[160rpx] rounded-[20rpx] border-[2rpx] border-dashed border-[#C0C4CC] bg-[#F7F9FC] flex flex-col items-center justify-center gap-[8rpx] active:opacity-70"
-                    @click="handleChooseImage">
-                    <view class="w-[56rpx] h-[56rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
-                        <u-icon name="plus" color="#0065fb" size="26" />
-                    </view>
-                    <text class="text-[22rpx] text-[#9CA3AF]">上传封面</text>
-                </view>
-
-                <view class="flex flex-col gap-[12rpx]">
-                    <view class="flex items-center gap-[8rpx]">
-                        <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#C0C4CC]" />
-                        <text class="text-[22rpx] text-[#9CA3AF]">建议尺寸比例 16:9 或 9:16</text>
-                    </view>
-                    <view class="flex items-center gap-[8rpx]">
-                        <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#C0C4CC]" />
-                        <text class="text-[22rpx] text-[#9CA3AF]">支持 jpg、jpeg、png、webp 格式</text>
-                    </view>
-                    <view class="flex items-center gap-[8rpx]">
-                        <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#C0C4CC]" />
-                        <text class="text-[22rpx] text-[#9CA3AF]">大小不超过 10MB</text>
-                    </view>
+                    v-for="opt in coverModeOptions"
+                    :key="opt.value"
+                    class="px-[24rpx] py-[12rpx] rounded-[12rpx] text-[24rpx] active:opacity-70"
+                    :class="
+                        mode === opt.value
+                            ? 'bg-[#EBF2FF] text-[#0065fb] font-semibold'
+                            : 'bg-[#F7F9FC] text-[#4B5563]'
+                    "
+                    @click="handleSelectMode(opt.value)">
+                    {{ opt.label }}
                 </view>
             </view>
 
-            <view v-else class="flex items-center gap-[24rpx]">
-                <view class="relative flex-shrink-0">
-                    <image
-                        :src="modelValue"
-                        class="w-[160rpx] h-[160rpx] rounded-[20rpx] bg-[#F0F2F5]"
-                        mode="aspectFill" />
+            <template v-if="mode === 3">
+                <view v-if="!modelValue" class="flex items-center gap-[24rpx]">
                     <view
-                        class="absolute inset-0 rounded-[20rpx] bg-[#000000]/40 flex items-center justify-center gap-[16rpx]">
-                        <view
-                            class="w-[48rpx] h-[48rpx] rounded-full bg-[#ffffff]/20 flex items-center justify-center"
-                            @click="handlePreview">
-                            <u-icon name="eye" color="#ffffff" size="22" />
+                        class="w-[160rpx] h-[160rpx] rounded-[20rpx] border-[2rpx] border-dashed border-[#C0C4CC] bg-[#F7F9FC] flex flex-col items-center justify-center gap-[8rpx] active:opacity-70"
+                        @click="handleChooseImage">
+                        <view class="w-[56rpx] h-[56rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center">
+                            <u-icon name="plus" color="#0065fb" size="26" />
                         </view>
-                        <view
-                            class="w-[48rpx] h-[48rpx] rounded-full bg-[#ffffff]/20 flex items-center justify-center"
-                            @click="handleDelete">
-                            <u-icon name="trash" color="#ffffff" size="22" />
+                        <text class="text-[22rpx] text-[#9CA3AF]">上传封面</text>
+                    </view>
+
+                    <view class="flex flex-col gap-[12rpx]">
+                        <view class="flex items-center gap-[8rpx]">
+                            <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#C0C4CC]" />
+                            <text class="text-[22rpx] text-[#9CA3AF]">建议尺寸比例 16:9 或 9:16</text>
+                        </view>
+                        <view class="flex items-center gap-[8rpx]">
+                            <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#C0C4CC]" />
+                            <text class="text-[22rpx] text-[#9CA3AF]">支持 jpg、jpeg、png 格式</text>
+                        </view>
+                        <view class="flex items-center gap-[8rpx]">
+                            <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#C0C4CC]" />
+                            <text class="text-[22rpx] text-[#9CA3AF]">大小不超过 10MB</text>
                         </view>
                     </view>
                 </view>
 
-                <view class="flex flex-col gap-[16rpx] flex-1 min-w-0">
-                    <view class="flex items-center gap-[8rpx]">
-                        <u-icon name="checkmark-circle-fill" color="#07C160" size="28" />
-                        <text class="text-[26rpx] font-semibold text-[#0D1117]">封面已上传</text>
+                <view v-else class="flex items-center gap-[24rpx]">
+                    <view class="relative flex-shrink-0">
+                        <image
+                            :src="modelValue"
+                            class="w-[160rpx] h-[160rpx] rounded-[20rpx] bg-[#F0F2F5]"
+                            mode="aspectFill" />
+                        <view
+                            class="absolute inset-0 rounded-[20rpx] bg-[#000000]/40 flex items-center justify-center gap-[16rpx]">
+                            <view
+                                class="w-[48rpx] h-[48rpx] rounded-full bg-[#ffffff]/20 flex items-center justify-center"
+                                @click="handlePreview">
+                                <u-icon name="eye" color="#ffffff" size="22" />
+                            </view>
+                            <view
+                                class="w-[48rpx] h-[48rpx] rounded-full bg-[#ffffff]/20 flex items-center justify-center"
+                                @click="handleDelete">
+                                <u-icon name="trash" color="#ffffff" size="22" />
+                            </view>
+                        </view>
                     </view>
-                    <text class="text-[22rpx] text-[#9CA3AF] truncate">{{ fileName }}</text>
-                    <view
-                        class="flex items-center justify-center gap-[8rpx] h-[60rpx] rounded-[14rpx] border border-solid border-[#E5E9F0] bg-white active:opacity-70"
-                        @click="handleChooseImage">
-                        <u-icon name="reload" color="#4B5563" size="18" />
-                        <text class="text-[24rpx] font-semibold text-[#4B5563]">重新上传</text>
+
+                    <view class="flex flex-col gap-[16rpx] flex-1 min-w-0">
+                        <view class="flex items-center gap-[8rpx]">
+                            <u-icon name="checkmark-circle-fill" color="#07C160" size="28" />
+                            <text class="text-[26rpx] font-semibold text-[#0D1117]">封面已上传</text>
+                        </view>
+                        <text class="text-[22rpx] text-[#9CA3AF] truncate">{{ fileName }}</text>
+                        <view
+                            class="flex items-center justify-center gap-[8rpx] h-[60rpx] rounded-[14rpx] border border-solid border-[#E5E9F0] bg-white active:opacity-70"
+                            @click="handleChooseImage">
+                            <u-icon name="reload" color="#4B5563" size="18" />
+                            <text class="text-[24rpx] font-semibold text-[#4B5563]">重新上传</text>
+                        </view>
                     </view>
                 </view>
+            </template>
+
+            <view v-else class="flex items-center gap-[8rpx]">
+                <view class="w-[6rpx] h-[6rpx] rounded-full bg-[#C0C4CC]" />
+                <text class="text-[22rpx] text-[#9CA3AF]">{{ modeTip }}</text>
             </view>
         </view>
     </view>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import useUpload from "@/hooks/useUpload";
 
 interface Props {
     modelValue?: string;
+    /** 封面方式:1=首帧 2=AI封面 3=手动上传 */
+    mode?: number;
     maxSize?: number;
 }
 
 interface Emits {
     (e: "update:modelValue", value: string): void;
+    (e: "update:mode", value: number): void;
     (e: "change", value: string): void;
     (e: "delete"): void;
     (e: "error", msg: string): void;
@@ -92,10 +118,23 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
     modelValue: "",
+    mode: 1,
     maxSize: 10,
 });
 
 const emit = defineEmits<Emits>();
+
+const coverModeOptions = [
+    { label: "首帧", value: 1 },
+    { label: "AI封面", value: 2 },
+    { label: "手动上传", value: 3 },
+];
+
+const modeTip = computed(() =>
+    props.mode === 2
+        ? "AI封面异步生成，不阻塞视频合成，失败自动回退首帧"
+        : "使用视频首帧作为封面",
+);
 
 const { uploadAndProcessFiles } = useUpload({
     isTranscode: true,
@@ -112,6 +151,17 @@ const { uploadAndProcessFiles } = useUpload({
 // ─── 状态 ────────────────────────────────────────────────────────
 
 const fileName = ref("");
+
+// ─── 切换封面方式 ────────────────────────────────────────────────
+
+const handleSelectMode = (value: number) => {
+    if (props.mode === value) return;
+    emit("update:mode", value);
+    if (value !== 3 && props.modelValue) {
+        fileName.value = "";
+        emit("update:modelValue", "");
+    }
+};
 
 // ─── 选择图片 ────────────────────────────────────────────────────
 

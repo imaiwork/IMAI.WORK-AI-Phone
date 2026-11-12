@@ -11,6 +11,7 @@ use app\common\model\pay\PayConfig;
 use app\common\service\{ConfigService, FileService};
 use app\common\service\chat\ChatModelsService;
 use app\common\service\DigitalHumanModelConfigService;
+use app\common\service\ManualTaskSwitchService;
 use app\common\service\UserDisplaySanitizer;
 use app\common\service\UserProfileConfigService;
 
@@ -109,6 +110,7 @@ class ConfigLogic
             'ai_model' =>  $chatModels,
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
             'demo_switch' =>  intval(ConfigService::get('rpa', 'demo_switch', 0)),
+            'manual_task_switch' => ManualTaskSwitchService::all(),
         ];
     }
 

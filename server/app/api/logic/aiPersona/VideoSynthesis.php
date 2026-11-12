@@ -22,6 +22,7 @@ use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
 use app\common\model\sv\SvDevice;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\aiPersona\MaterialUsageService;
 use app\common\service\MaterialReadinessService;
 use app\common\service\square\SquareAssetService;
 use think\facade\Cache;
@@ -531,28 +532,104 @@ class VideoSynthesis extends BasePersonaLogic
 
                 // 数字人口播混剪 + 纯AI/AI+素材库：复用统一的 AI 抓素材逻辑，素材库为空也能合成
                 $visualSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($synthesisConfig);
-                $selectedMaterials = $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
-                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
-                        CopywritingImitationLogic::selectMaterialsForLibraryAndSquare(
-                            $videos,
-                            $images,
-                            (int)$shanjianType,
-                            $deviceCode,
-                            $synthesisConfig
+                // 「指定素材分组」：该类型只从所选分组取自有素材，广场素材与 AI 抓取都不再参与
+                $materialGroup = CopywritingImitationLogic::applyTypeMaterialGroups(
+                    ['videos' => $videos, 'images' => $images],
+                    $synthesisConfig,
+                    (int)$shanjianType
+                );
+                $typeVideos = $materialGroup['grouped']['videos'];
+                $typeImages = $materialGroup['grouped']['images'];
+                if ($materialGroup['active'] && $typeVideos === [] && $typeImages === []) {
+                    Log::channel('wechatVideoSynthesis')->write('设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType
+                        . ' 指定素材分组下没有可用素材，分组：' . json_encode($materialGroup['group_ids']));
+                    $failed = CopywritingImitationLogic::createFailedSynthesisTask(
+                        $device,
+                        $persona,
+                        $shanjianType,
+                        CopywritingImitationLogic::MATERIAL_GROUP_EMPTY_REMARK,
+                        [
+                            'wechat_type' => 1,
+                            'exec_time' => $execTime,
+                            'config' => $synthesisConfig,
+                        ]
+                    );
+                    if ($failed) {
+                        $createdSettings[] = $failed;
+                    }
+                    continue;
+                }
+                $squareEnabled = !$materialGroup['active']
+                    && $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE;
+                $aiMaterialsEnabled = !$materialGroup['active']
+                    && ShanjianVideoSettingLogic::canUseAiMaterials((int)$shanjianType, $visualSource);
+                // 新闻体一镜到底：与云手机、有手机社媒链路共用同一套选片规则
+                // （CopywritingImitationLogic::resolveSingleShotNewsPick），只取 1 条视频、0 张图片，
+                // 成片按素材实际时长。
+                $singleShot = (int)$shanjianType === AiPersonaSynthesisConfig::GENERATION_TYPE_NEWS
+                    && AiPersonaSynthesisConfig::resolveTypeSingleShot($synthesisConfig, AiPersonaSynthesisConfig::GENERATION_TYPE_NEWS);
+                $singleShotDuration = 0;
+                if ($singleShot) {
+                    $singleShotVideos = $typeVideos;
+                    if ($squareEnabled) {
+                        $publicGrouped = SquareAssetService::publicGrouped(
+                            (int)$userId,
+                            (int)$personaId,
+                            SquareAssetService::normalizeGroupIds($synthesisConfig->square_group_ids ?? [])
+                        );
+                        $singleShotVideos = CopywritingImitationLogic::mergeSingleShotVideos($singleShotVideos, $publicGrouped['videos'] ?? []);
+                    }
+                    $singleShotPick = CopywritingImitationLogic::resolveSingleShotNewsPick(
+                        $singleShotVideos,
+                        $newsMixcutDuration,
+                        (int)$personaId
+                    );
+                    if ($singleShotPick['picked'] === []) {
+                        $remark = CopywritingImitationLogic::singleShotFailureRemark((int)$singleShotPick['available']);
+                        Log::channel('wechatVideoSynthesis')->write('设备号: ' . $deviceCode . ' 新闻体一镜到底无可合成视频' . json_encode([
+                            'persona_id' => (int)$personaId,
+                            'video_candidates' => $singleShotPick['total'],
+                            'valid_candidates' => $singleShotPick['available'],
+                            'used_candidates' => $singleShotPick['used'],
+                            'news_duration' => $newsMixcutDuration,
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                        $failed = CopywritingImitationLogic::createFailedSynthesisTask($device, $persona, $shanjianType, $remark, [
+                            'wechat_type' => 1,
+                            'exec_time' => $execTime,
+                            'config' => $synthesisConfig,
+                        ]);
+                        if ($failed) {
+                            $createdSettings[] = $failed;
+                        }
+                        continue;
+                    }
+                    $selectedMaterials = ShanjianVideoSettingLogic::formatMaterialsForSetting([$singleShotPick['picked']]);
+                    $singleShotDuration = (int)$singleShotPick['duration'];
+                    $extradata['videoDuration'] = $singleShotDuration;
+                } else {
+                    $selectedMaterials = $squareEnabled
+                        ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                            CopywritingImitationLogic::selectMaterialsForLibraryAndSquare(
+                                $typeVideos,
+                                $typeImages,
+                                (int)$shanjianType,
+                                $deviceCode,
+                                $synthesisConfig
+                            )
                         )
-                    )
-                    : (ShanjianVideoSettingLogic::canUseAiMaterials((int)$shanjianType, $visualSource)
-                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
-                        CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
-                            $videos,
-                            $images,
-                            (int)$shanjianType,
-                            $deviceCode,
-                            $synthesisConfig,
-                            (string)($copywritingResult['content']['0'] ?? '')
+                        : ($aiMaterialsEnabled
+                        ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                            CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
+                                $typeVideos,
+                                $typeImages,
+                                (int)$shanjianType,
+                                $deviceCode,
+                                $synthesisConfig,
+                                (string)($copywritingResult['content']['0'] ?? '')
+                            )
                         )
-                    )
-                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode));
+                        : self::selectAndValidateMaterials($typeVideos, $typeImages, $shanjianType, $deviceCode, (int)$persona->id));
+                }
 
                 if (empty($selectedMaterials)) {
                     $msg = '设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType . '，素材为空';
@@ -783,7 +860,7 @@ class VideoSynthesis extends BasePersonaLogic
         }
     }
 
-    private static function selectAndValidateMaterials(array $videos, array $images, int $shanjianType, string $deviceCode): array
+    private static function selectAndValidateMaterials(array $videos, array $images, int $shanjianType, string $deviceCode, int $personaId = 0): array
     {
         try {
             $videoCount = 0;
@@ -875,21 +952,13 @@ class VideoSynthesis extends BasePersonaLogic
                 }
             }
 
-            // 打乱素材顺序实现随机抽取
-            shuffle($videos);
-            shuffle($images);
-            $selectedVideos = [];
-            if ($videoCount > 0) {
-                $selectedVideos = array_slice($videos, 0, $videoCount);
-                // $msg = '设备号: ' . $deviceCode . '，原始需求视频数量: ' . $originalVideoCount . '，视频数量: ' . $videoCount;
-                // Log::channel('wechatVideoSynthesis')->write($msg);
-            }
-            $selectedImages = [];
-            if ($imageCount > 0) {
-                $selectedImages = array_slice($images, 0, $imageCount);
-                // $msg = '设备号: ' . $deviceCode . '，原始需求图片数量: ' . $originalImageCount . '，图片数量: ' . $imageCount;
-                // Log::channel('wechatVideoSynthesis')->write($msg);
-            }
+            // 按使用次数升序取用：用得少的先选，避免部分素材反复用、部分一次不用
+            $selectedVideos = $videoCount > 0
+                ? MaterialUsageService::pickLeastUsed($videos, $videoCount, $personaId)
+                : [];
+            $selectedImages = $imageCount > 0
+                ? MaterialUsageService::pickLeastUsed($images, $imageCount, $personaId)
+                : [];
             $mergedMaterials = [];
             if ($videoCount > 0 || $imageCount > 0) {
                 $mergedMaterials = array_merge($selectedVideos, $selectedImages);

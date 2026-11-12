@@ -353,7 +353,9 @@
                             :show-tooltip="false" />
                     </div>
 
-                    <div class="bg-slate-50 border border-br rounded-2xl px-5 mb-6" v-if="showAdvancedSetting">
+                    <video-cover-upload v-model="formData.cover" v-model:mode="formData.coverMode" />
+
+                    <div class="bg-slate-50 border border-br rounded-2xl px-5 mb-6 mt-6" v-if="showAdvancedSetting">
                         <advanced-setting v-model="formData.packaging" show-music />
                     </div>
                 </ElScrollbar>
@@ -417,6 +419,7 @@ import {
     DIGITAL_HUMAN_DRIVE_MODEL_VERSIONS,
     CHANJING_ORIGINAL_VOICE_ID,
     SPEECH_TEXT_LIMIT,
+    VideoCoverModeEnum,
 } from "@/pages/app/digital_human/_enums";
 import { useAppStore } from "@/stores/app";
 import GeneratePrompt from "@/pages/app/digital_human/_components/generate-prompt.vue";
@@ -426,6 +429,7 @@ import UploadForm from "./_components/upload-form.vue";
 import CreatePanel from "./_components/create-panel.vue";
 import AdvancedSetting from "@/pages/app/digital_human/_components/advanced-setting.vue";
 import { createAdvancedSetting } from "@/pages/app/digital_human/_config/advanced-setting";
+import VideoCoverUpload from "@/pages/app/digital_human/_components/video-cover-upload.vue";
 
 const router = useRouter();
 const appStore = useAppStore();
@@ -451,6 +455,8 @@ const formData = reactive<Record<string, any>>({
     audio_url: "",
     voice_type: 1,
     ai_clip_enabled: 1,
+    cover: "",
+    coverMode: VideoCoverModeEnum.FIRST_FRAME,
     extra: {
         video_count: 1,
         volume: 0.3,

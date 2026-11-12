@@ -119,6 +119,13 @@ export enum CreateTypeEnum {
     AUDIO = 2, // 音频
 }
 
+// 视频封面方式
+export enum VideoCoverModeEnum {
+    FIRST_FRAME = 1, // 首帧
+    AI_COVER = 2, // AI 封面
+    MANUAL_UPLOAD = 3, // 手动上传
+}
+
 // 音色类型
 export enum ToneTypeEnum {
     BUILTIN = 0, // 系统音色

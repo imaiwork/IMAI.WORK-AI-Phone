@@ -18,6 +18,7 @@ class CopywritingLibraryValidate extends BaseValidate
         'publish_title' => 'max:2000',
         'publish_content' => 'max:10000',
         'publish_topic' => 'max:1000',
+        'music_group_id' => 'number',
         'sort' => 'number',
         'status' => 'in:0,1',
         'items' => 'require|array',
@@ -50,7 +51,7 @@ class CopywritingLibraryValidate extends BaseValidate
 
     public function sceneAdd()
     {
-        return $this->only(['persona_id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'publish_title', 'publish_content', 'publish_topic', 'sort', 'status'])
+        return $this->only(['persona_id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'publish_title', 'publish_content', 'publish_topic', 'music_group_id', 'sort', 'status'])
             ->append('driver_type', 'require');
     }
 
@@ -62,7 +63,7 @@ class CopywritingLibraryValidate extends BaseValidate
 
     public function sceneUpdate()
     {
-        return $this->only(['id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'publish_title', 'publish_content', 'publish_topic', 'sort', 'status']);
+        return $this->only(['id', 'library_type', 'driver_type', 'title', 'content', 'topic', 'publish_title', 'publish_content', 'publish_topic', 'music_group_id', 'sort', 'status']);
     }
 
     public function sceneDetail()
@@ -78,6 +79,12 @@ class CopywritingLibraryValidate extends BaseValidate
     public function sceneImport()
     {
         return $this->only(['persona_id', 'library_type', 'driver_type', 'file'])
+            ->append('driver_type', 'require');
+    }
+
+    public function sceneClean()
+    {
+        return $this->only(['persona_id', 'library_type', 'driver_type'])
             ->append('driver_type', 'require');
     }
 }

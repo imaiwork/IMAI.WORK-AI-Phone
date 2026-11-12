@@ -15,6 +15,7 @@ use app\common\service\chat\ChatModelsService;
 use app\common\service\ConfigService;
 use app\common\service\draw\MediaModelsService;
 use app\common\service\FileService;
+use app\common\service\ManualTaskSwitchService;
 use app\common\service\transcoding\OssMediaProcessService;
 use app\common\service\UserDisplaySanitizer;
 use app\common\service\UserProfileConfigService;
@@ -256,6 +257,8 @@ class PcLogic extends BaseLogic
             'wechat_remarks' => ConfigService::get('add_remark', 'wechat', []),
             'comment_screening' => ConfigService::get('touch_clue', 'comment_screening', []),
             'touch_speech' => ConfigService::get('touch_clue',  'touch_speech',  []),
+            // 手动任务开关（与 /index/config 口径一致，未配置默认关闭）
+            'manual_task_switch' => ManualTaskSwitchService::all(),
         ];
     }
 

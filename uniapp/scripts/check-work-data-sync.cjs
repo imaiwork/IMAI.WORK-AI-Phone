@@ -15,6 +15,7 @@ const pending = () => {
 }
 const flush = () => new Promise(setImmediate)
 const calls = []
+const backfills = []
 let read = async () => ({ bound: true, hasData: false })
 let save = async (params) => ({ auto_sync_enabled: params.auto_sync_enabled })
 const api = {
@@ -23,6 +24,7 @@ const api = {
         { id: 2, name: '人设二', auto_sync_enabled: 0, accounts: {} }
     ], cost: { score: 50, unit: '算力/次' } }),
     getWorkDataAnalytics: async (params) => { calls.push(params); return read(params) },
+    getWorkDataBackfill: async (params) => { backfills.push(params); return read(params) },
     setWorkDataSyncSettings: (params) => save(params)
 }
 function evaluate(source, imports = {}) {
@@ -51,8 +53,11 @@ const page = evaluate(script + '\nexport { loadPersonas, loadAnalytics, handleSy
     page.handleRefresh()
     assert.equal(page.showRefreshConfirm.value, true)
     await page.runRefresh()
-    assert.equal(calls.at(-1).refresh, 1)
-    console.log('PASS 关闭状态仍能确认费用后手动刷新')
+    assert.equal(backfills.at(-1).max_pages, 5)
+    assert.equal(backfills.at(-1).platform, 'douyin')
+    assert.equal(backfills.at(-1).account, 'demo')
+    assert.equal(calls.at(-1).refresh, 0)
+    console.log('PASS 关闭状态仍能确认费用后手动刷新，刷新走回填且最多 5 页')
 
     const saving = pending()
     let saves = 0

@@ -336,7 +336,7 @@
 
                         <view
                             class="bg-white rounded-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
-                            <video-cover-upload v-model="formData.cover" />
+                            <video-cover-upload v-model="formData.cover" v-model:mode="formData.coverMode" />
                         </view>
 
                         <view
@@ -651,6 +651,7 @@ const formData = reactive<{
     audio: any[];
     clip: any[];
     cover: string;
+    coverMode: number;
 }>({
     copywriterList: [],
     materialList: [],
@@ -672,6 +673,7 @@ const formData = reactive<{
     audio: [],
     clip: [],
     cover: "",
+    coverMode: 1,
 });
 
 // ─── Refs ─────────────────────────────────────────────────────────

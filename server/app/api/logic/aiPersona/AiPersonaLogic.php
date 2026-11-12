@@ -30,6 +30,7 @@ use app\common\model\sv\SvAccount;
 use app\common\model\sv\SvDevice;
 use app\common\model\user\User;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\aiPersona\AgentConfigService;
 use app\common\service\aiPersona\AiPersonaTextService;
 use app\common\service\aiPersona\PersonaAgentProvisionService;
 use app\common\service\aiPersona\PersonaRunModeSwitchService;
@@ -579,14 +580,19 @@ class AiPersonaLogic extends ApiLogic
             return ['res' => false, 'msg' => '请生成人设报告', 'is_configured' => 0];
         }
         $personaAgentConfig = AiPersonaAgentConfig::where([['persona_id', '=', $personaId], ['user_id', '=', $userId]])->findOrEmpty();
-        if ($personaAgentConfig->isEmpty()) {
+        $missingAgents = AgentConfigService::getMissingAgentScenes(
+            $personaAgentConfig->getData(),
+            AiPersonaOptionService::getOptionsByPersona($persona)
+        );
+        if (!empty($missingAgents)) {
             $persona->is_configured = 0;
             $persona->save();
-            return ['res' => false, 'msg' => '请先配置智能体', 'is_configured' => 0];
-        } else if ((!$personaAgentConfig->hasAnyEffectivePlatformAgentConfig() && ($personaAgentConfig['comment_agent_id'] == 0 || $personaAgentConfig['dm_agent_id'] == 0)) || $personaAgentConfig['wechat_chat_agent_id'] == 0 || $personaAgentConfig['moments_agent_id'] == 0) {
-            $persona->is_configured = 0;
-            $persona->save();
-            return ['res' => false, 'msg' => '请先配置智能体', 'is_configured' => 0];
+            return [
+                'res' => false,
+                'msg' => '请配置' . implode('、', $missingAgents) . '智能体',
+                'is_configured' => 0,
+                'missing_agents' => $missingAgents,
+            ];
         }
         $material = Material::where([['persona_id', '=', $personaId], ['user_id', '=', $userId], ['publish_mode', '=', $persona['publish_mode']]])->findOrEmpty();
         if ($material->isEmpty()) {
@@ -1119,13 +1125,12 @@ class AiPersonaLogic extends ApiLogic
             }
 
             $personaAgentConfig               = AiPersonaAgentConfig::where([['persona_id', '=', $personaId], ['user_id', '=', $userId]])->findOrEmpty();
-            if ($personaAgentConfig->isEmpty()) {
-                $res['persona_agent_config'] = 0;
-            } else if ((!$personaAgentConfig->hasAnyEffectivePlatformAgentConfig() && ($personaAgentConfig['comment_agent_id'] == 0 || $personaAgentConfig['dm_agent_id'] == 0)) || $personaAgentConfig['wechat_chat_agent_id'] == 0 || $personaAgentConfig['moments_agent_id'] == 0) {
-                $res['persona_agent_config'] = 0;
-            } else {
-                $res['persona_agent_config'] = 1;
-            }
+            $missingAgents = AgentConfigService::getMissingAgentScenes(
+                $personaAgentConfig->getData(),
+                AiPersonaOptionService::getOptionsByPersona($persona)
+            );
+            $res['persona_agent_config'] = empty($missingAgents) ? 1 : 0;
+            $res['config_missing_agents'] = $missingAgents;
             $material                         = Material::where([['persona_id', '=', $personaId], ['user_id', '=', $userId], ['publish_mode', '=', $persona['publish_mode']]])->findOrEmpty();
             $res['material_config']           = $material->isEmpty() ? 0 : 1;
             $trafficConfig                    = AiPersonaTrafficConfig::where([['persona_id', '=', $personaId], ['user_id', '=', $userId]])->findOrEmpty();

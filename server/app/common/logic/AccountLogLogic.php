@@ -152,8 +152,11 @@ class AccountLogLogic extends BaseLogic
         //运行失败。token恢复
         if (!$success) {
             $billItem = (string)($extra['扣费项目'] ?? '');
+            // 差额返还是任务成功后的多退少补，与「请求失败」不是一回事，不能落到兜底文案
             if ($billItem !== '' && str_contains($billItem, '结余预估退费')) {
                 $remark = str_replace('减少算力', '超额恢复算力', $remark);
+            } elseif (str_contains($billItem . (string)($extra['退费项目'] ?? ''), '差额返还')) {
+                $remark = str_replace('减少算力', '差额返还恢复算力', $remark);
             } else {
                 $remark = str_replace('减少算力', '请求失败恢复算力', $remark);
             }

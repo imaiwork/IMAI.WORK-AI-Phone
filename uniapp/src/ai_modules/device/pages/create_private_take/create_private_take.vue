@@ -32,7 +32,7 @@
                                             ? 'bg-white shadow-[0_2rpx_8rpx_rgba(0,101,251,0.12)]'
                                             : ''
                                     "
-                                    @click="switchTakeoverType(tab.value)">
+                                    @click="handleSwitchTakeoverType(tab.value)">
                                     <text
                                         class="font-bold"
                                         :class="takeoverType === tab.value ? 'text-primary' : 'text-[#9CA3AF]'">
@@ -440,12 +440,9 @@
                             :show-accounts="true"
                             :multiple="0"
                             :current-frequency="currentFrequency"
-                            :platform-types="[
-                                AppTypeEnum.XHS,
-                                AppTypeEnum.DOUYIN,
-                                AppTypeEnum.KUAISHOU,
-                                AppTypeEnum.SPH,
-                            ]"
+                            :platform-types="platformTypes"
+                            type-one-label="视频号"
+                            :exclude-wechat="platformTypes.includes(AppTypeEnum.SPH)"
                             @change-frequency="currentFrequency = $event" />
 
                         <view
@@ -524,6 +521,7 @@
 import { AppTypeEnum } from "@/enums/appEnums";
 import { ListenerTypeEnum } from "@/ai_modules/device/enums";
 import { useEventBusManager } from "@/hooks/useEventBusManager";
+import { useAppStore } from "@/stores/app";
 import Steps from "@/ai_modules/device/components/steps/steps.vue";
 import BaseSetting from "@/ai_modules/device/components/base-setting/base-setting.vue";
 import KeywordsEdit from "@/ai_modules/device/components/keywords-edit/keywords-edit.vue";
@@ -539,12 +537,16 @@ import {
     StrategyTypeEnum,
     TakeoverTypeEnum,
     createDefaultFormData,
+    type TakeoverType,
 } from "./hooks/types";
 import { useTakeoverStep } from "./hooks/useTakeoverStep";
 import { useStep } from "./hooks/useStep";
 import { useCreateTask } from "./hooks/useCreateTask";
 
 // ── Tab 数据（模板用 v-for，消除重复 view）────────────────────────
+
+const appStore = useAppStore();
+// 视频号平台类型在 useTakeoverStep 之后定义（需依赖 takeoverType）
 
 // ── 表单数据 ──────────────────────────────────────────────────────
 const formData = reactive(createDefaultFormData());
@@ -585,6 +587,23 @@ const {
     toggleCommentScripts,
     SCRIPT_COLLAPSE_THRESHOLD,
 } = useTakeoverStep(formData);
+
+// 视频号仅在「回复评论」类型下可选，且需后台开关开启
+const platformTypes = computed(() => {
+    const types = [AppTypeEnum.XHS, AppTypeEnum.DOUYIN, AppTypeEnum.KUAISHOU];
+    if (takeoverType.value === TakeoverTypeEnum.COMMENT && appStore.getManualTaskSwitch.sph_private_take) {
+        types.push(AppTypeEnum.SPH);
+    }
+    return types;
+});
+
+// 切到「回复私信」时移除已选的视频号账号
+const handleSwitchTakeoverType = (type: TakeoverType) => {
+    switchTakeoverType(type);
+    if (type !== TakeoverTypeEnum.COMMENT) {
+        formData.accounts = formData.accounts.filter((item) => Number(item.type) !== AppTypeEnum.SPH);
+    }
+};
 
 // ── 步骤导航 ──────────────────────────────────────────────────────
 const { currentStep, canNext, handleStep } = useStep({

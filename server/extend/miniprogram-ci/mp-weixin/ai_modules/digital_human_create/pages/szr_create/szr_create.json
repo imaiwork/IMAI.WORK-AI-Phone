@@ -14,6 +14,7 @@
     "recorder-control": "../../components/recorder-control/recorder-control",
     "choose-audio-type": "../../components/choose-audio-type/choose-audio-type",
     "create-success-pop": "../../components/create-success-pop/create-success-pop",
-    "advanced-setting": "../../components/advanced-setting/advanced-setting"
+    "advanced-setting": "../../components/advanced-setting/advanced-setting",
+    "video-cover-upload": "../../components/video-cover-upload/video-cover-upload"
   }
 }

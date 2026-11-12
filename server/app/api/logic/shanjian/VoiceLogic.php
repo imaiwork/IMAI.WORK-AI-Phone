@@ -33,7 +33,9 @@ class VoiceLogic extends ApiLogic
             Log::channel('shanjian')->write('闪剪音色合成参数' . json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
             if((int)$response['code'] !== 10000)
             {
-                self::setError($response['msg'] ?? '');
+                // 中台返回的是 message 字段，取不到再回退 msg，避免空文案被 BaseLogic 兜底成“系统错误”
+                $msg = trim((string)($response['message'] ?? $response['msg'] ?? ''));
+                self::setError($msg !== '' ? $msg : '声音克隆失败，请稍后重试');
                 return false;
             }
             $data = array(

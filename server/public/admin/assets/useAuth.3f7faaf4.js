@@ -1,1 +1,0 @@
-import{a as t}from"./index.5cdb26a2.js";function m(){const e=t().perms;return{hasAuth:s=>{const o="*";if(Array.isArray(s)){if(s.length>0)return e.some(r=>o==r||s.includes(r))}else throw new Error("auth must be array")}}}export{m as u};

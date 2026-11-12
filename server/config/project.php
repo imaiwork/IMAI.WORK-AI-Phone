@@ -1,8 +1,8 @@
 <?php
 return [
     // 系统版本号
-    'version'                  => 'v2.13.6',
-    'version_number'           => '21306',
+    'version'                  => 'v2.13.7',
+    'version_number'           => '21307',
     // 官网
     'website'               => [
         'name'        => env('project.web_name', ''), // 网站名称

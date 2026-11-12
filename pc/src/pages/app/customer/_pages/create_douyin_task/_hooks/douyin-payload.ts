@@ -33,6 +33,7 @@ export interface DouyinFormData {
     add_rule: string;
     add_number: number;
     add_interval_time: number;
+    add_remark_enable: 0 | 1;
     remarks: string[];
     task_exec_type: number;
     minutes: number;
@@ -98,9 +99,8 @@ export function buildDouyinPayload(
         add_rule: formData.add_rule,
         add_number: formData.add_number,
         add_interval_time: formData.add_interval_time,
-        // 抖音契约没有单一内容字段，有备注就按随机库提交
-        add_remark_enable: formData.add_type === "1" && formData.remarks.length > 0 ? 1 : 0,
-        remarks: formData.add_type === "1" && formData.remarks.length > 0 ? formData.remarks : [],
+        add_remark_enable: formData.add_type === "1" ? formData.add_remark_enable : 0,
+        remarks: formData.add_type === "1" && formData.add_remark_enable === 1 && formData.remarks.length > 0 ? formData.remarks : [],
         task_exec_type: formData.task_exec_type,
         minutes: formData.minutes,
         task_ids: formData.task_ids,
@@ -176,6 +176,7 @@ export function createDefaultDouyinForm(): DouyinFormData {
         add_rule: "all",
         add_number: 15,
         add_interval_time: 10,
+        add_remark_enable: 1,
         remarks: [...DEFAULT_REMARK_LIST],
         task_exec_type: 1,
         minutes: 15,

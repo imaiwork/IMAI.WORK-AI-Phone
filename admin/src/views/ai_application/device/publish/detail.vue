@@ -156,11 +156,10 @@ const queryParams = reactive({
     end_time: "",
 });
 const statusMap: any = {
-    0: "等待中",
-    1: "执行中",
-    2: "执行完成",
-    3: "执行失败",
-    4: "中断",
+    0: "未发布",
+    1: "已发布",
+    2: "发布失败",
+    3: "发布中",
 };
 
 const { pager, getLists, resetPage, resetParams } = usePaging({

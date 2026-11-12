@@ -8,6 +8,7 @@ use think\exception\HttpResponseException;
 use app\api\logic\device\WechatLogic;
 use app\api\lists\device\WechatLists;
 use app\api\validate\device\WechatValidate;
+use app\common\service\ManualTaskSwitchService;
 
 /**
  * WechatController
@@ -30,6 +31,9 @@ class WechatController extends BaseApiController
 
     public function add()
     {
+        if (!ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::WECHAT_PRIVATE_TAKE)) {
+            return $this->fail(ManualTaskSwitchService::disabledMessage());
+        }
         try {
             $params = (new WechatValidate())->post()->goCheck('add');
             $result = WechatLogic::add($params);

@@ -15,6 +15,7 @@ use app\common\model\sv\SvDySearchTask;
 use app\common\model\sv\SvDySearchTaskDevice;
 use app\common\service\aiPersona\AiPersonaOptionService;
 use app\common\service\auto\AutoTaskSceneConfigService;
+use app\common\service\ManualTaskSwitchService;
 use app\common\service\sv\DySearchAccountNormalizer;
 use app\common\service\sv\DySearchFilterHistoryService;
 use app\common\service\sv\SvDeviceTaskExistenceService;
@@ -117,7 +118,10 @@ class DySearchTaskLogic extends ApiLogic
                 return $item !== '';
             }));
 
-            $addType = (int)($params['add_type'] ?? 0);
+            // 后台手动任务开关「抖音账号搜寻获客-自动加好友」关闭时，忽略前端提交的加好友配置
+            $addType = ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::DY_SEARCH_FRIEND_ADD)
+                ? (int)($params['add_type'] ?? 0)
+                : 0;
             if ($addType === 1 && $wechatId === '') {
                 throw new \Exception('请配置添加微信的客服微信');
             }
@@ -866,7 +870,7 @@ class DySearchTaskLogic extends ApiLogic
                     'day_cap'            => 50,
                     'scan_config'        => $scanConfig,
                     'exclude_default_id' => 1,
-                    'add_type'           => 1,
+                    'add_type'           => ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::DY_SEARCH_FRIEND_ADD) ? 1 : 0,
                     'wechat_id'          => '',
                     'add_rule'           => 'all',
                     'add_number'         => 15,

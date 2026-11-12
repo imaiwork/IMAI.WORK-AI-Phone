@@ -18,8 +18,7 @@ class PublishLists extends BaseAdminDataLists implements ListsSearchInterface
     {
         return [
             '=' => ['ps.status', 'ps.media_type', 'ps.account_type'],
-            '%like%' => ['ps.name'],
-            '%like%' => ['a.account'],
+            '%like%' => ['ps.name', 'a.account', 'u.nickname'],
         ];
     }
 

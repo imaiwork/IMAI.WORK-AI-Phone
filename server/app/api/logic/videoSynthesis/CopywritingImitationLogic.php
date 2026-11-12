@@ -2,6 +2,7 @@
 
 namespace app\api\logic\videoSynthesis;
 
+use app\api\lists\aiPersona\MaterialUseLogLists;
 use app\api\logic\aiPersona\BasePersonaLogic;
 use app\api\logic\auto\AutoDeviceSettingLogic;
 use app\api\logic\service\TokenLogService;
@@ -28,6 +29,8 @@ use app\common\model\sv\SvDeviceViralRecord;
 use app\common\model\sv\SvMediaMaterial;
 use app\common\model\user\User;
 use app\common\model\user\UserTokensLog;
+use app\common\service\aiPersona\LeastUsedPicker;
+use app\common\service\aiPersona\MaterialUsageService;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
 use app\common\service\AiMaterialRelevanceService;
 use app\common\service\FileService;
@@ -68,6 +71,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
     public const AI_MATERIAL_FETCH_BUDGET_MIN = 60;
     public const AI_MATERIAL_FETCH_BUDGET_MAX = 90;
     public const AI_MATERIAL_LARGE_GAP_VIDEO = 6; //视频缺口达到该值按大缺口给 90 秒
+
+    /** 「指定素材分组」下没有可用素材：云手机抛异常、有手机链路落失败任务，措辞统一 */
+    public const MATERIAL_GROUP_EMPTY_REMARK = '所选素材分组下没有可用素材，请补充素材或关闭指定素材分组';
 
     /**
      * 测试钩子：仅 tests/ 注入，生产勿用。
@@ -1362,7 +1368,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
     /**
      * 创建任务逻辑
      */
-    protected static function createImitationVideoTask($device, $persona, $config, $groupedData, $rewrittenText, $title, $taskType, $source, int $isDowngrade = 0, $materialKeywords = null, $execTime = '', string $publishTopic = '', array $pairedPublish = [])
+    protected static function createImitationVideoTask($device, $persona, $config, $groupedData, $rewrittenText, $title, $taskType, $source, int $isDowngrade = 0, $materialKeywords = null, $execTime = '', string $publishTopic = '', array $pairedPublish = [], int $copywritingMusicGroupId = 0)
     {
         // 注:转码就绪/分辨率门禁已下沉到 ShanjianVideoTaskLogic::compositeVideoCron 下发闪剪前统一把关。
         // 这里只负责建 task(status=0,创作记录显示"生成中"),转码完成后由 cron 自动下发。
@@ -1384,6 +1390,19 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $squareGrouped = $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
             ? SquareAssetService::publicGrouped((int)$userId, (int)($persona->id ?? 0), $squareGroupIds)
             : ['videos' => [], 'images' => []];
+
+        // 「指定素材分组」：该类型只从所选分组取素材，广场素材与 AI 抓取素材都不再参与，
+        // 否则「只用指定分组」的承诺会被其它来源悄悄稀释。分组 ID 由配置保存入口校验归属。
+        $materialGroupIds = AiPersonaSynthesisConfig::resolveTypeMaterialGroupIds($config, (int)$taskType);
+        if ($materialGroupIds !== []) {
+            $groupedData = self::filterGroupedMaterialsByMaterialGroups($groupedData, $materialGroupIds);
+            $squareGrouped = ['videos' => [], 'images' => []];
+            $willGrabByAi = false;
+            if (empty($groupedData['videos']) && empty($groupedData['images'])) {
+                throw new \Exception(self::MATERIAL_GROUP_EMPTY_REMARK);
+            }
+        }
+
         if ($useMode === ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
             && !$willGrabByAi
             && empty($groupedData['videos'])
@@ -1394,7 +1413,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
         }
 
         // 新闻体一镜到底：只取 1 条视频，避免自动新闻体混剪不断切换素材。
-        // 只作用于人设自动合成链路（本方法），朋友圈/设备本地合成仍走各自原有规则。
+        // 人设自动合成的三条链路都生效：云手机走本方法，有手机模式的社媒
+        // （device\DeviceLogic::createVideoSynthesisTasks）与朋友圈（aiPersona\VideoSynthesis）
+        // 共用同一套 resolveSingleShotNewsPick()。设备本地合成等其它链路仍走各自原有规则。
         $singleShot = (int)$taskType === AiPersonaSynthesisConfig::GENERATION_TYPE_NEWS
             && AiPersonaSynthesisConfig::resolveTypeSingleShot($config, AiPersonaSynthesisConfig::GENERATION_TYPE_NEWS);
         $singleShotDuration = 0;
@@ -1413,19 +1434,25 @@ class CopywritingImitationLogic extends BasePersonaLogic
                 );
             }
             $newsDuration = self::getNewsMixcutDuration($config);
-            $picked = self::pickSingleShotVideo($singleShotVideos, $newsDuration);
+            // 一镜到底下每条视频素材只用一次：同一人设已被自动任务用过（含生成中）的视频不再取用，
+            // 避免连续多天/多条任务反复合成同一条素材被平台判重复内容。
+            // 混剪不受影响——素材可复用，选材按使用次数升序轮转，保证各素材使用次数接近。
+            $singleShotPick = self::resolveSingleShotNewsPick($singleShotVideos, $newsDuration, (int)($persona->id ?? 0));
+            $picked = $singleShotPick['picked'];
             if ($picked === []) {
                 Log::channel('ipVideoSynthesis')->write('新闻体一镜到底无可合成视频' . json_encode([
                     'device_code' => $deviceCode,
                     'persona_id' => (int)($persona->id ?? 0),
-                    'video_candidates' => count($singleShotVideos),
+                    'video_candidates' => $singleShotPick['total'],
+                    'valid_candidates' => $singleShotPick['available'],
+                    'used_candidates' => $singleShotPick['used'],
                     'news_duration' => $newsDuration,
                 ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
                 return self::createFailedSynthesisTask(
                     $device,
                     $persona,
                     (int)$taskType,
-                    '新闻体已开启一镜到底，但人设下没有可用视频素材（需 1 条 59 秒以内的视频），请补充视频或关闭一镜到底',
+                    self::singleShotFailureRemark($singleShotPick['available']),
                     [
                         'config' => $config,
                         'copywriting_source' => (int)$source,
@@ -1436,11 +1463,11 @@ class CopywritingImitationLogic extends BasePersonaLogic
             }
             $selectedMaterials = [$picked];
             // 素材比设定时长短就出短成片：成片与终态结算都按素材实际时长，避免多扣
-            $singleShotDuration = min($newsDuration, max(1, (int)($picked['duration'] ?? $newsDuration)));
+            $singleShotDuration = $singleShotPick['duration'];
             if (isset($picked['id'])) {
                 Cache::store('material_redis')->inc('material_' . $picked['id'] . '_device_' . $deviceCode);
             }
-        } elseif ($visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE) {
+        } elseif ($visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE && $materialGroupIds === []) {
             $selectedMaterials = self::selectMaterialsForLibraryAndSquare(
                 $groupedData['videos'] ?? [],
                 $groupedData['images'] ?? [],
@@ -1451,7 +1478,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
         } elseif ($willGrabByAi) {
             $selectedMaterials = self::selectMaterialsForTaskTypeAndVisualMaterialSource($groupedData['videos'], $groupedData['images'], $taskType, $deviceCode, $config, $keywordsForMaterial);
         } else {
-            $selectedMaterials = self::selectMaterialsForTaskType($groupedData['videos'], $groupedData['images'], $taskType, $deviceCode);
+            $selectedMaterials = self::selectMaterialsForTaskType($groupedData['videos'], $groupedData['images'], $taskType, $deviceCode, (int)$persona->id);
         }
 
         // 闪剪限制：素材总时长不能超过5分钟。图片按2s、视频按实际时长累计裁剪。
@@ -1499,7 +1526,8 @@ class CopywritingImitationLogic extends BasePersonaLogic
                     break;
             }
             // 背景音乐按生成类型取：手机模式与无手机模式共用这条链路
-            $taskMusic = self::resolveMusicForTask($config, (int)$persona->id, (int)$taskType);
+            // 文案行绑定了音乐分组时，只在人设该类型没选分组的情况下生效（人设配置优先）
+            $taskMusic = self::resolveMusicForTask($config, (int)$persona->id, (int)$taskType, $copywritingMusicGroupId);
             $extradata['volume'] = AiPersonaSynthesisConfig::normalizeMusicVolume($taskMusic['volume']);
             $extradata['speed_ratio'] = AiPersonaSynthesisConfig::resolveTypeSpeechRate($config, (int)$taskType);
             $extradata['material_use_mode'] = $useMode;
@@ -1933,13 +1961,18 @@ class CopywritingImitationLogic extends BasePersonaLogic
         if (empty($generationTypes)) {
             $taskType = 3;
         } else {
-            $lastType = ShanjianVideoTask::where('device_code', $deviceCode)->where('persona_id', $personaId)->order('id', 'desc')->value('shanjian_type');
-            $currentIndex = array_search($lastType, $generationTypes);
-            if ($currentIndex === false) {
-                $taskType = intval($generationTypes[0]);
-            } else {
-                $taskType = intval($generationTypes[($currentIndex + 1) % count($generationTypes)]);
-            }
+            $rotationTypes = array_values(array_map('intval', $generationTypes));
+            // 轮转锚点必须与轮转列表同口径：仿写配置的列表已排除新闻体(4)，
+            // 若锚点仍按全量任务取上一条类型，命中新闻体时 array_search 查不到，
+            // 轮转会被打回列表首个类型，数字人口播(1)永远轮不到。
+            $lastType = ShanjianVideoTask::where('device_code', $deviceCode)
+                ->where('persona_id', $personaId)
+                ->where('auto_type', 1)
+                ->where('wechat_type', 0)
+                ->whereIn('shanjian_type', $rotationTypes)
+                ->order('id', 'desc')
+                ->value('shanjian_type');
+            $taskType = self::resolveNextRotationType($rotationTypes, $lastType);
         }
 
         $resolvedTaskType = self::resolveTaskTypeByVoice($taskType, $personaId, (int)$config->user_id);
@@ -1948,6 +1981,28 @@ class CopywritingImitationLogic extends BasePersonaLogic
         }
 
         return $resolvedTaskType;
+    }
+
+    /**
+     * 按轮转列表计算下一个生成类型。
+     * 锚点类型不在列表内（含无历史任务）时回到列表首个类型。
+     *
+     * @param array<int, int|string> $rotationTypes
+     * @param int|string|null $lastType
+     */
+    protected static function resolveNextRotationType(array $rotationTypes, $lastType): int
+    {
+        $rotationTypes = array_values(array_map('intval', $rotationTypes));
+        if (empty($rotationTypes)) {
+            return 3;
+        }
+
+        $currentIndex = $lastType === null ? false : array_search((int)$lastType, $rotationTypes, true);
+        if ($currentIndex === false) {
+            return $rotationTypes[0];
+        }
+
+        return $rotationTypes[($currentIndex + 1) % count($rotationTypes)];
     }
 
     protected static function hasOnlyNewsMixcutGenerationTypes($config): bool
@@ -2205,15 +2260,33 @@ class CopywritingImitationLogic extends BasePersonaLogic
      * 按生成类型取背景音乐与音量。
      * 两种运行模式共用：手机模式与无手机模式都按该类型的来源/分组/指定曲目/音量出片。
      *
+     * @param int $copywritingMusicGroupId 文案行绑定的公共音乐分组，0=未绑定
      * @return array{url:string, volume:float}
      */
-    public static function resolveMusicForTask($config, int $personaId, int $taskType): array
+    public static function resolveMusicForTask($config, int $personaId, int $taskType, int $copywritingMusicGroupId = 0): array
     {
         $music = AiPersonaSynthesisConfig::resolveTypeMusic($config, (int)$taskType);
+        $music['group_id'] = self::resolveEffectiveMusicGroupId($music, $copywritingMusicGroupId);
         return [
             'url' => self::resolveMusicUrlByTypeMusic($music, $personaId),
             'volume' => (float)($music['volume'] ?? AiPersonaSynthesisConfig::MUSIC_VOLUME_DEFAULT),
         ];
+    }
+
+    /**
+     * 生效的音乐分组：人设类型配置选过分组时以人设为准，没选才用文案行绑定的分组。
+     * 背景音乐来源不是系统音乐库（人设音乐库 / 不使用）时，文案绑定分组不生效。
+     */
+    public static function resolveEffectiveMusicGroupId(array $music, int $copywritingGroupId = 0): int
+    {
+        $source = AiPersonaSynthesisConfig::normalizeMusicSource(
+            $music['source'] ?? AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM
+        );
+        $group = max(0, (int)($music['group_id'] ?? 0));
+        if ($source !== AiPersonaSynthesisConfig::MUSIC_SOURCE_SYSTEM) {
+            return $group;
+        }
+        return $group > 0 ? $group : max(0, $copywritingGroupId);
     }
 
     /**
@@ -2259,6 +2332,29 @@ class CopywritingImitationLogic extends BasePersonaLogic
     }
 
     /**
+     * 「指定素材分组」：只保留属于所选分组的自有素材。
+     * 广场素材没有本站素材分组概念，开启后一并剔除，避免绕过「只用指定分组」的约束。
+     *
+     * @param array<int, int> $groupIds
+     */
+    protected static function filterGroupedMaterialsByMaterialGroups(array $grouped, array $groupIds): array
+    {
+        $allowed = array_fill_keys(array_map('intval', $groupIds), true);
+        foreach (['videos', 'images'] as $key) {
+            $grouped[$key] = array_values(array_filter(
+                $grouped[$key] ?? [],
+                static function ($item) use ($allowed) {
+                    if (!is_array($item) || ($item['source'] ?? '') === 'square') {
+                        return false;
+                    }
+                    return isset($allowed[(int)($item['group_id'] ?? 0)]);
+                }
+            ));
+        }
+        return $grouped;
+    }
+
+    /**
      * 是否必须从素材库取素材（shanjian_type=3/4 或 visual_material_source=2/3）
      */
     protected static function requiresLibraryMaterials(array $videoTypes, int $visualMaterialSource): bool
@@ -2296,7 +2392,7 @@ class CopywritingImitationLogic extends BasePersonaLogic
         throw new \Exception('-绑定的人设' . AiPersona::formatLabel(null, $personaId) . '下没有可用的素材');
     }
 
-    protected static function selectMaterialsForTaskType($videos, $images, $taskType, $deviceCode)
+    protected static function selectMaterialsForTaskType($videos, $images, $taskType, $deviceCode, int $personaId = 0)
     {
         $rules = [
             1 => ['v_min' => 2, 'v_max' => 3, 'i_min' => 2, 'i_max' => 3],
@@ -2307,20 +2403,27 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $rule = $rules[$taskType] ?? $rules[3];
         $vCount = rand($rule['v_min'], $rule['v_max']);
         $iCount = rand($rule['i_min'], $rule['i_max']);
-        shuffle($videos);
-        shuffle($images);
-        $selectedVideos = array_slice($videos, 0, $vCount);
-        $selectedImages = array_slice($images, 0, $iCount);
+        // 按使用次数升序取用：用得少的先选，避免部分素材反复用、部分一次不用
+        $selectedVideos = MaterialUsageService::pickLeastUsed($videos, $vCount, $personaId);
+        $selectedImages = MaterialUsageService::pickLeastUsed($images, $iCount, $personaId);
 
         $videoGap = $vCount - count($selectedVideos);
         $imageGap = $iCount - count($selectedImages);
 
         // 某一类素材不足时，用另一类已满足基础配额后的剩余素材补齐总数量。
         if ($videoGap > 0) {
-            $selectedImages = array_merge($selectedImages, array_slice($images, $iCount, $videoGap));
+            $remainingImages = LeastUsedPicker::exclude($images, $selectedImages);
+            $selectedImages = array_merge(
+                $selectedImages,
+                MaterialUsageService::pickLeastUsed($remainingImages, $videoGap, $personaId)
+            );
         }
         if ($imageGap > 0) {
-            $selectedVideos = array_merge($selectedVideos, array_slice($videos, $vCount, $imageGap));
+            $remainingVideos = LeastUsedPicker::exclude($videos, $selectedVideos);
+            $selectedVideos = array_merge(
+                $selectedVideos,
+                MaterialUsageService::pickLeastUsed($remainingVideos, $imageGap, $personaId)
+            );
         }
 
         $selected = self::trimMaterialsByDuration(array_merge($selectedVideos, $selectedImages));
@@ -2337,26 +2440,18 @@ class CopywritingImitationLogic extends BasePersonaLogic
      *
      * 规则（与闪剪单素材硬限制对齐，>59s 的素材下发会被裁掉）：
      * - 只认 duration > 0 且 <= 59 的视频，图片/未知时长一律不参与；
+     * - 跳过 $excludeIds 里的素材：一镜到底下每条视频只使用一次，用过的不再取；
      * - 优先在「时长 >= 目标时长」的候选里随机取一条；
      * - 都不够长时取最长的一条（同时长随机），成片时长按该素材实际时长；
      * - 没有候选返回空数组，由调用方决定判失败。
      *
      * @param array<int, array<string, mixed>> $videos
+     * @param array<int, int|string> $excludeIds 已使用过的素材 ID（一镜到底下每条视频只使用一次）
      * @return array<string, mixed> 选中素材行，未命中返回 []
      */
-    public static function pickSingleShotVideo(array $videos, int $targetDuration): array
+    public static function pickSingleShotVideo(array $videos, int $targetDuration, array $excludeIds = []): array
     {
-        $candidates = [];
-        foreach ($videos as $video) {
-            if (!is_array($video)) {
-                continue;
-            }
-            $duration = (float)($video['duration'] ?? 0);
-            if ($duration <= 0 || $duration > 59) {
-                continue;
-            }
-            $candidates[] = $video;
-        }
+        $candidates = self::singleShotCandidates($videos, $excludeIds);
         if ($candidates === []) {
             return [];
         }
@@ -2382,6 +2477,174 @@ class CopywritingImitationLogic extends BasePersonaLogic
     }
 
     /**
+     * 一镜到底可用视频候选：时长 >0 且 <=59 秒，并剔除已使用过的素材。
+     *
+     * @param array<int, array<string, mixed>> $videos
+     * @param array<int, int|string> $excludeIds
+     * @return array<int, array<string, mixed>>
+     */
+    public static function singleShotCandidates(array $videos, array $excludeIds = []): array
+    {
+        $exclude = [];
+        foreach ($excludeIds as $id) {
+            $id = (int)$id;
+            if ($id > 0) {
+                $exclude[$id] = true;
+            }
+        }
+
+        $candidates = [];
+        foreach ($videos as $video) {
+            if (!is_array($video)) {
+                continue;
+            }
+            $duration = (float)($video['duration'] ?? 0);
+            if ($duration <= 0 || $duration > 59) {
+                continue;
+            }
+            $id = (int)($video['id'] ?? 0);
+            if ($id > 0 && isset($exclude[$id])) {
+                continue;
+            }
+            $candidates[] = $video;
+        }
+
+        return $candidates;
+    }
+
+    /**
+     * 一镜到底「已用过」的素材 ID：同一人设下自动任务用过的视频不再取用。
+     *
+     * 口径与素材列表「已用N次」一致（只数自动任务 auto_type=1、只看 AI 生成场景），
+     * 但额外把「生成中(0)」也算已用——同一批里前一条任务刚建单、还没回调成功，
+     * 后一条任务不能再选同一条视频，否则一天的成片都是同一个素材。
+     * 失败(2) 不计入，上游失败的素材允许重试。
+     *
+     * @return array<int, int>
+     */
+    public static function usedSingleShotMaterialIds(int $personaId): array
+    {
+        if ($personaId <= 0) {
+            return [];
+        }
+
+        $ids = MaterialUseLog::alias('log')
+            ->join('shanjian_video_task task', 'task.id = log.task_id')
+            ->where('log.persona_id', $personaId)
+            ->where('log.use_scene', MaterialUseLog::USE_SCENE_AI_GENERATE)
+            ->whereIn('log.use_status', [MaterialUseLog::USE_STATUS_USING, MaterialUseLog::USE_STATUS_SUCCESS])
+            ->where('task.auto_type', MaterialUseLogLists::AUTO_TASK)
+            ->column('log.material_id');
+
+        $ids = array_map('intval', $ids ?: []);
+        $ids = array_values(array_unique(array_filter($ids)));
+
+        return $ids;
+    }
+
+    /**
+     * 应用「指定素材分组」：该类型只从所选分组取自有素材，广场素材与 AI 抓取素材都不参与。
+     *
+     * 云手机链路（createImitationVideoTask）原先自己写这段，有手机模式的社媒/朋友圈两条链路
+     * 完全没接（开关勾了分组也照旧从全库+广场取），统一收口到这里。
+     *
+     * @return array{grouped: array{videos: array, images: array}, group_ids: array<int, int>, active: bool}
+     *         active=true 表示本类型开了「指定素材分组」且选了分组
+     */
+    public static function applyTypeMaterialGroups(array $grouped, $config, int $taskType): array
+    {
+        $groupIds = AiPersonaSynthesisConfig::resolveTypeMaterialGroupIds($config, $taskType);
+        $grouped = [
+            'videos' => $grouped['videos'] ?? [],
+            'images' => $grouped['images'] ?? [],
+        ];
+        if ($groupIds === []) {
+            return ['grouped' => $grouped, 'group_ids' => [], 'active' => false];
+        }
+
+        return [
+            'grouped' => self::filterGroupedMaterialsByMaterialGroups($grouped, $groupIds),
+            'group_ids' => $groupIds,
+            'active' => true,
+        ];
+    }
+
+    /**
+     * 一镜到底候选池：自有素材 + 广场上架视频，按文件地址去重。
+     * 广场素材被「加入人设」后两边都会出现，不去重会让同一条视频在池子里占两份、被重复抽中。
+     *
+     * @param array<int, array<string, mixed>> $videos
+     * @param array<int, array<string, mixed>> $squareVideos
+     * @return array<int, array<string, mixed>>
+     */
+    public static function mergeSingleShotVideos(array $videos, array $squareVideos = []): array
+    {
+        $pool = [];
+        $seen = [];
+        foreach (array_merge($videos, $squareVideos) as $video) {
+            if (!is_array($video)) {
+                continue;
+            }
+            $url = MaterialModel::rawFileUrl($video);
+            if ($url !== '' && isset($seen[$url])) {
+                continue;
+            }
+            if ($url !== '') {
+                $seen[$url] = true;
+            }
+            $pool[] = $video;
+        }
+
+        return $pool;
+    }
+
+    /**
+     * 一镜到底选片结果：云手机（本类 createImitationVideoTask）与有手机模式
+     * （device\DeviceLogic::createVideoSynthesisTasks）共用，选片规则只保留一份。
+     *
+     * 有手机模式的社媒旧链路原先直接按「新闻体 5 视频 + 2~3 图」取素材，
+     * 开关打开也不会生效；改成调这里后两条链路的素材条数、选片规则、
+     * 失败措辞与成片时长完全一致。
+     *
+     * @param array<int, array<string, mixed>> $videos 候选视频（自有素材，按来源可能已并入广场）
+     * @return array{picked: array<string, mixed>, duration: int, total: int, available: int, used: int}
+     *         duration：成片时长，素材比设定时长短时按素材实际时长（无可用素材为 0）
+     */
+    public static function resolveSingleShotNewsPick(array $videos, int $newsDuration, int $personaId): array
+    {
+        $usedIds = self::usedSingleShotMaterialIds($personaId);
+        $available = self::singleShotCandidates($videos);
+        $picked = self::pickSingleShotVideo($videos, $newsDuration, $usedIds);
+
+        return [
+            'picked' => $picked,
+            'duration' => $picked === []
+                ? 0
+                : min(max(1, $newsDuration), max(1, (int)($picked['duration'] ?? $newsDuration))),
+            'total' => count($videos),
+            'available' => count($available),
+            'used' => count($available) - count(self::singleShotCandidates($videos, $usedIds)),
+        ];
+    }
+
+    /**
+     * 一镜到底选不到素材时的失败提示：区分「压根没有合规视频」与「候选都被用过了」。
+     *
+     * @param int $available 合规候选条数（不含「已被使用过」的排除）；为 0 说明人设下压根没有可用视频
+     */
+    public static function singleShotFailureRemark(int $available): string
+    {
+        if ($available <= 0) {
+            return '新闻体已开启一镜到底，但人设下没有可用视频素材（需 1 条 59 秒以内的视频），请补充视频或关闭一镜到底';
+        }
+
+        return sprintf(
+            '新闻体已开启一镜到底，可用视频素材已用完（%d 条候选视频都已被自动任务使用过，一镜到底下每条视频只使用一次），请补充新的视频素材',
+            $available
+        );
+    }
+
+    /**
      * 素材库+广场：自有与广场对半取，不够再用另一边补。
      * 广场取上架分组，不要求客户先手动加入引用。
      */
@@ -2396,13 +2659,23 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $rule = $rules[$taskType] ?? $rules[3];
         $needV = rand($rule['v_min'], $rule['v_max']);
         $needI = rand($rule['i_min'], $rule['i_max']);
+        $personaId = (int)($config->persona_id ?? 0);
+        // 自有素材按使用次数轮转，广场素材没有本体系的使用次数，仍随机取用
+        $usageCounts = MaterialUsageService::countsForPersona(
+            $personaId,
+            MaterialUsageService::ownMaterialIds(array_merge(
+                is_array($localVideos) ? $localVideos : [],
+                is_array($localImages) ? $localImages : []
+            ))
+        );
         $selected = SquareAssetService::selectLibraryAndSquare(
             ['videos' => is_array($localVideos) ? $localVideos : [], 'images' => is_array($localImages) ? $localImages : []],
             (int)($config->user_id ?? 0),
-            (int)($config->persona_id ?? 0),
+            $personaId,
             SquareAssetService::normalizeGroupIds($config->square_group_ids ?? []),
             $needV,
-            $needI
+            $needI,
+            $usageCounts
         );
         $selected = self::trimMaterialsByDuration($selected);
         foreach ($selected as $s) {
@@ -2457,10 +2730,10 @@ class CopywritingImitationLogic extends BasePersonaLogic
         $finalImages = [];
 
        // 1. 初始化默认值（处理 case 3 和 else 的逻辑）
-        shuffle($localVideos);
-        shuffle($localImages);
-        $finalVideos = array_slice($localVideos, 0, $needV);
-        $finalImages = array_slice($localImages, 0, $needI);
+        $personaId = (int)($config->persona_id ?? 0);
+        // 按使用次数升序取用：用得少的先选，避免部分素材反复用、部分一次不用
+        $finalVideos = MaterialUsageService::pickLeastUsed($localVideos, $needV, $personaId);
+        $finalImages = MaterialUsageService::pickLeastUsed($localImages, $needI, $personaId);
 
 // 2. 仅在 taskType == 1 时根据不同模式调整素材来源
         if ($taskType == 1) {
@@ -3672,6 +3945,9 @@ class CopywritingImitationLogic extends BasePersonaLogic
 
         [$videos, $images] = self::adoptMaterialsToQuota($videos, $images, $vCount, $iCount);
         $coverImageCount = self::countCoverFillImages($images);
+        $prePersistVideoCount = count($videos);
+        $prePersistImageCount = count($images);
+        $prePersistDowngradedCount = count($downgraded);
         $allMaterials = self::persistGrabbedMaterials(
             $materialStore,
             $userId,
@@ -3680,6 +3956,36 @@ class CopywritingImitationLogic extends BasePersonaLogic
             $now,
             $platform
         );
+        // 扣费-入库对账日志：验证付费成功数、预入素材数、实际入库数三者一致，
+        // 出现 paid != prePersist 或 prePersist != 实际入库数时需要排障
+        $persistedVideoCount = 0;
+        $persistedImageCount = 0;
+        $missingIdVideo = 0;
+        $missingIdImage = 0;
+        foreach ($allMaterials as $m) {
+            if (!is_array($m)) continue;
+            $t = (int)($m['material_type'] ?? 0);
+            if ($t === 1) {
+                $persistedVideoCount++;
+                if ((int)($m['id'] ?? 0) <= 0) $missingIdVideo++;
+            } elseif ($t === 2) {
+                $persistedImageCount++;
+                if ((int)($m['id'] ?? 0) <= 0) $missingIdImage++;
+            }
+        }
+        Log::channel('explosionVideoSynthesis')->info('素材抓取对账：' . json_encode([
+            'persona_id' => $personaId,
+            'user_id' => $userId,
+            'paid_video' => $paidVideoGrabs,
+            'paid_image' => $paidImageGrabs,
+            'pre_persist_video' => $prePersistVideoCount,
+            'pre_persist_image' => $prePersistImageCount,
+            'pre_persist_downgraded' => $prePersistDowngradedCount,
+            'persisted_video_total' => $persistedVideoCount,
+            'persisted_image_total' => $persistedImageCount,
+            'video_missing_id' => $missingIdVideo,
+            'image_missing_id' => $missingIdImage,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         // 降级素材已入库留给自动适配模式，但不参与本次原图合成
         $videos = array_values(array_filter(
             $allMaterials,
@@ -4144,9 +4450,22 @@ class CopywritingImitationLogic extends BasePersonaLogic
         if ($insertData === []) {
             return array_values($all);
         }
+        $expectedCount = count($insertData);
         $result = $store === 'sv_media'
             ? SvMediaMaterial::saveMaterialRows($insertData)
             : (new MaterialModel())->saveAll($insertData);
+        $insertedCount = count($result);
+        // 入库完整性校验：saveAll 在 MySQL 非严格模式下可能静默截断或丢失部分行，
+        // 这里确保实际入库条数与预期一致，不一致时记录 error 日志供排障
+        if ($insertedCount !== $expectedCount) {
+            Log::channel('explosionVideoSynthesis')->warning('素材入库条数不匹配：' . json_encode([
+                'store' => $store,
+                'expected' => $expectedCount,
+                'inserted' => $insertedCount,
+                'persona_id' => $personaId,
+                'user_id' => $userId,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        }
         foreach ($result as $j => $model) {
             $pos = $insertPositions[$j] ?? null;
             if ($pos === null) {
@@ -4154,6 +4473,12 @@ class CopywritingImitationLogic extends BasePersonaLogic
             }
             $all[$pos]['id'] = is_object($model) ? (int)($model->id ?? 0) : (int)($model['id'] ?? 0);
             $all[$pos]['material_store'] = $store;
+        }
+        // 补全 saveAll 未覆盖的 item 的 store 标记（inserted < expected 时）
+        foreach ($insertPositions as $j => $pos) {
+            if (!isset($all[$pos]['id']) || (int)($all[$pos]['id'] ?? 0) <= 0) {
+                $all[$pos]['material_store'] = $store;
+            }
         }
         return array_values($all);
     }

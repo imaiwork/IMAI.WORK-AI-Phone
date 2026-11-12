@@ -38,14 +38,20 @@
                                 class="bg-white rounded-[24rpx] p-[24rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]"
                                 @click="handleEditMaterial(index)">
                                 <view class="flex items-center justify-between mb-[18rpx]">
-                                    <view class="flex items-center gap-[10rpx]">
+                                    <view class="flex items-center gap-[10rpx] min-w-0">
                                         <view
                                             class="w-[40rpx] h-[40rpx] rounded-full bg-[#EBF2FF] flex items-center justify-center flex-shrink-0">
                                             <text class="text-[22rpx] font-bold text-primary">{{ index + 1 }}</text>
                                         </view>
-                                        <text class="text-[28rpx] font-bold text-[#0D1117] truncate flex-1">{{
-                                            storyboard.groupName
-                                        }}</text>
+                                        <text
+                                            class="text-[28rpx] font-bold text-[#0D1117] truncate max-w-[320rpx]"
+                                            >{{ storyboard.groupName }}</text
+                                        >
+                                        <view
+                                            class="w-[36rpx] h-[36rpx] rounded-full bg-[#F3F4F6] flex items-center justify-center flex-shrink-0"
+                                            @click.stop="handleEditGroupName(index)">
+                                            <u-icon name="edit-pen" color="#9CA3AF" size="14" />
+                                        </view>
                                     </view>
                                     <view class="flex items-center gap-[6rpx]">
                                         <text class="text-primary font-bold">{{ storyboard.materialList.length }}</text>
@@ -555,6 +561,12 @@
             @to="toPublish"
             @seek="toRecord" />
         <recharge-popup ref="rechargePopupRef" />
+        <keywords-edit
+            ref="groupNameEditRef"
+            v-model="showGroupNameEdit"
+            title="镜头组名称"
+            :maxlength="GROUP_NAME_MAX"
+            @confirm="handleConfirmGroupName" />
     </view>
 </template>
 
@@ -567,6 +579,7 @@ import Steps from "@/ai_modules/digital_human_create/components/steps/steps.vue"
 import ChooseAgent from "@/ai_modules/digital_human_create/components/choose-agent/choose-agent.vue";
 import ChooseTone from "@/ai_modules/digital_human_create/components/choose-tone/choose-tone.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human_create/components/create-success-pop/create-success-pop.vue";
+import KeywordsEdit from "@/ai_modules/digital_human_create/components/keywords-edit/keywords-edit.vue";
 import TokensCost from "@/components/tokens-cost/tokens-cost.vue";
 
 // ─── Hooks ──────────────────────────────────────────────────
@@ -659,7 +672,17 @@ const {
 // ────────────────────────────────────────────────
 // 素材
 // ────────────────────────────────────────────────
-const { editMaterialIndex, syncSubtitleList, handleEditMaterial, handleDeleteStoryboard } = useMaterialGroup({
+const {
+    editMaterialIndex,
+    syncSubtitleList,
+    handleEditMaterial,
+    handleDeleteStoryboard,
+    showGroupNameEdit,
+    groupNameEditRef,
+    GROUP_NAME_MAX,
+    handleEditGroupName,
+    handleConfirmGroupName,
+} = useMaterialGroup({
     formData,
 });
 

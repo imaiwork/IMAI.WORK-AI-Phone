@@ -12,6 +12,8 @@ class WorkDataValidate extends BaseValidate
         'refresh' => 'in:0,1,true,false,True,False',
         'account' => 'max:64|checkWorkDataAccount',
         'auto_sync_enabled' => 'require|in:0,1',
+        'cursor' => 'max:128',
+        'max_pages' => 'integer|between:1,5',
     ];
 
     protected $message = [
@@ -22,6 +24,8 @@ class WorkDataValidate extends BaseValidate
         'platform.in' => '不支持的平台',
         'account.max' => '账号格式不正确',
         'account.checkWorkDataAccount' => '账号格式不正确',
+        'max_pages.integer' => '回填页数不正确',
+        'max_pages.between' => '回填页数需在 1~5 页之间',
     ];
 
     public function scenePersonas()
@@ -31,7 +35,12 @@ class WorkDataValidate extends BaseValidate
 
     public function sceneAnalytics()
     {
-        return $this->only(['persona_id', 'platform', 'refresh', 'account']);
+        return $this->only(['persona_id', 'platform', 'refresh', 'account', 'cursor']);
+    }
+
+    public function sceneBackfill()
+    {
+        return $this->only(['persona_id', 'platform', 'account', 'max_pages']);
     }
 
     public function sceneSyncSettings()

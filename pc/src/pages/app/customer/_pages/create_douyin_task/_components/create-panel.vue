@@ -302,6 +302,134 @@
                             </div>
                         </div>
 
+                        <!-- 自动加好友设置 -->
+                        <div
+                            v-if="friendAddEnabled"
+                            class="bg-white p-6 rounded-2xl border border-br-extra-light">
+                            <div class="flex justify-between items-center mb-6">
+                                <div class="text-base font-black flex items-center gap-2">
+                                    <span class="w-1 h-4 bg-orange-500 rounded-full"></span>
+                                    自动加好友设置
+                                </div>
+                                <ElSwitch
+                                    v-model="formData.add_type"
+                                    active-value="1"
+                                    inactive-value="0" />
+                            </div>
+
+                            <div v-if="formData.add_type === '1'" class="space-y-5">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <ElFormItem label="加微微信" tip="选择执行加好友的微信号">
+                                            <ElSelect
+                                                v-model="formData.wechat_id"
+                                                multiple
+                                                collapse-tags
+                                                class="custom-select w-full"
+                                                placeholder="选择微信号">
+                                                <ElOption
+                                                    v-for="item in deviceOptions.wechatLists"
+                                                    :key="item.account"
+                                                    :label="item.nickname"
+                                                    :value="item.account" />
+                                            </ElSelect>
+                                        </ElFormItem>
+                                    </div>
+                                    <div>
+                                        <ElFormItem label="加微规则">
+                                            <ElSelect v-model="formData.add_rule" class="custom-select w-full">
+                                                <ElOption
+                                                    v-for="opt in ADD_RULE_OPTIONS"
+                                                    :key="opt.value"
+                                                    :label="opt.label"
+                                                    :value="opt.value" />
+                                            </ElSelect>
+                                        </ElFormItem>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <ElFormItem label="每次新增数量" tip="每次连续加多少人">
+                                            <ElInputNumber
+                                                v-model="formData.add_number"
+                                                :min="1"
+                                                :max="50"
+                                                controls-position="right"
+                                                class="!w-full" />
+                                        </ElFormItem>
+                                    </div>
+                                    <div>
+                                        <ElFormItem label="每次间隔（分钟）">
+                                            <ElInputNumber
+                                                v-model="formData.add_interval_time"
+                                                :min="1"
+                                                :max="60"
+                                                controls-position="right"
+                                                class="!w-full" />
+                                        </ElFormItem>
+                                    </div>
+                                </div>
+
+                                <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-500">
+                                    <div class="flex items-center gap-1 text-blue-600 mb-1">
+                                        <Icon name="el-icon-InfoFilled" :size="14" />
+                                        <span class="font-medium">风控提示</span>
+                                    </div>
+                                    间隔太短、数量过多都可能触发微信风控，建议每 5-10 分钟加 3-5 人。
+                                </div>
+
+                                <!-- 加好友备注内容 -->
+                                <div class="bg-slate-50 rounded-xl p-4">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="text-sm font-medium text-tx-regular">加好友备注内容</span>
+                                        <ElSwitch
+                                            v-model="formData.add_remark_enable"
+                                            :active-value="1"
+                                            :inactive-value="0" />
+                                    </div>
+                                    <template v-if="formData.add_remark_enable === 1">
+                                        <div class="flex flex-wrap gap-2.5">
+                                            <div
+                                                v-for="(item, index) in formData.remarks"
+                                                :key="index"
+                                                class="bg-white border border-slate-100 pl-3 pr-2 py-2 rounded-xl flex items-center shadow-sm group hover:border-primary transition-all">
+                                                <input
+                                                    v-model="formData.remarks[index]"
+                                                    type="text"
+                                                    placeholder="请输入备注"
+                                                    class="bg-transparent outline-none text-xs font-medium text-slate-600 w-40" />
+                                                <button
+                                                    @click="formData.remarks.splice(index, 1)"
+                                                    class="w-5 h-5 rounded-md bg-slate-100 text-slate-400 hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center ml-2">
+                                                    <Icon name="el-icon-Close" :size="10" />
+                                                </button>
+                                            </div>
+                                            <button
+                                                @click="formData.remarks.push('')"
+                                                class="h-[34px] px-4 rounded-xl border-2 border-dashed border-[#0065fb]/30 text-primary hover:bg-primary hover:text-white transition-all flex items-center gap-2 text-xs font-black">
+                                                <Icon name="el-icon-Plus" /> 添加备注
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-tx-placeholder mt-3">
+                                            随机取一条发，带上来源（「抖音看到的」）通过率明显更高。
+                                        </p>
+                                    </template>
+                                    <template v-else>
+                                        <p class="text-xs text-tx-placeholder leading-relaxed">
+                                            已关闭。发好友申请时不带验证语，通过率会低一些。
+                                        </p>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <div
+                                v-else
+                                class="p-3 rounded-xl bg-[#F2F7FF] border border-[#D6E6FF] text-xs text-[#2A5FAE]">
+                                已关闭。识别到的联系方式只存进客资库，不会自动去加。
+                            </div>
+                        </div>
+
                         <div class="bg-white p-6 rounded-2xl border border-br-extra-light">
                             <div class="text-base font-black mb-6 flex items-center gap-2">
                                 <span class="w-1 h-4 bg-primary rounded-full"></span>
@@ -482,7 +610,9 @@ import dayjs from "dayjs";
 import { useCreateTask } from "@/pages/app/customer/_hooks/useCreateTask";
 import AiAddKeyword from "../../create_task/_components/ai-add-keyword.vue";
 import TaskConflictPop from "@/pages/app/_components/task-conflict-pop.vue";
+import { useAppStore } from "@/stores/app";
 import {
+    ADD_RULE_OPTIONS,
     CONTACT_TYPE_OPTIONS,
     ContactTypeEnum,
     DAY_CAP_OPTIONS,
@@ -496,7 +626,17 @@ import { buildDouyinPayload, createDefaultDouyinForm, DouyinFormData } from "../
 
 const emit = defineEmits(["back"]);
 
+const appStore = useAppStore();
+
+/** 后台「手动任务开关 - 抖音搜寻获客 - 自动加好友」关闭时隐藏加微设置 */
+const friendAddEnabled = computed(() => appStore.getManualTaskSwitch.dy_search_friend_add);
+
 const formData = reactive<DouyinFormData>(createDefaultDouyinForm());
+
+// 配置可能在页面挂载后才返回，开关状态变化时同步
+watch(friendAddEnabled, (enabled) => {
+    formData.add_type = enabled ? "1" : "0";
+});
 
 const currentClueList = computed(() =>
     formData.search_mode === SearchModeEnum.KEYWORD ? formData.keywords : formData.target_accounts,
@@ -640,6 +780,16 @@ const { lockFn, isLock } = useLockFn(async () => {
         return;
     } else if (isMissDm.value && formData.miss_scripts.filter((item) => item.trim()).length == 0) {
         feedback.msgWarning("请填写私信话术，或将「没识别到」改成直接跳过");
+        return;
+    } else if (formData.add_type === "1" && formData.wechat_id.length == 0) {
+        feedback.msgWarning("请选择加微微信");
+        return;
+    } else if (
+        formData.add_type === "1" &&
+        formData.add_remark_enable === 1 &&
+        formData.remarks.filter((item) => item.trim()).length == 0
+    ) {
+        feedback.msgWarning("请填写加好友备注内容");
         return;
     } else if (formData.task_exec_type === 0) {
         if (currentFrequency.value == 5 && formData.custom_date.length == 0) {

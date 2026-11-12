@@ -42,7 +42,7 @@
                             :show-title="false"
                             :prompt-type="CreateVideoTypeEnum.NEWS" />
                     </section>
-                    <video-cover-upload v-model="formData.cover" />
+                    <video-cover-upload v-model="formData.cover" v-model:mode="formData.coverMode" />
 
                     <section class="space-y-3">
                         <div class="bg-slate-50 rounded-[20px] border border-br overflow-hidden">
@@ -292,6 +292,7 @@ import {
     SidebarTypeEnum,
     CreateVideoTypeEnum,
     MontageStylesType,
+    VideoCoverModeEnum,
 } from "@/pages/app/digital_human/_enums";
 import MaterialGroupPanel from "@/pages/app/digital_human/_components/material-group-panel.vue";
 import MontageCopywritingEditor from "@/pages/app/digital_human/_components/montage-copywriting-editor.vue";
@@ -346,6 +347,7 @@ const formData = reactive<{
         videoDuration: number;
     };
     cover: string;
+    coverMode: number;
 }>({
     name: dayjs().format("YYYYMMDDHHmm") + "新闻体视频",
     materialGroups: [],
@@ -369,6 +371,7 @@ const formData = reactive<{
         videoDuration: 10,
     },
     cover: "",
+    coverMode: VideoCoverModeEnum.FIRST_FRAME,
 });
 
 const usageToggleRows = [
@@ -470,6 +473,10 @@ const validateBeforeCreate = async () => {
         feedback.msgWarning("已选择手动指定风格，请至少选择一个视频风格");
         return false;
     }
+    if (formData.coverMode === VideoCoverModeEnum.MANUAL_UPLOAD && !formData.cover) {
+        feedback.msgWarning("请上传视频封面");
+        return false;
+    }
     return true;
 };
 
@@ -508,6 +515,7 @@ const handleCreateVideo = async () => {
                 volume: formData.extra.volume.toFixed(1),
             },
             pic: formData.cover,
+            video_cover_source: formData.coverMode ?? VideoCoverModeEnum.FIRST_FRAME,
         };
         if (formData.person_name && formData.person_introduction) {
             addShanjianPerson({

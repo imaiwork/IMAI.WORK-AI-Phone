@@ -391,8 +391,11 @@ class AccountLogEnum
     /** AI 生视频（draw 统一链路，按 models_cost 计费；预扣后按实际秒数结算） */
     const TOKENS_DEC_DRAW_VIDEO = 10602;
 
-
-
+    // ========== 通用AI服务 ==========
+    /** 通用AI分析（多模态大模型结构化分析） */
+    const TOKENS_DEC_GENERAL_ANALYZE = 10701;
+    /** 通用OCR识别（图片文字识别） */
+    const TOKENS_DEC_GENERAL_OCR = 10702;
 
     /**
      * 用户算力（减少类型汇总）
@@ -598,6 +601,9 @@ class AccountLogEnum
         // draw 统一生图/生视频
         self::TOKENS_DEC_DRAW_IMAGE,
         self::TOKENS_DEC_DRAW_VIDEO,
+        // 通用AI服务
+        self::TOKENS_DEC_GENERAL_ANALYZE,
+        self::TOKENS_DEC_GENERAL_OCR,
     ];
 
 
@@ -884,6 +890,9 @@ class AccountLogEnum
             // draw 统一生图/生视频
             self::TOKENS_DEC_DRAW_IMAGE => 'AI生图减少算力',
             self::TOKENS_DEC_DRAW_VIDEO => 'AI生视频减少算力',
+            // 通用AI服务
+            self::TOKENS_DEC_GENERAL_ANALYZE => '通用AI分析减少算力',
+            self::TOKENS_DEC_GENERAL_OCR => '通用OCR识别减少算力',
         ];
         if ($flag) {
             return $desc;
@@ -961,8 +970,7 @@ class AccountLogEnum
 
     /**
      * @notes 获取变动对象
-     * @param $changeType
-     * @return false
+     * @return string[]
      * 团队非业务消耗(转账类):划拨/回收/OEM/制卡/后台调整等
      * —— 成员「累计消耗」与消耗明细合计统一用此口径排除,保证两处数字一致
      */

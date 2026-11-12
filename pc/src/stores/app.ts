@@ -100,6 +100,24 @@ export const useAppStore = defineStore("appStore", {
         getAppLiveConfig: (state) => state.config.ai_live || {},
         getHdConfig: (state) => state.config.draw || {},
         getAppConfig: (state) => state.config.app_config || {},
+        /** 手动任务开关（未配置默认关闭，需后台开启；与后端 ManualTaskSwitchService 口径一致） */
+        getManualTaskSwitch: (state) => {
+            const config = state.config.manual_task_switch || {};
+            const keys = [
+                "wechat_friend_add",
+                "wechat_private_take",
+                "wechat_circle_publish",
+                "wechat_circle_interact",
+                "sph_clue",
+                "sph_private_take",
+                "dy_search_friend_add",
+            ];
+            const result: Record<string, boolean> = {};
+            keys.forEach((key) => {
+                result[key] = Number(config[key] ?? 0) === 1;
+            });
+            return result;
+        },
         getByName: (state) => state.config.by_name || "",
         getAiModels: (state) => state.aiModels || {},
         getOemConfig: (state) => state.oem || {},

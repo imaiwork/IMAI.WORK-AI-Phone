@@ -49,6 +49,40 @@ class LeastUsedPicker
         return $result;
     }
 
+    /**
+     * 从候选里剔除本轮已选条目，供「一类素材不足、用另一类补位」时继续按次数取用。
+     *
+     * @param array $items 全量候选
+     * @param array $selected 已选条目
+     * @return array 剩余候选
+     */
+    public static function exclude(array $items, array $selected, string $idKey = 'id'): array
+    {
+        $selectedIds = [];
+        foreach ($selected as $item) {
+            $id = self::itemId($item, $idKey);
+            if ($id > 0) {
+                $selectedIds[$id] = true;
+            }
+        }
+
+        $remaining = [];
+        foreach ($items as $item) {
+            $id = self::itemId($item, $idKey);
+            if ($id > 0) {
+                if (!isset($selectedIds[$id])) {
+                    $remaining[] = $item;
+                }
+                continue;
+            }
+            // AI 抓取的素材 id 为 0，只能按值判断是否已选
+            if (!in_array($item, $selected, true)) {
+                $remaining[] = $item;
+            }
+        }
+        return $remaining;
+    }
+
     private static function itemId($item, string $idKey): int
     {
         if (is_array($item)) {

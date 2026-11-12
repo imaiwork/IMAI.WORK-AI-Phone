@@ -16,6 +16,7 @@ use app\common\model\sv\SvDySearchTask;
 use app\common\model\sv\SvDySearchTaskDevice;
 use app\common\service\auto\AutoTaskSceneConfigService;
 use app\common\service\FileService;
+use app\common\service\ManualTaskSwitchService;
 use app\common\service\sv\DySearchAccountNormalizer;
 use app\common\service\sv\DySearchFilterHistoryService;
 use app\common\service\UserDisplaySanitizer;
@@ -1153,7 +1154,9 @@ class DeviceLogic extends ApiLogic
                     'keywords' => $find['keywords'] ?? [],
                     'per_kw' => (int)($find['per_kw'] ?? 30),
                     'scan_config' => $find['scan_config'] ?? [],
-                    'add_type' => (int)($find['add_type'] ?? 1),
+                    'add_type' => ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::DY_SEARCH_FRIEND_ADD)
+                        ? (int)($find['add_type'] ?? 1)
+                        : 0,
                     'add_rule' => (string)($find['add_rule'] ?? 'all'),
                     'ocr_type' => (int)($find['ocr_type'] ?? 1),
                     'day_cap' => (int)($find['day_cap'] ?? 50),
@@ -1285,7 +1288,9 @@ class DeviceLogic extends ApiLogic
             'keywords' => $keywords,
             'per_kw' => (int)($domain->per_kw ?: 30),
             'scan_config' => is_array($domain->scan_config) ? $domain->scan_config : [],
-            'add_type' => (int)($domain->add_type ?? 1),
+            'add_type' => ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::DY_SEARCH_FRIEND_ADD)
+                ? (int)($domain->add_type ?? 1)
+                : 0,
             'add_rule' => (string)($domain->add_rule ?: 'all'),
             'ocr_type' => (int)($domain->ocr_type ?: 1),
             'day_cap' => (int)($domain->day_cap ?: 50),
@@ -1334,7 +1339,7 @@ class DeviceLogic extends ApiLogic
             'keywords' => $keywords,
             'per_kw' => 30,
             'scan_config' => $scanConfig,
-            'add_type' => 1,
+            'add_type' => ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::DY_SEARCH_FRIEND_ADD) ? 1 : 0,
             'add_rule' => 'all',
             'ocr_type' => 1,
             'day_cap' => 50,
@@ -1479,14 +1484,14 @@ class DeviceLogic extends ApiLogic
             'interval_time' => 10,
             'watch_time' => 10,
             'gender' => '不限',
-            'old' => '不限',
+            'old' => ['max' => '60', 'min' => '18'],
             'region' => '不限',
             'city' => '不限',
             'send_num' => 100,
             'like_num' => 100,
             'comment_num' => 100,
-            'comment_fans_num' => 100,
-            'comment_follow_num' => 100,
+            'comment_fans_num' => ['max' => '9999', 'min' => '0'],
+            'comment_follow_num' => ['max' => '9999', 'min' => '0'],
             'filter' => [
                 '?'
             ],

@@ -127,6 +127,49 @@
                                 </view>
                             </view>
                         </template>
+
+                        <view v-if="!isPublish" class="copy-field">
+                            <view class="copy-label-row">
+                                <text class="copy-label">背景音乐分组</text>
+                            </view>
+                            <view class="copy-select" @click="showMusicGroups = !showMusicGroups">
+                                <text class="flex-1 min-w-0">{{ selectedMusicGroupLabel }}</text>
+                                <u-icon
+                                    :name="showMusicGroups ? 'arrow-up' : 'arrow-down'"
+                                    color="#647184"
+                                    size="24"></u-icon>
+                            </view>
+                            <view v-if="showMusicGroups" class="copy-options">
+                                <view
+                                    class="copy-option"
+                                    :class="{ 'copy-option--on': !localForm.music_group_id }"
+                                    @click="handlePickMusicGroup(0)">
+                                    <text class="flex-1 min-w-0">不绑定（系统随机）</text>
+                                    <u-icon
+                                        v-if="!localForm.music_group_id"
+                                        name="checkmark"
+                                        color="#0065FB"
+                                        size="26"></u-icon>
+                                </view>
+                                <view
+                                    v-for="group in musicGroups"
+                                    :key="group.id"
+                                    class="copy-option"
+                                    :class="{ 'copy-option--on': localForm.music_group_id === group.id }"
+                                    @click="handlePickMusicGroup(group.id)">
+                                    <text class="flex-1 min-w-0">{{ group.name }}</text>
+                                    <text v-if="!group.music_count" class="copy-option-tip">暂无曲目</text>
+                                    <u-icon
+                                        v-else-if="localForm.music_group_id === group.id"
+                                        name="checkmark"
+                                        color="#0065FB"
+                                        size="26"></u-icon>
+                                </view>
+                            </view>
+                            <text class="copy-hint">
+                                人设合成规则里已选音乐分组时以人设为准，未选时才用这里的背景音乐。
+                            </text>
+                        </view>
                     </scroll-view>
                 </view>
                 <view class="copy-footer">
@@ -138,7 +181,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { getSystemMusicGroups } from "@/api/digital_human";
 import {
     COPY_PUBLISH_CONTENT_LIMIT,
     COPY_TITLE_LIMIT,
@@ -149,6 +193,12 @@ import {
     isPublishCopy,
     type CopyFormData,
 } from "../hooks/useCopyLibrary";
+
+interface MusicGroupOption {
+    id: number;
+    name: string;
+    music_count: number;
+}
 
 const props = defineProps<{
     modelValue: boolean;
@@ -170,6 +220,7 @@ const localForm = reactive<CopyFormData>({
     publish_title: "",
     publish_content: "",
     publish_topic: "",
+    music_group_id: 0,
 });
 
 const show = computed({
@@ -193,9 +244,50 @@ const fieldHint = computed(() => {
     return isNews.value ? "标题内容必填，发布文案可以不填" : "至少填写一项内容，发布文案可以不填";
 });
 
+const musicGroups = ref<MusicGroupOption[]>([]);
+const showMusicGroups = ref(false);
+
+// 全部分组（含暂无曲目的空分组）：空分组也允许绑定，等曲目补进来自然生效
+const queryMusicGroups = async (): Promise<void> => {
+    let loaded = false;
+    try {
+        const res: any = await getSystemMusicGroups({ all: 1 });
+        const list = Array.isArray(res) ? res : res?.list || [];
+        musicGroups.value = list.map((group: any) => ({
+            id: Number(group.id) || 0,
+            name: String(group.name || ""),
+            music_count: Number(group.music_count) || 0,
+        }));
+        loaded = true;
+    } catch {
+        musicGroups.value = [];
+    }
+    // 绑定过的分组被删掉时回到「不绑定」，避免把脏 id 又提交回去；
+    // 接口失败不算「分组被删」，保持原绑定不动
+    if (
+        loaded &&
+        localForm.music_group_id > 0 &&
+        !musicGroups.value.some((group) => group.id === localForm.music_group_id)
+    ) {
+        localForm.music_group_id = 0;
+    }
+};
+
+const selectedMusicGroupLabel = computed(() => {
+    if (!localForm.music_group_id) return "不绑定（系统随机）";
+    const hit = musicGroups.value.find((group) => group.id === localForm.music_group_id);
+    return hit ? hit.name : "不绑定（系统随机）";
+});
+
+const handlePickMusicGroup = (groupId: number): void => {
+    localForm.music_group_id = Math.max(0, Number(groupId) || 0);
+    showMusicGroups.value = false;
+};
+
 watch(
     () => props.modelValue,
     (visible) => {
+        showMusicGroups.value = false;
         if (!visible) return;
         localForm.id = props.form?.id;
         localForm.title = props.form?.title ?? "";
@@ -204,6 +296,8 @@ watch(
         localForm.publish_title = props.form?.publish_title ?? "";
         localForm.publish_content = props.form?.publish_content ?? "";
         localForm.publish_topic = props.form?.publish_topic ?? "";
+        localForm.music_group_id = Number(props.form?.music_group_id) || 0;
+        if (!isPublish.value) queryMusicGroups();
     },
     { immediate: true },
 );
@@ -231,6 +325,7 @@ const handleConfirm = (): void => {
         publish_title: isPublish.value ? "" : localForm.publish_title.trim(),
         publish_content: isPublish.value ? "" : localForm.publish_content.trim(),
         publish_topic: isPublish.value ? "" : localForm.publish_topic.trim(),
+        music_group_id: isPublish.value ? 0 : Math.max(0, Number(localForm.music_group_id) || 0),
     });
 };
 </script>
@@ -299,6 +394,33 @@ const handleConfirm = (): void => {
     @apply w-full h-[240rpx] bg-[transparent] text-[#26364E] text-[30rpx] leading-[1.6];
 }
 
+.copy-select {
+    @apply min-h-[92rpx] flex items-center gap-[16rpx] px-[24rpx] py-[20rpx]
+        rounded-[22rpx] border-[2rpx] border-solid border-[#DBE3EE] bg-[#F9FBFD]
+        text-[30rpx] leading-[44rpx] text-[#26364E] active:opacity-70;
+}
+
+.copy-options {
+    @apply mt-[12rpx] p-[8rpx] rounded-[22rpx] border-[2rpx] border-solid border-[#DBE3EE] bg-white;
+}
+
+.copy-option {
+    @apply min-h-[88rpx] px-[20rpx] flex items-center gap-[16rpx] rounded-[16rpx]
+        text-[28rpx] text-[#26364E] active:opacity-70;
+}
+
+.copy-option--on {
+    @apply bg-[#EDF4FF] text-[#0761D9];
+}
+
+.copy-option-tip {
+    @apply shrink-0 text-[22rpx] text-[#909399];
+}
+
+.copy-hint {
+    @apply block mt-[12rpx] text-[24rpx] leading-[38rpx] text-[#647184];
+}
+
 .plain-btn {
     @apply m-0 p-0 leading-none border-none bg-[transparent];
 
@@ -306,7 +428,6 @@ const handleConfirm = (): void => {
         border: none;
     }
 }
-
 .copy-save {
     @apply h-[94rpx] rounded-[24rpx] bg-primary text-white text-[28rpx] font-semibold flex items-center justify-center active:opacity-80;
 }

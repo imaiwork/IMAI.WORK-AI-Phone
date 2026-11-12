@@ -27,6 +27,7 @@
             <view class="px-[32rpx] -mt-[50rpx]">
                 <view class="flex gap-x-[40rpx]">
                     <view
+                        v-if="sphClueEnabled"
                         class="h-[161rpx] w-full rounded-lg overflow-hidden relative"
                         @click="handleTabClick(TabKey.VIDEO)">
                         <image
@@ -38,6 +39,7 @@
                         </view>
                     </view>
                     <view
+                        v-if="sphClueEnabled"
                         class="h-[161rpx] w-full rounded-lg overflow-hidden relative"
                         @click="handleTabClick(TabKey.ACCOUNT)">
                         <image
@@ -86,10 +88,15 @@ import { getTaskList } from "@/api/sph";
 import { usePaging } from "@/hooks/usePaging";
 import TaskCard from "@/ai_modules/sph/components/task-card/task-card.vue";
 import TaskEdit from "@/ai_modules/sph/components/task-edit/task-edit.vue";
+import { useAppStore } from "@/stores/app";
 enum TabKey {
     VIDEO = 0,
     ACCOUNT = 1,
 }
+
+const appStore = useAppStore();
+// 视频号获客任务被后台关闭时隐藏新建入口
+const sphClueEnabled = computed(() => appStore.getManualTaskSwitch.sph_clue);
 
 const headerStyle = reactive({
     iconColor: "#ffffff",

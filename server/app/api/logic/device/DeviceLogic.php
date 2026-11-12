@@ -29,6 +29,7 @@ use app\common\model\sv\SvDeviceUsed;
 use app\common\model\sv\SvSetting;
 use app\common\model\user\User;
 use app\common\service\aiPersona\AiPersonaTextService;
+use app\common\service\aiPersona\MaterialUsageService;
 use app\common\service\device\RpaDeviceDispatchService;
 use app\common\service\MemberService;
 use app\common\service\square\SquareAssetService;
@@ -1139,28 +1140,108 @@ class DeviceLogic extends BasePersonaLogic
 
                 // 数字人口播混剪 + 纯AI/AI+素材库：复用统一的 AI 抓素材逻辑，素材库为空也能合成
                 $visualSource = ShanjianVideoSettingLogic::resolveVisualMaterialSource($config);
-                $selectedMaterials = $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE
-                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
-                        CopywritingImitationLogic::selectMaterialsForLibraryAndSquare(
-                            $videos,
-                            $images,
-                            (int)$shanjianType,
-                            $deviceCode,
-                            $config
+                // 「指定素材分组」：该类型只从所选分组取自有素材，广场素材与 AI 抓取都不再参与。
+                // 有手机模式原先完全没接这一项（勾了分组仍按全库 + 广场取），与云手机口径不一致。
+                $materialGroup = CopywritingImitationLogic::applyTypeMaterialGroups(
+                    ['videos' => $videos, 'images' => $images],
+                    $config,
+                    (int)$shanjianType
+                );
+                $typeVideos = $materialGroup['grouped']['videos'];
+                $typeImages = $materialGroup['grouped']['images'];
+                if ($materialGroup['active'] && $typeVideos === [] && $typeImages === []) {
+                    Log::channel('ipVideoSynthesis')->write('设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType
+                        . ' 指定素材分组下没有可用素材，分组：' . json_encode($materialGroup['group_ids']));
+                    CopywritingImitationLogic::createFailedSynthesisTask(
+                        $device,
+                        $persona,
+                        (int)$shanjianType,
+                        CopywritingImitationLogic::MATERIAL_GROUP_EMPTY_REMARK,
+                        [
+                            'config' => $config,
+                            'copywriting_source' => AiPersonaSynthesisConfig::COPYWRITING_SOURCE_AI,
+                            'title' => (string)($copywritingResult['content']['0'] ?? ''),
+                            'msg' => (string)($copywritingResult['content']['0'] ?? ''),
+                            'visual_material_source' => $visualSource,
+                        ]
+                    );
+                    continue;
+                }
+                // 开了「指定素材分组」后，广场上架素材与 AI 抓取都不再用
+                $squareEnabled = !$materialGroup['active']
+                    && $visualSource === AiPersonaSynthesisConfig::VISUAL_MATERIAL_SOURCE_SQUARE;
+                $aiMaterialsEnabled = !$materialGroup['active']
+                    && ShanjianVideoSettingLogic::canUseAiMaterials((int)$shanjianType, $visualSource);
+                // 新闻体一镜到底：有手机模式（设备绑定）的社媒旧链路原先直接按「5 视频 + 2~3 图」
+                // 取素材、下发设定时长，开关打开也不会生效。这里改用与云手机链路同一套
+                // CopywritingImitationLogic::resolveSingleShotNewsPick()，只取 1 条视频、0 张图片，
+                // 成片按素材实际时长（素材比设定时长短就出短成片）。
+                $singleShot = (int)$shanjianType === AiPersonaSynthesisConfig::GENERATION_TYPE_NEWS
+                    && AiPersonaSynthesisConfig::resolveTypeSingleShot($config, AiPersonaSynthesisConfig::GENERATION_TYPE_NEWS);
+                $singleShotDuration = 0;
+                if ($singleShot) {
+                    $singleShotVideos = $typeVideos;
+                    if ($squareEnabled) {
+                        // 广场来源要把上架分组的视频一并作为候选，口径与 selectMaterialsForLibraryAndSquare 一致
+                        $publicGrouped = SquareAssetService::publicGrouped(
+                            (int)$userId,
+                            (int)$persona->id,
+                            SquareAssetService::normalizeGroupIds($config->square_group_ids ?? [])
+                        );
+                        $singleShotVideos = CopywritingImitationLogic::mergeSingleShotVideos($singleShotVideos, $publicGrouped['videos'] ?? []);
+                    }
+                    $singleShotPick = CopywritingImitationLogic::resolveSingleShotNewsPick(
+                        $singleShotVideos,
+                        $newsMixcutDuration,
+                        (int)$persona->id
+                    );
+                    if ($singleShotPick['picked'] === []) {
+                        $remark = CopywritingImitationLogic::singleShotFailureRemark((int)$singleShotPick['available']);
+                        Log::channel('ipVideoSynthesis')->write('设备号: ' . $deviceCode . ' 新闻体一镜到底无可合成视频' . json_encode([
+                            'persona_id' => (int)$persona->id,
+                            'video_candidates' => $singleShotPick['total'],
+                            'valid_candidates' => $singleShotPick['available'],
+                            'used_candidates' => $singleShotPick['used'],
+                            'news_duration' => $newsMixcutDuration,
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                        // 与云手机链路一致：留一条失败任务，备注写明原因，不静默跳过
+                        CopywritingImitationLogic::createFailedSynthesisTask($device, $persona, (int)$shanjianType, $remark, [
+                            'config' => $config,
+                            'copywriting_source' => AiPersonaSynthesisConfig::COPYWRITING_SOURCE_AI,
+                            'title' => (string)($copywritingResult['content']['0'] ?? ''),
+                            'msg' => (string)($copywritingResult['content']['0'] ?? ''),
+                            'visual_material_source' => $visualSource,
+                        ]);
+                        continue;
+                    }
+                    $selectedMaterials = ShanjianVideoSettingLogic::formatMaterialsForSetting([$singleShotPick['picked']]);
+                    $singleShotDuration = (int)$singleShotPick['duration'];
+                    // 覆盖 case 4 里下发的设定时长：一镜到底按素材实际时长出片
+                    $extradata['videoDuration'] = $singleShotDuration;
+                } else {
+                    $selectedMaterials = $squareEnabled
+                        ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                            CopywritingImitationLogic::selectMaterialsForLibraryAndSquare(
+                                $typeVideos,
+                                $typeImages,
+                                (int)$shanjianType,
+                                $deviceCode,
+                                $config
+                            )
                         )
-                    )
-                    : (ShanjianVideoSettingLogic::canUseAiMaterials((int)$shanjianType, $visualSource)
-                    ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
-                        CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
-                            $videos,
-                            $images,
-                            (int)$shanjianType,
-                            $deviceCode,
-                            $config,
-                            (string)($copywritingResult['content']['0'] ?? '')
+                        : ($aiMaterialsEnabled
+                        ? ShanjianVideoSettingLogic::formatMaterialsForSetting(
+                            CopywritingImitationLogic::selectMaterialsForTaskTypeAndVisualMaterialSource(
+                                $typeVideos,
+                                $typeImages,
+                                (int)$shanjianType,
+                                $deviceCode,
+                                $config,
+                                (string)($copywritingResult['content']['0'] ?? '')
+                            )
                         )
-                    )
-                    : self::selectAndValidateMaterials($videos, $images, $shanjianType, $deviceCode));
+                        : self::selectAndValidateMaterials($typeVideos, $typeImages, $shanjianType, $deviceCode, (int)$persona->id));
+                }
 
                 if (empty($selectedMaterials)) {
                     $msg = '设备号: ' . $deviceCode . '第' . ($key + 1) . '类型视频' . $shanjianType . '，素材为空';
@@ -1375,7 +1456,7 @@ class DeviceLogic extends BasePersonaLogic
         }
     }
 
-    private static function selectAndValidateMaterials(array $videos, array $images, int $shanjianType, string $deviceCode): array
+    private static function selectAndValidateMaterials(array $videos, array $images, int $shanjianType, string $deviceCode, int $personaId = 0): array
     {
         try {
             $videoCount = 0;
@@ -1467,21 +1548,13 @@ class DeviceLogic extends BasePersonaLogic
                 }
             }
 
-            // 打乱素材顺序实现随机抽取
-            shuffle($videos);
-            shuffle($images);
-            $selectedVideos = [];
-            if ($videoCount > 0) {
-                $selectedVideos = array_slice($videos, 0, $videoCount);
-                // $msg = '设备号: ' . $deviceCode . '，原始需求视频数量: ' . $originalVideoCount . '，视频数量: ' . $videoCount;
-                // Log::channel('ipVideoSynthesis')->write($msg);  
-            }
-            $selectedImages = [];
-            if ($imageCount > 0) {
-                $selectedImages = array_slice($images, 0, $imageCount);
-                // $msg = '设备号: ' . $deviceCode . '，原始需求图片数量: ' . $originalImageCount . '，图片数量: ' . $imageCount;
-                // Log::channel('ipVideoSynthesis')->write($msg);  
-            }
+            // 按使用次数升序取用：用得少的先选，避免部分素材反复用、部分一次不用
+            $selectedVideos = $videoCount > 0
+                ? MaterialUsageService::pickLeastUsed($videos, $videoCount, $personaId)
+                : [];
+            $selectedImages = $imageCount > 0
+                ? MaterialUsageService::pickLeastUsed($images, $imageCount, $personaId)
+                : [];
             $mergedMaterials = [];
             if ($videoCount > 0 || $imageCount > 0) {
                 $mergedMaterials = array_merge($selectedVideos, $selectedImages);

@@ -1033,6 +1033,7 @@ const {
     handleCopyText: handleCopyLibraryText,
     handleRefreshCopy,
     handleRemoveCopy,
+    handleCleanCopy,
     copyBatchMode,
     selectedCopyCount,
     isCopySelected,
@@ -1301,6 +1302,7 @@ const materialsTabActions = {
     toggleSelectAllCopy: handleToggleSelectAllCopy,
     cancelCopyBatch: handleCancelCopyBatch,
     confirmCopyBatchDelete: handleConfirmCopyBatchDelete,
+    cleanCopy: handleCleanCopy,
 };
 
 const devicesTabState = computed(() => ({

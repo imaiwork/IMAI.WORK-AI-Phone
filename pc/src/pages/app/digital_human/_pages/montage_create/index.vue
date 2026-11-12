@@ -196,7 +196,7 @@
                             :prompt-type="CreateVideoTypeEnum.ORAL_MIX" />
                     </section>
 
-                    <video-cover-upload v-model="formData.cover" />
+                    <video-cover-upload v-model="formData.cover" v-model:mode="formData.coverMode" />
 
                     <section class="space-y-3">
                         <div class="bg-slate-50 rounded-[20px] border border-br overflow-hidden">
@@ -495,6 +495,7 @@ import {
     CreateVideoTypeEnum,
     MontageStylesType,
     ShanjianCloneTypeEnum,
+    VideoCoverModeEnum,
 } from "@/pages/app/digital_human/_enums";
 import { montageUploadConfig, calcMaterialDurationBudget } from "@/pages/app/digital_human/_config";
 import { useMaterial } from "@/pages/app/digital_human/_hooks/useMaterial";
@@ -542,6 +543,7 @@ const formData = reactive<{
         video_count: number;
     };
     cover: string;
+    coverMode: number;
 }>({
     name: dayjs().format("YYYYMMDDHHmm") + "口播混剪",
     anchorLists: [],
@@ -566,6 +568,7 @@ const formData = reactive<{
         video_count: 1,
     },
     cover: "",
+    coverMode: VideoCoverModeEnum.FIRST_FRAME,
 });
 
 const voiceList = ref<any[]>([]);
@@ -850,6 +853,10 @@ const validateBeforeCreate = async () => {
         feedback.msgWarning("已选择手动指定风格，请至少选择一个视频风格");
         return false;
     }
+    if (formData.coverMode === VideoCoverModeEnum.MANUAL_UPLOAD && !formData.cover) {
+        feedback.msgWarning("请上传视频封面");
+        return false;
+    }
     return true;
 };
 
@@ -899,6 +906,7 @@ const handleCreateVideo = async () => {
                 volume: formData.extra.volume.toFixed(1),
             },
             pic: formData.cover,
+            video_cover_source: formData.coverMode ?? VideoCoverModeEnum.FIRST_FRAME,
         };
 
         if (formData.person_name && formData.person_introduction) {

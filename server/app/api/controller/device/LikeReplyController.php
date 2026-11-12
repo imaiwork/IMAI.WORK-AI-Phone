@@ -9,6 +9,7 @@ use think\exception\HttpResponseException;
 use app\api\validate\device\LikeReplyValidate;
 use app\api\logic\device\LikeReplyLogic;
 use app\api\lists\device\LikeReplyLists;
+use app\common\service\ManualTaskSwitchService;
 
 /**
  * LikeReplyController
@@ -30,6 +31,9 @@ class LikeReplyController extends BaseApiController
 
     public function add()
     {
+        if (!ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::WECHAT_CIRCLE_INTERACT)) {
+            return $this->fail(ManualTaskSwitchService::disabledMessage());
+        }
         try {
             $params = (new LikeReplyValidate())->post()->goCheck('add');
             $result = LikeReplyLogic::add($params);

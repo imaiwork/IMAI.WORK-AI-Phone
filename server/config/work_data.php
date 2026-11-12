@@ -10,4 +10,6 @@ return [
     'refresh_min_interval' => max(10, (int)env('work_data.refresh_min_interval', 60)),
     'lock_wait_seconds' => max(1, (int)env('work_data.lock_wait_seconds', 15)),
     'mid_timeout' => max(30, (int)env('work_data.mid_timeout', 180)),
+    // 历史回填单次最多翻几页；每页都是一次付费取数，硬上限 5 页（约 100 条）
+    'backfill_max_pages' => max(1, min(5, (int)env('work_data.backfill_max_pages', 5))),
 ];

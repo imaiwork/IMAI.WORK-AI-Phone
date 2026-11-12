@@ -9,6 +9,7 @@ use app\api\lists\sv\CrawlingManualRecordLists;
 use think\exception\HttpResponseException;
 use app\api\validate\sv\CrawlingManualValidate;
 use app\api\logic\sv\CrawlingManualLogic;
+use app\common\service\ManualTaskSwitchService;
 
 /**
  * CrawlingManualController
@@ -25,6 +26,9 @@ class CrawlingManualController extends BaseApiController
 
     public function add()
     {
+        if (!ManualTaskSwitchService::isEnabled(ManualTaskSwitchService::WECHAT_FRIEND_ADD)) {
+            return $this->fail(ManualTaskSwitchService::disabledMessage());
+        }
         try {
             $params = (new CrawlingManualValidate())->post()->goCheck('add');
             $result = CrawlingManualLogic::add($params);

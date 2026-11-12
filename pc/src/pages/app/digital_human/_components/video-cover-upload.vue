@@ -17,7 +17,23 @@
         </div>
 
         <div class="p-4 min-w-0 overflow-hidden">
-            <template v-if="!modelValue">
+            <div class="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl mb-3">
+                <button
+                    v-for="opt in coverModeOptions"
+                    :key="opt.value"
+                    type="button"
+                    class="h-8 rounded-lg text-xs font-black transition-all"
+                    :class="
+                        mode === opt.value
+                            ? 'bg-white text-primary shadow-sm'
+                            : 'text-slate-400 hover:text-slate-600'
+                    "
+                    @click="handleSelectMode(opt.value)">
+                    {{ opt.label }}
+                </button>
+            </div>
+
+            <template v-if="mode === VideoCoverModeEnum.MANUAL_UPLOAD && !modelValue">
                 <upload
                     class="w-full"
                     type="image"
@@ -52,7 +68,7 @@
                 </upload>
             </template>
 
-            <template v-else>
+            <template v-else-if="mode === VideoCoverModeEnum.MANUAL_UPLOAD">
                 <div class="flex items-center gap-3 min-w-0 overflow-hidden">
                     <div
                         class="relative flex-shrink-0 rounded-[14px] overflow-hidden border border-slate-100 group cursor-pointer shadow-sm"
@@ -91,6 +107,11 @@
                     </div>
                 </div>
             </template>
+
+            <div v-else class="flex items-start gap-2 px-1">
+                <span class="mt-1.5 w-1 h-1 rounded-full bg-slate-300 shrink-0"></span>
+                <p class="text-[11px] text-slate-400 font-medium">{{ modeTip }}</p>
+            </div>
         </div>
     </div>
 
@@ -99,14 +120,18 @@
 
 <script setup lang="ts">
 import { montageUploadConfig } from "@/pages/app/digital_human/_config";
+import { VideoCoverModeEnum } from "@/pages/app/digital_human/_enums";
 
 interface Props {
     modelValue?: string;
+    /** 封面方式:1=首帧 2=AI封面 3=手动上传 */
+    mode?: number;
     maxSize?: number;
 }
 
 interface Emits {
     (e: "update:modelValue", value: string): void;
+    (e: "update:mode", value: number): void;
     (e: "change", value: string): void;
     (e: "delete"): void;
     (e: "error", msg: string): void;
@@ -114,10 +139,32 @@ interface Emits {
 
 const props = withDefaults(defineProps<Props>(), {
     modelValue: "",
+    mode: VideoCoverModeEnum.FIRST_FRAME,
     maxSize: 10,
 });
 
 const emit = defineEmits<Emits>();
+
+const coverModeOptions: { label: string; value: number }[] = [
+    { label: "首帧", value: VideoCoverModeEnum.FIRST_FRAME },
+    { label: "AI封面", value: VideoCoverModeEnum.AI_COVER },
+    { label: "手动上传", value: VideoCoverModeEnum.MANUAL_UPLOAD },
+];
+
+const modeTip = computed(() =>
+    props.mode === VideoCoverModeEnum.AI_COVER
+        ? "AI封面异步生成，不阻塞视频合成，失败自动回退首帧"
+        : "使用视频首帧作为封面",
+);
+
+// 切换封面方式:非手动模式清空已上传封面,避免脏数据
+const handleSelectMode = (value: number) => {
+    if (props.mode === value) return;
+    emit("update:mode", value);
+    if (value !== VideoCoverModeEnum.MANUAL_UPLOAD && props.modelValue) {
+        emit("update:modelValue", "");
+    }
+};
 
 const fileName = ref("");
 const imageRatio = ref("");

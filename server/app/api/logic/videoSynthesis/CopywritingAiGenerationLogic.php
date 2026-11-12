@@ -1763,12 +1763,14 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
             $materialKeywords = '';
             $copywritingSource = AiPersonaSynthesisConfig::COPYWRITING_SOURCE_LIBRARY;
             $libraryId = 0;
+            $copywritingMusicGroupId = 0;
             $publishTopic = '';
             $pairedPublish = [];
 
             try {
                 if (!empty($library)) {
                     $libraryId = (int)$library['id'];
+                    $copywritingMusicGroupId = max(0, (int)($library['music_group_id'] ?? 0));
                     $taskTitle = (string)($library['title'] ?? '');
                     $taskMsg = (string)($library['content'] ?? '');
                     if ($shanjianType === 4) {
@@ -1814,7 +1816,8 @@ class CopywritingAiGenerationLogic extends CopywritingImitationLogic
                     $materialKeywords,
                     $execTime,
                     $publishTopic,
-                    $pairedPublish
+                    $pairedPublish,
+                    $copywritingMusicGroupId
                 );
                 if ($result) {
                     $createdTasks[] = $result;

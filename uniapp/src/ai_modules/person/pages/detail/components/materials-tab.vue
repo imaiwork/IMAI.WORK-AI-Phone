@@ -699,6 +699,12 @@
                         @click="actions.importCopy()">
                         <text class="copy-toolbar-label">批量导入</text>
                     </view>
+                    <view
+                        v-if="!state.copyBatchMode && state.copyList.length"
+                        class="copy-toolbar-button copy-toolbar-button--danger active:opacity-70"
+                        @click="actions.cleanCopy()">
+                        <text class="copy-toolbar-label">一键清理</text>
+                    </view>
                 </view>
             </view>
 
@@ -727,6 +733,11 @@
                                     <text v-else-if="isAiRewriteCopy(item)" class="copy-badge copy-badge--ai">AI仿写</text>
                                     <text v-if="item.has_update" class="copy-badge copy-badge--upd">有更新</text>
                                     <text v-else-if="item.edited" class="copy-badge copy-badge--edit">已改过</text>
+                                    <text
+                                        v-if="Number(item.music_group_id) > 0 && item.music_group_name"
+                                        class="copy-badge copy-badge--music">
+                                        音乐：{{ item.music_group_name }}
+                                    </text>
                                 </view>
                                 <text
                                     v-if="item.has_update"
@@ -1075,6 +1086,7 @@ const props = defineProps<{
         toggleSelectAllCopy: () => void;
         cancelCopyBatch: () => void;
         confirmCopyBatchDelete: () => void;
+        cleanCopy: () => void;
     };
 }>();
 
@@ -1631,7 +1643,8 @@ const handleCopyManage = (): void => {
 }
 
 .copy-toolbar-button--soft::before,
-.copy-toolbar-button--outline::before {
+.copy-toolbar-button--outline::before,
+.copy-toolbar-button--danger::before {
     content: "";
     @apply absolute inset-x-0 top-[14rpx] bottom-[14rpx] rounded-[12rpx] border-[2rpx] border-solid border-[transparent] pointer-events-none;
 }
@@ -1642,6 +1655,14 @@ const handleCopyManage = (): void => {
 
 .copy-toolbar-button--outline::before {
     @apply bg-white border-[#D8E2ED];
+}
+
+.copy-toolbar-button--danger {
+    @apply text-[#D93026];
+}
+
+.copy-toolbar-button--danger::before {
+    background: #fff1f0;
 }
 
 .copy-badge {
@@ -1658,6 +1679,10 @@ const handleCopyManage = (): void => {
 }
 .copy-badge--ai {
     background: #7b61ff;
+}
+.copy-badge--music {
+    @apply text-[#4a5b70];
+    background: #e8eef6;
 }
 
 .copy-results {

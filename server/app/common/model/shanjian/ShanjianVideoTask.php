@@ -34,6 +34,9 @@ class ShanjianVideoTask extends BaseModel
     const EXTRA_PUBLISH_TITLE = 'publish_title';
     const EXTRA_PUBLISH_CONTENT = 'publish_content';
     const EXTRA_PUBLISH_TOPIC = 'publish_topic';
+
+    /** AI封面提交失败次数，写 extra，达到阈值后收口并退费 */
+    const EXTRA_AI_COVER_ATTEMPTS = 'ai_cover_attempts';
     
     // 音频类型常量
     const AUDIO_TYPE_SCRIPT = 1;     // 文案驱动

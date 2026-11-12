@@ -131,7 +131,7 @@ class AiPersonaLists extends BaseApiDataLists implements ListsSearchInterface
             // 检查AI人设配置状态
             $result = AiPersonaLogic::checkAiPersonaConfigStatus($item['id'], $item['user_id']);
             $item['is_configured'] = $result['is_configured'] ?? 0;
-            $this->appendConfigGuide($item, $result['msg'] ?? '');
+            $this->appendConfigGuide($item, $result);
         }
 
         return $lists;
@@ -140,14 +140,26 @@ class AiPersonaLists extends BaseApiDataLists implements ListsSearchInterface
     /**
      * 列表页只露一个「未完善」会让用户猜错缺口；这里给前端一个短提示和直达动作。
      */
-    private function appendConfigGuide(array &$item, string $message): void
+    private function appendConfigGuide(array &$item, array $result): void
     {
         $item['config_tip'] = '';
         $item['config_action'] = '';
+        $item['config_missing_agents'] = $result['missing_agents'] ?? [];
         if ((int)($item['is_configured'] ?? 0) === 1) {
             return;
         }
 
+        if (!empty($item['config_missing_agents'])) {
+            $missing = $item['config_missing_agents'];
+            $item['config_tip'] = '缺少' . $missing[0] . '智能体';
+            if (count($missing) > 1) {
+                $item['config_tip'] .= '等' . count($missing) . '项';
+            }
+            $item['config_action'] = 'agent';
+            return;
+        }
+
+        $message = $result['msg'] ?? '';
         if ($message === '请先上传素材') {
             if ((int)($item['publish_mode'] ?? 0) === Material::PUBLISH_MODE_DIRECT_SEND) {
                 $item['config_tip'] = '缺少成品';
@@ -161,7 +173,6 @@ class AiPersonaLists extends BaseApiDataLists implements ListsSearchInterface
 
         $guideMap = [
             '请生成人设报告' => ['缺少报告', 'report'],
-            '请先配置智能体' => ['缺少智能体', 'agent'],
             '请先配置获客截流设置' => ['缺少获客配置', 'traffic'],
             '请先配置微信私域互动管家设置' => ['缺少私域配置', 'interaction'],
             '请先配置人设音色' => ['缺少音色', 'voice'],

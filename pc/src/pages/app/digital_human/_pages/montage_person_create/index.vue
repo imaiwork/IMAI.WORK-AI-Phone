@@ -261,7 +261,7 @@
                         </div>
                     </section>
 
-                    <video-cover-upload v-model="formData.cover" />
+                    <video-cover-upload v-model="formData.cover" v-model:mode="formData.coverMode" />
 
                     <section class="space-y-3">
                         <div class="bg-slate-50 rounded-[20px] border border-br overflow-hidden">
@@ -500,7 +500,12 @@
 import dayjs from "dayjs";
 import { useUserStore } from "@/stores/user";
 import { createShanjianTask, addShanjianPerson } from "@/api/digital_human";
-import { MontageTypeEnum, SidebarTypeEnum, MontageStylesType } from "@/pages/app/digital_human/_enums";
+import {
+    MontageTypeEnum,
+    SidebarTypeEnum,
+    MontageStylesType,
+    VideoCoverModeEnum,
+} from "@/pages/app/digital_human/_enums";
 import { montageUploadConfig, calcMaterialDurationBudget } from "@/pages/app/digital_human/_config";
 import { useMaterial } from "@/pages/app/digital_human/_hooks/useMaterial";
 import { getValidUploadFileData } from "@/pages/app/digital_human/_hooks/useUpload";
@@ -545,6 +550,7 @@ const formData = reactive<{
         video_count: number;
     };
     cover: string;
+    coverMode: number;
 }>({
     name: dayjs().format("YYYYMMDDHHmm") + "真人口播视频智剪",
     anchorLists: [],
@@ -569,6 +575,7 @@ const formData = reactive<{
         video_count: 1,
     },
     cover: "",
+    coverMode: VideoCoverModeEnum.FIRST_FRAME,
 });
 
 const usageToggleRows = [
@@ -892,6 +899,8 @@ const validateBeforeCreate = () => {
     }
     if (formData.extra.clip === 1 && formData.clip.length === 0)
         return feedback.msgWarning("已选择手动指定风格，请至少选择一个视频风格");
+    if (formData.coverMode === VideoCoverModeEnum.MANUAL_UPLOAD && !formData.cover)
+        return feedback.msgWarning("请上传视频封面");
     return true;
 };
 
@@ -921,6 +930,7 @@ const handleCreateVideo = async () => {
             clip: formData.clip.map((item: any) => ({ clip_template_id: item })),
             extra: { ...formData.extra, volume: formData.extra.volume.toFixed(1) },
             pic: formData.cover,
+            video_cover_source: formData.coverMode ?? VideoCoverModeEnum.FIRST_FRAME,
         };
 
         if (formData.person_name && formData.person_introduction) {

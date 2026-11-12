@@ -175,14 +175,7 @@
                                             {{ item.content.length }} / {{ MAX_TEXT_LENGTH }}
                                         </text>
                                         <view
-                                            class="flex items-center gap-[6rpx] px-[20rpx] py-[8rpx] rounded-full"
-                                            style="
-                                                background: linear-gradient(
-                                                    135deg,
-                                                    #0065fb 0%,
-                                                    #0ea5e9 100%
-                                                );
-                                            "
+                                            class="flex items-center gap-[6rpx] px-[20rpx] py-[8rpx] rounded-full use-content-button"
                                             @click="useContent(item)"
                                         >
                                             <u-icon name="checkmark" color="#fff" size="14" />
@@ -377,6 +370,10 @@ onLoad((options: any) => {
 </script>
 
 <style scoped lang="scss">
+.use-content-button {
+    background: linear-gradient(135deg, #0065fb 0%, #0ea5e9 100%);
+}
+
 .skeleton {
     background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
     background-size: 400% 100%;

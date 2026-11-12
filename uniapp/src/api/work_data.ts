@@ -18,3 +18,14 @@ export const getWorkDataAnalytics = (data: {
 }) => {
     return request.get({ url: '/workData.WorkData/analytics', data })
 }
+
+// 作品数据 · 历史回填（自动翻页拉更多作品并合并入库，整段只计 1 次费用）
+// max_pages 后端会夹到 1~5，传 5 表示最多拉 5 页（约 100 条）
+export const getWorkDataBackfill = (data: {
+    persona_id: number | string
+    platform: string
+    account?: string
+    max_pages?: number
+}) => {
+    return request.post({ url: '/workData.WorkData/backfill', data })
+}

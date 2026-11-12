@@ -226,7 +226,75 @@
                                     <el-switch v-model="innerState.typeConfig['4'].singleShot" />
                                 </div>
                                 <div class="text-xs text-[#86909C] mt-1.5">
-                                    开启后每条新闻体视频只用 1 条视频素材，画面不再切换；素材不足设定时长时按素材实际时长出片
+                                    开启后每条新闻体视频只用 1 条视频素材，且每条素材只用一次；素材不足设定时长时按实际时长出片，可用素材用完则该条任务判失败
+                                </div>
+                            </div>
+                            <!-- 指定素材分组：素材库为剪辑原片时可用，每个生成类型独立配置 -->
+                            <div v-if="showMaterialGroupConfig" class="mt-3">
+                                <div class="rule-sec-hd rule-slider-hd" style="align-items: center">
+                                    <div class="rule-sec-title">指定素材分组</div>
+                                    <el-switch
+                                        :model-value="currentTypeConfig.materialGroupEnabled"
+                                        @update:model-value="toggleTypeMaterialGroup" />
+                                </div>
+                                <div class="text-xs text-[#86909C] mt-1.5">
+                                    开启后该生成类型只从所选素材分组里取素材
+                                </div>
+                                <div v-if="currentTypeConfig.materialGroupEnabled" class="mt-2">
+                                    <!-- 分组用下拉多选：分组多时 chip 会撑爆面板；已选分组以标签填进输入框，
+                                         标签换行时输入框自动往下延伸 -->
+                                    <el-select
+                                        v-model="currentTypeConfig.materialGroupIds"
+                                        multiple
+                                        placeholder="请选择素材分组"
+                                        style="width: 100%">
+                                        <el-option
+                                            v-for="item in materialGroups"
+                                            :key="`type-material-group-${activeTypeTab}-${item.id}`"
+                                            :label="item.name"
+                                            :value="item.id" />
+                                    </el-select>
+                                    <div v-if="!materialGroups.length" class="text-xs text-[#C0C4CC] mt-1">
+                                        暂无素材分组
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 画面素材：只有数字人口播会走 AI 抓素材，其余类型恒走素材库，因此跟这个 tab 走 -->
+                            <div v-if="hasDigitalHuman && activeTypeTab === '1'" class="mt-3">
+                                <div class="rule-sec-hd rule-slider-hd">
+                                    <div class="rule-sec-title">画面素材</div>
+                                </div>
+                                <div class="rule-seg">
+                                    <div
+                                        v-for="opt in MATERIAL_SOURCE_OPTIONS"
+                                        :key="opt.val"
+                                        class="rule-seg-btn"
+                                        :class="{ sel: innerState.materialSource === opt.val }"
+                                        @click="innerState.materialSource = opt.val">
+                                        <span>{{ opt.label }}</span>
+                                    </div>
+                                </div>
+                                <!-- 已开启指定素材分组的类型不会走 AI 抓素材，提前说清楚免得以为 AI 还在补 -->
+                                <div v-if="aiMaterialDisabledTip" class="text-xs text-[#FF7D00] mt-1.5">
+                                    {{ aiMaterialDisabledTip }}
+                                </div>
+                                <div v-if="isMaterialConflict" class="rule-note rule-note-error">
+                                    当前素材库为空，使用「纯素材库」将导致任务生成失败。请先上传素材。
+                                </div>
+                                <div v-else class="rule-note">
+                                    <div class="rule-note-text">{{ currentMaterialHint.effect }}</div>
+                                    <div class="rule-note-extra" :class="{ free: currentMaterialHint.costType === 'free' }">
+                                        {{ currentMaterialHint.cost }}
+                                    </div>
+                                </div>
+                                <div v-if="innerState.materialSource === MaterialSourceEnum.Square" class="mt-3">
+                                    <div class="text-xs text-[#86909C] mb-2">从这些广场分组取素材（不选=全部已上架分组）</div>
+                                    <el-checkbox-group v-model="innerState.squareGroupIds">
+                                        <el-checkbox v-for="item in squareGroups" :key="item.id" :label="item.id">
+                                            {{ item.name }}
+                                        </el-checkbox>
+                                    </el-checkbox-group>
+                                    <div v-if="!squareGroups.length" class="text-xs text-[#C0C4CC]">还没有上架的广场分组</div>
                                 </div>
                             </div>
                             <div class="mt-3">
@@ -350,45 +418,7 @@
                     </div>
                 </div>
 
-                <!-- ② 画面素材（数字人专属） -->
-                <div v-if="hasDigitalHuman" class="rule-sec">
-                    <div class="rule-sec-hd">
-                        <div class="rule-sec-title">
-                            画面素材
-                            <span class="ml-2 text-xs font-normal text-[#86909C]">(数字人专属)</span>
-                        </div>
-                    </div>
-                    <div class="rule-seg">
-                        <div
-                            v-for="opt in MATERIAL_SOURCE_OPTIONS"
-                            :key="opt.val"
-                            class="rule-seg-btn"
-                            :class="{ sel: innerState.materialSource === opt.val }"
-                            @click="innerState.materialSource = opt.val">
-                            <span>{{ opt.label }}</span>
-                        </div>
-                    </div>
-                    <div v-if="isMaterialConflict" class="rule-note rule-note-error">
-                        当前素材库为空，使用「纯素材库」将导致任务生成失败。请先上传素材。
-                    </div>
-                    <div v-else class="rule-note">
-                        <div class="rule-note-text">{{ currentMaterialHint.effect }}</div>
-                        <div class="rule-note-extra" :class="{ free: currentMaterialHint.costType === 'free' }">
-                            {{ currentMaterialHint.cost }}
-                        </div>
-                    </div>
-                    <div v-if="innerState.materialSource === MaterialSourceEnum.Square" class="mt-3">
-                        <div class="text-xs text-[#86909C] mb-2">从这些广场分组取素材（不选=全部已上架分组）</div>
-                        <el-checkbox-group v-model="innerState.squareGroupIds">
-                            <el-checkbox v-for="item in squareGroups" :key="item.id" :label="item.id">
-                                {{ item.name }}
-                            </el-checkbox>
-                        </el-checkbox-group>
-                        <div v-if="!squareGroups.length" class="text-xs text-[#C0C4CC]">还没有上架的广场分组</div>
-                    </div>
-                </div>
-
-                <!-- ③ 文案来源 -->
+                <!-- ② 文案来源 -->
                 <div class="rule-sec">
                     <div class="rule-sec-hd">
                         <div class="rule-sec-title">文案来源</div>
@@ -490,7 +520,7 @@
                     </div>
                 </div>
 
-                <!-- ④ 视频封面 -->
+                <!-- ③ 视频封面 -->
                 <div class="rule-sec">
                     <div class="rule-sec-hd">
                         <div class="rule-sec-title">视频封面</div>
@@ -755,6 +785,10 @@ interface TypeMusicState {
     speechRate: number;
     /** 一镜到底：仅新闻体混剪可开，开启后每条只用 1 条视频素材 */
     singleShot: boolean;
+    /** 指定素材分组：开启后该类型只从所选分组取素材 */
+    materialGroupEnabled: boolean;
+    /** 所选素材分组 ID（剪辑原片库的 ai_persona_material_group.id） */
+    materialGroupIds: number[];
 }
 const createDefaultTypeMusic = (): TypeMusicState => ({
     videoCount: 0,
@@ -766,6 +800,8 @@ const createDefaultTypeMusic = (): TypeMusicState => ({
     musicVolume: MUSIC_VOLUME_DEFAULT,
     speechRate: SPEECH_RATE_DEFAULT,
     singleShot: false,
+    materialGroupEnabled: false,
+    materialGroupIds: [],
 });
 const createDefaultTypeConfig = (): Record<TypeConfigKey, TypeMusicState> => ({
     "1": createDefaultTypeMusic(),
@@ -1120,6 +1156,13 @@ const templateSummary = computed(() =>
 const currentWorkModeNote = computed(() => WORK_MODE_NOTES[innerState.workMode]);
 const currentRunModeNote = computed(() => RUN_MODE_NOTES[innerState.runMode]);
 const isCloudRun = computed(() => innerState.runMode === RunModeEnum.Cloud);
+/** 人设素材库模式：1=剪辑原片 2=成品直发；只有剪辑原片才允许指定素材分组 */
+const publishMode = ref(0);
+/** 「指定素材分组」可选分组：由配置详情按当前素材模式一并返回 */
+const materialGroups = ref<{ id: number; name: string }[]>([]);
+const showMaterialGroupConfig = computed(
+    () => publishMode.value === 1 && innerState.workMode === WorkModeEnum.Ai,
+);
 const currentMaterialKindNote = computed(() => MATERIAL_KIND_NOTES[innerState.materialKind]);
 const currentEditorLibRuleNote = computed(() => EDITOR_LIB_RULE_NOTES[innerState.libRandomRule]);
 const currentCopyLibRuleNote = computed(() => COPY_LIB_RULE_NOTES[innerState.copyLibRandomRule]);
@@ -1143,6 +1186,16 @@ const isMaterialConflict = computed(
 );
 
 const currentMaterialHint = computed(() => MATERIAL_HINTS[innerState.materialSource]);
+/**
+ * 选「纯AI找素材」时，若数字人口播已开启指定素材分组，AI 抓素材不会生效
+ * （出片侧 $willGrabByAi 被置 false，只从所选分组取素材），这里提前说明。
+ */
+const aiMaterialDisabledTip = computed(() => {
+    if (innerState.materialSource !== MaterialSourceEnum.PureAI) return "";
+    return innerState.typeConfig["1"].materialGroupEnabled
+        ? "已开启指定素材分组，不使用AI素材"
+        : "";
+});
 const currentCopyHint = computed(() => {
     const hint = COPY_HINTS[innerState.copySource] ?? "";
     // 无手机模式下仿写照常可用，但爆款只能手动导入：自动抓取要靠绑定手机去平台搜
@@ -1251,6 +1304,16 @@ const pickTypeMusicSource = (key: TypeConfigKey, val: MusicSourceEnum) => {
         cfg.systemMusicEnabled = true;
     }
 };
+
+/** 开启前先确认有分组；无分组时保持关闭并提示 */
+const toggleTypeMaterialGroup = (val: boolean | string | number) => {
+    const next = Boolean(val);
+    if (next && materialGroups.value.length === 0) {
+        feedback.msgWarning("当前无素材分组，不可开启");
+        return;
+    }
+    currentTypeConfig.value.materialGroupEnabled = next;
+};
 const setTypeMusicGroup = (key: TypeConfigKey, groupId: number) => {
     const cfg = innerState.typeConfig[key];
     cfg.musicGroupId = Number(groupId) || 0;
@@ -1333,6 +1396,9 @@ const buildTypeConfigPayload = () => {
             speech_rate: normalizeSpeechRate(cfg.speechRate),
             // 一镜到底只有新闻体混剪生效，其余类型恒 0
             single_shot: key === "4" && cfg.singleShot ? 1 : 0,
+            // 指定素材分组：每个类型独立；关闭时保留已选 ID，便于再次开启
+            material_group_enabled: cfg.materialGroupEnabled ? 1 : 0,
+            material_group_ids: cfg.materialGroupIds,
         };
     });
     return payload;
@@ -1458,6 +1524,17 @@ const validate = (): boolean => {
         feedback.msgWarning("请至少给一个生成类型设置视频数量");
         return false;
     }
+    // 指定素材分组：开启后必须至少选一个，否则合成时无素材可取
+    if (showMaterialGroupConfig.value) {
+        const emptyGroupType = visibleTypeKeys.value.find((key) => {
+            const cfg = innerState.typeConfig[key];
+            return cfg.materialGroupEnabled && cfg.materialGroupIds.length === 0;
+        });
+        if (emptyGroupType) {
+            feedback.msgWarning(`「${TYPE_CONFIG_LABELS[emptyGroupType]}」请至少选择一个素材分组`);
+            return false;
+        }
+    }
     const emptyType = findEmptyCustomType(activeSynthApiTypes.value, innerState.templateConfig);
     if (emptyType != null) {
         feedback.msgWarning(`「${getSynthApiFullLabel(emptyType)}」请至少选择 1 个模板`);
@@ -1530,6 +1607,13 @@ const getDetail = async () => {
         innerState.id = res.id ?? "";
         const isProductDirect = Number(res.work_mode) === 2 || Number(res.publish_mode) === 2;
         innerState.workMode = isProductDirect ? WorkModeEnum.Lib : WorkModeEnum.Ai;
+        // 素材库为「剪辑原片」时才显示「指定素材分组」
+        publishMode.value = Number(res.publish_mode) || 0;
+        materialGroups.value = Array.isArray(res.material_groups)
+            ? res.material_groups
+                  .map((item: any) => ({ id: Number(item.id) || 0, name: String(item.name || "") }))
+                  .filter((item: { id: number; name: string }) => item.id > 0)
+            : [];
         const types = Array.isArray(res.generation_types) ? res.generation_types : [];
         innerState.synthTypes = (types
             .map((n: number) => API_TO_SYNTH_TYPE[String(n)])
@@ -1604,6 +1688,10 @@ const getDetail = async () => {
                 );
                 target.speechRate = normalizeSpeechRate(cfg.speech_rate ?? res.speech_rate ?? SPEECH_RATE_DEFAULT);
                 target.singleShot = Number(cfg.single_shot ?? 0) === 1;
+                target.materialGroupEnabled = Number(cfg.material_group_enabled ?? 0) === 1;
+                target.materialGroupIds = Array.isArray(cfg.material_group_ids)
+                    ? cfg.material_group_ids.map((id: any) => Number(id)).filter((id: number) => id > 0)
+                    : [];
                 return;
             }
             // 老数据 / 老接口：三类音乐与语速都继承顶层配置，条数按「先均分余数补前」分配
@@ -1636,6 +1724,8 @@ const open = (id: string | number, opts?: { isMaterialEmpty?: boolean }) => {
     typeConfigExpanded.value = false;
     // 重置后再拉详情
     Object.assign(innerState, DEFAULT_INNER_STATE());
+    publishMode.value = 0;
+    materialGroups.value = [];
     getDetail();
     loadMusicGroups();
     getSquareGroups()

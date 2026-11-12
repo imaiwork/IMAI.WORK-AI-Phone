@@ -10,6 +10,66 @@ use Exception;
 
 class AgentConfigService
 {
+    /**
+     * 只检查已启用且使用 AI 回复的场景；列表和详情共用这份缺项清单。
+     * 接收原始配置，避免模型访问器补默认平台后丢失旧版配置的回退语义。
+     *
+     * @return list<string>
+     */
+    public static function getMissingAgentScenes(array $config, array $options): array
+    {
+        $missing = [];
+        $platforms = AiPersonaAgentConfig::normalizePlatformAgentConfig($config['platform_agent_config'] ?? null, false);
+        $needsAgent = static fn(array $reply): bool => (int)($reply['type'] ?? 1) !== 2
+            && (int)($reply['agent_id'] ?? 0) <= 0
+            && (int)($reply['comment_only_like'] ?? 0) !== 1;
+
+        if (AiPersonaOptionService::isEnabled($options, 'customer_service')) {
+            foreach (['comment' => '评论', 'dm' => '私信'] as $scene => $label) {
+                if ((int)($config[$scene . '_enabled'] ?? 0) !== 1) {
+                    continue;
+                }
+                if (empty($platforms)) {
+                    if ($needsAgent([
+                        'type' => $config[$scene . '_type'] ?? 1,
+                        'agent_id' => $config[$scene . '_agent_id'] ?? 0,
+                        'comment_only_like' => $scene === 'comment' && (int)($config['comment_type'] ?? 1) === 3 ? 1 : 0,
+                    ])) {
+                        $missing[] = '社媒' . $label;
+                    }
+                    continue;
+                }
+                foreach ([3 => '小红书', 4 => '抖音', 5 => '快手'] as $type => $platformName) {
+                    if ($needsAgent($platforms[$type][$scene] ?? [])) {
+                        $missing[] = $platformName . $label;
+                    }
+                }
+            }
+
+            if ((int)($config['wechat_chat_enabled'] ?? 0) === 1) {
+                $wechatReply = empty($platforms) ? [
+                    'type' => $config['wechat_chat_type'] ?? 1,
+                    'agent_id' => $config['wechat_chat_agent_id'] ?? 0,
+                ] : ($platforms[AiPersonaAgentConfig::WECHAT_PLATFORM_TYPE]['dm'] ?? []);
+                if ($needsAgent($wechatReply)) {
+                    $missing[] = '微信私信';
+                }
+            }
+        }
+
+        if (AiPersonaOptionService::isEnabled($options, 'private_operation.options.circle_config')
+            && (int)($config['moments_enabled'] ?? 0) === 1
+            && in_array((int)($config['moments_action'] ?? 0), [2, 3], true)
+            && $needsAgent([
+                'type' => $config['moments_type'] ?? 1,
+                'agent_id' => $config['moments_agent_id'] ?? 0,
+            ])) {
+            $missing[] = '朋友圈评论';
+        }
+
+        return $missing;
+    }
+
     public static function buildCustomerServiceData(AiPersonaAgentConfig $agentConfig, array $params): array
     {
         $data = [

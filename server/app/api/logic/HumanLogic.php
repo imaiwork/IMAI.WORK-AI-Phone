@@ -3512,10 +3512,14 @@ class HumanLogic extends ApiLogic
         $result = self::requestUrl($request, $scene, self::$uid, $taskId);
         if (!empty($result) && isset($result['content'])) {
             // ─── 文案质量校验：英文缺空格 / 外文乱码 ───
-            $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
-            $result['content'] = $sanitized['content'];
-            if (!empty($sanitized['warnings'])) {
-                $result['warnings'] = $sanitized['warnings'];
+            // 仅对数组型 content 校验，字符串型原样透传：sanitizeArray 的 array 类型约束
+            // 对字符串会抛 TypeError（\Error），catch(\Exception) 接不住会直接炸流程。
+            if (is_array($result['content'])) {
+                $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
+                $result['content'] = $sanitized['content'];
+                if (!empty($sanitized['warnings'])) {
+                    $result['warnings'] = $sanitized['warnings'];
+                }
             }
             self::$returnData = $result;
         } else {

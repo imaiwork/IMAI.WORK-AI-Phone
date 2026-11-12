@@ -49,18 +49,89 @@ class ApiLogic extends BaseLogic
             $find->delete();
         }
         
-        \app\common\model\sv\SvPublishSettingDetail::where('device_code', $device->device_code)
-            ->where('auto_type', 1)
-            ->where('publish_time', 'between', [date('Y-m-d 00:00:00', time()), date('Y-m-d 23:59:59', time())])
-            ->select()->delete();
-        \app\common\model\wechat\AiWechatCircleTask::where('device_code', $device->device_code)
-            ->where('auto_type', 1)
-            ->where('send_time', 'between', [date('Y-m-d 00:00:00', time()), date('Y-m-d 23:59:59', time())])
-            ->select()->delete();
-        SvDeviceTask::where('device_code', $device->device_code)
-            ->where('auto_type', 1)
-            ->where('day', date('Y-m-d'))
-            ->select()->delete();
+        \think\facade\Db::startTrans();
+        try {
+            // 发布链路：先收集明细关联的账号、设置，删除明细后再逐级清理父表，避免产生孤儿数据
+            $publishStart = date('Y-m-d 00:00:00', time());
+            $publishEnd = date('Y-m-d 23:59:59', time());
+            $details = \app\common\model\sv\SvPublishSettingDetail::where('device_code', $device->device_code)
+                ->where('auto_type', 1)
+                ->where('publish_time', 'between', [$publishStart, $publishEnd])
+                ->select();
+            $accountIds = [];
+            $publishIds = [];
+            foreach ($details as $detail) {
+                if ((int)$detail->publish_account_id > 0) {
+                    $accountIds[(int)$detail->publish_account_id] = (int)$detail->publish_id;
+                }
+                $publishIds[(int)$detail->publish_id] = true;
+            }
+            $details->delete();
+
+            foreach (array_keys($accountIds) as $accountId) {
+                if ($accountId <= 0) {
+                    continue;
+                }
+                // 账号下仍有未删除的明细时保留，避免误删跨天或其它来源的任务
+                $remainDetail = \app\common\model\sv\SvPublishSettingDetail::where('publish_account_id', $accountId)->count();
+                if ($remainDetail > 0) {
+                    continue;
+                }
+                $account = \app\common\model\sv\SvPublishSettingAccount::where('id', $accountId)->findOrEmpty();
+                if ($account->isEmpty()) {
+                    continue;
+                }
+                $publishIds[(int)$account->publish_id] = true;
+                $account->delete();
+            }
+
+            foreach (array_keys($publishIds) as $publishId) {
+                if ($publishId <= 0) {
+                    continue;
+                }
+                // 设置下仍有账号或明细时保留
+                if (\app\common\model\sv\SvPublishSettingAccount::where('publish_id', $publishId)->count() > 0) {
+                    continue;
+                }
+                if (\app\common\model\sv\SvPublishSettingDetail::where('publish_id', $publishId)->count() > 0) {
+                    continue;
+                }
+                \app\common\model\sv\SvPublishSetting::where('id', $publishId)->select()->delete();
+            }
+
+            // 朋友圈链路：先收集任务关联的配置，删除任务后再清理无任务的配置
+            $circleStart = date('Y-m-d 00:00:00', time());
+            $circleEnd = date('Y-m-d 23:59:59', time());
+            $tasks = \app\common\model\wechat\AiWechatCircleTask::where('device_code', $device->device_code)
+                ->where('auto_type', 1)
+                ->where('send_time', 'between', [$circleStart, $circleEnd])
+                ->select();
+            $configIds = [];
+            foreach ($tasks as $task) {
+                $configIds[(int)$task->task_config_id] = true;
+            }
+            $tasks->delete();
+
+            foreach (array_keys($configIds) as $configId) {
+                if ($configId <= 0) {
+                    continue;
+                }
+                // 配置下仍有任务时保留
+                if (\app\common\model\wechat\AiWechatCircleTask::where('task_config_id', $configId)->count() > 0) {
+                    continue;
+                }
+                \app\common\model\wechat\AiWechatCircleTaskConfig::where('id', $configId)->select()->delete();
+            }
+
+            SvDeviceTask::where('device_code', $device->device_code)
+                ->where('auto_type', 1)
+                ->where('day', date('Y-m-d'))
+                ->select()->delete();
+            \think\facade\Db::commit();
+        } catch (\Throwable $e) {
+            \think\facade\Db::rollback();
+            \think\facade\Log::channel('device')->error('人设任务取消重置清理失败：' . $e->getMessage());
+        }
     }
 
     public static function sendNotice(array $payload, $scene_id = 401)

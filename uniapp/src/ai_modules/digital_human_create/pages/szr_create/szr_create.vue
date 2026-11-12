@@ -266,6 +266,12 @@
                                 </view>
                             </view>
 
+                            <view class="border-[0] border-t border-solid border-[#F1F5F9] pt-[24rpx]">
+                                <video-cover-upload
+                                    v-model="formData.cover"
+                                    v-model:mode="formData.coverMode" />
+                            </view>
+
                             <view v-if="showAdvancedSetting" class="border-[0] border-t border-solid border-[#F1F5F9]">
                                 <advanced-setting v-model="formData.packaging" show-music />
                             </view>
@@ -554,6 +560,7 @@ import RecorderControl from "@/ai_modules/digital_human_create/components/record
 import ChooseAudioType from "@/ai_modules/digital_human_create/components/choose-audio-type/choose-audio-type.vue";
 import CreateSuccessPop from "@/ai_modules/digital_human_create/components/create-success-pop/create-success-pop.vue";
 import AdvancedSetting from "@/ai_modules/digital_human_create/components/advanced-setting/advanced-setting.vue";
+import VideoCoverUpload from "@/ai_modules/digital_human_create/components/video-cover-upload/video-cover-upload.vue";
 import {
     createAdvancedSetting,
     toPackagingParams,
@@ -600,6 +607,9 @@ const DH_CREATE_AGREEMENT_KEY = "create_agreement";
 const formData = reactive<any>({
     name: "",
     pic: "",
+    cover: "",
+    // 封面方式:1=首帧 2=AI封面 3=手动上传
+    coverMode: 1,
     width: 0,
     height: 0,
     anchor_id: "",
@@ -1165,6 +1175,10 @@ const confirmCreate = async () => {
         uni.$u.toast("请上传背景音乐");
         return;
     }
+    if (formData.coverMode === 3 && !formData.cover) {
+        uni.$u.toast("请上传视频封面");
+        return;
+    }
 
     showAgreement.value = false;
     try {
@@ -1245,7 +1259,8 @@ const createShanjianSpeechTask = async (engineType: SpeechEngineTypeEnum = Speec
         ai_clip_enabled: clipConfig.is_open ? formData.ai_clip_enabled : 0,
         // 关掉包装时 packaging 无意义，不提交
         ...(packaging ? { packaging } : {}),
-        pic: pic || formData.pic,
+        pic: formData.coverMode === 3 ? formData.cover : pic || formData.pic,
+        video_cover_source: formData.coverMode ?? 1,
         ...contentParams,
         anchor: [
             {

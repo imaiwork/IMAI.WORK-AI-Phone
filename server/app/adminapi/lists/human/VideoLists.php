@@ -219,8 +219,11 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
                 ?? $shanjianAnchorMap[$item['anchor_id'] ?? '']
                 ?? '';
             $item['anchor_id']    = $item['anchor_id'] ?? 0;
-            $item['model_version'] = self::MODEL_VERSION_SHANJIAN;
-            $item['model_name']   = $shanjianName;
+            $isChanjing = $this->isChanjingEngine($item['extra'] ?? null);
+            $item['model_version'] = $isChanjing ? self::MODEL_VERSION_CHANJING : self::MODEL_VERSION_SHANJIAN;
+            $item['model_name']   = $isChanjing
+                ? ($this->resolveModelName($modelMap, self::MODEL_VERSION_CHANJING) ?: '蝉镜')
+                : $shanjianName;
             $item['voice_name']   = $voiceMap[$item['voice_id'] ?? ''] ?? '';
             $item['gender']       = 0;
             $item['clip_type']    = 0;
@@ -445,6 +448,18 @@ class VideoLists extends BaseAdminDataLists implements ListsSearchInterface
         }
 
         return (string)($modelMap[$modelVersion]['name'] ?? '');
+    }
+
+    /**
+     * type5 里 extra.waiting_engine=chanjing 的是蝉镜桥接，模型名不能按闪剪显示
+     */
+    protected function isChanjingEngine($extra): bool
+    {
+        if (is_string($extra)) {
+            $extra = json_decode($extra, true) ?: [];
+        }
+
+        return is_array($extra) && ($extra['waiting_engine'] ?? '') === 'chanjing';
     }
 
     /**

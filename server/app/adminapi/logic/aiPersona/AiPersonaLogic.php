@@ -18,6 +18,7 @@ use app\common\model\aiPersona\AiPersonaWechatInteractionConfig;
 use app\common\model\aiPersona\Material;
 use app\common\model\sv\SvDevice;
 use app\common\service\aiPersona\AiPersonaOptionService;
+use app\common\service\aiPersona\AgentConfigService;
 use app\common\service\aiPersona\AiPersonaTextService;
 use app\common\service\aiPersona\PersonaAgentProvisionService;
 use app\common\service\aiPersona\PersonaRunModeSwitchService;
@@ -358,14 +359,19 @@ class AiPersonaLogic extends BaseLogic
             return ['res' => false, 'msg' => '请生成人设报告', 'is_configured' => 0];
         }
         $personaAgentConfig = AiPersonaAgentConfig::where([['persona_id', '=', $personaId], ['user_id', '=', $userId]])->findOrEmpty();
-        if ($personaAgentConfig->isEmpty()) {
+        $missingAgents = AgentConfigService::getMissingAgentScenes(
+            $personaAgentConfig->getData(),
+            AiPersonaOptionService::getOptionsByPersona($persona)
+        );
+        if (!empty($missingAgents)) {
             $persona->is_configured = 0;
             $persona->save();
-            return ['res' => false, 'msg' => '请先配置智能体', 'is_configured' => 0];
-        } else if ((!$personaAgentConfig->hasAnyEffectivePlatformAgentConfig() && ($personaAgentConfig['comment_agent_id'] == 0 || $personaAgentConfig['dm_agent_id'] == 0)) || $personaAgentConfig['wechat_chat_agent_id'] == 0 || $personaAgentConfig['moments_agent_id'] == 0) {
-            $persona->is_configured = 0;
-            $persona->save();
-            return ['res' => false, 'msg' => '请先配置智能体', 'is_configured' => 0];
+            return [
+                'res' => false,
+                'msg' => '请配置' . implode('、', $missingAgents) . '智能体',
+                'is_configured' => 0,
+                'missing_agents' => $missingAgents,
+            ];
         }
         $material = Material::where([['persona_id', '=', $personaId], ['user_id', '=', $userId], ['publish_mode', '=', $persona['publish_mode']]])->findOrEmpty();
         if ($material->isEmpty()) {

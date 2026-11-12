@@ -44,10 +44,13 @@ class SvMediaMaterialLogic extends SvBaseLogic
                 self::setError('素材不存在');
                 return false;
             }
-            $data['name'] = $params['name'];
+            // 只写入请求携带的字段：局部更新（如重命名）不能把 pic/group_id 重置掉
             $data['id'] = $params['id'];
-            $data['pic'] = $params['pic'] ?? '';
-            $data['group_id'] = $params['group_id'] ?? 0;
+            foreach (['name', 'pic', 'group_id'] as $field) {
+                if (array_key_exists($field, $params)) {
+                    $data[$field] = $params[$field];
+                }
+            }
             $material->update($data);
             self::$returnData = $material->refresh()->toArray();
             return true;

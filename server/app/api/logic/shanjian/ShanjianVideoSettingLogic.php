@@ -22,6 +22,7 @@ use app\common\model\user\UserTokensLog;
 use app\common\service\FileService;
 use app\common\service\MemberService;
 use app\common\service\OriginalMaterialSpec;
+use app\common\service\shanjian\ShanjianVideoCoverService;
 use app\common\service\UserDisplaySanitizer;
 use think\facade\Db;
 use think\facade\Log;
@@ -1804,9 +1805,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 );
                 // 未指定全局封面时，按当前形象独立取封面
                 $taskPic = $defaultPic !== '' ? $defaultPic : (string)($selectedAnchor['pic'] ?? '');
+                $coverFields = ShanjianVideoCoverService::buildForTask(
+                    (int)($params['video_cover_source'] ?? 0),
+                    $taskPic,
+                    $defaultPic
+                );
                 $taskItem = [
                     'name' => $taskname,
-                    'pic' => $taskPic,
+                    'pic' => $coverFields['pic'],
                     'task_id' => generate_unique_task_id(),
                     'status' => 0, // 待处理
                     'audio_type' => $audioType,
@@ -1821,7 +1827,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'audio_url' => $taskContent['audio_url'] ?? '',
                     'material' => $material,
                     'music_url' => $music_url,
-                    'thumb_status' => $taskPic !== '' ? 2 : 4,
+                    'thumb_status' => $coverFields['thumb_status'],
+                    'cover_status' => $coverFields['cover_status'],
+                    'cover_result_id' => $coverFields['cover_result_id'],
+                    'video_cover_source' => $coverFields['video_cover_source'],
                     'clip_id' => $clip_id,
                     'duration' => (int)ceil($taskDuration),
                     'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
@@ -2736,9 +2745,15 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $mergedArray['packaging'] = $packaging;
                 }
 
+                $bridgePic = $pic !== '' ? $pic : (string)($humanTask->pic ?? '');
+                $coverFields = ShanjianVideoCoverService::buildForTask(
+                    (int)($params['video_cover_source'] ?? 0),
+                    $bridgePic,
+                    $pic
+                );
                 $bridgeTasks[] = [
                     'name' => $taskname,
-                    'pic' => $pic ?: (string)($humanTask->pic ?? ''),
+                    'pic' => $coverFields['pic'],
                     'task_id' => $sharedTaskId,
                     'status' => -1, // 等待蝉镜/MiniMax，禁止闪剪 cron 下发
                     'audio_type' => $isMinimaxPending ? 1 : $audioType,
@@ -2756,7 +2771,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'audio_url' => $isMinimaxPending ? '' : ($taskContent['audio_url'] ?? ''),
                     'material' => '[]',
                     'music_url' => self::resolveType5MusicUrl($packaging, [], $extraData, $globalTaskIndex),
-                    'thumb_status' => ($pic !== '' || !empty($humanTask->pic)) ? 2 : 4,
+                    'thumb_status' => $coverFields['thumb_status'],
+                    'cover_status' => $coverFields['cover_status'],
+                    'cover_result_id' => $coverFields['cover_result_id'],
+                    'video_cover_source' => $coverFields['video_cover_source'],
                     'duration' => (int)ceil($taskDuration),
                     'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     'create_time' => time(),
@@ -2925,9 +2943,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     ? $minimaxVoice
                     : (string)($selectedVoice['voice_id'] ?? '');
 
+                $coverFields = ShanjianVideoCoverService::buildForTask(
+                    (int)($params['video_cover_source'] ?? 0),
+                    $taskPic,
+                    (string)($params['pic'] ?? '')
+                );
                 $taskData[] = [
                     'name' => $taskname,
-                    'pic' => $taskPic,
+                    'pic' => $coverFields['pic'],
                     'task_id' => generate_unique_task_id(),
                     'status' => $isMinimaxPending ? -1 : 0,
                     'audio_type' => $audioType,
@@ -2945,7 +2968,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'audio_url' => $isMinimaxPending ? '' : ($taskContent['audio_url'] ?? ''),
                     'material' => $material,
                     'music_url' => $music_url,
-                    'thumb_status' => empty($taskPic) ? 4 : 2,
+                    'thumb_status' => $coverFields['thumb_status'],
+                    'cover_status' => $coverFields['cover_status'],
+                    'cover_result_id' => $coverFields['cover_result_id'],
+                    'video_cover_source' => $coverFields['video_cover_source'],
                     'duration' => (int)ceil($taskDuration),
                     'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                     'create_time' => time(),
@@ -3143,6 +3169,19 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 } catch (\Throwable $e) {
                     Log::channel('shanjiannotice')->write(
                         '[' . $tag . '退费失败] task_id=' . $task->task_id . ' err=' . $e->getMessage()
+                    );
+                }
+            }
+
+            // 超时收口的子任务没产出成片，素材使用记录一并标失败：一镜到底按
+            // 「用过一次就不再取」选片，不标的话这条素材会永远算「已使用」，
+            // 上游抖动几天就能把人设的视频池烧空，之后每条任务都只能落失败。
+            foreach ($failedTasks as $task) {
+                try {
+                    ShanjianVideoTaskLogic::handleMaterialUseFailure($task, $reason);
+                } catch (\Throwable $e) {
+                    Log::channel('shanjiannotice')->write(
+                        '[' . $tag . '素材使用记录回滚失败] task_id=' . $task->task_id . ' err=' . $e->getMessage()
                     );
                 }
             }
@@ -3518,9 +3557,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 $videoName = mb_substr($videoName, 0, 120, 'UTF-8');
                 // 未指定全局封面时，按当前形象独立取封面，避免多形象任务共用第一张
                 $taskPic = $defaultPic !== '' ? $defaultPic : (string)($currentAnchor['pic'] ?? '');
+                $coverFields = ShanjianVideoCoverService::buildForTask(
+                    (int)($params['video_cover_source'] ?? 0),
+                    $taskPic,
+                    $defaultPic
+                );
                 $taskItem = [
                     'name' => $videoName,
-                    'pic' => $taskPic,
+                    'pic' => $coverFields['pic'],
                     'task_id' => generate_unique_task_id(),
                     'status' => 0, // 待处理
                     'audio_type' => 1, // 文案驱动
@@ -3536,7 +3580,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'material' => $material,
                     'music_url' => $music_url,
                     'clip_id' => $clip_id,
-                    'thumb_status' => $taskPic !== '' ? 2 : 4,
+                    'thumb_status' => $coverFields['thumb_status'],
+                    'cover_status' => $coverFields['cover_status'],
+                    'cover_result_id' => $coverFields['cover_result_id'],
+                    'video_cover_source' => $coverFields['video_cover_source'],
                     'duration' => (int)ceil($taskDuration),
                     'extra' => json_encode($mergedArray, JSON_UNESCAPED_UNICODE),
                     'create_time' => time(),
@@ -3793,9 +3840,14 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 $taskExtra['create_type'] = 'minimax_type3_pending';
 
                 $title = (string)($copywritingItem['title'] ?? '');
+                $coverFields = ShanjianVideoCoverService::buildForTask(
+                    (int)($params['video_cover_source'] ?? 0),
+                    $taskPic,
+                    $defaultPic
+                );
                 $taskData[] = [
                     'name'             => mb_substr($title !== '' ? $title : ($params['name'] ?? 'MiniMax混剪'), 0, 120, 'UTF-8'),
-                    'pic'              => $taskPic,
+                    'pic'              => $coverFields['pic'],
                     'task_id'          => generate_unique_task_id(),
                     'status'           => -1,
                     'audio_type'       => 1,
@@ -3815,7 +3867,10 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     'audio_url'        => '',
                     'duration'         => (int)ceil(self::formatBillingDuration(self::taskTextDuration($copywritingItem))),
                     'extra'            => json_encode($taskExtra, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                    'thumb_status'     => $taskPic !== '' ? 2 : 4,
+                    'thumb_status'     => $coverFields['thumb_status'],
+                    'cover_status'     => $coverFields['cover_status'],
+                    'cover_result_id'  => $coverFields['cover_result_id'],
+                    'video_cover_source' => $coverFields['video_cover_source'],
                     'create_time'      => time(),
                     'update_time'      => time(),
                 ];
@@ -3903,7 +3958,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                 }
                 unset($value);
-                $taskThumbStatus = $taskPic !== '' ? 2 : 4;
+                $coverFields = ShanjianVideoCoverService::buildForTask(
+                    (int)($params['video_cover_source'] ?? 0),
+                    $taskPic,
+                    $defaultPic
+                );
+                $taskThumbStatus = $coverFields['thumb_status'];
                 $materialJson = json_encode(is_array($selectedMaterial) ? array_values($selectedMaterial) : [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
                 // ===== 剪辑模板选择逻辑 =====
@@ -3961,8 +4021,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     $taskDuration = self::formatBillingDuration(self::taskTextDuration($copywritingItem));
 
                     $taskItem = [
-                        'pic' => $taskPic,
-                        'thumb_status' => $taskThumbStatus,
+                        'pic' => $coverFields['pic'],
+                        'thumb_status' => $coverFields['thumb_status'],
+                        'cover_status' => $coverFields['cover_status'],
+                        'cover_result_id' => $coverFields['cover_result_id'],
+                        'video_cover_source' => $coverFields['video_cover_source'],
                         'task_id' => generate_unique_task_id(),
                         'status' => 0, // 待处理
                         'audio_type' => 1, // 文案驱动
@@ -4008,8 +4071,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
 
                     $taskItem = [
-                        'pic' => $taskPic,
-                        'thumb_status' => $taskThumbStatus,
+                        'pic' => $coverFields['pic'],
+                        'thumb_status' => $coverFields['thumb_status'],
+                        'cover_status' => $coverFields['cover_status'],
+                        'cover_result_id' => $coverFields['cover_result_id'],
+                        'video_cover_source' => $coverFields['video_cover_source'],
                         'task_id' => generate_unique_task_id(),
                         'status' => 0, // 待处理
                         'audio_type' => 2, // 音频驱动
@@ -4864,7 +4930,12 @@ class ShanjianVideoSettingLogic extends ApiLogic
                     }
                 }
                 unset($value);
-                $taskThumbStatus = $taskPic !== '' ? 2 : 4;
+                $coverFields = ShanjianVideoCoverService::buildForTask(
+                    (int)($params['video_cover_source'] ?? 0),
+                    $taskPic,
+                    $defaultPic
+                );
+                $taskThumbStatus = $coverFields['thumb_status'];
                 $materialJson = json_encode(is_array($selectedMaterial) ? array_values($selectedMaterial) : [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
                 // ===== 剪辑模板选择逻辑 =====
@@ -4912,8 +4983,11 @@ class ShanjianVideoSettingLogic extends ApiLogic
                 $contentStrategy = 'sequential_copywriting';
                 $taskDuration = self::resolveNewsTaskDuration($copywritingItem, $extraData);
                 $taskItem = [
-                    'pic' => $taskPic,
-                    'thumb_status' => $taskThumbStatus,
+                    'pic' => $coverFields['pic'],
+                    'thumb_status' => $coverFields['thumb_status'],
+                    'cover_status' => $coverFields['cover_status'],
+                    'cover_result_id' => $coverFields['cover_result_id'],
+                    'video_cover_source' => $coverFields['video_cover_source'],
                     'task_id' => generate_unique_task_id(),
                     'status' => 0, // 待处理
                     'audio_type' => 1, // 文案驱动
@@ -5015,9 +5089,19 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $audioUrl = $normalizedAudio['url'];
         $audioFormat = is_string($audioItem) ? 'string' : 'object';
 
+        $coverFields = ShanjianVideoCoverService::buildForTask(
+            (int)($params['video_cover_source'] ?? 0),
+            '',
+            (string)($params['pic'] ?? '')
+        );
+
         return [
             'name' => ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($index + 1),
-            'pic' => '', // Type4可能没有anchor pic
+            'pic' => $coverFields['pic'], // Type4可能没有anchor pic
+            'thumb_status' => $coverFields['thumb_status'],
+            'cover_status' => $coverFields['cover_status'],
+            'cover_result_id' => $coverFields['cover_result_id'],
+            'video_cover_source' => $coverFields['video_cover_source'],
             'task_id' => generate_unique_task_id(),
             'status' => 0, // 待处理
             'audio_type' => 2, // 音频驱动
@@ -5069,9 +5153,18 @@ class ShanjianVideoSettingLogic extends ApiLogic
         $clip_id = !empty($clipData) ? $clipData[$index % count($clipData)]['clip_template_id'] ?? $clip_template_id[$clip] : $clip_template_id[$clip];
 
         $material = json_encode(is_array($selectedMaterial) ? array_values($selectedMaterial) : [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $coverFields = ShanjianVideoCoverService::buildForTask(
+            (int)($params['video_cover_source'] ?? 0),
+            '',
+            (string)($params['pic'] ?? '')
+        );
         return [
             'name' => ($params['name'] ?? '视频设置' . date('YmdHi')) . '_' . ($index + 1),
-            'pic' => '', // Type4可能没有anchor pic
+            'pic' => $coverFields['pic'], // Type4可能没有anchor pic
+            'thumb_status' => $coverFields['thumb_status'],
+            'cover_status' => $coverFields['cover_status'],
+            'cover_result_id' => $coverFields['cover_result_id'],
+            'video_cover_source' => $coverFields['video_cover_source'],
             'task_id' => generate_unique_task_id(),
             'status' => 0, // 待处理
             'audio_type' => 1, // 文案驱动

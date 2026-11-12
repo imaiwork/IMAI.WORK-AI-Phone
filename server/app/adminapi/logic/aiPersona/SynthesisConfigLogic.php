@@ -391,9 +391,32 @@ class SynthesisConfigLogic extends BaseLogic
                 'single_shot' => AiPersonaSynthesisConfig::resolveTypeSingleShot($data, $type)
                     ? AiPersonaSynthesisConfig::SINGLE_SHOT_ON
                     : AiPersonaSynthesisConfig::SINGLE_SHOT_OFF,
+                // 指定素材分组：每个类型独立开关，关闭时 ID 原样回显方便再次开启
+                'material_group_enabled' => AiPersonaSynthesisConfig::resolveTypeMaterialGroupEnabled($data, $type)
+                    ? AiPersonaSynthesisConfig::MATERIAL_GROUP_ON
+                    : AiPersonaSynthesisConfig::MATERIAL_GROUP_OFF,
+                'material_group_ids' => AiPersonaSynthesisConfig::resolveTypeMaterialGroupIdsForDisplay($data, $type),
             ];
         }
         $data['type_config'] = $typeConfig;
+        $data['material_groups'] = self::materialGroupOptions($data);
         return $data;
+    }
+
+    /**
+     * 当前素材模式下该人设可选的素材分组（剪辑原片库）。
+     */
+    private static function materialGroupOptions(array $data): array
+    {
+        $personaId = (int)($data['persona_id'] ?? 0);
+        $userId = (int)($data['user_id'] ?? 0);
+        if ($personaId <= 0 || $userId <= 0) {
+            return [];
+        }
+        $keepOriginal = \app\api\logic\shanjian\ShanjianVideoSettingLogic::resolvePersonaMaterialUseMode($personaId)
+            === \app\api\logic\shanjian\ShanjianVideoSettingLogic::MATERIAL_USE_MODE_ORIGINAL
+            ? \app\common\model\aiPersona\Material::KEEP_ORIGINAL_YES
+            : \app\common\model\aiPersona\Material::KEEP_ORIGINAL_NO;
+        return \app\api\logic\aiPersona\MaterialGroupLogic::optionsForPersona($userId, $personaId, $keepOriginal);
     }
 }

@@ -139,6 +139,7 @@
                         </view>
 
                         <view
+                            v-if="friendAddEnabled"
                             class="bg-white rounded-[28rpx] shadow-[0_2rpx_12rpx_rgba(0,0,0,0.06),0_0_0_1rpx_rgba(0,0,0,0.04)]">
                             <view
                                 class="flex items-center justify-between px-[28rpx] py-[24rpx] border-[0] border-b border-solid border-[#F0F2F5]">
@@ -806,6 +807,9 @@ const appStore = useAppStore();
 const userStore = useUserStore();
 const { on } = useEventBusManager();
 
+/** 后台手动任务开关「自动加好友」：关闭时隐藏加微设置且不生成加微任务 */
+const friendAddEnabled = computed(() => appStore.getManualTaskSwitch.wechat_friend_add);
+
 const getWechatRemarks = computed(() => appStore.config.wechat_remarks || []);
 const getOCRCloudToken = computed(() => userStore.getTokenByScene(TokensSceneEnum.SPH_OCR)?.score);
 const getOCRLocalToken = computed(() => userStore.getTokenByScene(TokensSceneEnum.SPH_LOCAL_OCR)?.score);
@@ -828,7 +832,7 @@ const formData = reactive<SphFormData>({
     chat_number: 30,
     chat_interval_time: 10,
     greeting_content: "",
-    add_type: 1,
+    add_type: friendAddEnabled.value ? 1 : 0,
     remark: "",
     add_number: 15,
     add_interval_time: 10,
@@ -910,6 +914,11 @@ watch(
         formData.remarks = getWechatRemarks.value;
     },
 );
+
+// 配置可能在页面挂载后才返回，开关状态变化时同步（关闭强制 0，开启恢复默认开启）
+watch(friendAddEnabled, (enabled) => {
+    formData.add_type = enabled ? 1 : 0;
+});
 
 // ── onLoad ───────────────────────────────────────────────────────
 onLoad(({ type }: any) => {

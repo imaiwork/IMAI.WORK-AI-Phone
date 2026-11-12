@@ -28,6 +28,7 @@ import {
     CHANJING_ORIGINAL_VOICE_ID,
     MusicSourceEnum,
     SpeechEngineTypeEnum,
+    VideoCoverModeEnum,
 } from "../../../_enums";
 import { toPackagingParams, withResolvedSystemMusicUrl } from "../../../_config/advanced-setting";
 import { validateText } from "@/utils/textValidator";
@@ -75,6 +76,10 @@ const validateFormData = (formData: any) => {
     const { url, anchor_id, audio_type, msg, voice_id, audio_url } = formData;
     if (!url || !anchor_id) {
         feedback.msgError("请选择一位数字人");
+        return false;
+    }
+    if (formData.coverMode === VideoCoverModeEnum.MANUAL_UPLOAD && !formData.cover) {
+        feedback.msgError("请上传视频封面");
         return false;
     }
     // 后端在 music_source=自定义 且没有音乐时会直接报错，这里先拦一次
@@ -161,7 +166,11 @@ const createSpeechTaskByEngine = async (engineType: SpeechEngineTypeEnum) => {
         engine_type: engineType,
         ai_clip_enabled: props.formData.ai_clip_enabled,
         ...(packaging ? { packaging } : {}),
-        pic: props.formData.pic,
+        pic:
+            props.formData.coverMode === VideoCoverModeEnum.MANUAL_UPLOAD
+                ? props.formData.cover
+                : props.formData.pic,
+        video_cover_source: props.formData.coverMode ?? VideoCoverModeEnum.FIRST_FRAME,
         ...getContentParams(),
         anchor: [
             {

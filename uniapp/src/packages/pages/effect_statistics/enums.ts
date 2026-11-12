@@ -71,8 +71,7 @@ export const NA_PLAY_TEXT = '暂不可用'
 export const NA_REACH_TEXT = '未接入'
 export const REACH_LABEL = '触达客户'
 
-// 与后端 work_data.refresh_min_interval 对齐（默认 60s）：
-// 在这个窗口内强制刷新，后端只会回缓存且不扣费，前端提前挡掉，免得白弹一次扣费确认
+// 手动刷新冷却（默认 60s）：刷新会翻页回填并按次计费，冷却期内直接拦住，避免连续点击重复扣费
 export const REFRESH_INTERVAL = 60000
 
 export const PERSONA_CREATE_URL = '/ai_modules/person/pages/create/create?mode=add'

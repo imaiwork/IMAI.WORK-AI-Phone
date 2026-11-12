@@ -1,1 +1,0 @@
-import{_ as o}from"./chat-msg-item.vue.381abbbf.js";import"./entry.99a15d63.js";import"./el-avatar.9738633d.js";import"./useHandle.be9751c3.js";import"./person_wechat.215849d1.js";import"./index.b7cb110d.js";export{o as default};

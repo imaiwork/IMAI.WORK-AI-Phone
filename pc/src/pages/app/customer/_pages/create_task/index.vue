@@ -21,13 +21,14 @@
                     </template>
                 </ElInput>
 
-                <!-- <ElButton
+                <ElButton
+                    v-if="sphClueEnabled"
                     type="primary"
                     class="!rounded-xl !h-[44px] px-6 !font-medium transition-all hover:scale-105 active:scale-95"
                     @click="handleCreate">
                     <Icon name="local-icon-add_circle" color="#ffffff" :size="18"></Icon>
                     <span class="ml-2">发布新任务</span>
-                </ElButton> -->
+                </ElButton>
             </div>
         </div>
 
@@ -195,11 +196,16 @@
 <script setup lang="ts">
 import { getTaskList, deleteTask, changeTaskStatus, retryTask, getTaskClue } from "~/api/customer";
 import { SidebarTypeEnum } from "../../_enums";
+import { useAppStore } from "@/stores/app";
 import CreatePanel from "./_components/create-panel.vue";
 import EditPopup from "./_components/edit.vue";
 import Detail from "./detail.vue";
 const { query } = useRoute();
 const nuxtApp = useNuxtApp();
+const appStore = useAppStore();
+
+/** 后台手动任务开关「视频号任务-自动获线索」：关闭时隐藏发布新任务入口 */
+const sphClueEnabled = computed(() => appStore.getManualTaskSwitch.sph_clue);
 
 const queryParams = reactive({
     name: "",

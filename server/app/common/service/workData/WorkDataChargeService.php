@@ -137,6 +137,10 @@ class WorkDataChargeService
     public static function settle(int $userId, string $ref = '', array $extra = [], string $scene = self::SCENE_FETCH): float
     {
         self::requireUser($userId);
+        // task_id 列为 varchar(50)，超长会直接抛 SQL 错误，这里统一截断兜底
+        if (strlen($ref) > self::TASK_ID_MAX_LEN) {
+            $ref = substr($ref, 0, self::TASK_ID_MAX_LEN);
+        }
         $conf = self::SCENES[$scene] ?? null;
         if ($conf === null) {
             return 0.0;

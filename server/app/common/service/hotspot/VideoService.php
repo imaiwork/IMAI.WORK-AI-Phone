@@ -17,6 +17,7 @@ use app\common\model\human\HumanVoice;
 use app\common\model\minimax\MinimaxShanjianTask;
 use app\common\model\shanjian\ShanjianVideoSetting;
 use app\common\model\shanjian\ShanjianVideoTask;
+use app\common\service\aiPersona\MaterialUsageService;
 use app\common\service\aiPersona\SynthesisTemplateConfigService;
 use app\common\service\FileService;
 use app\common\service\OriginalMaterialSpec;
@@ -1474,9 +1475,42 @@ class VideoService
     }
 
     /**
+     * 同人设池候选按「使用次数升序 + 时长倒序」排序：先轮转用得少的，同次数内优先长素材，
+     * 避免固定按最长优先导致短素材永远轮不到。
+     *
+     * @param array<int, array<string, mixed>> $candidates
+     * @return array<int, array<string, mixed>>
+     */
+    private static function sortPersonaPoolCandidates(array $candidates, int $personaId): array
+    {
+        if ($candidates === []) {
+            return [];
+        }
+        $ids = [];
+        foreach ($candidates as $candidate) {
+            $id = (int)($candidate['material_id'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        // 热点补入链路包含手动任务(auto_type=0)，统计时一并计入，否则次数恒为 0、轮转不生效
+        $usage = MaterialUsageService::countsForPersona($personaId, $ids, true);
+        shuffle($candidates);
+        usort($candidates, function ($a, $b) use ($usage) {
+            $usageA = $usage[(int)($a['material_id'] ?? 0)] ?? 0;
+            $usageB = $usage[(int)($b['material_id'] ?? 0)] ?? 0;
+            if ($usageA !== $usageB) {
+                return $usageA <=> $usageB;
+            }
+            return (float)($b['duration'] ?? 0) <=> (float)($a['duration'] ?? 0);
+        });
+        return $candidates;
+    }
+
+    /**
      * 纯人设预检用：只读统计同人设可选视频池还能补进的秒数，不改动素材、不落库。
-     * 与下发链路 fillFromPersonaPool 同口径：可选池排除已选、按最长优先、累计到缺口即止；
-     * 原图模式候选先按时长裁剪再统计（与补入动作一致）。
+     * 与下发链路 fillFromPersonaPool 同口径：可选池排除已选、按使用次数升序（同次数时长倒序）、
+     * 累计到缺口即止；原图模式候选先按时长裁剪再统计（与补入动作一致）。
      *
      * @return array{count:int,added_sec:float}
      */
@@ -1513,6 +1547,7 @@ class VideoService
         if ($isOriginalMode) {
             $candidates = ShanjianVideoSettingLogic::trimMaterialsByDuration($candidates);
         }
+        $candidates = self::sortPersonaPoolCandidates($candidates, $personaId);
         $count = 0;
         $addedSec = 0.0;
         foreach ($candidates as $candidate) {
@@ -1752,8 +1787,8 @@ class VideoService
     /** AI 补齐最多轮次：整单视频总数另有 50 条熔断兜底 */
     public const AI_ROUND2_MAX_ROUNDS = 3;
 
-    /** 同人设池自动补入最多取的候选行数 */
-    public const PERSONA_POOL_FILL_LIMIT = 20;
+    /** 同人设池自动补入的候选扫描行数：先取足够大的候选集，再按使用次数轮转挑选 */
+    public const PERSONA_POOL_FILL_LIMIT = 200;
 
     /**
      * 素材可承载时长收口：不足素材下限秒数时二轮补齐，补齐后仍不足按配置警告或拦截。
@@ -1960,7 +1995,7 @@ class VideoService
     }
 
     /**
-     * persona（纯人设勾选）模式自动补入：从同人设可选素材池挑时长最长的视频补进本次任务。
+     * persona（纯人设勾选）模式自动补入：从同人设可选素材池按使用次数升序补视频。
      * 与混剪素材列表同口径（clipMaterialQuery 按快照/人设模式滤），不产生 AI 找素材费用。
      *
      * @return array{count:int,added_sec:float,ids:list<int>}
@@ -1998,6 +2033,7 @@ class VideoService
         if ($isOriginalMode) {
             $candidates = ShanjianVideoSettingLogic::trimMaterialsByDuration($candidates);
         }
+        $candidates = self::sortPersonaPoolCandidates($candidates, $personaId);
         $added = 0;
         $addedSec = 0.0;
         $addedIds = [];

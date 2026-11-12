@@ -68,7 +68,7 @@
                                 <div class="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                                     <Icon name="el-icon-Film" :size="24" class="opacity-40" />
                                 </div>
-                                <p class="text-[12px] font-medium">请先在左侧添加素材分组</p>
+                                <p class="text-[12px] font-medium">请先在左侧添加镜头组</p>
                             </div>
 
                             <div v-else class="flex flex-col">
@@ -81,7 +81,7 @@
                                         </span>
                                         <span
                                             class="ml-1 px-1.5 py-0.5 rounded-full bg-[#0065fb]/10 text-primary text-[10px] font-black">
-                                            {{ formData.materialGroups.length }} 组
+                                            {{ formData.materialGroups.length }} 个镜头组
                                         </span>
                                     </div>
                                     <button
@@ -113,13 +113,8 @@
                                                         ]">
                                                         {{ index + 1 }}
                                                     </span>
-                                                    <span class="text-[13px] font-black text-slate-700">
-                                                        镜头组 {{ index + 1 }}
-                                                    </span>
-                                                    <span
-                                                        v-if="group.name"
-                                                        class="text-[11px] text-slate-400 font-medium truncate max-w-[100px]">
-                                                        · {{ group.name }}
+                                                    <span class="text-[13px] font-black text-slate-700 truncate max-w-[160px]">
+                                                        {{ resolveGroupName(group, index) }}
                                                     </span>
                                                 </div>
                                                 <div class="flex items-center gap-2">
@@ -150,7 +145,7 @@
                                                 :maxlength="500"
                                                 :show-word-limit="false"
                                                 :autosize="{ minRows: 2, maxRows: 5 }"
-                                                :placeholder="`输入镜头组 ${index + 1} 的口播文案…`"
+                                                :placeholder="`输入「${resolveGroupName(group, index)}」的口播文案…`"
                                                 resize="none"
                                                 :class="[
                                                     'clip-textarea',
@@ -506,6 +501,9 @@ enum CopywritingTypeEnum {
     CLIP = "clip",
 }
 
+/** 镜头组显示名：自定义名优先，空名回落到默认「镜头组N」 */
+const resolveGroupName = (group: MaterialGroup, index: number) => group.name || `镜头组${index + 1}`;
+
 // ──────────────────────────────────────────────────────────────
 // 表单数据
 // ──────────────────────────────────────────────────────────────
@@ -603,7 +601,7 @@ const syncClipToFormData = () => {
     formData.clip = formData.materialGroups.map((group, index) => ({
         groupId: group.id,
         groupIndex: index,
-        label: `镜头组${index + 1}`,
+        label: resolveGroupName(group, index),
         text: clipCopywritingMap[group.id] ?? "",
     }));
 };
@@ -635,7 +633,7 @@ const handleClearAllClipCopywriting = () => {
     syncClipToFormData();
 };
 
-/** 监听素材分组增删，联动维护草稿 Map */
+/** 监听镜头组增删，联动维护草稿 Map */
 watch(
     () => formData.materialGroups,
     (newGroups, oldGroups) => {
@@ -770,14 +768,14 @@ const validateBeforeCreate = async (): Promise<boolean> => {
     }
 
     if (!formData.materialGroups.length) {
-        feedback.msgWarning("请至少创建一个素材分组");
+        feedback.msgWarning("请至少创建一个镜头组");
         return false;
     }
 
     for (let i = 0; i < formData.materialGroups.length; i++) {
         const group = formData.materialGroups[i];
         if (group.materialList.length === 0) {
-            feedback.msgWarning(`第 ${i + 1} 组「${group.name}」还没有添加素材`);
+            feedback.msgWarning(`镜头组「${group.name}」还没有添加素材`);
             materialGroupPanelRef.value?.scrollToGroup(group.id);
             return false;
         }

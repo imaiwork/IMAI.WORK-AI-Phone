@@ -201,6 +201,7 @@ import { getPublishAccountList } from '@/api/device'
 import { ListenerTypeEnum } from '@/ai_modules/device/enums'
 import { useDictOptions } from '@/hooks/useDictOptions'
 import { useEventBusManager } from '@/hooks/useEventBusManager'
+import { useAppStore } from '@/stores/app'
 import Steps from '@/ai_modules/device/components/steps/steps.vue'
 import KeywordsEdit from '@/ai_modules/device/components/keywords-edit/keywords-edit.vue'
 import ClueGenPop from '@/ai_modules/device/components/clue-gen-pop/clue-gen-pop.vue'
@@ -227,8 +228,25 @@ const EDIT_TITLE: Record<EditTarget, string> = {
 }
 
 const { on } = useEventBusManager()
+const appStore = useAppStore()
 
-const formData = reactive(createDefaultFormData())
+/** 后台手动任务开关「抖音账号搜寻获客-自动加好友」：关闭时隐藏加好友设置且不生成加好友任务 */
+const friendAddEnabled = computed(() => appStore.getManualTaskSwitch.dy_search_friend_add)
+
+const formData = reactive({
+    ...createDefaultFormData(),
+    add_type: friendAddEnabled.value ? 1 : 0
+})
+
+// 配置可能在页面挂载后才返回，开关关闭时兜底强制不生成加好友任务
+watch(friendAddEnabled, (enabled) => {
+    if (!enabled) formData.add_type = 0
+})
+
+// 后台保存开关后，已打开的小程序不会重新拉配置，进入页面时刷新一次手动任务开关
+onShow(() => {
+    appStore.refreshManualTaskSwitch()
+})
 
 const { step: currentStep, canNext, currentClueList, handleStep, STEPS } = useStep(formData)
 // 进页面回填上次填过的线索词 / 私信话术 / 加好友备注

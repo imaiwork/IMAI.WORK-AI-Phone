@@ -200,8 +200,9 @@ interface TagConfig {
     color: string;
 }
 
-// video_cover_source：2=AI自动  3=手动
+// video_cover_source：1=首帧  2=AI自动  3=手动
 const COVER_SOURCE_MAP: Record<number, TagConfig> = {
+    1: { label: "首帧", bg: "rgba(107,114,128,0.6)", color: "#ffffff" },
     2: { label: "AI封面", bg: "rgba(0,101,251,0.75)", color: "#ffffff" },
     3: { label: "手动封面", bg: "rgba(0,0,0,0.55)", color: "#ffffff" },
 };

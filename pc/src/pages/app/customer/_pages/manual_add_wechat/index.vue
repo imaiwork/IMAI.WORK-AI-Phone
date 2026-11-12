@@ -21,13 +21,14 @@
                     </template>
                 </ElInput>
 
-                <!-- <ElButton
+                <ElButton
+                    v-if="friendAddEnabled"
                     type="primary"
                     class="!rounded-xl !h-[44px] px-6 !font-medium transition-all hover:scale-105 active:scale-95"
                     @click="handleCreate">
                     <Icon name="local-icon-add_circle" color="#ffffff" :size="18"></Icon>
                     <span class="ml-2">创建加微任务</span>
-                </ElButton> -->
+                </ElButton>
             </div>
         </div>
 
@@ -145,11 +146,16 @@
 import dayjs from "dayjs";
 import { getManualAddWechatList, updateManualAddWechatStatus, deleteManualAddWechat } from "~/api/customer";
 import { SidebarTypeEnum } from "../../_enums/index";
+import { useAppStore } from "@/stores/app";
 import CreatePanel from "./_components/create-panel.vue";
 import Detail from "./detail.vue";
 
 const { query } = useRoute();
 const nuxtApp = useNuxtApp();
+const appStore = useAppStore();
+
+/** 后台「手动任务开关 - 微信任务 - 自动加好友」关闭时隐藏创建入口 */
+const friendAddEnabled = computed(() => appStore.getManualTaskSwitch.wechat_friend_add);
 
 const queryParams = reactive({
     device_code: "",

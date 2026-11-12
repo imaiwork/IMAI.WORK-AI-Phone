@@ -15,6 +15,7 @@ use app\common\service\chat\ChatModelsService;
 use app\common\service\ConfigService;
 use app\common\service\draw\MediaModelsService;
 use app\common\service\FileService;
+use app\common\service\ManualTaskSwitchService;
 use app\common\service\transcoding\OssMediaProcessService;
 use app\common\service\UserDisplaySanitizer;
 use app\common\service\UserProfileConfigService;
@@ -259,6 +260,7 @@ class IndexLogic extends BaseLogic
                 'clean_switch' => (int)ConfigService::get('aiPersona', 'material_clean_switch', 0),
                 'clean_threshold' => (int)ConfigService::get('aiPersona', 'material_clean_threshold', 3),
             ],
+            'manual_task_switch' => ManualTaskSwitchService::all(),
         ];
     }
 

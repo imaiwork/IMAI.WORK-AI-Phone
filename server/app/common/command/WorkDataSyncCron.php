@@ -47,7 +47,8 @@ class WorkDataSyncCron extends Command
                                 continue;
                             }
                             try {
-                                $result = WorkDataFetchService::fetch($userId, $personaId, $platform, false, $accountId, true);
+                                // 与手动刷新同口径：中台一次请求内翻页合并（最多 5 页），整次只扣一次费用
+                                $result = WorkDataFetchService::backfill($userId, $personaId, $platform, $accountId, 0, true);
                                 // 只有真正取数（非缓存命中）才标记今日已同步
                                 if (empty($result['cached'])) {
                                     WorkDataCache::markSyncedToday($platform, $accountId);

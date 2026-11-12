@@ -7,8 +7,10 @@ use app\common\model\aiPersona\AiPersona;
 use app\common\model\aiPersona\AiPersonaCopywritingLibrary;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryPlatformUse;
 use app\common\model\aiPersona\AiPersonaCopywritingLibraryUseLog;
+use app\common\model\shanjian\SystemMusicGroup;
 use app\common\service\aiPersona\IdRoundRobinPicker;
 use app\common\service\SpreadsheetService;
+use app\common\service\SystemMusicService;
 use think\facade\Db;
 
 class CopywritingLibraryLogic extends ApiLogic
@@ -139,7 +141,7 @@ class CopywritingLibraryLogic extends ApiLogic
                 return false;
             }
 
-            self::$returnData = $library->toArray();
+            self::$returnData = self::withMusicGroupName($library->toArray());
             return true;
         } catch (\Throwable $e) {
             self::setError($e->getMessage());
@@ -175,6 +177,64 @@ class CopywritingLibraryLogic extends ApiLogic
         }
     }
 
+    /**
+     * 一键清理：软删除当前人设下「当前类型」的全部文案（视频驱动按子类型，发布文案整体）。
+     * 只清文案行，不动使用记录；清理后同类型文案可重新导入/新增。
+     */
+    public static function clean(array $params): bool
+    {
+        try {
+            $personaId = (int)($params['persona_id'] ?? 0);
+            $scope = self::cleanScopeWhere(
+                (int)($params['library_type'] ?? 0),
+                (int)($params['driver_type'] ?? 0)
+            );
+            if ($scope === null) {
+                self::setError('文案库类型或驱动类型不正确');
+                return false;
+            }
+            self::assertPersona($personaId, self::$uid);
+
+            $where = array_merge([['user_id', '=', self::$uid], ['persona_id', '=', $personaId]], $scope);
+            // 批量软删：条数可能上千，逐条 destroy 会退化成 N 次 UPDATE；
+            // 受影响行数即真实清理条数（筛选条件带 delete_time IS NULL，命中行必然被改成新时间戳）
+            $deleted = (int)AiPersonaCopywritingLibrary::where($where)->update(['delete_time' => time()]);
+            self::$returnData = ['deleted_count' => max(0, $deleted)];
+            return true;
+        } catch (\Throwable $e) {
+            self::setError($e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 一键清理的落库筛选条件：发布文案清整库（该库不应再有子类型），
+     * 视频驱动必须带具体子类型（0 会一条都清不到，直接判非法）。
+     * 返回 null = 参数非法。
+     */
+    public static function cleanScopeWhere(int $libraryType, int $driverType): ?array
+    {
+        if ($libraryType === AiPersonaCopywritingLibrary::LIBRARY_TYPE_PUBLISH) {
+            // 发布文案没有子类型：不清 driver_type，避免历史脏数据落在筛选外清不掉
+            return [['library_type', '=', AiPersonaCopywritingLibrary::LIBRARY_TYPE_PUBLISH]];
+        }
+        if ($libraryType !== AiPersonaCopywritingLibrary::LIBRARY_TYPE_VIDEO_DRIVER) {
+            return null;
+        }
+        $driveTypes = [
+            AiPersonaCopywritingLibrary::DRIVER_TYPE_NEWS,
+            AiPersonaCopywritingLibrary::DRIVER_TYPE_ORAL,
+            AiPersonaCopywritingLibrary::DRIVER_TYPE_MATERIAL_MIXCUT,
+        ];
+        if (!in_array($driverType, $driveTypes, true)) {
+            return null;
+        }
+        return [
+            ['library_type', '=', AiPersonaCopywritingLibrary::LIBRARY_TYPE_VIDEO_DRIVER],
+            ['driver_type', '=', $driverType],
+        ];
+    }
+
     public static function import(array $params, string $fileUrl): bool
     {
         $tempFile = '';
@@ -196,12 +256,16 @@ class CopywritingLibraryLogic extends ApiLogic
             $startRow = $layout['start_row'];
             $warnings = $layout['warnings'];
             $params['_import_layout'] = $layout['layout'];
+            // 背景音乐列按表头定位（新闻体 E 列 / 口播与素材混剪 F 列），没这一列就整列不绑定
+            $params['_import_music_col'] = (string)($layout['music_col'] ?? '');
+            $params['_import_group_map'] = self::musicGroupNameMap();
 
             $success = 0;
             $fail = 0;
             $failList = [];
             $insertRows = [];
             $seen = [];
+            $warnedGroups = [];
             $now = time();
 
             foreach ($rows as $rowNo => $row) {
@@ -220,6 +284,16 @@ class CopywritingLibraryLogic extends ApiLogic
                     $seen[$fingerprint] = true;
                     $insertRows[] = $data;
                     $success++;
+
+                    // 分组名匹配不上不算错误（按未绑定处理），只提示一次，避免整列刷屏
+                    $musicName = self::readImportMusicGroupName($params, $row);
+                    if ($musicName !== ''
+                        && !isset($params['_import_group_map'][$musicName])
+                        && !isset($warnedGroups[$musicName])
+                    ) {
+                        $warnedGroups[$musicName] = true;
+                        $warnings[] = '背景音乐分组「' . $musicName . '」不存在，已按未绑定处理';
+                    }
                 } catch (\Throwable $e) {
                     $fail++;
                     $failList[] = [
@@ -805,6 +879,9 @@ class CopywritingLibraryLogic extends ApiLogic
             'publish_title' => $publishTitle,
             'publish_content' => $publishContent,
             'publish_topic' => $publishTopic,
+            'music_group_id' => $libraryType === AiPersonaCopywritingLibrary::LIBRARY_TYPE_VIDEO_DRIVER
+                ? max(0, (int)($params['music_group_id'] ?? 0))
+                : 0,
             'source' => $source,
             'sort' => (int)($params['sort'] ?? 0),
             'status' => isset($params['status']) ? (int)$params['status'] : AiPersonaCopywritingLibrary::STATUS_ENABLED,
@@ -881,7 +958,76 @@ class CopywritingLibraryLogic extends ApiLogic
             ];
         }
 
+        // 背景音乐分组只对视频驱动文案有意义，发布文案忽略该列
+        if ($libraryType !== AiPersonaCopywritingLibrary::LIBRARY_TYPE_PUBLISH) {
+            $raw['music_group_id'] = self::resolveImportMusicGroupId($params, $row);
+        }
+
         return self::normalizeSaveData($raw, $userId, AiPersonaCopywritingLibrary::SOURCE_IMPORT);
+    }
+
+    /** 表头行里定位「背景音乐」列；老模板没有这一列时返回空串 */
+    private static function detectMusicColumn(array $headerRow): string
+    {
+        foreach ($headerRow as $col => $value) {
+            if (self::cleanText($value) === '背景音乐') {
+                return (string)$col;
+            }
+        }
+        return '';
+    }
+
+    /** 分组名 → id；与导入、保存共用同一套名称归一，保证「绝对匹配」口径一致 */
+    private static function musicGroupNameMap(): array
+    {
+        $map = [];
+        foreach (SystemMusicService::allGroups() as $group) {
+            $name = self::cleanMusicGroupName($group['name'] ?? '');
+            if ($name !== '') {
+                $map[$name] = (int)($group['id'] ?? 0);
+            }
+        }
+        return $map;
+    }
+
+    private static function readImportMusicGroupName(array $params, array $row): string
+    {
+        $col = (string)($params['_import_music_col'] ?? '');
+        if ($col === '') {
+            return '';
+        }
+        return self::cleanMusicGroupName($row[$col] ?? '');
+    }
+
+    private static function resolveImportMusicGroupId(array $params, array $row): int
+    {
+        $name = self::readImportMusicGroupName($params, $row);
+        if ($name === '') {
+            return 0;
+        }
+        $map = is_array($params['_import_group_map'] ?? null) ? $params['_import_group_map'] : [];
+        return max(0, (int)($map[$name] ?? 0));
+    }
+
+    /**
+     * 分组名归一：只去首尾空白（含全角空格/不换行空格），不做大小写或模糊匹配。
+     * 导入时 Excel 里手填的名字常带尾空格，直接比较会漏配。
+     */
+    private static function cleanMusicGroupName($value): string
+    {
+        $value = self::cleanText($value);
+        $value = preg_replace('/^[\s\x{3000}\x{00A0}]+|[\s\x{3000}\x{00A0}]+$/u', '', $value);
+        return is_string($value) ? $value : '';
+    }
+
+    /** 单条文案补齐 music_group_name，前端列表/详情直接展示 */
+    private static function withMusicGroupName(array $row): array
+    {
+        $groupId = (int)($row['music_group_id'] ?? 0);
+        $row['music_group_name'] = $groupId > 0
+            ? (string)SystemMusicGroup::where('id', $groupId)->value('name')
+            : '';
+        return $row;
     }
 
     private static function expectedHeaders(int $libraryType, int $driverType): array
@@ -908,7 +1054,13 @@ class CopywritingLibraryLogic extends ApiLogic
      */
     private static function resolveImportLayout(int $libraryType, int $driverType, array $headerRow): array
     {
-        $blank = ['layout' => '', 'start_row' => 5, 'warnings' => [], 'error' => ''];
+        $blank = [
+            'layout' => '',
+            'start_row' => 5,
+            'warnings' => [],
+            'error' => '',
+            'music_col' => self::detectMusicColumn($headerRow),
+        ];
         if ($libraryType === AiPersonaCopywritingLibrary::LIBRARY_TYPE_PUBLISH) {
             $expected = self::expectedHeaders($libraryType, $driverType);
             $errors = self::validateHeaders($headerRow, $expected);
@@ -934,6 +1086,8 @@ class CopywritingLibraryLogic extends ApiLogic
             if (!self::containsExpectedHeader($headerRow, $paired) && !self::containsExpectedHeader($headerRow, $legacy)) {
                 $blank['layout'] = 'loose_news';
                 $blank['start_row'] = 1;
+                // 无表头时第 4 行是数据行，不能拿它当归宿列
+                $blank['music_col'] = '';
                 $blank['warnings'] = ['未检测到模板表头，已按每行一组新闻标题导入'];
                 return $blank;
             }

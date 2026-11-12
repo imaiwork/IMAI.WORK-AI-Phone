@@ -34,6 +34,22 @@ class WorkDataController extends BaseApiController
         return $this->data($result);
     }
 
+    public function backfill()
+    {
+        $params = (new WorkDataValidate())->post()->goCheck('backfill');
+        $result = WorkDataLogic::backfill($params, (int)$this->userId);
+        if (false === $result) {
+            return $this->fail(WorkDataLogic::getError());
+        }
+        if (($result['bound'] ?? true) === false) {
+            return $this->success((string)($result['msg'] ?? '未绑定账号'), [
+                'bound' => false,
+                'platform' => (string)($result['platform'] ?? ''),
+            ]);
+        }
+        return $this->data($result);
+    }
+
     public function syncSettings()
     {
         $params = (new WorkDataValidate())->post()->goCheck('syncSettings');

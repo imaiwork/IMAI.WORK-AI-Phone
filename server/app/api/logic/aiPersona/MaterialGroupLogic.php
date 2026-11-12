@@ -145,6 +145,41 @@ class MaterialGroupLogic extends ApiLogic
         }
     }
 
+    /**
+     * 24h 任务配置可选的素材分组（仅当前素材模式下的分组）。
+     * 返回 id/name，供合成配置详情一次带出，避免前端再拉一次分组接口。
+     */
+    public static function optionsForPersona(int $uid, int $personaId, int $keepOriginal = Material::KEEP_ORIGINAL_NO): array
+    {
+        if ($uid <= 0 || $personaId <= 0) {
+            return [];
+        }
+        return MaterialGroup::where('user_id', $uid)
+            ->where('persona_id', $personaId)
+            ->where('keep_original', self::normalizeKeepOriginal($keepOriginal))
+            ->order(['sort' => 'asc', 'id' => 'asc'])
+            ->field('id,name')
+            ->select()
+            ->toArray();
+    }
+
+    /**
+     * 当前素材模式下属于该人设的分组 ID，保存配置时用来过滤已删除/跨模式的分组。
+     *
+     * @return array<int, int>
+     */
+    public static function availableGroupIds(int $uid, int $personaId, int $keepOriginal = Material::KEEP_ORIGINAL_NO): array
+    {
+        if ($uid <= 0 || $personaId <= 0) {
+            return [];
+        }
+        $ids = MaterialGroup::where('user_id', $uid)
+            ->where('persona_id', $personaId)
+            ->where('keep_original', self::normalizeKeepOriginal($keepOriginal))
+            ->column('id');
+        return array_values(array_map('intval', $ids ?: []));
+    }
+
     public static function countBase(int $uid, int $personaId, array $params)
     {
         $query = Material::where('user_id', $uid)

@@ -1462,15 +1462,21 @@ class AutoDeviceSettingLogic extends ApiLogic
             $result = self::requestUrl($request, $scene, $userId, $taskId, $withBillingMeta);
             if (!empty($result) && isset($result['content'])) {
                 // ─── 文案质量校验：英文缺空格 / 外文乱码 ───
-                $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
-                $result['content'] = $sanitized['content'];
-                if (!empty($sanitized['warnings'])) {
-                    $result['warnings'] = $sanitized['warnings'];
-                    \think\facade\Log::channel('automedia')->warning('文案质量校验发现问题: ' . json_encode([
-                        'scene'    => $scene,
-                        'task_id'  => $taskId,
-                        'warnings' => $sanitized['warnings'],
-                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                // 仅对数组型 content 做校验：字符串型 content（如 AI 封面提示词 sn=9 返回的
+                // JSON 串）传给 sanitizeArray 会因 array 类型约束抛 TypeError，而 TypeError
+                // 属于 \Error，下方 catch(\Exception) 接不住，曾致 AI 封面 100% 失败回退首帧
+                // （算力已在校验前扣除）。字符串也不宜包进数组清洗：空格修复会改写 JSON 键名。
+                if (is_array($result['content'])) {
+                    $sanitized = \app\common\service\TextQualityValidator::sanitizeArray($result['content']);
+                    $result['content'] = $sanitized['content'];
+                    if (!empty($sanitized['warnings'])) {
+                        $result['warnings'] = $sanitized['warnings'];
+                        \think\facade\Log::channel('automedia')->warning('文案质量校验发现问题: ' . json_encode([
+                            'scene'    => $scene,
+                            'task_id'  => $taskId,
+                            'warnings' => $sanitized['warnings'],
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+                    }
                 }
                 return $result;
             } else {

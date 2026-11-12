@@ -111,6 +111,7 @@ export function useGenerateSetting({
         extra: formData.extra,
         clip: formData.clip.map((item: any) => ({ clip_template_id: item })),
         pic: formData.cover,
+        video_cover_source: formData.coverMode ?? 1,
     });
 
     // ─── 生成视频 ────────────────────────────────────────────────

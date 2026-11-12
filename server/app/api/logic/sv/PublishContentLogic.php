@@ -526,7 +526,7 @@ class PublishContentLogic extends SvBaseLogic
     private static function getSvQuery()
     {
         return SvPublishSettingDetail::alias('ps')
-            ->field('ps.id,ps.user_id,ps.account,ps.account_type,ps.device_code,ps.publish_account_id,ps.persona_id,ps.auto_type,ps.material_type,ps.material_url,ps.material_title,ps.material_subtitle,ps.material_tag,ps.publish_time,ps.poi,ps.pic,ps.video_task_id,ps.video_setting_id,ps.task_type,sj.persona_id as shanjian_persona_id,sj.shanjian_type,sj.status as shanjian_status,sj.video_result_url as shanjian_video_result_url,sj.pic as shanjian_pic,sj.duration as shanjian_duration,sj.remark as shanjian_remark')
+            ->field('ps.id,ps.user_id,ps.account,ps.account_type,ps.device_code,ps.publish_account_id,ps.persona_id,ps.auto_type,ps.material_type,ps.material_url,ps.material_title,ps.material_subtitle,ps.material_tag,ps.publish_time,ps.poi,ps.pic,ps.video_task_id,ps.video_setting_id,ps.task_type,sj.persona_id as shanjian_persona_id,sj.shanjian_type,sj.status as shanjian_status,sj.video_result_url as shanjian_video_result_url,sj.pic as shanjian_pic,sj.video_cover_source as shanjian_cover_source,sj.cover_status as shanjian_cover_status,sj.duration as shanjian_duration,sj.remark as shanjian_remark')
             ->leftJoin('shanjian_video_task sj', 'sj.id = ps.video_task_id AND sj.user_id = ps.user_id');
     }
 
@@ -911,6 +911,8 @@ class PublishContentLogic extends SvBaseLogic
             'poi' => (string)($row['poi'] ?? ''),
             'location' => (string)($row['poi'] ?? ''),
             'cover_url' => $coverUrl,
+            'cover_source' => (int)($row['shanjian_cover_source'] ?? 0),
+            'cover_status' => (int)($row['shanjian_cover_status'] ?? 0),
             'auto_type' => (int)($row['auto_type'] ?? 0),
             'task_type' => (int)($row['task_type'] ?? 0),
             'video_setting_id' => (int)($row['video_setting_id'] ?? 0),
